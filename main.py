@@ -3,7 +3,6 @@ import os
 import logging
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt
-import qdarkstyle
 
 # 프로젝트 루트 경로를 sys.path에 추가하여 모듈 import 가능하게 함
 sys.path.append(os.path.dirname(os.path.abspath(__file__)))
@@ -28,8 +27,8 @@ def main():
 
     app = QApplication(sys.argv)
     
-    # 테마 적용
-    # app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    # 테마 적용 (MainWindow에서 처리됨)
+    # ThemeManager.apply_theme(app, "dark")
 
     # MainWindow 초기화
     window = MainWindow()

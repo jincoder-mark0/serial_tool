@@ -1,60 +1,114 @@
-# 변경 이력 (Changelog)
+# 변경 이력 (CHANGELOG)
 
-이 프로젝트의 모든 주요 변경 사항은 이 파일에 기록됩니다.
+## [미배포] (Unreleased)
 
-이 형식은 [Keep a Changelog](https://keepachangelog.com/ko/1.0.0/)를 기반으로 하며,
-이 프로젝트는 [Semantic Versioning](https://semver.org/spec/v2.0.0.html)을 준수합니다.
+### UI 구현 (2025-12-01)
 
-## [Unreleased]
+#### 추가 사항 (Added)
 
-## [0.1.1] - 2025-11-30
+- **테마 시스템**
+  - 중앙 집중식 QSS 기반 테마 관리 구현 (`view/theme_manager.py`)
+  - 다크 테마 (`resources/themes/dark_theme.qss`) 및 라이트 테마 (`resources/themes/light_theme.qss`) 생성
+  - View 메뉴를 통한 동적 테마 전환
+  - 폰트 커스터마이징 메뉴 (사전 정의 폰트 및 커스텀 폰트 대화상자)
+  
+- **SVG 아이콘 시스템**
+  - 아이콘 리소스 디렉토리 생성 (`resources/icons/`)
+  - 테마 인식 SVG 아이콘 구현 (다크 테마용 흰색, 라이트 테마용 검은색)
+  - 아이콘: Add, Delete, Up, Down, Close, ComboBox 화살표
+  - objectName 선택자를 통한 QSS 기반 아이콘 로딩 적용
 
-### 변경됨 (Changed)
+- **UI 컴포넌트**
+  - `PortSettingsWidget`: 컴팩트한 2줄 레이아웃
+    - 1행: 포트 | 스캔 | 보레이트 | 열기
+    - 2행: 데이터 | 패리티 | 정지 | 흐름 | DTR | RTS
+  - `CommandListWidget`:
+    - Prefix/Suffix 컬럼 추가 (이전 Head/Tail에서 변경)
+    - 3단계 Select All 체크박스 (선택 안함, 부분 선택, 전체 선택)
+    - 세로 스크롤바 항상 표시
+    - 행별 Send 버튼
+  - `CommandControlWidget`:
+    - 전역 명령 수정을 위한 Prefix/Suffix 입력 필드 추가
+    - 스크립트 저장/로드 버튼
+    - 자동 실행 설정 (지연시간, 최대 실행 횟수)
 
-- **프로젝트 이름 변경**: SerialManager에서 SerialTool로 통일
-  - 메인 윈도우 타이틀 업데이트
-  - 로그 메시지 및 주석 업데이트
-  - README 및 문서 갱신
-- **스타일 시스템 개선**: 중앙 집중식 테마 적용 준비
-  - 모든 위젯에서 개별 `setStyleSheet` 호출 제거
-  - QSS 파일 기반 스타일링으로 전환
+#### 변경 사항 (Changed)
 
-### 추가됨 (Added)
+- **디렉토리 구조 재정리**
+  - `view/resources/` → `resources/` (루트로 이동)
+  - `view/styles/` → `resources/themes/` (테마 파일 통합)
+  - `view/styles/theme_manager.py` → `view/theme_manager.py`
+  - 모든 QSS 파일 내 아이콘 경로 업데이트 (`view/resources/` → `resources/`)
 
-- 구현 명세서 문서 추가 (`doc/Implementation_Specification.md`)
+- **레이아웃 최적화**
+  - `CommandControl`에서 `CommandList` 헤더로 Select All 체크박스 이동
+  - 일관성을 위한 컴포넌트 크기 조정
+  - Port combo 너비를 Baud combo와 동일하게 맞춤
+  - 명확성을 위해 UI 요소 간 간격 추가
 
-## [0.1.0] - 2025-11-30
+- **명명 규칙**
+  - `CommandList` 및 `CommandControl` 전체에서 "Head/Tail"을 "Prefix/Suffix"로 변경
+  - 관련된 모든 레이블, 툴팁 및 변수명 업데이트
 
-### 추가됨 (Added)
+#### 수정 사항 (Fixed)
 
-- **멀티 포트 탭 지원**: `LeftPanel`에 `QTabWidget`을 구현하여 여러 시리얼 포트 연결을 관리할 수 있도록 했습니다.
-- **동적 탭 이름**: 탭 이름이 연결된 COM 포트 이름 또는 자리 표시자("-")로 동적으로 업데이트됩니다.
-- **수동 제어 위젯 (ManualControlWidget)**: 수동 명령 입력, 파일 전송, 로그 저장을 위한 위젯을 추가했습니다 (구 `OperationArea`).
-- **커맨드 제어 위젯 (CommandControlWidget)**: 커맨드 리스트 실행(실행, 중지, 자동 실행)을 관리하는 위젯을 추가했습니다 (구 `RunControl`).
-- **커맨드 리스트 위젯 (CommandListWidget)**:
-  - 행 관리(추가, 삭제, 위로 이동, 아래로 이동)를 위한 버튼을 추가했습니다.
-  - HEX/CR 옵션 및 행별 Send 버튼을 실제 체크박스와 버튼으로 구현했습니다.
-  - 레이아웃 및 선택 동작(행 단위 선택)을 개선했습니다.
-- **패널 구조**: UI 구성을 개선하기 위해 `LeftPanel`(포트/수동 제어)과 `RightPanel`(커맨드/인스펙터) 컨테이너를 도입했습니다.
-- **핵심 인프라 (Core Infrastructure)**:
-  - `EventBus`: 시그널 기반의 전역 이벤트 처리 시스템.
-  - `SerialWorker`: 스레드 기반 시리얼 통신 워커.
-  - `ThreadSafeQueue`, `RingBuffer`: 데이터 처리를 위한 유틸리티 클래스.
+- 두 테마 모두에서 ComboBox 드롭다운 화살표가 이제 표시됨
+- 탭 닫기 버튼 아이콘이 올바르게 테마 적용됨
+- Select All 체크박스가 이제 개별 행 체크박스 변경에 반응함
+- Import 오류 수정 (QCheckBox, QSizePolicy)
 
-### 변경됨 (Changed)
+### 프로젝트 구조 (2025-11-30)
 
-- **UI 리팩토링**:
-  - `OperationArea` -> `ManualControlWidget`으로 이름 변경.
-  - `RunControl` -> `CommandControlWidget`으로 이름 변경.
-  - 패널 클래스들을 `view/panels/` 디렉토리로 이동.
-  - 위젯 클래스들을 `view/widgets/` 디렉토리로 이동.
-- **레이아웃 개선**:
-  - `MainWindow`를 단순화하고 레이아웃 관리를 `LeftPanel`과 `RightPanel`에 위임했습니다.
-  - `CommandListWidget`의 컬럼 렌더링 및 버튼 레이아웃을 개선했습니다.
-- **UX 향상**:
-  - 모든 UI 요소에 툴팁을 추가했습니다.
-  - 포트 연결 전 제어 버튼들의 초기 비활성화 상태를 구현했습니다.
+#### 추가 사항 (Added)
 
-### 제거됨 (Removed)
+- Layered MVP 아키텍처 확립
+- 모듈식 폴더 구조 생성:
+  - `view/panels/`: LeftPanel, RightPanel, PortPanel, CommandListPanel
+  - `view/widgets/`: PortSettings, CommandList, CommandControl, ManualControl
+  - `resources/themes/`: 테마 관리자 및 QSS 파일
+  - `resources/icons/`: SVG 아이콘
+  - `doc/`: 문서 및 계획 파일
 
-- 사용하지 않는 파일 삭제: `rx_log_view.py`, `status_bar.py`, `run_control.py`, `operation_area.py`.
+#### 변경 사항 (Changed)
+
+- 프로젝트 이름을 "SerialManager"에서 "SerialTool"로 변경
+- UI를 LeftPanel(포트 + 수동 제어) 및 RightPanel(커맨드 리스트 + 패킷 인스펙터)을 사용하도록 리팩토링
+- 미사용 파일 제거 (rx_log_view.py, status_bar.py 등)
+
+## 버전 이력 (Version History)
+
+### [1.0.0] - 개발 중
+
+#### 완료 (Completed)
+
+- ✅ 프로젝트 설정 및 구조
+- ✅ UI 골격 구현
+- ✅ 테마 및 스타일링 시스템
+- ✅ UI 레이아웃 최적화
+- ✅ SVG 아이콘 시스템
+- ✅ 위젯 개선 및 다듬기
+- ✅ 디렉토리 구조 재정리
+
+#### 진행 중 (In Progress)
+
+- 🔄 Core 유틸리티 (RingBuffer, ThreadSafeQueue)
+- 🔄 Model 계층 (SerialWorker, PortController)
+- 🔄 Presenter 통합
+
+#### 계획 (Planned)
+
+- ⏳ Command List 자동화 엔진
+- ⏳ 파일 전송 기능
+- ⏳ 플러그인 시스템
+- ⏳ 테스트 및 배포
+
+---
+
+**범례:**
+
+- ✅ 완료
+- 🔄 진행 중
+- ⏳ 계획됨
+- 🐛 버그 수정
+- ⚡ 성능 개선
+- 🎨 UI/UX 향상

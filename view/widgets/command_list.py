@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableView, QPushButton, 
-    QHeaderView, QLabel
+    QHeaderView, QLabel, QCheckBox
 )
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtCore import Qt, pyqtSignal, QModelIndex
@@ -26,19 +26,33 @@ class CommandListWidget(QWidget):
         # Header / Controls
         header_layout = QHBoxLayout()
         
-        self.add_btn = QPushButton("➕")
+        # Select All Checkbox (Tristate)
+        self.select_all_check = QCheckBox("Select All")
+        self.select_all_check.setToolTip("Select/Deselect all steps")
+        self.select_all_check.setTristate(True)
+        self.select_all_check.stateChanged.connect(self.on_select_all_changed)
+        
+        self.add_btn = QPushButton()
+        self.add_btn.setObjectName("add_btn")
         self.add_btn.setToolTip("Add new command step")
+        self.add_btn.setFixedSize(30, 30)
         
-        self.del_btn = QPushButton("➖")
+        self.del_btn = QPushButton()
+        self.del_btn.setObjectName("del_btn")
         self.del_btn.setToolTip("Delete selected step")
+        self.del_btn.setFixedSize(30, 30)
         
-        self.up_btn = QPushButton("⬆️")
+        self.up_btn = QPushButton()
+        self.up_btn.setObjectName("up_btn")
         self.up_btn.setToolTip("Move step up")
+        self.up_btn.setFixedSize(30, 30)
         
-        self.down_btn = QPushButton("⬇️")
+        self.down_btn = QPushButton()
+        self.down_btn.setObjectName("down_btn")
         self.down_btn.setToolTip("Move step down")
+        self.down_btn.setFixedSize(30, 30)
         
-        header_layout.addWidget(QLabel("Command List"))
+        header_layout.addWidget(self.select_all_check)
         header_layout.addStretch()
         header_layout.addWidget(self.add_btn)
         header_layout.addWidget(self.del_btn)
@@ -54,9 +68,14 @@ class CommandListWidget(QWidget):
         # Table View
         self.table_view = QTableView()
         self.model = QStandardItemModel()
-        self.model.setHorizontalHeaderLabels(["", "Command", "HEX", "CR", "Delay", "Send"])
+        # Columns: Select, Prefix, Command, Suffix, HEX, Delay, Send
+        self.model.setHorizontalHeaderLabels(["", "Prefix", "Command", "Suffix", "HEX", "Delay", "Send"])
         self.table_view.setModel(self.model)
         self.table_view.setToolTip("List of commands to execute")
+        
+        # Scroll bar policy - always show
+        self.table_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.table_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         
         # Hide vertical header (row numbers)
         self.table_view.verticalHeader().setVisible(False)
@@ -67,65 +86,83 @@ class CommandListWidget(QWidget):
         
         # Adjust column widths
         header = self.table_view.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeToContents) # Checkbox
-        header.setSectionResizeMode(1, QHeaderView.Stretch)          # Command
-        header.setSectionResizeMode(2, QHeaderView.ResizeToContents) # HEX
-        header.setSectionResizeMode(3, QHeaderView.ResizeToContents) # CR
-        header.setSectionResizeMode(4, QHeaderView.ResizeToContents) # Delay
-        header.setSectionResizeMode(5, QHeaderView.ResizeToContents) # Send Btn
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents) # Select
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents) # Prefix
+        header.setSectionResizeMode(2, QHeaderView.Stretch)          # Command
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents) # Suffix
+        header.setSectionResizeMode(4, QHeaderView.ResizeToContents) # HEX
+        header.setSectionResizeMode(5, QHeaderView.ResizeToContents) # Delay
+        header.setSectionResizeMode(6, QHeaderView.ResizeToContents) # Send Btn
         
         layout.addLayout(header_layout)
         layout.addWidget(self.table_view)
         
         self.setLayout(layout)
         
+        # Connect model signals
+        self.model.itemChanged.connect(self.on_item_changed)
+        
         # Add dummy data
         self.add_dummy_row("AT", False, True, "100")
         self.add_dummy_row("AT+VER?", False, True, "500")
+    
+    def on_item_changed(self, item: QStandardItem) -> None:
+        """모델 아이템 변경 핸들러 - Select 컬럼이 변경되면 Select All 상태 업데이트"""
+        if item.column() == 0:  # Select column
+            self.update_select_all_state()
 
-    def add_dummy_row(self, cmd: str, hex_mode: bool, cr: bool, delay: str) -> None:
+    def add_dummy_row(self, cmd: str, hex_mode: bool, suffix: bool, delay: str) -> None:
         """테스트용 더미 데이터 추가"""
-        self._append_row(cmd, hex_mode, cr, delay)
+        self._append_row(cmd, True, hex_mode, suffix, delay)
 
     def add_empty_row(self) -> None:
         """빈 행 추가"""
-        self._append_row("", False, True, "100")
+        self._append_row("", True, False, True, "100")
         
-    def _append_row(self, cmd: str, hex_mode: bool, cr: bool, delay: str) -> None:
+    def _append_row(self, cmd: str, prefix: bool, hex_mode: bool, suffix: bool, delay: str) -> None:
         row_idx = self.model.rowCount()
         
         # 0: Select Checkbox
         item_select = QStandardItem()
         item_select.setCheckable(True)
         item_select.setCheckState(Qt.Checked)
-        item_select.setEditable(False) # Only checkbox is interactive
+        item_select.setEditable(False)
         
-        # 1: Command
+        # 1: Prefix Checkbox
+        item_prefix = QStandardItem()
+        item_prefix.setCheckable(True)
+        item_prefix.setCheckState(Qt.Checked if prefix else Qt.Unchecked)
+        item_prefix.setEditable(False)
+        
+        # 2: Command
         item_cmd = QStandardItem(cmd)
         
-        # 2: HEX
+        # 3: Suffix Checkbox
+        item_suffix = QStandardItem()
+        item_suffix.setCheckable(True)
+        item_suffix.setCheckState(Qt.Checked if suffix else Qt.Unchecked)
+        item_suffix.setEditable(False)
+        
+        # 4: HEX
         item_hex = QStandardItem()
         item_hex.setCheckable(True)
         item_hex.setCheckState(Qt.Checked if hex_mode else Qt.Unchecked)
         item_hex.setEditable(False)
         
-        # 3: CR
-        item_cr = QStandardItem()
-        item_cr.setCheckable(True)
-        item_cr.setCheckState(Qt.Checked if cr else Qt.Unchecked)
-        item_cr.setEditable(False)
-        
-        # 4: Delay
+        # 5: Delay
         item_delay = QStandardItem(delay)
         
-        # 5: Send (Placeholder)
+        # 6: Send (Placeholder)
         item_send = QStandardItem("")
         item_send.setEditable(False)
         
-        self.model.appendRow([item_select, item_cmd, item_hex, item_cr, item_delay, item_send])
+        self.model.appendRow([item_select, item_prefix, item_cmd, item_suffix, item_hex, item_delay, item_send])
         
         # Set Send Button
         self._set_send_button(row_idx)
+        
+        # Update Select All state
+        self.update_select_all_state()
 
     def _set_send_button(self, row: int) -> None:
         """해당 행에 Send 버튼 설정 (레이아웃 개선)"""
@@ -144,7 +181,7 @@ class CommandListWidget(QWidget):
         
         layout.addWidget(btn)
         
-        index = self.model.index(row, 5)
+        index = self.model.index(row, 6)
         self.table_view.setIndexWidget(index, widget)
 
     def _on_send_btn_clicked(self, btn: QPushButton) -> None:
@@ -160,7 +197,7 @@ class CommandListWidget(QWidget):
     def set_send_enabled(self, enabled: bool) -> None:
         """모든 Send 버튼의 활성화 상태 변경"""
         for row in range(self.model.rowCount()):
-            index = self.model.index(row, 5)
+            index = self.model.index(row, 6)
             widget = self.table_view.indexWidget(index)
             if widget:
                 # widget은 컨테이너이므로 그 안의 버튼을 찾아야 함
@@ -173,6 +210,7 @@ class CommandListWidget(QWidget):
         rows = sorted(set(index.row() for index in self.table_view.selectionModel().selectedRows()), reverse=True)
         for row in rows:
             self.model.removeRow(row)
+        self.update_select_all_state()
             
     def move_row_up(self) -> None:
         """선택된 행 위로 이동"""
@@ -230,9 +268,43 @@ class CommandListWidget(QWidget):
                 indices.append(row)
         return indices
         
+    def on_select_all_changed(self, state: int) -> None:
+        """Select All checkbox 상태 변경 핸들러"""
+        if state == Qt.PartiallyChecked:
+            # PartiallyChecked 상태에서 클릭하면 모두 선택으로
+            self.select_all_check.setCheckState(Qt.Checked)
+        elif state == Qt.Checked:
+            self.set_all_checked(True)
+        else:  # Qt.Unchecked
+            self.set_all_checked(False)
+    
     def set_all_checked(self, checked: bool) -> None:
         """모든 항목 체크/해제"""
         state = Qt.Checked if checked else Qt.Unchecked
         for row in range(self.model.rowCount()):
             item = self.model.item(row, 0)
             item.setCheckState(state)
+        self.update_select_all_state()
+    
+    def update_select_all_state(self) -> None:
+        """Select All checkbox 상태 업데이트 (전체/부분/없음)"""
+        total = self.model.rowCount()
+        if total == 0:
+            self.select_all_check.setCheckState(Qt.Unchecked)
+            return
+            
+        checked_count = 0
+        for row in range(total):
+            item = self.model.item(row, 0)
+            if item and item.checkState() == Qt.Checked:
+                checked_count += 1
+        
+        # Block signals to prevent recursive calls
+        self.select_all_check.blockSignals(True)
+        if checked_count == 0:
+            self.select_all_check.setCheckState(Qt.Unchecked)
+        elif checked_count == total:
+            self.select_all_check.setCheckState(Qt.Checked)
+        else:
+            self.select_all_check.setCheckState(Qt.PartiallyChecked)
+        self.select_all_check.blockSignals(False)

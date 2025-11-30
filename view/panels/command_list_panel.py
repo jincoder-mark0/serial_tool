@@ -31,7 +31,6 @@ class CommandListPanel(QWidget):
         self.command_control.stop_requested.connect(self.stop_requested.emit)
         self.command_control.start_auto_requested.connect(self.on_start_auto_requested)
         self.command_control.stop_auto_requested.connect(self.stop_requested.emit) # Stop signal is same for now
-        self.command_control.select_all_toggled.connect(self.command_list.set_all_checked)
         
         layout.addWidget(self.command_list)
         layout.addWidget(self.command_control)

@@ -19,7 +19,6 @@ class CommandControlWidget(QWidget):
     
     save_script_requested = pyqtSignal()
     load_script_requested = pyqtSignal()
-    select_all_toggled = pyqtSignal(bool)
     
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
@@ -30,12 +29,8 @@ class CommandControlWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(5)
         
-        # 1. Top Row: Select All, Script Controls
+        # 1. Top Row: Script Controls
         top_layout = QHBoxLayout()
-        
-        self.select_all_check = QCheckBox("Select All")
-        self.select_all_check.setToolTip("Select/Deselect all steps")
-        self.select_all_check.toggled.connect(self.select_all_toggled.emit)
         
         self.save_script_btn = QPushButton("Save Script")
         self.save_script_btn.setToolTip("Save current command list to JSON")
@@ -45,7 +40,21 @@ class CommandControlWidget(QWidget):
         self.load_script_btn.setToolTip("Load command list from JSON")
         self.load_script_btn.clicked.connect(self.load_script_requested.emit)
         
-        top_layout.addWidget(self.select_all_check)
+        # Prefix / Suffix Inputs
+        top_layout.addWidget(QLabel("Prefix:"))
+        self.prefix_input = QLineEdit()
+        self.prefix_input.setPlaceholderText("Prefix")
+        self.prefix_input.setFixedWidth(80)
+        self.prefix_input.setToolTip("Global command prefix")
+        top_layout.addWidget(self.prefix_input)
+        
+        top_layout.addWidget(QLabel("Suffix:"))
+        self.suffix_input = QLineEdit()
+        self.suffix_input.setPlaceholderText("Suffix")
+        self.suffix_input.setFixedWidth(80)
+        self.suffix_input.setToolTip("Global command suffix")
+        top_layout.addWidget(self.suffix_input)
+        
         top_layout.addStretch()
         top_layout.addWidget(self.save_script_btn)
         top_layout.addWidget(self.load_script_btn)

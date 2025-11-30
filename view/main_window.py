@@ -1,10 +1,11 @@
 from PyQt5.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QSplitter, QAction, QStatusBar
+    QMainWindow, QWidget, QVBoxLayout, QSplitter, QAction, QStatusBar, QApplication
 )
 from PyQt5.QtCore import Qt
 
 from view.panels.left_panel import LeftPanel
 from view.panels.right_panel import RightPanel
+from view.theme_manager import ThemeManager
 
 class MainWindow(QMainWindow):
     """
@@ -19,6 +20,9 @@ class MainWindow(QMainWindow):
         
         self.init_ui()
         self.init_menu()
+        
+        # Apply default theme
+        self.switch_theme("dark")
         
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃 초기화"""
@@ -66,48 +70,33 @@ class MainWindow(QMainWindow):
         exit_action.triggered.connect(self.close)
         file_menu.addAction(exit_action)
         
-        # Tools Menu
-        tools_menu = menubar.addMenu("Tools")
+        # View Menu (Theme)
+        view_menu = menubar.addMenu("View")
         
-        # Help Menu
-        help_menu = menubar.addMenu("Help")
-        about_action = QAction("About", self)
-        help_menu.addAction(about_action)
+        theme_menu = view_menu.addMenu("Theme")
         
-    def init_menu(self):
-        menubar = self.menuBar()
+        dark_action = QAction("Dark", self)
+        dark_action.triggered.connect(lambda: self.switch_theme("dark"))
+        theme_menu.addAction(dark_action)
         
-        # File Menu
-        file_menu = menubar.addMenu("File")
+        light_action = QAction("Light", self)
+        light_action.triggered.connect(lambda: self.switch_theme("light"))
+        theme_menu.addAction(light_action)
         
-        new_tab_action = QAction("New Port Tab", self)
-        new_tab_action.setShortcut("Ctrl+T")
-        new_tab_action.setToolTip("Open a new serial port tab")
-        new_tab_action.triggered.connect(self.add_new_port_tab)
-        file_menu.addAction(new_tab_action)
+        # Font Menu
+        font_menu = view_menu.addMenu("Font")
         
-        exit_action = QAction("Exit", self)
-        exit_action.setShortcut("Ctrl+Q")
-        exit_action.setToolTip("Exit application")
-        exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
+        fonts = ["Segoe UI", "Consolas", "Arial", "Verdana"]
+        for font in fonts:
+            action = QAction(font, self)
+            action.triggered.connect(lambda checked, f=font: self.change_font(f))
+            font_menu.addAction(action)
+            
+        font_menu.addSeparator()
         
-        # Tools Menu
-        tools_menu = menubar.addMenu("Tools")
-        
-        # Help Menu
-        help_menu = menubar.addMenu("Help")
-        about_action = QAction("About", self)
-        help_menu.addAction(about_action)
-        
-    def init_menu(self):
-        menubar = self.menuBar()
-        
-        # File Menu
-        file_menu = menubar.addMenu("File")
-        exit_action = QAction("Exit", self)
-        exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
+        custom_font_action = QAction("Custom...", self)
+        custom_font_action.triggered.connect(self.open_font_dialog)
+        font_menu.addAction(custom_font_action)
         
         # Tools Menu
         tools_menu = menubar.addMenu("Tools")
@@ -116,3 +105,26 @@ class MainWindow(QMainWindow):
         help_menu = menubar.addMenu("Help")
         about_action = QAction("About", self)
         help_menu.addAction(about_action)
+
+    def switch_theme(self, theme_name: str):
+        """Switches the application theme."""
+        app = QApplication.instance()
+        if app:
+            ThemeManager.apply_theme(app, theme_name)
+
+    def change_font(self, font_family: str):
+        """Changes the application font."""
+        app = QApplication.instance()
+        if app:
+            ThemeManager.set_font(app, font_family)
+
+    def open_font_dialog(self):
+        """Opens a font selection dialog."""
+        from PyQt5.QtWidgets import QFontDialog, QApplication
+        
+        current_font = QApplication.font()
+        font, ok = QFontDialog.getFont(current_font, self)
+        if ok:
+            app = QApplication.instance()
+            if app:
+                app.setFont(font)

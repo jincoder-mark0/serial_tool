@@ -1,100 +1,87 @@
 # 작업 목록 (Task List)
 
 - [x] 프로젝트 초기 설정 (Project Setup) <!-- id: 0 -->
-    - [x] 폴더 구조 생성 (`serial_manager/` 및 하위 `core`, `model`, `view`, `presenter`, `plugins`, `tests`) <!-- id: 1 -->
-    - [x] `requirements.txt` 작성 (PyQt5, pyserial, requests, etc.) <!-- id: 2 -->
-    - [x] `README.md` 작성 (프로젝트 개요, 설치 및 실행 가이드) <!-- id: 29 -->
-    - [x] `version.py` 및 `default_settings.json` 템플릿 작성 <!-- id: 34 -->
-    - [x] `main.py` 진입점 작성 <!-- id: 3 -->
+  - [x] 폴더 구조 생성 (`serial_manager/` 및 하위 `core`, `model`, `view`, `presenter`, `plugins`, `tests`) <!-- id: 1 -->
+  - [x] `requirements.txt` 작성 (PyQt5, pyserial, requests, etc.) <!-- id: 2 -->
+  - [x] `README.md` 작성 (프로젝트 개요, 설치 및 실행 가이드) <!-- id: 29 -->
+  - [x] `version.py` 및 `default_settings.json` 템플릿 작성 <!-- id: 34 -->
+  - [x] `main.py` 진입점 작성 <!-- id: 3 -->
 
 - [x] UI 기본 골격 및 View 구현 (UI Skeleton & Views) <!-- id: 9 -->
-    - [x] `view/main_window.py` (Main Layout, Splitter, Menu, Toolbar) <!-- id: 10 -->
-    - [x] `view/widgets/port_settings.py` (PortCombo, BaudSelector) <!-- id: 11 -->
-    - [x] `view/rx_log_view.py` (Custom QTextEdit, Batch Rendering, Hex View) <!-- id: 12 -->
-    - [x] `view/tx_panel.py` (Input, Send Button, History) <!-- id: 35 -->
-    - [x] `view/command_list_panel.py` (QTableView, Delegate, Controls) <!-- id: 18 -->
-    - [x] `view/status_bar.py` (Real-time Stats, Progress) <!-- id: 13 -->
-    - [x] `view/widgets/packet_inspector.py` (Packet Detail View) <!-- id: 36 -->
-    - [ ] `core/utils.py` (RingBuffer, ThreadSafeQueue) <!-- id: 37 -->
-    - [ ] `model/serial_worker.py` (QThread, Non-blocking I/O) <!-- id: 6 -->
-    - [ ] `model/port_controller.py` (Port Lifecycle, State Machine) <!-- id: 38 -->
-    - [ ] `model/packet_parser.py` (Factory, AT/Delimiter/Fixed Parsers) <!-- id: 39 -->
-    - [ ] `model/serial_manager.py` (PortRegistry, Multi-port Management) <!-- id: 40 -->
+  - [x] `view/main_window.py` (Main Layout, Splitter, Menu, Toolbar) <!-- id: 10 -->
+  - [x] `view/widgets/port_settings.py` (PortCombo, BaudSelector) <!-- id: 11 -->
+  - [x] `view/rx_log_view.py` (Custom QTextEdit, Batch Rendering, Hex View) <!-- id: 12 -->
+  - [x] `view/tx_panel.py` (Input, Send Button, History) <!-- id: 35 -->
+  - [x] `view/command_list_panel.py` (QTableView, Delegate, Controls) <!-- id: 18 -->
+  - [x] `view/status_bar.py` (Real-time Stats, Progress) <!-- id: 13 -->
+  - [x] `view/widgets/packet_inspector.py` (Packet Detail View) <!-- id: 36 -->
+  - [ ] `core/utils.py` (RingBuffer, ThreadSafeQueue) <!-- id: 37 -->
+  - [ ] `model/serial_worker.py` (QThread, Non-blocking I/O) <!-- id: 6 -->
+  - [ ] `model/port_controller.py` (Port Lifecycle, State Machine) <!-- id: 38 -->
+  - [ ] `model/packet_parser.py` (Factory, AT/Delimiter/Fixed Parsers) <!-- id: 39 -->
+  - [ ] `model/serial_manager.py` (PortRegistry, Multi-port Management) <!-- id: 40 -->
+
+- [x] 테마 및 스타일링 시스템 (Theme & Styling System)
+  - [x] `view/styles/theme_manager.py` (QSS Loading & Application)
+  - [x] `view/styles/dark_theme.qss` (Dark Mode Style)
+  - [x] `view/styles/light_theme.qss` (Light Mode Style)
+  - [x] UI 컴포넌트 테마 적용 및 동적 전환 (Dynamic Switching)
+  - [x] UI 개선 (UI Refinement)
+    - [x] 폰트 변경 기능 추가 (View -> Font Menu)
+    - [x] 콤보박스 화살표 아이콘 추가 (Base64 SVG)
+    - [x] 포트 설정 위젯 레이아웃 개선 (Component Sizing)
+  - [x] UI 레이아웃 최적화 및 기능 업데이트 (Layout & Features)
+    - [x] `PortSettingsWidget` 레이아웃 컴팩트화 (2줄 구성)
+    - [x] 콤보박스 화살표 표시 문제 해결 (Style Fix)
+    - [x] `CommandList`: Enter -> Tail 변경 및 Head 추가 (Checkboxes)
+    - [x] `CommandControl`: Head/Tail 입력 필드 추가
+  - [x] UI 추가 개선 및 리네이밍 (Refinement & Renaming)
+    - [x] `PortSettingsWidget`: Port Combo 크기 조정 (Baud Combo와 동일하게)
+    - [x] 아이콘 적용 (SVG): Close Tab, Add, Del, Up, Down (White/Black)
+    - [x] 용어 변경: Head/Tail -> Prefix/Suffix (`CommandList`, `CommandControl`)
 
 - [ ] Presenter 및 로직 연결 (Presenter Integration) <!-- id: 14 -->
-    - [ ] `presenter/event_router.py` (Event Routing) <!-- id: 41 -->
-    - [ ] `presenter/main_presenter.py` (Central Logic) <!-- id: 15 -->
-    - [ ] `presenter/port_presenter.py` (Open/Close, Settings) <!-- id: 42 -->
-    - [ ] 포트 열기/닫기, 데이터 송수신(Tx/Rx) 연동 확인 <!-- id: 16 -->
+  - [ ] `presenter/event_router.py` (Event Routing) <!-- id: 41 -->
+  - [ ] `presenter/main_presenter.py` (Central Logic) <!-- id: 15 -->
+  - [ ] `presenter/port_presenter.py` (Open/Close, Settings) <!-- id: 42 -->
+  - [ ] 포트 열기/닫기, 데이터 송수신(Tx/Rx) 연동 확인 <!-- id: 16 -->
 
 - [ ] Command List 및 자동화 구현 (Automation) <!-- id: 17 -->
-    - [ ] `model/command_entry.py` (DTO) <!-- id: 8 -->
-    - [ ] `model/cl_runner.py` (Command List Engine, Expect/Timeout) <!-- id: 43 -->
-# 작업 목록 (Task List)
-
-- [x] 프로젝트 초기 설정 (Project Setup) <!-- id: 0 -->
-    - [x] 폴더 구조 생성 (`serial_manager/` 및 하위 `core`, `model`, `view`, `presenter`, `plugins`, `tests`) <!-- id: 1 -->
-    - [x] `requirements.txt` 작성 (PyQt5, pyserial, requests, etc.) <!-- id: 2 -->
-    - [x] `README.md` 작성 (프로젝트 개요, 설치 및 실행 가이드) <!-- id: 29 -->
-    - [x] `version.py` 및 `default_settings.json` 템플릿 작성 <!-- id: 34 -->
-    - [x] `main.py` 진입점 작성 <!-- id: 3 -->
-
-- [x] UI 기본 골격 및 View 구현 (UI Skeleton & Views) <!-- id: 9 -->
-    - [x] `view/main_window.py` (Main Layout, Splitter, Menu, Toolbar) <!-- id: 10 -->
-    - [x] `view/widgets/port_settings.py` (PortCombo, BaudSelector) <!-- id: 11 -->
-    - [x] `view/rx_log_view.py` (Custom QTextEdit, Batch Rendering, Hex View) <!-- id: 12 -->
-    - [x] `view/tx_panel.py` (Input, Send Button, History) <!-- id: 35 -->
-    - [x] `view/command_list_panel.py` (QTableView, Delegate, Controls) <!-- id: 18 -->
-    - [x] `view/status_bar.py` (Real-time Stats, Progress) <!-- id: 13 -->
-    - [x] `view/widgets/packet_inspector.py` (Packet Detail View) <!-- id: 36 -->
-    - [ ] `core/utils.py` (RingBuffer, ThreadSafeQueue) <!-- id: 37 -->
-    - [ ] `model/serial_worker.py` (QThread, Non-blocking I/O) <!-- id: 6 -->
-    - [ ] `model/port_controller.py` (Port Lifecycle, State Machine) <!-- id: 38 -->
-    - [ ] `model/packet_parser.py` (Factory, AT/Delimiter/Fixed Parsers) <!-- id: 39 -->
-    - [ ] `model/serial_manager.py` (PortRegistry, Multi-port Management) <!-- id: 40 -->
-
-- [ ] Presenter 및 로직 연결 (Presenter Integration) <!-- id: 14 -->
-    - [ ] `presenter/event_router.py` (Event Routing) <!-- id: 41 -->
-    - [ ] `presenter/main_presenter.py` (Central Logic) <!-- id: 15 -->
-    - [ ] `presenter/port_presenter.py` (Open/Close, Settings) <!-- id: 42 -->
-    - [ ] 포트 열기/닫기, 데이터 송수신(Tx/Rx) 연동 확인 <!-- id: 16 -->
-
-- [ ] Command List 및 자동화 구현 (Automation) <!-- id: 17 -->
-    - [ ] `model/command_entry.py` (DTO) <!-- id: 8 -->
-    - [ ] `model/cl_runner.py` (Command List Engine, Expect/Timeout) <!-- id: 43 -->
-    - [ ] `presenter/command_presenter.py` (Run/Stop/Pause Logic) <!-- id: 44 -->
-    - [ ] Command List 저장/로드 (JSON) 및 실행 테스트 <!-- id: 19 -->
+  - [ ] `model/command_entry.py` (DTO) <!-- id: 8 -->
+  - [ ] `model/cl_runner.py` (Command List Engine, Expect/Timeout) <!-- id: 43 -->
+  - [ ] `presenter/command_presenter.py` (Run/Stop/Pause Logic) <!-- id: 44 -->
+  - [ ] Command List 저장/로드 (JSON) 및 실행 테스트 <!-- id: 19 -->
 
 - [ ] 파일 전송 및 고급 기능 (Advanced Features) <!-- id: 20 -->
-    - [ ] `model/file_transfer.py` (Chunk-based Transfer, QRunnable) <!-- id: 22 -->
-    - [ ] `presenter/file_presenter.py` (Progress Update, Cancel) <!-- id: 45 -->
-    - [ ] `core/settings_manager.py` (Global/Port Profile Persistence) <!-- id: 24 -->
-    - [x] 사용자 피드백 반영: 멀티 포트 탭 구조로 변경 (PortPanel, QTabWidget) <!-- id: 51 -->
-    - [x] 사용자 피드백 반영: 모든 컴포넌트에 툴팁 및 단축키 설명 추가 <!-- id: 52 -->
-    - [x] 사용자 피드백 반영: 위젯 구조 리팩토링 (`widgets/` 하위 분리) <!-- id: 53 -->
-        - [x] `received_area.py`, `status_area.py`, `operation_area.py` 생성 <!-- id: 54 -->
-        - [x] `command_list.py`, `command_row.py` 분리 및 Status 컬럼 제거 <!-- id: 55 -->
-        - [x] 모든 메서드에 타입 힌트 및 주석 추가 <!-- id: 56 -->
-        - [x] `OperationArea` 재작성 (과거 사양 반영) <!-- id: 58 -->
-        - [x] `CommandList`에서 Run Control 분리 및 `CommandListPanel` 재구성 <!-- id: 60 -->
-        - [x] `MainWindow` 레이아웃 수정: `OperationArea` 좌측 배치, `+` 탭 로직 구현 <!-- id: 61 -->
-        - [x] 네이밍 변경: `RunControl` -> `CommandControl`, `OperationArea` -> `ManualControl` <!-- id: 62 -->
-        - [x] 구조 개선: `LeftPanel`, `RightPanel` 도입하여 `MainWindow` 단순화 <!-- id: 63 -->
-        - [x] 패널 이동: `port_panel.py`, `command_list_panel.py`, `tx_panel.py` -> `view/panels/` <!-- id: 64 -->
-        - [x] 미사용 파일 삭제 (`rx_log_view.py`, `status_bar.py`, `run_control.py`, `operation_area.py`) <!-- id: 59 -->
-        - [x] `CommandControlWidget` 기능 보강 (스크립트 저장/로드, 자동 실행 설정) <!-- id: 65 -->
-        - [x] `CommandListWidget` 렌더링 개선 (버튼/체크박스, 레이아웃) <!-- id: 66 -->
-        - [x] 초기 실행 시 버튼 비활성화 로직 구현 <!-- id: 67 -->
-    - [x] 탭 이름 동적 변경 (COMx / -) 및 + 버튼 위치 개선 <!-- id: 57 -->
-    - [x] 최종 UI 검증 <!-- id: 33 -->
+  - [ ] `model/file_transfer.py` (Chunk-based Transfer, QRunnable) <!-- id: 22 -->
+  - [ ] `presenter/file_presenter.py` (Progress Update, Cancel) <!-- id: 45 -->
+  - [ ] `core/settings_manager.py` (Global/Port Profile Persistence) <!-- id: 24 -->
+  - [x] 사용자 피드백 반영: 멀티 포트 탭 구조로 변경 (PortPanel, QTabWidget) <!-- id: 51 -->
+  - [x] 사용자 피드백 반영: 모든 컴포넌트에 툴팁 및 단축키 설명 추가 <!-- id: 52 -->
+  - [x] 사용자 피드백 반영: 위젯 구조 리팩토링 (`widgets/` 하위 분리) <!-- id: 53 -->
+    - [x] `received_area.py`, `status_area.py`, `operation_area.py` 생성 <!-- id: 54 -->
+    - [x] `command_list.py`, `command_row.py` 분리 및 Status 컬럼 제거 <!-- id: 55 -->
+    - [x] 모든 메서드에 타입 힌트 및 주석 추가 <!-- id: 56 -->
+    - [x] `OperationArea` 재작성 (과거 사양 반영) <!-- id: 58 -->
+    - [x] `CommandList`에서 Run Control 분리 및 `CommandListPanel` 재구성 <!-- id: 60 -->
+    - [x] `MainWindow` 레이아웃 수정: `OperationArea` 좌측 배치, `+` 탭 로직 구현 <!-- id: 61 -->
+    - [x] 네이밍 변경: `RunControl` -> `CommandControl`, `OperationArea` -> `ManualControl` <!-- id: 62 -->
+    - [x] 구조 개선: `LeftPanel`, `RightPanel` 도입하여 `MainWindow` 단순화 <!-- id: 63 -->
+    - [x] 패널 이동: `port_panel.py`, `command_list_panel.py`, `tx_panel.py` -> `view/panels/` <!-- id: 64 -->
+    - [x] 미사용 파일 삭제 (`rx_log_view.py`, `status_bar.py`, `run_control.py`, `operation_area.py`) <!-- id: 59 -->
+    - [x] `CommandControlWidget` 기능 보강 (스크립트 저장/로드, 자동 실행 설정) <!-- id: 65 -->
+    - [x] `CommandListWidget` 렌더링 개선 (버튼/체크박스, 레이아웃) <!-- id: 66 -->
+    - [x] 초기 실행 시 버튼 비활성화 로직 구현 <!-- id: 67 -->
+  - [x] 탭 이름 동적 변경 (COMx / -) 및 + 버튼 위치 개선 <!-- id: 57 -->
+  - [x] 최종 UI 검증 <!-- id: 33 -->
 
 - [ ] 플러그인 시스템 (Plugin System) <!-- id: 23 -->
-    - [ ] `core/plugin_base.py` (Interface Definition) <!-- id: 47 -->
-    - [ ] `core/plugin_loader.py` (Dynamic Loading) <!-- id: 25 -->
-    - [ ] `plugins/example_plugin.py` (Sample Implementation) <!-- id: 48 -->
+  - [ ] `core/plugin_base.py` (Interface Definition) <!-- id: 47 -->
+  - [ ] `core/plugin_loader.py` (Dynamic Loading) <!-- id: 25 -->
+  - [ ] `plugins/example_plugin.py` (Sample Implementation) <!-- id: 48 -->
 
 - [ ] 테스트 및 배포 (Testing & Deployment) <!-- id: 26 -->
-    - [ ] 단위 테스트 (Core, Model) 및 통합 테스트 (Virtual Port) <!-- id: 27 -->
-    - [ ] 성능 벤치마크 (Rx Throughput, UI Rendering) <!-- id: 49 -->
-    - [ ] `pyinstaller.spec` 작성 및 빌드 테스트 <!-- id: 50 -->
-    - [ ] 최종 수동 검증 및 문서 업데이트 <!-- id: 28 -->
+  - [ ] 단위 테스트 (Core, Model) 및 통합 테스트 (Virtual Port) <!-- id: 27 -->
+  - [ ] 성능 벤치마크 (Rx Throughput, UI Rendering) <!-- id: 49 -->
+  - [ ] `pyinstaller.spec` 작성 및 빌드 테스트 <!-- id: 50 -->
+  - [ ] 최종 수동 검증 및 문서 업데이트 <!-- id: 28 -->
