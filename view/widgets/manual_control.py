@@ -64,7 +64,7 @@ class ManualControlWidget(QWidget):
         
         self.send_btn = QPushButton("Send")
         self.send_btn.setMinimumHeight(50)
-        self.send_btn.setStyleSheet("font-weight: bold;")
+        # self.send_btn.setStyleSheet("font-weight: bold;")
         self.send_btn.clicked.connect(self.on_send_clicked)
         
         send_layout.addWidget(self.input_text, 1)
@@ -78,7 +78,7 @@ class ManualControlWidget(QWidget):
         file_layout.setContentsMargins(5, 5, 5, 5)
         
         self.file_path_label = QLabel("No file selected")
-        self.file_path_label.setStyleSheet("color: gray; border: 1px solid #ccc; padding: 2px;")
+        # self.file_path_label.setStyleSheet("color: gray; border: 1px solid #ccc; padding: 2px;")
         
         self.select_file_btn = QPushButton("Select File")
         self.select_file_btn.clicked.connect(self.on_select_file_clicked)

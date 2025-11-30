@@ -36,7 +36,7 @@ class TxPanel(QWidget):
         self.send_btn = QPushButton("Send")
         self.send_btn.clicked.connect(self.on_send)
         self.send_btn.setToolTip("Send data (Enter)")
-        self.send_btn.setStyleSheet("font-weight: bold; background-color: #2196F3; color: white;")
+        # self.send_btn.setStyleSheet("font-weight: bold; background-color: #2196F3; color: white;")
         
         controls_layout.addWidget(self.hex_check)
         controls_layout.addWidget(self.cr_check)

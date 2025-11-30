@@ -84,10 +84,10 @@ class PortSettingsWidget(QGroupBox):
         self.connect_btn.setCheckable(True)
         self.connect_btn.setToolTip("Open/Close serial port connection")
         self.connect_btn.clicked.connect(self.on_connect_clicked)
-        self.connect_btn.setStyleSheet("""
-            QPushButton { background-color: #4CAF50; color: white; font-weight: bold; }
-            QPushButton:checked { background-color: #F44336; }
-        """)
+        # self.connect_btn.setStyleSheet("""
+        #     QPushButton { background-color: #4CAF50; color: white; font-weight: bold; }
+        #     QPushButton:checked { background-color: #F44336; }
+        # """)
         
         # Layout Assembly
         layout.addWidget(self.port_combo, 0, 0, 1, 2)

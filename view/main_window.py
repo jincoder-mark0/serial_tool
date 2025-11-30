@@ -14,7 +14,7 @@ class MainWindow(QMainWindow):
     
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("SerialManager v1.0")
+        self.setWindowTitle("SerialTool v1.0")
         self.resize(1400, 900)
         
         self.init_ui()

@@ -69,7 +69,7 @@ class ReceivedArea(QWidget):
         font = QFont("Consolas", 10)
         font.setStyleHint(QFont.Monospace)
         self.text_edit.setFont(font)
-        self.text_edit.setStyleSheet("background-color: #1E1E1E; color: #D4D4D4;")
+        # self.text_edit.setStyleSheet("background-color: #1E1E1E; color: #D4D4D4;")
         
         layout.addLayout(toolbar)
         layout.addWidget(self.text_edit)

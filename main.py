@@ -20,7 +20,7 @@ def setup_logging():
 
 def main():
     setup_logging()
-    logging.info(f"Starting SerialManager v{__version__}")
+    logging.info(f"Starting Serial Tool v{__version__}")
 
     # High DPI Scaling
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
@@ -29,7 +29,7 @@ def main():
     app = QApplication(sys.argv)
     
     # 테마 적용
-    app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
+    # app.setStyleSheet(qdarkstyle.load_stylesheet_pyqt5())
 
     # MainWindow 초기화
     window = MainWindow()

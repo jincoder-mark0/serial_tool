@@ -27,7 +27,7 @@ class StatusArea(QWidget):
         layout.setSpacing(2)
         
         label = QLabel("Status Log")
-        label.setStyleSheet("font-weight: bold; font-size: 10px;")
+        # label.setStyleSheet("font-weight: bold; font-size: 10px;")
         
         self.log_edit = QTextEdit()
         self.log_edit.setReadOnly(True)

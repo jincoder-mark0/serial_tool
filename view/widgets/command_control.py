@@ -58,7 +58,7 @@ class CommandControlWidget(QWidget):
         # Row 0: Single Run
         self.run_btn = QPushButton("Run Selected (Once)")
         self.run_btn.setToolTip("Execute selected commands once (F5)")
-        self.run_btn.setStyleSheet("font-weight: bold;")
+        # self.run_btn.setStyleSheet("font-weight: bold;")
         self.run_btn.clicked.connect(self.run_single_requested.emit)
         
         self.stop_btn = QPushButton("Stop")
@@ -86,7 +86,7 @@ class CommandControlWidget(QWidget):
         
         # Row 2: Auto Run Controls & Status
         self.auto_run_btn = QPushButton("Start Auto Run")
-        self.auto_run_btn.setStyleSheet("background-color: #4CAF50; color: white;")
+        # self.auto_run_btn.setStyleSheet("background-color: #4CAF50; color: white;")
         self.auto_run_btn.clicked.connect(self.on_start_auto)
         
         self.stop_auto_btn = QPushButton("Stop Auto")
