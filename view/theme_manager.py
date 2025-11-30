@@ -4,23 +4,37 @@ from PyQt5.QtWidgets import QApplication
 class ThemeManager:
     @staticmethod
     def load_theme(theme_name: str = "dark") -> str:
-        """Loads the QSS content for the specified theme."""
+        """Loads the QSS content for the specified theme, prepending common styles."""
+        common_path = "resources/themes/common.qss"
         theme_files = {
             "dark": "resources/themes/dark_theme.qss",
             "light": "resources/themes/light_theme.qss"
         }
         
-        qss_path = theme_files.get(theme_name)
-        if not qss_path or not os.path.exists(qss_path):
-            print(f"Theme file not found: {qss_path}")
-            return ""
+        qss_content = ""
         
-        try:
-            with open(qss_path, "r", encoding="utf-8") as f:
-                return f.read()
-        except Exception as e:
-            print(f"Error loading theme {theme_name}: {e}")
-            return ""
+        # 1. Load Common QSS
+        if os.path.exists(common_path):
+            try:
+                with open(common_path, "r", encoding="utf-8") as f:
+                    qss_content += f.read() + "\n"
+            except Exception as e:
+                print(f"Error loading common theme: {e}")
+        else:
+            print(f"Common theme file not found: {common_path}")
+            
+        # 2. Load Specific Theme QSS
+        qss_path = theme_files.get(theme_name)
+        if qss_path and os.path.exists(qss_path):
+            try:
+                with open(qss_path, "r", encoding="utf-8") as f:
+                    qss_content += f.read()
+            except Exception as e:
+                print(f"Error loading theme {theme_name}: {e}")
+        else:
+            print(f"Theme file not found: {qss_path}")
+            
+        return qss_content
 
     @staticmethod
     def apply_theme(app: QApplication, theme_name: str = "dark"):

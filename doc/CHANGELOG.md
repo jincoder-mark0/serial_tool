@@ -57,6 +57,25 @@
 - Select All 체크박스가 이제 개별 행 체크박스 변경에 반응함
 - Import 오류 수정 (QCheckBox, QSizePolicy)
 
+### UI/UX 개선 및 테마 리팩토링 (2025-12-01)
+
+#### 변경 사항 (Changed)
+
+- **ManualControlWidget 개선**:
+  - 레이아웃을 컴팩트하게 조정 (불필요한 여백 제거)
+  - 입력창을 `QTextEdit`에서 `QLineEdit`으로 변경하여 높이 축소
+  - Send 버튼 높이 조정 및 스타일 적용
+  - Flow Control (RTS/DTR) 체크박스 추가
+- **CommandControlWidget 개선**:
+  - 레이아웃 정리 및 버튼 배치 최적화
+  - Start Auto Run (녹색), Stop (붉은색) 버튼에 강조 스타일 적용
+- **MainWindow 개선**:
+  - 좌우 패널 스플리터 비율을 2:1에서 1:1로 조정하여 균형 개선
+- **테마 시스템 리팩토링**:
+  - `common.qss` 도입으로 공통 스타일 통합 관리
+  - `ThemeManager`가 공통 스타일과 개별 테마를 병합하여 로드하도록 개선
+  - 라이트 테마에서 비활성화된 버튼의 시인성 개선 (틴트 색상 적용)
+
 ### 프로젝트 구조 (2025-11-30)
 
 #### 추가 사항 (Added)

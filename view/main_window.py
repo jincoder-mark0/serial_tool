@@ -41,8 +41,8 @@ class MainWindow(QMainWindow):
         
         splitter.addWidget(self.left_panel)
         splitter.addWidget(self.right_panel)
-        splitter.setStretchFactor(0, 2) # Left side wider
-        splitter.setStretchFactor(1, 1)
+        splitter.setStretchFactor(0, 1) # Left side
+        splitter.setStretchFactor(1, 1) # Right side
         
         main_layout.addWidget(splitter)
         

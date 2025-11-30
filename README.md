@@ -8,6 +8,7 @@
 * **강력한 수동 제어 (Manual Control)**:
   * HEX / ASCII 모드 지원
   * CR/LF 자동 추가 옵션
+  * **Flow Control (RTS/DTR) 제어**
   * 파일 전송 기능
   * 로그 저장 및 화면 클리어
 * **커맨드 리스트 자동화 (Command List Automation)**:
