@@ -1,0 +1,35 @@
+{
+  "version": "1.0",
+  "global": {
+    "theme": "dark",
+    "language": "ko",
+    "auto_update_check": true,
+    "log_level": "INFO",
+    "port_scan_interval": 5000
+  },
+  "ui": {
+    "timestamp_format": "[HH:MM:SS.mmm]",
+    "log_max_lines": 2000,
+    "hex_mode_default": false,
+    "font_family": "Consolas",
+    "font_size": 11
+  },
+  "ports": {
+    "recent_ports": [],
+    "default_config": {
+      "baudrate": 115200,
+      "parity": "N",
+      "bytesize": 8,
+      "stopbits": 1,
+      "flow_control": "none",
+      "timeout_ms": 100
+    }
+  },
+  "command_list": {
+    "recent_profiles": [],
+    "auto_run_defaults": {
+      "interval_ms": 100,
+      "max_loops": 10
+    }
+  }
+}

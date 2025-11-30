@@ -1,0 +1,100 @@
+import serial
+import time
+from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QMutexLocker
+from typing import Optional
+
+class SerialWorker(QThread):
+    """
+    시리얼 포트에서 데이터를 지속적으로 읽어오는 워커 스레드입니다.
+    """
+    # Signals
+    data_received = pyqtSignal(bytes)
+    error_occurred = pyqtSignal(str)
+    port_opened = pyqtSignal(str)
+    port_closed = pyqtSignal(str)
+
+    def __init__(self, port_name: str, baudrate: int, parent=None):
+        super().__init__(parent)
+        self.port_name = port_name
+        self.baudrate = baudrate
+        self.serial_port: Optional[serial.Serial] = None
+        self._is_running = False
+        self._mutex = QMutex()
+        
+        # Settings
+        self.data_bits = serial.EIGHTBITS
+        self.stop_bits = serial.STOPBITS_ONE
+        self.parity = serial.PARITY_NONE
+        self.flow_control = False # RTS/CTS
+
+    def run(self):
+        """스레드 실행 루프"""
+        try:
+            self.serial_port = serial.Serial(
+                port=self.port_name,
+                baudrate=self.baudrate,
+                bytesize=self.data_bits,
+                parity=self.parity,
+                stopbits=self.stop_bits,
+                timeout=0.1, # Non-blocking read with small timeout
+                xonxoff=False,
+                rtscts=self.flow_control,
+                dsrdtr=False
+            )
+            
+            if self.serial_port.is_open:
+                self._is_running = True
+                self.port_opened.emit(self.port_name)
+                
+                while self._is_running:
+                    try:
+                        if self.serial_port.in_waiting > 0:
+                            data = self.serial_port.read(self.serial_port.in_waiting)
+                            if data:
+                                self.data_received.emit(data)
+                        else:
+                            # CPU 점유율 방지를 위한 짧은 대기
+                            self.msleep(10) 
+                    except Exception as e:
+                        self.error_occurred.emit(f"Read Error: {str(e)}")
+                        break
+                        
+        except serial.SerialException as e:
+            self.error_occurred.emit(f"Open Error: {str(e)}")
+        finally:
+            self.close_port()
+
+    def stop(self):
+        """스레드 중지 요청"""
+        with QMutexLocker(self._mutex):
+            self._is_running = False
+        self.wait() # 스레드 종료 대기
+
+    def close_port(self):
+        """포트 닫기"""
+        if self.serial_port and self.serial_port.is_open:
+            try:
+                self.serial_port.close()
+                self.port_closed.emit(self.port_name)
+            except Exception as e:
+                self.error_occurred.emit(f"Close Error: {str(e)}")
+        self.serial_port = None
+
+    def write_data(self, data: bytes) -> bool:
+        """데이터 전송 (스레드 안전)"""
+        with QMutexLocker(self._mutex):
+            if self.serial_port and self.serial_port.is_open:
+                try:
+                    self.serial_port.write(data)
+                    return True
+                except Exception as e:
+                    self.error_occurred.emit(f"Write Error: {str(e)}")
+        return False
+        
+    def set_dtr(self, state: bool):
+        if self.serial_port and self.serial_port.is_open:
+            self.serial_port.dtr = state
+            
+    def set_rts(self, state: bool):
+        if self.serial_port and self.serial_port.is_open:
+            self.serial_port.rts = state
