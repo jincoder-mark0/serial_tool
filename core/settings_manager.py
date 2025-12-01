@@ -142,6 +142,15 @@ class SettingsManager:
         
         current[keys[-1]] = value
     
+    def get_all_settings(self) -> Dict[str, Any]:
+        """
+        전체 설정 딕셔너리를 반환합니다.
+        
+        Returns:
+            전체 설정 딕셔너리
+        """
+        return self.settings
+    
     def _get_fallback_settings(self) -> Dict[str, Any]:
         """
         기본 설정 파일이 없을 때 사용할 최소 설정을 반환합니다.
