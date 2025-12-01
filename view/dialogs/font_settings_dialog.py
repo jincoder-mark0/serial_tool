@@ -7,11 +7,18 @@ from PyQt5.QtGui import QFont
 
 class FontSettingsDialog(QDialog):
     """
-    듀얼 폰트 설정 대화상자
-    Proportional Font와 Fixed Font를 개별적으로 설정할 수 있습니다.
+    듀얼 폰트 설정 대화상자입니다.
+    가변폭(Proportional) 폰트와 고정폭(Fixed) 폰트를 개별적으로 설정할 수 있습니다.
     """
     
     def __init__(self, theme_manager, parent=None):
+        """
+        FontSettingsDialog를 초기화합니다.
+        
+        Args:
+            theme_manager (ThemeManager): 테마 및 폰트 관리를 위한 ThemeManager 인스턴스.
+            parent (QWidget, optional): 부모 위젯. 기본값은 None.
+        """
         super().__init__(parent)
         self.theme_manager = theme_manager
         
@@ -23,16 +30,16 @@ class FontSettingsDialog(QDialog):
         self.load_current_fonts()
     
     def init_ui(self):
-        """UI 초기화"""
+        """UI 컴포넌트를 초기화하고 레이아웃을 구성합니다."""
         layout = QVBoxLayout(self)
         layout.setSpacing(15)
         
-        # Proportional Font Group
+        # 가변폭 폰트 그룹 (Proportional Font Group)
         prop_group = QGroupBox("Proportional Font (UI Elements)")
-        prop_group.setToolTip("Used for menus, labels, buttons, and other UI elements")
+        prop_group.setToolTip("메뉴, 라벨, 버튼 등 일반 UI 요소에 사용됩니다.")
         prop_layout = QVBoxLayout(prop_group)
         
-        # Proportional font controls
+        # 가변폭 폰트 컨트롤
         prop_controls = QHBoxLayout()
         prop_controls.addWidget(QLabel("Font:"))
         self.prop_font_combo = QFontComboBox()
@@ -50,7 +57,7 @@ class FontSettingsDialog(QDialog):
         
         prop_layout.addLayout(prop_controls)
         
-        # Proportional font preview
+        # 가변폭 폰트 미리보기
         self.prop_preview = QTextEdit()
         self.prop_preview.setReadOnly(True)
         self.prop_preview.setMaximumHeight(80)
@@ -60,12 +67,12 @@ class FontSettingsDialog(QDialog):
         
         layout.addWidget(prop_group)
         
-        # Fixed Font Group
+        # 고정폭 폰트 그룹 (Fixed Font Group)
         fixed_group = QGroupBox("Fixed Font (Text Data)")
-        fixed_group.setToolTip("Used for TextEdit, LineEdit, CommandList, and other text data")
+        fixed_group.setToolTip("TextEdit, LineEdit, CommandList 등 텍스트 데이터 표시에 사용됩니다.")
         fixed_layout = QVBoxLayout(fixed_group)
         
-        # Fixed font controls
+        # 고정폭 폰트 컨트롤
         fixed_controls = QHBoxLayout()
         fixed_controls.addWidget(QLabel("Font:"))
         self.fixed_font_combo = QFontComboBox()
@@ -83,7 +90,7 @@ class FontSettingsDialog(QDialog):
         
         fixed_layout.addLayout(fixed_controls)
         
-        # Fixed font preview
+        # 고정폭 폰트 미리보기
         self.fixed_preview = QTextEdit()
         self.fixed_preview.setReadOnly(True)
         self.fixed_preview.setMaximumHeight(80)
@@ -93,11 +100,11 @@ class FontSettingsDialog(QDialog):
         
         layout.addWidget(fixed_group)
         
-        # Buttons
+        # 버튼 영역
         button_layout = QHBoxLayout()
         
         reset_button = QPushButton("Reset to Defaults")
-        reset_button.setToolTip("Reset fonts to platform defaults")
+        reset_button.setToolTip("플랫폼 기본 폰트로 초기화합니다.")
         reset_button.clicked.connect(self.reset_to_defaults)
         button_layout.addWidget(reset_button)
         
@@ -112,53 +119,68 @@ class FontSettingsDialog(QDialog):
         layout.addLayout(button_layout)
         
     def showEvent(self, event):
-        """다이얼로그가 보여질 때 프리뷰를 확실하게 초기화합니다."""
+        """
+        다이얼로그가 표시될 때 호출됩니다. 프리뷰를 현재 설정으로 초기화합니다.
+        
+        Args:
+            event (QShowEvent): 표시 이벤트.
+        """
         super().showEvent(event)
-        # Force update previews with current settings
+        # 프리뷰를 현재 설정으로 강제 업데이트
         self.load_current_fonts()
     
     def load_current_fonts(self):
-        """현재 폰트 설정을 로드합니다."""
-        # Load proportional font
+        """ThemeManager에서 현재 폰트 설정을 로드하여 UI에 반영합니다."""
+        # 가변폭 폰트 로드
         prop_family, prop_size = self.theme_manager.get_proportional_font_info()
         self.prop_font_combo.setCurrentFont(QFont(prop_family))
         self.prop_size_spin.setValue(prop_size)
         
-        # Load fixed font
+        # 고정폭 폰트 로드
         fixed_family, fixed_size = self.theme_manager.get_fixed_font_info()
         self.fixed_font_combo.setCurrentFont(QFont(fixed_family))
         self.fixed_size_spin.setValue(fixed_size)
         
-        # Update previews explicitly with loaded values
-        # (Combo box signals might not trigger if value is same as default or during init)
+        # 로드된 값으로 프리뷰 명시적 업데이트
+        # (콤보박스 시그널은 값이 같거나 초기화 중일 때 발생하지 않을 수 있음)
         self._update_prop_preview_with_font(QFont(prop_family, prop_size))
         self._update_fixed_preview_with_font(QFont(fixed_family, fixed_size))
     
     def update_prop_preview(self):
-        """Proportional 폰트 프리뷰를 업데이트합니다 (Signal Slot)."""
+        """가변폭 폰트 프리뷰를 업데이트합니다 (Signal Slot)."""
         font = QFont(self.prop_font_combo.currentFont().family(), self.prop_size_spin.value())
         self._update_prop_preview_with_font(font)
 
     def _update_prop_preview_with_font(self, font: QFont):
-        """Proportional 폰트 프리뷰 실제 업데이트 로직"""
+        """
+        가변폭 폰트 프리뷰를 실제 업데이트하는 내부 메서드입니다.
+        
+        Args:
+            font (QFont): 적용할 폰트 객체.
+        """
         self.prop_preview.setFont(font)
     
     def update_fixed_preview(self):
-        """Fixed 폰트 프리뷰를 업데이트합니다 (Signal Slot)."""
+        """고정폭 폰트 프리뷰를 업데이트합니다 (Signal Slot)."""
         font = QFont(self.fixed_font_combo.currentFont().family(), self.fixed_size_spin.value())
         self._update_fixed_preview_with_font(font)
 
     def _update_fixed_preview_with_font(self, font: QFont):
-        """Fixed 폰트 프리뷰 실제 업데이트 로직"""
+        """
+        고정폭 폰트 프리뷰를 실제 업데이트하는 내부 메서드입니다.
+        
+        Args:
+            font (QFont): 적용할 폰트 객체.
+        """
         font.setStyleHint(QFont.Monospace)
         self.fixed_preview.setFont(font)
     
     def reset_to_defaults(self):
-        """플랫폼 기본 폰트로 리셋합니다."""
+        """폰트 설정을 플랫폼별 기본값으로 리셋합니다."""
         import platform
         system = platform.system()
         
-        # Proportional defaults
+        # 가변폭 폰트 기본값
         if system == "Windows":
             self.prop_font_combo.setCurrentFont(QFont("Segoe UI"))
             self.prop_size_spin.setValue(9)
@@ -169,7 +191,7 @@ class FontSettingsDialog(QDialog):
             self.prop_font_combo.setCurrentFont(QFont("SF Pro Text"))
             self.prop_size_spin.setValue(9)
         
-        # Fixed defaults
+        # 고정폭 폰트 기본값
         if system == "Windows":
             self.fixed_font_combo.setCurrentFont(QFont("Consolas"))
             self.fixed_size_spin.setValue(9)
@@ -184,13 +206,13 @@ class FontSettingsDialog(QDialog):
         self.update_fixed_preview()
     
     def apply_changes(self):
-        """변경 사항을 적용합니다 (다이얼로그 닫지 않음)."""
-        # Apply proportional font
+        """변경 사항을 ThemeManager에 적용합니다 (다이얼로그는 유지)."""
+        # 가변폭 폰트 적용
         prop_family = self.prop_font_combo.currentFont().family()
         prop_size = self.prop_size_spin.value()
         self.theme_manager.set_proportional_font(prop_family, prop_size)
         
-        # Apply fixed font
+        # 고정폭 폰트 적용
         fixed_family = self.fixed_font_combo.currentFont().family()
         fixed_size = self.fixed_size_spin.value()
         self.theme_manager.set_fixed_font(fixed_family, fixed_size)
