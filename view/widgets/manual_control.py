@@ -14,6 +14,7 @@ class ManualControlWidget(QWidget):
     # Signals
     send_command_requested = pyqtSignal(str, bool, bool) # text, hex_mode, with_enter
     send_file_requested = pyqtSignal(str) # filepath
+    file_selected = pyqtSignal(str) # filepath (Added)
     save_log_requested = pyqtSignal(str) # filepath
     clear_info_requested = pyqtSignal()
     
@@ -131,6 +132,7 @@ class ManualControlWidget(QWidget):
         path, _ = QFileDialog.getOpenFileName(self, "Select File to Send")
         if path:
             self.file_path_label.setText(path)
+            self.file_selected.emit(path)
             
     def on_send_file_clicked(self) -> None:
         path = self.file_path_label.text()

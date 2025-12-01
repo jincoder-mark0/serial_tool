@@ -57,6 +57,11 @@ class LeftPanel(QWidget):
              
         self.port_tabs.setCurrentIndex(index)
 
+    def add_plus_tab(self) -> None:
+        """탭 추가를 위한 '+' 탭을 생성합니다."""
+        self.port_tabs.addTab(QWidget(), "+")
+        self.disable_close_button_for_plus_tab()
+
     def disable_close_button_for_plus_tab(self) -> None:
         """'+' 탭의 닫기 버튼을 비활성화/제거합니다."""
         count = self.port_tabs.count()
