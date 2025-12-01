@@ -14,6 +14,7 @@ class PortSettingsWidget(QGroupBox):
     port_open_requested = pyqtSignal(dict)  # config dict
     port_close_requested = pyqtSignal()
     scan_requested = pyqtSignal()
+    connection_state_changed = pyqtSignal(bool)  # connected state
     
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -172,3 +173,6 @@ class PortSettingsWidget(QGroupBox):
         self.parity_combo.setEnabled(not connected)
         self.stopbits_combo.setEnabled(not connected)
         self.flow_combo.setEnabled(not connected)
+        
+        # Emit connection state changed signal
+        self.connection_state_changed.emit(connected)

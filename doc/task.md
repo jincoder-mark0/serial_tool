@@ -21,6 +21,25 @@
   - [ ] `model/packet_parser.py` (Factory, AT/Delimiter/Fixed Parsers) <!-- id: 39 -->
   - [ ] `model/serial_manager.py` (PortRegistry, Multi-port Management) <!-- id: 40 -->
 
+- [x] 테마 및 스타일링 시스템 (Theme & Styling System)
+  - [x] `view/styles/theme_manager.py` (QSS Loading & Application)
+  - [x] `view/styles/dark_theme.qss` (Dark Mode Style)
+  - [x] `view/styles/light_theme.qss` (Light Mode Style)
+  - [x] UI 컴포넌트 테마 적용 및 동적 전환 (Dynamic Switching)
+  - [x] UI 개선 (UI Refinement)
+    - [x] 폰트 변경 기능 추가 (View -> Font Menu)
+    - [x] 콤보박스 화살표 아이콘 추가 (Base64 SVG)
+    - [x] 포트 설정 위젯 레이아웃 개선 (Component Sizing)
+  - [x] UI 레이아웃 최적화 및 기능 업데이트 (Layout & Features)
+    - [x] `PortSettingsWidget` 레이아웃 컴팩트화 (2줄 구성)
+    - [x] 콤보박스 화살표 표시 문제 해결 (Style Fix)
+    - [x] `CommandList`: Enter -> Tail 변경 및 Head 추가 (Checkboxes)
+    - [x] `CommandControl`: Head/Tail 입력 필드 추가
+  - [x] UI 추가 개선 및 리네이밍 (Refinement & Renaming)
+    - [x] `PortSettingsWidget`: Port Combo 크기 조정 (Baud Combo와 동일하게)
+    - [x] 아이콘 적용 (SVG): Close Tab, Add, Del, Up, Down (White/Black)
+    - [x] 용어 변경: Head/Tail -> Prefix/Suffix (`CommandList`, `CommandControl`)
+
 - [ ] Presenter 및 로직 연결 (Presenter Integration) <!-- id: 14 -->
   - [ ] `presenter/event_router.py` (Event Routing) <!-- id: 41 -->
   - [ ] `presenter/main_presenter.py` (Central Logic) <!-- id: 15 -->
@@ -36,7 +55,7 @@
 - [ ] 파일 전송 및 고급 기능 (Advanced Features) <!-- id: 20 -->
   - [ ] `model/file_transfer.py` (Chunk-based Transfer, QRunnable) <!-- id: 22 -->
   - [ ] `presenter/file_presenter.py` (Progress Update, Cancel) <!-- id: 45 -->
-  - [ ] `core/settings_manager.py` (Global/Port Profile Persistence) <!-- id: 24 -->
+  - [x] `core/settings_manager.py` (Global/Port Profile Persistence) <!-- id: 24 -->
   - [x] 사용자 피드백 반영: 멀티 포트 탭 구조로 변경 (PortPanel, QTabWidget) <!-- id: 51 -->
   - [x] 사용자 피드백 반영: 모든 컴포넌트에 툴팁 및 단축키 설명 추가 <!-- id: 52 -->
   - [x] 사용자 피드백 반영: 위젯 구조 리팩토링 (`widgets/` 하위 분리) <!-- id: 53 -->
@@ -61,6 +80,11 @@
     - [x] `CommandControlWidget`: Layout 정리, 강조색 적용 <!-- id: 72 -->
     - [x] `MainWindow`: Splitter 비율 조정 (1:1) <!-- id: 73 -->
   - [x] 테마 시스템 리팩토링 (Common QSS, ThemeManager 개선) <!-- id: 74 -->
+  - [x] View 계층 기능 강화 (View Enhancements) <!-- id: 75 -->
+    - [x] `ReceivedArea`: 색상 규칙, 로그 Trim, 타임스탬프 <!-- id: 76 -->
+    - [x] `ManualControl`: 파일 전송 UI, HEX 모드 <!-- id: 77 -->
+    - [x] `SettingsManager`: 설정 저장/로드 연동 <!-- id: 78 -->
+    - [x] `tests/test_view.py`: 독립 테스트 앱 구현 <!-- id: 79 -->
 
 - [ ] 플러그인 시스템 (Plugin System) <!-- id: 23 -->
   - [ ] `core/plugin_base.py` (Interface Definition) <!-- id: 47 -->

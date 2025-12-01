@@ -57,6 +57,30 @@
 - Select All 체크박스가 이제 개별 행 체크박스 변경에 반응함
 - Import 오류 수정 (QCheckBox, QSizePolicy)
 
+### View 계층 개선 및 설정 관리 (2025-12-01)
+
+#### 추가 사항 (Added)
+
+- **View 기능 강화**
+  - **색상 규칙 (Color Rules)**: `ReceivedArea`에 특정 패턴(OK, ERROR 등) 강조 기능 추가 (`config/color_rules.json`)
+  - **로그 최적화 (Log Trim)**: 2000줄 초과 시 자동 삭제 기능으로 메모리 관리
+  - **타임스탬프**: 수신 데이터에 타임스탬프(`[HH:MM:SS]`) 표시 옵션 추가
+  - **파일 전송 UI**: ManualControlWidget에 파일 선택 및 전송 UI 추가
+
+- **설정 관리 시스템**
+  - `SettingsManager` 구현: `config/default_settings.json` 및 사용자 설정 관리
+  - 상태 저장: 창 크기, 위치, 테마 설정을 종료 시 자동 저장 및 시작 시 복원
+
+- **테스트 도구**
+  - 독립 테스트 앱 (`tests/test_view.py`): View 컴포넌트(위젯)를 메인 로직 없이 독립적으로 테스트 가능
+
+#### 수정 사항 (Fixed)
+
+- `ManualControlWidget`: `file_selected` 시그널 누락 수정
+- `LeftPanel`: 탭 추가 로직(`add_plus_tab`) 오류 수정
+- `PortPresenter`: 파일 손상 복구 및 안정화
+- `MainPresenter`: 문법 오류 수정
+
 ### UI/UX 개선 및 테마 리팩토링 (2025-12-01)
 
 #### 변경 사항 (Changed)

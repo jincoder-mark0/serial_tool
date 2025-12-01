@@ -26,6 +26,8 @@
   * SVG 기반 테마 적응형 아이콘
   * 컴팩트한 2줄 포트 설정 레이아웃
   * 3단계 Select All 체크박스 (전체/부분/없음)
+  * **색상 규칙 (Color Rules)**: OK(녹색), ERROR(빨강) 등 패턴 강조
+  * **설정 저장**: 창 크기, 위치, 테마 설정 자동 저장
 
 ## 설치 및 실행 (Installation & Usage)
 
@@ -73,19 +75,21 @@ python serial_manager/main.py
 ### 완료 항목 ✅
 
 * 프로젝트 구조 및 기본 설정
-
 * UI 골격 및 위젯 구현
 * 테마 시스템 (Dark/Light)
 * SVG 아이콘 시스템
 * 레이아웃 최적화
 * Prefix/Suffix 기능
+* **View 계층 개선 (색상 규칙, Trim, 타임스탬프)**
+* **설정 관리 시스템 (SettingsManager)**
+* **Core 유틸리티 (RingBuffer, ThreadSafeQueue)**
+* **Model 계층 (SerialWorker, PortController)**
+* **Presenter 통합 (기본)**
 
 ### 진행 중 🔄
 
-* Core 유틸리티 (RingBuffer, ThreadSafeQueue)
-
-* Model 계층 (SerialWorker, PortController)
-* Presenter 통합
+* 시리얼 통신 로직 안정화
+* Command List 자동화 엔진 구현
 
 ### 예정 ⏳
 
@@ -98,8 +102,9 @@ python serial_manager/main.py
 ## 프로젝트 구조 (Project Structure)
 
 ```
-serial_manager/
-├── core/           # 핵심 유틸리티 (EventBus, RingBuffer 등)
+serial_tool/
+├── config/         # 설정 파일 (color_rules.json, default_settings.json)
+├── core/           # 핵심 유틸리티 (EventBus, RingBuffer, SettingsManager 등)
 ├── model/          # 데이터 모델 및 비즈니스 로직 (SerialWorker 등)
 ├── view/           # UI 컴포넌트
 │   ├── panels/     # 주요 패널 (LeftPanel, RightPanel 등)
@@ -109,6 +114,7 @@ serial_manager/
 ├── resources/      # 리소스 파일
 │   ├── icons/      # SVG 아이콘 (테마별 white/black 변형)
 │   └── themes/     # QSS 테마 파일 (dark_theme.qss, light_theme.qss)
+├── tests/          # 테스트 코드 (test_view.py 등)
 ├── doc/            # 문서 (CHANGELOG, 명세서 등)
 └── main.py         # 애플리케이션 진입점
 ```

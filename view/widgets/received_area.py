@@ -2,6 +2,8 @@ from PyQt5.QtWidgets import QTextEdit, QWidget, QVBoxLayout, QHBoxLayout, QPushB
 from PyQt5.QtCore import pyqtSignal, QTimer, Qt
 from PyQt5.QtGui import QFont, QTextCursor
 from typing import Optional
+import datetime
+from view.color_rules import ColorRulesManager
 
 class ReceivedArea(QWidget):
     """
@@ -21,6 +23,10 @@ class ReceivedArea(QWidget):
         self.paused: bool = False
         self.batch_buffer: list[str] = []
         self.max_lines: int = 2000
+        self.timestamp_enabled: bool = False
+        
+        # Color rules manager
+        self.color_manager = ColorRulesManager()
         
         self.init_ui()
         
@@ -47,6 +53,10 @@ class ReceivedArea(QWidget):
         self.hex_check.setToolTip("Show data in Hexadecimal format")
         self.hex_check.stateChanged.connect(self.toggle_hex_mode)
         
+        self.timestamp_check = QCheckBox("TS")
+        self.timestamp_check.setToolTip("Show timestamp prefix")
+        self.timestamp_check.stateChanged.connect(self.toggle_timestamp)
+        
         self.pause_check = QCheckBox("Pause")
         self.pause_check.setToolTip("Pause log updates (Data is still buffered)")
         self.pause_check.stateChanged.connect(self.toggle_pause)
@@ -57,6 +67,7 @@ class ReceivedArea(QWidget):
         toolbar.addWidget(QLabel("RX Log"))
         toolbar.addStretch()
         toolbar.addWidget(self.hex_check)
+        toolbar.addWidget(self.timestamp_check)
         toolbar.addWidget(self.pause_check)
         toolbar.addWidget(self.clear_btn)
         toolbar.addWidget(self.save_btn)
@@ -93,6 +104,15 @@ class ReceivedArea(QWidget):
                 text = data.decode('utf-8', errors='replace')
             except Exception:
                 text = str(data)
+        
+        # Add timestamp if enabled
+        if self.timestamp_enabled:
+            ts = datetime.datetime.now().strftime("[%H:%M:%S]")
+            text = f'<span style="color:#9E9E9E;">{ts}</span> {text}'
+        
+        # Apply color rules (only in text mode)
+        if not self.hex_mode:
+            text = self.color_manager.apply_rules(text)
                 
         self.batch_buffer.append(text)
 
@@ -103,13 +123,16 @@ class ReceivedArea(QWidget):
             
         text = "".join(self.batch_buffer)
         self.text_edit.moveCursor(QTextCursor.End)
-        self.text_edit.insertPlainText(text)
+        self.text_edit.insertHtml(text)  # Use insertHtml for color support
         self.batch_buffer.clear()
         
         # Auto Scroll
         sb = self.text_edit.verticalScrollBar()
         if sb:
             sb.setValue(sb.maximum())
+        
+        # Trim if needed
+        self._trim_if_needed()
 
     def clear_log(self) -> None:
         """로그 뷰와 버퍼를 초기화합니다."""
@@ -124,6 +147,15 @@ class ReceivedArea(QWidget):
             state: 체크박스 상태 (Qt.Checked 등)
         """
         self.hex_mode = (state == Qt.Checked)
+    
+    def toggle_timestamp(self, state: int) -> None:
+        """
+        타임스탬프 토글 처리.
+        
+        Args:
+            state: 체크박스 상태
+        """
+        self.timestamp_enabled = (state == Qt.Checked)
 
     def toggle_pause(self, state: int) -> None:
         """
@@ -133,3 +165,23 @@ class ReceivedArea(QWidget):
             state: 체크박스 상태
         """
         self.paused = (state == Qt.Checked)
+    
+    def _trim_if_needed(self) -> None:
+        """
+        2000줄 초과 시 상위 20% (400줄) 제거.
+        Implementation_Specification.md 섹션 18.3.2 기준.
+        """
+        document = self.text_edit.document()
+        if document.blockCount() > self.max_lines:
+            # 사용자가 스크롤 중인지 확인
+            sb = self.text_edit.verticalScrollBar()
+            if sb:
+                at_bottom = sb.value() >= (sb.maximum() - 10)
+                
+                if at_bottom:  # 자동 스크롤 모드일 때만 trim
+                    cursor = QTextCursor(document)
+                    cursor.movePosition(QTextCursor.Start)
+                    # 상위 20% (400줄) 선택 및 삭제
+                    for _ in range(400):
+                        cursor.movePosition(QTextCursor.Down, QTextCursor.KeepAnchor)
+                    cursor.removeSelectedText()

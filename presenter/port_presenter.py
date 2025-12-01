@@ -1,0 +1,127 @@
+from PyQt5.QtCore import QObject
+import serial.tools.list_ports
+from typing import Optional
+
+from view.panels.left_panel import LeftPanel
+from model.port_controller import PortController
+
+class PortPresenter(QObject):
+    """
+    포트 설정 및 제어를 위한 Presenter.
+    PortSettingsWidget(View)와 PortController(Model)를 연결합니다.
+    """
+    def __init__(self, left_panel: LeftPanel, port_controller: PortController) -> None:
+        """
+        PortPresenter 초기화.
+        
+        Args:
+            left_panel: 좌측 패널 (포트 탭 및 설정 포함)
+            port_controller: 포트 제어기
+        """
+        super().__init__()
+        self.left_panel = left_panel
+        
+        # Get current active port panel
+        self.current_port_panel = None
+        self.update_current_port_panel()
+        
+        self.port_controller = port_controller
+        
+        # Scan ports initially
+        self.scan_ports()
+        
+        # Connect View signals (from current port panel's settings widget)
+        if self.current_port_panel:
+            self.current_port_panel.port_settings.scan_requested.connect(self.scan_ports)
+            # Note: connect_btn has its own handler that emits signals, 
+            # but we'll override by connecting directly
+            # Disconnect existing handler first
+            try:
+                self.current_port_panel.port_settings.connect_btn.clicked.disconnect()
+            except:
+                pass
+            self.current_port_panel.port_settings.connect_btn.clicked.connect(self.handle_connect_click)
+        
+        # Connect Model signals
+        self.port_controller.port_opened.connect(self.on_port_opened)
+        self.port_controller.port_closed.connect(self.on_port_closed)
+        self.port_controller.error_occurred.connect(self.on_error)
+        
+    def update_current_port_panel(self) -> None:
+        """현재 활성 포트 패널에 대한 참조를 업데이트합니다."""
+        index = self.left_panel.port_tabs.currentIndex()
+        if index >= 0:
+            widget = self.left_panel.port_tabs.widget(index)
+            if hasattr(widget, 'port_settings'):
+                self.current_port_panel = widget
+                
+    def scan_ports(self) -> None:
+        """사용 가능한 시리얼 포트를 스캔하여 UI에 표시합니다."""
+        ports = [port.device for port in serial.tools.list_ports.comports()]
+        if self.current_port_panel:
+            self.current_port_panel.port_settings.set_port_list(ports)
+        
+    def handle_connect_click(self) -> None:
+        """
+        연결 버튼 클릭을 처리합니다.
+        포트가 열려있으면 닫고, 닫혀있으면 엽니다.
+        """
+        if not self.current_port_panel:
+            return
+            
+        if self.port_controller.is_open:
+            self.port_controller.close_port()
+        else:
+            port = self.current_port_panel.port_settings.port_combo.currentText()
+            try:
+                baud = int(self.current_port_panel.port_settings.baud_combo.currentText())
+            except ValueError:
+                print("Invalid baudrate")
+                return
+                
+            if port:
+                self.port_controller.open_port(port, baud)
+            else:
+                print("No port selected")
+
+    def on_port_opened(self, port_name: str) -> None:
+        """
+        포트 열림 이벤트를 처리합니다.
+        UI를 연결됨 상태로 업데이트하고 탭 제목을 변경합니다.
+        
+        Args:
+            port_name: 열린 포트의 이름
+        """
+        if self.current_port_panel:
+            self.current_port_panel.port_settings.set_connected(True)
+            # Update tab title
+            index = self.left_panel.port_tabs.currentIndex()
+            self.left_panel.update_tab_title(index, port_name)
+        
+    def on_port_closed(self, port_name: str) -> None:
+        """
+        포트 닫힘 이벤트를 처리합니다.
+        UI를 연결 해제됨 상태로 업데이트하고 탭 제목을 기본값으로 변경합니다.
+        
+        Args:
+            port_name: 닫힌 포트의 이름
+        """
+        if self.current_port_panel:
+            self.current_port_panel.port_settings.set_connected(False)
+            # Update tab title
+            index = self.left_panel.port_tabs.currentIndex()
+            self.left_panel.update_tab_title(index, "-")
+        
+    def on_error(self, message: str) -> None:
+        """
+        에러 이벤트를 처리합니다.
+        현재는 콘솔에 출력하며, 향후 상태바에 표시할 예정입니다.
+        
+        Args:
+            message: 에러 메시지
+        """
+        # TODO: Show error in status bar
+        print(f"Port Error: {message}")
+        # If error occurred during open/close, ensure UI is synced
+        if not self.port_controller.is_open and self.current_port_panel:
+            self.current_port_panel.port_settings.set_connected(False)

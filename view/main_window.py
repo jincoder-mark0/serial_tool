@@ -6,6 +6,7 @@ from PyQt5.QtCore import Qt
 from view.panels.left_panel import LeftPanel
 from view.panels.right_panel import RightPanel
 from view.theme_manager import ThemeManager
+from core.settings_manager import SettingsManager
 
 class MainWindow(QMainWindow):
     """
@@ -15,14 +16,22 @@ class MainWindow(QMainWindow):
     
     def __init__(self) -> None:
         super().__init__()
+        
+        # Initialize Settings Manager
+        self.settings = SettingsManager()
+        
         self.setWindowTitle("SerialTool v1.0")
         self.resize(1400, 900)
         
         self.init_ui()
         self.init_menu()
         
-        # Apply default theme
-        self.switch_theme("dark")
+        # Apply theme from settings
+        theme = self.settings.get('global.theme', 'dark')
+        self.switch_theme(theme)
+        
+        # Load window geometry if saved
+        self._load_window_state()
         
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃 초기화"""
@@ -106,25 +115,71 @@ class MainWindow(QMainWindow):
         about_action = QAction("About", self)
         help_menu.addAction(about_action)
 
-    def switch_theme(self, theme_name: str):
-        """Switches the application theme."""
-        app = QApplication.instance()
-        if app:
-            ThemeManager.apply_theme(app, theme_name)
+    def switch_theme(self, theme_name: str) -> None:
+        """테마를 전환합니다."""
+        ThemeManager.apply_theme(QApplication.instance(), theme_name)
+        
+        # Save theme to settings
+        if hasattr(self, 'settings'):
+            self.settings.set('global.theme', theme_name)
+        
+        if theme_name == "dark":
+            self.global_status_bar.showMessage("Theme changed to Dark", 2000)
+        else:
+            self.global_status_bar.showMessage("Theme changed to Light", 2000)
 
-    def change_font(self, font_family: str):
+    def change_font(self, font_family: str) -> None:
         """Changes the application font."""
-        app = QApplication.instance()
-        if app:
-            ThemeManager.set_font(app, font_family)
+        ThemeManager.set_font(QApplication.instance(), font_family)
 
-    def open_font_dialog(self):
+    def open_font_dialog(self) -> None:
         """Opens a font selection dialog."""
-        from PyQt5.QtWidgets import QFontDialog, QApplication
+        from PyQt5.QtWidgets import QFontDialog
         
         current_font = QApplication.font()
         font, ok = QFontDialog.getFont(current_font, self)
         if ok:
-            app = QApplication.instance()
-            if app:
-                app.setFont(font)
+            QApplication.instance().setFont(font)
+    
+    def _load_window_state(self) -> None:
+        """
+        저장된 윈도우 상태를 로드합니다.
+        (크기, 위치)
+        """
+        # Window geometry
+        width = self.settings.get('ui.window_width', 1400)
+        height = self.settings.get('ui.window_height', 900)
+        self.resize(width, height)
+        
+        # Position (optional)
+        x = self.settings.get('ui.window_x')
+        y = self.settings.get('ui.window_y')
+        if x is not None and y is not None:
+            self.move(x, y)
+    
+    def _save_window_state(self) -> None:
+        """
+        현재 윈도우 상태를 설정에 저장합니다.
+        """
+        # Save window geometry
+        self.settings.set('ui.window_width', self.width())
+        self.settings.set('ui.window_height', self.height())
+        self.settings.set('ui.window_x', self.x())
+        self.settings.set('ui.window_y', self.y())
+    
+    def closeEvent(self, event) -> None:
+        """
+        윈도우 종료 이벤트를 처리합니다.
+        설정을 저장하고 종료합니다.
+        
+        Args:
+            event: 종료 이벤트
+        """
+        # Save window state
+        self._save_window_state()
+        
+        # Save settings to file
+        self.settings.save_settings()
+        
+        # Accept the close event
+        event.accept()
