@@ -103,14 +103,12 @@ class MainWindow(QMainWindow):
         light_action.triggered.connect(lambda: self.switch_theme("light"))
         theme_menu.addAction(light_action)
         
-        # Font Menu (Updated for Dual Font System)
-        font_menu = view_menu.addMenu("Font")
-        
+        # Font Settings Action
         font_settings_action = QAction("Font Settings...", self)
         font_settings_action.setShortcut("Ctrl+Shift+F")
         font_settings_action.setToolTip("Configure proportional and fixed fonts")
         font_settings_action.triggered.connect(self.open_font_settings_dialog)
-        font_menu.addAction(font_settings_action)
+        view_menu.addAction(font_settings_action)
         
         # Tools Menu
         tools_menu = menubar.addMenu("Tools")
