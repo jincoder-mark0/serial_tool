@@ -122,18 +122,27 @@ class FontSettingsDialog(QDialog):
         self.fixed_font_combo.setCurrentFont(QFont(fixed_family))
         self.fixed_size_spin.setValue(fixed_size)
         
-        # Update previews
-        self.update_prop_preview()
-        self.update_fixed_preview()
+        # Update previews explicitly with loaded values
+        # (Combo box signals might not trigger if value is same as default or during init)
+        self._update_prop_preview_with_font(QFont(prop_family, prop_size))
+        self._update_fixed_preview_with_font(QFont(fixed_family, fixed_size))
     
     def update_prop_preview(self):
-        """Proportional 폰트 프리뷰를 업데이트합니다."""
+        """Proportional 폰트 프리뷰를 업데이트합니다 (Signal Slot)."""
         font = QFont(self.prop_font_combo.currentFont().family(), self.prop_size_spin.value())
+        self._update_prop_preview_with_font(font)
+
+    def _update_prop_preview_with_font(self, font: QFont):
+        """Proportional 폰트 프리뷰 실제 업데이트 로직"""
         self.prop_preview.setFont(font)
     
     def update_fixed_preview(self):
-        """Fixed 폰트 프리뷰를 업데이트합니다."""
+        """Fixed 폰트 프리뷰를 업데이트합니다 (Signal Slot)."""
         font = QFont(self.fixed_font_combo.currentFont().family(), self.fixed_size_spin.value())
+        self._update_fixed_preview_with_font(font)
+
+    def _update_fixed_preview_with_font(self, font: QFont):
+        """Fixed 폰트 프리뷰 실제 업데이트 로직"""
         font.setStyleHint(QFont.Monospace)
         self.fixed_preview.setFont(font)
     

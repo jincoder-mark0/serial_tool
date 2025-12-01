@@ -73,12 +73,51 @@ class ThemeManager:
         """Applies the specified theme to the QApplication instance."""
         self._app = app
         self._current_theme = theme_name
-        stylesheet = self.load_theme(theme_name)
-        if stylesheet:
-            app.setStyleSheet(stylesheet)
+        
+        # 1. Load base theme (common + specific)
+        base_stylesheet = self.load_theme(theme_name)
+        
+        # 2. Generate font stylesheet
+        font_stylesheet = self._generate_font_stylesheet()
+        
+        # 3. Combine and apply
+        full_stylesheet = base_stylesheet + "\n" + font_stylesheet
+        
+        if full_stylesheet:
+            app.setStyleSheet(full_stylesheet)
         else:
             print(f"Failed to apply theme: {theme_name}")
-    
+            
+    def _generate_font_stylesheet(self) -> str:
+        """Generates QSS for current font settings."""
+        prop_family = self._proportional_font.family()
+        prop_size = self._proportional_font.pointSize()
+        
+        fixed_family = self._fixed_font.family()
+        fixed_size = self._fixed_font.pointSize()
+        
+        return f"""
+        /* Dynamic Font Settings */
+        .proportional-font {{
+            font-family: "{prop_family}", sans-serif;
+            font-size: {prop_size}pt;
+        }}
+        
+        .fixed-font {{
+            font-family: "{fixed_family}", monospace;
+            font-size: {fixed_size}pt;
+        }}
+        
+        /* Apply Fixed Font to Text Data Widgets */
+        QTextEdit.fixed-font,
+        QPlainTextEdit.fixed-font,
+        QLineEdit.fixed-font,
+        QTableView.fixed-font {{
+            font-family: "{fixed_family}", monospace;
+            font-size: {fixed_size}pt;
+        }}
+        """
+
     def get_current_theme(self) -> str:
         """Returns the current theme name."""
         return self._current_theme
@@ -89,6 +128,8 @@ class ThemeManager:
         self._proportional_font = QFont(family, size)
         if self._app:
             self._app.setFont(self._proportional_font)
+            # Re-apply theme to update QSS
+            self.apply_theme(self._app, self._current_theme)
     
     def get_proportional_font(self) -> QFont:
         """Returns the current proportional font."""
@@ -103,6 +144,9 @@ class ThemeManager:
         """Sets the fixed-width (monospace) font for text data."""
         self._fixed_font = QFont(family, size)
         self._fixed_font.setStyleHint(QFont.Monospace)
+        if self._app:
+            # Re-apply theme to update QSS
+            self.apply_theme(self._app, self._current_theme)
     
     def get_fixed_font(self) -> QFont:
         """Returns the current fixed-width font."""
@@ -121,13 +165,19 @@ class ThemeManager:
         prop_family = ui_settings.get("proportional_font_family")
         prop_size = ui_settings.get("proportional_font_size")
         if prop_family and prop_size:
-            self.set_proportional_font(prop_family, prop_size)
+            self._proportional_font = QFont(prop_family, prop_size)
         
         # Restore fixed font
         fixed_family = ui_settings.get("fixed_font_family")
         fixed_size = ui_settings.get("fixed_font_size")
         if fixed_family and fixed_size:
-            self.set_fixed_font(fixed_family, fixed_size)
+            self._fixed_font = QFont(fixed_family, fixed_size)
+            self._fixed_font.setStyleHint(QFont.Monospace)
+            
+        # Note: We don't apply here because apply_theme will be called shortly after initialization
+        # or we can explicitly apply if app is set.
+        if self._app:
+             self.apply_theme(self._app, self._current_theme)
     
     def get_font_settings(self) -> dict:
         """Returns current font settings as a dictionary."""
