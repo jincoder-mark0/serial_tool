@@ -42,32 +42,33 @@
   - **PacketInspector**: 상세 패킷 분석 뷰.
 - **Styling**: [완료] `common.qss` 도입 및 다크/라이트 테마 리팩토링. `.accent`/`.danger` 스타일 적용.
 
-#### [IN-PROGRESS] Core & Model Layer
+#### [COMPLETED] Core & Model Layer
 
 - **EventBus**: Publish/Subscribe 패턴으로 컴포넌트 간 느슨한 결합 보장.
 - **SerialWorker**: `QThread` 상속, Non-blocking I/O 및 `RingBuffer`를 이용한 고속 데이터 수신.
 - **Utils**: `RingBuffer`, `ThreadSafeQueue` 구현.
 - **PortPresenter**: View와 Model 연결, 포트 제어 로직 구현.
-
-#### [TODO] Automation & Features
-
 - **PortController**: 포트별 상태 머신 및 리소스(Worker, Queue) 관리, 멀티포트 격리.
+
+#### [IN-PROGRESS] Automation & Features
+
+- **SettingsManager**: [완료] 설정 저장/로드 (JSON).
 - **PacketParser**: Factory 패턴 적용, AT/Delimiter/Fixed/Hex 파서 지원.
 - **CLRunner**: Command List 실행 엔진 (순차 실행, 반복, 지연).
 - **FileTransferEngine**: 파일 청크 전송 로직.
-- **SettingsManager**: 설정 저장/로드 (JSON).
 - **PluginSystem**: 확장 플러그인 로더.
 
 ### 3. 기능 구현 순서 (Implementation Order)
 
 1. **[완료] 프로젝트 설정**: 구조 생성, `requirements.txt`, `README.md`, `main.py`.
 2. **[완료] UI 구현 (View)**: 메인 윈도우, 패널/위젯 분리 및 리팩토링, 레이아웃 최적화.
-3. **[진행중] UI 검증**: 초기 실행 시 버튼 비활성화, 탭 동작, 리사이징 확인.
-4. **Core & Model**: EventBus, SerialWorker, PortPresenter 구현 및 연동.
-5. **Presenter 연동**: 실제 시리얼 포트 연결, 데이터 송수신(Tx/Rx) 활성화.
-6. **자동화 기능**: Command List 실행 엔진, Auto Run 구현.
-7. **고급 기능**: 파일 전송, 설정 관리, 로깅, 플러그인 시스템.
-8. **테스트 및 배포**: 단위/통합 테스트, 성능 벤치마크, PyInstaller 빌드.
+3. **[완료] UI 검증**: 초기 실행 시 버튼 비활성화, 탭 동작, 리사이징 확인.
+4. **[완료] Core & Model**: EventBus, SerialWorker, PortPresenter 구현 및 연동.
+5. **[완료] Presenter 연동**: 실제 시리얼 포트 연결, 데이터 송수신(Tx/Rx) 활성화.
+6. **[완료] 설정 관리**: SettingsManager 구현 및 View 연동.
+7. **[진행중] 자동화 기능**: Command List 실행 엔진, Auto Run 구현.
+8. **고급 기능**: 파일 전송, 로깅, 플러그인 시스템.
+9. **테스트 및 배포**: 단위/통합 테스트, 성능 벤치마크, PyInstaller 빌드.
 
 ## 검증 계획 (Verification Plan)
 

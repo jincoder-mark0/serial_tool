@@ -6,8 +6,12 @@ import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget
 from PyQt5.QtCore import Qt
 
-# Add parent directory to path
-sys.path.insert(0, '..')
+import os
+
+# Add parent directory to path correctly
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.insert(0, parent_dir)
 
 from view.widgets.received_area import ReceivedArea
 from view.widgets.manual_control import ManualControlWidget
