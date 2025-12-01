@@ -103,12 +103,19 @@ class FontSettingsDialog(QDialog):
         
         button_layout.addStretch()
         
-        button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel)
-        button_box.accepted.connect(self.accept_changes)
-        button_box.rejected.connect(self.reject)
-        button_layout.addWidget(button_box)
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel | QDialogButtonBox.Apply)
+        self.button_box.accepted.connect(self.accept_changes)
+        self.button_box.rejected.connect(self.reject)
+        self.button_box.button(QDialogButtonBox.Apply).clicked.connect(self.apply_changes)
+        button_layout.addWidget(self.button_box)
         
         layout.addLayout(button_layout)
+        
+    def showEvent(self, event):
+        """다이얼로그가 보여질 때 프리뷰를 확실하게 초기화합니다."""
+        super().showEvent(event)
+        # Force update previews with current settings
+        self.load_current_fonts()
     
     def load_current_fonts(self):
         """현재 폰트 설정을 로드합니다."""
@@ -176,8 +183,8 @@ class FontSettingsDialog(QDialog):
         self.update_prop_preview()
         self.update_fixed_preview()
     
-    def accept_changes(self):
-        """변경 사항을 적용하고 대화상자를 닫습니다."""
+    def apply_changes(self):
+        """변경 사항을 적용합니다 (다이얼로그 닫지 않음)."""
         # Apply proportional font
         prop_family = self.prop_font_combo.currentFont().family()
         prop_size = self.prop_size_spin.value()
@@ -188,4 +195,7 @@ class FontSettingsDialog(QDialog):
         fixed_size = self.fixed_size_spin.value()
         self.theme_manager.set_fixed_font(fixed_family, fixed_size)
         
+    def accept_changes(self):
+        """변경 사항을 적용하고 대화상자를 닫습니다."""
+        self.apply_changes()
         self.accept()

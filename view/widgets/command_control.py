@@ -46,11 +46,13 @@ class CommandControlWidget(QWidget):
         self.prefix_input.setPlaceholderText("Prefix")
         self.prefix_input.setFixedWidth(60)
         self.prefix_input.setToolTip("Global command prefix")
+        self.prefix_input.setProperty("class", "fixed-font")  # Apply fixed-width font
         
         self.suffix_input = QLineEdit()
         self.suffix_input.setPlaceholderText("Suffix")
         self.suffix_input.setFixedWidth(60)
         self.suffix_input.setToolTip("Global command suffix")
+        self.suffix_input.setProperty("class", "fixed-font")  # Apply fixed-width font
         
         top_layout.addWidget(QLabel("Pre:"))
         top_layout.addWidget(self.prefix_input)

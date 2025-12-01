@@ -112,15 +112,6 @@ class MainWindow(QMainWindow):
         font_settings_action.triggered.connect(self.open_font_settings_dialog)
         font_menu.addAction(font_settings_action)
         
-        font_menu.addSeparator()
-        
-        # Quick font presets (legacy support)
-        fonts = ["Segoe UI", "Consolas", "Arial", "Verdana"]
-        for font in fonts:
-            action = QAction(font, self)
-            action.triggered.connect(lambda checked, f=font: self.change_font(f))
-            font_menu.addAction(action)
-        
         # Tools Menu
         tools_menu = menubar.addMenu("Tools")
         
@@ -141,11 +132,6 @@ class MainWindow(QMainWindow):
             self.global_status_bar.showMessage("Theme changed to Dark", 2000)
         else:
             self.global_status_bar.showMessage("Theme changed to Light", 2000)
-
-    def change_font(self, font_family: str) -> None:
-        """Changes the application font (legacy method - sets proportional font)."""
-        self.theme_manager.set_proportional_font(font_family, 9)
-        self.global_status_bar.showMessage(f"Font changed to {font_family}", 2000)
 
     def open_font_settings_dialog(self) -> None:
         """Opens the dual font settings dialog."""

@@ -2,8 +2,7 @@
 
 /* Global Settings */
 QWidget {
-    font-family: "Segoe UI", sans-serif;
-    font-size: 10pt;
+    /* Font settings are handled dynamically by ThemeManager */
 }
 
 /* QMainWindow Separator */

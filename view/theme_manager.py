@@ -98,6 +98,13 @@ class ThemeManager:
         
         return f"""
         /* Dynamic Font Settings */
+        
+        /* Global Font (Proportional) */
+        QWidget {{
+            font-family: "{prop_family}", sans-serif;
+            font-size: {prop_size}pt;
+        }}
+        
         .proportional-font {{
             font-family: "{prop_family}", sans-serif;
             font-size: {prop_size}pt;

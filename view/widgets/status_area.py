@@ -33,9 +33,8 @@ class StatusArea(QWidget):
         self.log_edit.setReadOnly(True)
         self.log_edit.setMaximumHeight(100) # 높이 제한
         self.log_edit.setToolTip("System status and error log")
-        
-        font = QFont("Consolas", 9)
-        self.log_edit.setFont(font)
+        self.log_edit.setPlaceholderText("System status and error log")
+        self.log_edit.setProperty("class", "fixed-font")  # Apply fixed-width font
         
         layout.addWidget(label)
         layout.addWidget(self.log_edit)
