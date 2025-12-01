@@ -10,7 +10,7 @@ import os
 class SettingsManager:
     """
     애플리케이션 설정 관리자.
-    config/default_settings.json에서 설정을 로드하고 사용자 설정을 저장합니다.
+    config/settings.json에서 설정을 로드하고 사용자 설정을 저장합니다.
     """
     
     def __init__(self):
@@ -27,7 +27,7 @@ class SettingsManager:
         기본 설정 파일 경로를 반환합니다.
         
         Returns:
-            config/default_settings.json 파일의 Path 객체
+            config/settings.json 파일의 Path 객체
         """
         if hasattr(os, '_MEIPASS'):
             # PyInstaller bundle
@@ -36,7 +36,7 @@ class SettingsManager:
             # Development mode
             base_path = Path(__file__).parent.parent
         
-        return base_path / 'config' / 'default_settings.json'
+        return base_path / 'config' / 'settings.json'
     
     def _get_user_settings_path(self) -> Path:
         """

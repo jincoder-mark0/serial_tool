@@ -97,20 +97,6 @@ python serial_manager/main.py
 
 * Command List 자동화
 * 파일 전송
-* 플러그인 시스템
-
-## 프로젝트 구조 (Project Structure)
-
-```
-serial_tool/
-├── config/         # 설정 파일 (color_rules.json, default_settings.json)
-├── core/           # 핵심 유틸리티 (EventBus, RingBuffer, SettingsManager 등)
-├── model/          # 데이터 모델 및 비즈니스 로직 (SerialWorker 등)
-├── view/           # UI 컴포넌트
-│   ├── panels/     # 주요 패널 (LeftPanel, RightPanel 등)
-│   ├── widgets/    # 재사용 가능한 위젯 (CommandList, ManualControl 등)
-│   └── theme_manager.py  # 테마 관리자
-├── presenter/      # MVP 패턴의 Presenter 계층
 ├── resources/      # 리소스 파일
 │   ├── icons/      # SVG 아이콘 (테마별 white/black 변형)
 │   └── themes/     # QSS 테마 파일 (dark_theme.qss, light_theme.qss)
