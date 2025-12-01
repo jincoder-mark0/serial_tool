@@ -49,7 +49,7 @@ class MainPresenter(QObject):
         """
         수동 전송 버튼 클릭을 처리합니다.
         입력 필드의 텍스트를 가져와 포트로 전송합니다.
-        """"
+        """
         text = self.view.left_panel.manual_control.input_field.text()
         if text and self.port_controller.is_open:
             # Convert text to bytes
