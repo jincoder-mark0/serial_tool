@@ -28,6 +28,11 @@
   - [x] UI 컴포넌트 테마 적용 및 동적 전환 (Dynamic Switching)
   - [x] UI 개선 (UI Refinement)
     - [x] 폰트 변경 기능 추가 (View -> Font Menu)
+    - [/] 듀얼 폰트 시스템 구현 (Proportional/Fixed Font)
+      - [ ] ThemeManager에 폰트 관리 기능 추가
+      - [ ] 폰트 설정 대화상자 개선
+      - [ ] QSS 폰트 클래스 적용
+      - [ ] 모든 위젯에 적절한 폰트 적용
     - [x] 콤보박스 화살표 아이콘 추가 (Base64 SVG)
     - [x] 포트 설정 위젯 레이아웃 개선 (Component Sizing)
   - [x] UI 레이아웃 최적화 및 기능 업데이트 (Layout & Features)

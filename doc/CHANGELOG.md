@@ -2,6 +2,36 @@
 
 ## [미배포] (Unreleased)
 
+### 듀얼 폰트 시스템 (2025-12-01)
+
+#### 추가 사항 (Added)
+
+- **폰트 시스템 개선**
+  - Proportional Font (가변폭): UI 요소 (메뉴, 상태바, 레이블, 버튼 등)에 적용
+    - Windows 기본: "Segoe UI" 9pt
+    - Linux 기본: "Ubuntu" 9pt
+  - Fixed Font (고정폭): 텍스트 데이터 (TextEdit, LineEdit, CommandList 등)에 적용
+    - Windows 기본: "Consolas" 9pt
+    - Linux 기본: "Monospace" 9pt
+  - ThemeManager에 폰트 관리 기능 추가
+    - `set_proportional_font()`, `set_fixed_font()`
+    - `get_proportional_font()`, `get_fixed_font()`
+  - 폰트 설정 대화상자 개선
+    - Proportional/Fixed 폰트 개별 선택
+    - 실시간 프리뷰
+    - 크기 조절 (6pt ~ 16pt)
+    - 기본값 복원 버튼
+
+#### 변경 사항 (Changed)
+
+- **QSS 테마 시스템**
+  - 폰트 클래스 추가: `.proportional-font`, `.fixed-font`
+  - 모든 위젯에 적절한 폰트 클래스 적용
+- **설정 관리**
+  - `settings.json`에 폰트 정보 저장/복원 기능 추가
+
+---
+
 ### UI 구현 (2025-12-01)
 
 #### 추가 사항 (Added)

@@ -41,6 +41,7 @@
   - **CommandListPanel**: 커맨드 리스트 관리 및 실행 제어 (`CommandControl` 포함).
   - **PacketInspector**: 상세 패킷 분석 뷰.
 - **Styling**: [완료] `common.qss` 도입 및 다크/라이트 테마 리팩토링. `.accent`/`.danger` 스타일 적용.
+- **Font System**: [진행 중] Proportional/Fixed 폰트 분리 시스템 구현 중.
 
 #### [COMPLETED] Core & Model Layer
 
