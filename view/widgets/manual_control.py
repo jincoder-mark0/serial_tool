@@ -72,6 +72,7 @@ class ManualControlWidget(QWidget):
         
         self.input_field = QLineEdit() # QTextEdit -> QLineEdit 변경
         self.input_field.setPlaceholderText("Enter command here...")
+        self.input_field.setProperty("class", "fixed-font")  # Apply fixed-width font
         self.input_field.returnPressed.connect(self.on_send_clicked) # Enter 키 지원
         
         self.send_btn = QPushButton("Send")

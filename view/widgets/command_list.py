@@ -67,6 +67,7 @@ class CommandListWidget(QWidget):
         
         # Table View
         self.table_view = QTableView()
+        self.table_view.setProperty("class", "fixed-font")  # Apply fixed-width font to table
         self.model = QStandardItemModel()
         # Columns: Select, Prefix, Command, Suffix, HEX, Delay, Send
         self.model.setHorizontalHeaderLabels(["", "Prefix", "Command", "Suffix", "HEX", "Delay", "Send"])

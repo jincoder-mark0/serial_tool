@@ -20,15 +20,26 @@ class MainWindow(QMainWindow):
         # Initialize Settings Manager
         self.settings = SettingsManager()
         
+        # Initialize Theme Manager (instance-based)
+        self.theme_manager = ThemeManager()
+        
         self.setWindowTitle("SerialTool v1.0")
         self.resize(1400, 900)
         
         self.init_ui()
         self.init_menu()
         
-        # Apply theme from settings
+        # Apply theme and fonts from settings
         theme = self.settings.get('global.theme', 'dark')
         self.switch_theme(theme)
+        
+        # Restore fonts from settings
+        settings_dict = self.settings.get_all_settings()
+        self.theme_manager.restore_fonts_from_settings(settings_dict)
+        
+        # Apply proportional font to application
+        prop_font = self.theme_manager.get_proportional_font()
+        QApplication.instance().setFont(prop_font)
         
         # Load window geometry if saved
         self._load_window_state()
@@ -92,20 +103,23 @@ class MainWindow(QMainWindow):
         light_action.triggered.connect(lambda: self.switch_theme("light"))
         theme_menu.addAction(light_action)
         
-        # Font Menu
+        # Font Menu (Updated for Dual Font System)
         font_menu = view_menu.addMenu("Font")
         
+        font_settings_action = QAction("Font Settings...", self)
+        font_settings_action.setShortcut("Ctrl+Shift+F")
+        font_settings_action.setToolTip("Configure proportional and fixed fonts")
+        font_settings_action.triggered.connect(self.open_font_settings_dialog)
+        font_menu.addAction(font_settings_action)
+        
+        font_menu.addSeparator()
+        
+        # Quick font presets (legacy support)
         fonts = ["Segoe UI", "Consolas", "Arial", "Verdana"]
         for font in fonts:
             action = QAction(font, self)
             action.triggered.connect(lambda checked, f=font: self.change_font(f))
             font_menu.addAction(action)
-            
-        font_menu.addSeparator()
-        
-        custom_font_action = QAction("Custom...", self)
-        custom_font_action.triggered.connect(self.open_font_dialog)
-        font_menu.addAction(custom_font_action)
         
         # Tools Menu
         tools_menu = menubar.addMenu("Tools")
@@ -117,7 +131,7 @@ class MainWindow(QMainWindow):
 
     def switch_theme(self, theme_name: str) -> None:
         """테마를 전환합니다."""
-        ThemeManager.apply_theme(QApplication.instance(), theme_name)
+        self.theme_manager.apply_theme(QApplication.instance(), theme_name)
         
         # Save theme to settings
         if hasattr(self, 'settings'):
@@ -129,17 +143,27 @@ class MainWindow(QMainWindow):
             self.global_status_bar.showMessage("Theme changed to Light", 2000)
 
     def change_font(self, font_family: str) -> None:
-        """Changes the application font."""
-        ThemeManager.set_font(QApplication.instance(), font_family)
+        """Changes the application font (legacy method - sets proportional font)."""
+        self.theme_manager.set_proportional_font(font_family, 9)
+        self.global_status_bar.showMessage(f"Font changed to {font_family}", 2000)
 
-    def open_font_dialog(self) -> None:
-        """Opens a font selection dialog."""
-        from PyQt5.QtWidgets import QFontDialog
+    def open_font_settings_dialog(self) -> None:
+        """Opens the dual font settings dialog."""
+        from view.dialogs.font_settings_dialog import FontSettingsDialog
         
-        current_font = QApplication.font()
-        font, ok = QFontDialog.getFont(current_font, self)
-        if ok:
-            QApplication.instance().setFont(font)
+        dialog = FontSettingsDialog(self.theme_manager, self)
+        if dialog.exec_():
+            # Save font settings
+            font_settings = self.theme_manager.get_font_settings()
+            for key, value in font_settings.items():
+                self.settings.set(f'ui.{key}', value)
+            
+            # Apply proportional font to application
+            prop_font = self.theme_manager.get_proportional_font()
+            QApplication.instance().setFont(prop_font)
+            
+            self.global_status_bar.showMessage("Font settings updated", 2000)
+
     
     def _load_window_state(self) -> None:
         """

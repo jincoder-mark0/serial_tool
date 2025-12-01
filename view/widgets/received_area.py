@@ -76,11 +76,7 @@ class ReceivedArea(QWidget):
         self.text_edit = QTextEdit()
         self.text_edit.setReadOnly(True)
         self.text_edit.setToolTip("Received data display area")
-        
-        font = QFont("Consolas", 10)
-        font.setStyleHint(QFont.Monospace)
-        self.text_edit.setFont(font)
-        # self.text_edit.setStyleSheet("background-color: #1E1E1E; color: #D4D4D4;")
+        self.text_edit.setProperty("class", "fixed-font")  # Apply fixed-width font
         
         layout.addLayout(toolbar)
         layout.addWidget(self.text_edit)

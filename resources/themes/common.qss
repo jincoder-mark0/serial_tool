@@ -179,3 +179,24 @@ QToolBar QToolButton {
 QPushButton[class="accent"], QPushButton[class="danger"] {
     font-weight: bold;
 }
+
+/* Font Classes - Proportional (Variable-width) Font */
+.proportional-font {
+    font-family: "Segoe UI", "Ubuntu", "Arial", sans-serif;
+    font-size: 9pt;
+}
+
+/* Font Classes - Fixed (Monospace) Font */
+.fixed-font {
+    font-family: "Consolas", "Monospace", "Courier New", monospace;
+    font-size: 9pt;
+}
+
+/* Apply Fixed Font to Text Data Widgets */
+QTextEdit.fixed-font,
+QPlainTextEdit.fixed-font,
+QLineEdit.fixed-font {
+    font-family: "Consolas", "Monospace", "Courier New", monospace;
+    font-size: 9pt;
+}
+
