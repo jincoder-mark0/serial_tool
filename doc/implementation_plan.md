@@ -2,7 +2,7 @@
 
 ## 목표 (Goal)
 
-`Implementation_Specification.md`에 정의된 **SerialTool v1.0** (구 SerialManager, Quectel QCOM V1.6 클론 및 확장)을 **Python 3.10+** 및 **PyQt5**를 사용하여 구현합니다. **Layered MVP (Model-View-Presenter)** 아키텍처와 **Worker Thread** 모델을 적용하여 고성능, 안정성, 확장성을 확보합니다.
+`Implementation_Specification.md`에 정의된 **SerialTool v1.0** 을 **Python 3.10+** 및 **PyQt5**를 사용하여 구현합니다. **Layered MVP (Model-View-Presenter)** 아키텍처와 **Worker Thread** 모델을 적용하여 고성능, 안정성, 확장성을 확보합니다.
 
 ## 사용자 검토 필요 사항 (User Review Required)
 >
@@ -10,6 +10,7 @@
 >
 > - **프로젝트 명칭 변경**: `SerialManager`에서 `SerialTool`로 변경되었습니다.
 > - **UI 구조 확정**: `LeftPanel`(포트/수동제어) + `RightPanel`(커맨드/인스펙터) 구조로 리팩토링 완료되었습니다.
+> - **성능 목표**: Rx 2MB/s, UI 10K lines/s 처리를 목표로 최적화(RingBuffer, Batch Rendering)를 적용합니다.
 > - **스타일링**: 개별 `setStyleSheet` 대신 중앙 집중식 QSS 테마 시스템을 사용합니다.
 
 ## 제안된 변경 사항 (Proposed Changes)
@@ -18,12 +19,14 @@
 
 `serial_manager/` 루트 하위에 계층별 모듈을 구성합니다:
 
-- `core/`: EventBus, Utils(RingBuffer, ThreadSafeQueue), Logger
-- `model/`: SerialWorker, PortController, PacketParser, CLRunner
+- `core/`: EventBus, Utils(RingBuffer, ThreadSafeQueue), Logger, Settings
+- `model/`: SerialWorker, PortController, PacketParser, CLRunner, FileTransfer
 - `view/`:
   - `panels/`: LeftPanel, RightPanel, PortPanel, CommandListPanel
   - `widgets/`: ManualControl, CommandControl, PortSettings, PacketInspector
-- `presenter/`: PortPresenter, MainPresenter
+- `presenter/`: PortPresenter, MainPresenter, EventRouter
+- `plugins/`: 확장 플러그인
+- `tests/`: Unit/Integration/E2E 테스트
 - `doc/`: 문서 (CHANGELOG, 명세서 등)
 
 ### 2. 핵심 컴포넌트 상세 (Core Components Detail)
@@ -41,13 +44,15 @@
 
 #### [IN-PROGRESS] Core & Model Layer
 
-- **EventBus**: [완료] Singleton 기반 전역 이벤트 시스템.
-- **SerialWorker**: [완료] `QThread` 기반 비동기 시리얼 통신 워커.
-- **Utils**: [완료] `RingBuffer`, `ThreadSafeQueue` 구현.
-- **PortPresenter**: [진행중] View와 Model 연결, 포트 제어 로직 구현.
+- **EventBus**: Publish/Subscribe 패턴으로 컴포넌트 간 느슨한 결합 보장.
+- **SerialWorker**: `QThread` 상속, Non-blocking I/O 및 `RingBuffer`를 이용한 고속 데이터 수신.
+- **Utils**: `RingBuffer`, `ThreadSafeQueue` 구현.
+- **PortPresenter**: View와 Model 연결, 포트 제어 로직 구현.
 
 #### [TODO] Automation & Features
 
+- **PortController**: 포트별 상태 머신 및 리소스(Worker, Queue) 관리, 멀티포트 격리.
+- **PacketParser**: Factory 패턴 적용, AT/Delimiter/Fixed/Hex 파서 지원.
 - **CLRunner**: Command List 실행 엔진 (순차 실행, 반복, 지연).
 - **FileTransferEngine**: 파일 청크 전송 로직.
 - **SettingsManager**: 설정 저장/로드 (JSON).
@@ -57,8 +62,8 @@
 
 1. **[완료] 프로젝트 설정**: 구조 생성, `requirements.txt`, `README.md`, `main.py`.
 2. **[완료] UI 구현 (View)**: 메인 윈도우, 패널/위젯 분리 및 리팩토링, 레이아웃 최적화.
-3. **[완료] UI 검증**: 초기 실행 시 버튼 비활성화, 탭 동작, 리사이징 확인.
-4. **[진행중] Core & Model**: EventBus, SerialWorker, PortPresenter 구현 및 연동.
+3. **[진행중] UI 검증**: 초기 실행 시 버튼 비활성화, 탭 동작, 리사이징 확인.
+4. **Core & Model**: EventBus, SerialWorker, PortPresenter 구현 및 연동.
 5. **Presenter 연동**: 실제 시리얼 포트 연결, 데이터 송수신(Tx/Rx) 활성화.
 6. **자동화 기능**: Command List 실행 엔진, Auto Run 구현.
 7. **고급 기능**: 파일 전송, 설정 관리, 로깅, 플러그인 시스템.
@@ -68,10 +73,13 @@
 
 ### 자동화 테스트
 
-- **Unit Test**: `pytest`로 Core/Model 로직 검증.
-- **Integration Test**: 가상 시리얼 포트(com0com)를 이용한 송수신 테스트.
+- **Unit Test**: `pytest`로 Core/Model 로직 검증 (커버리지 70%+).
+- **Integration Test**: 가상 시리얼 포트(com0com/socat)를 이용한 송수신 및 멀티포트 테스트.
+- **Performance Test**: `pytest-benchmark`로 Rx 처리량(2MB/s) 및 UI 렌더링 속도 측정.
 
 ### 수동 검증
 
 - **UI UX**: 버튼 활성/비활성 상태, 탭 동작, 툴팁 확인.
 - **Functional**: 실제 장비 연결 후 데이터 송수신, 커맨드 리스트 자동 실행 확인.
+- **Scenario**: 실제 장비 또는 루프백 환경에서 장시간(24h+) Auto Run 테스트.
+- **Deployment**: PyInstaller로 생성된 실행 파일의 클린 설치 및 실행 확인.

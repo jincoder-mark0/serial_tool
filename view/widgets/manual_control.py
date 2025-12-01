@@ -69,9 +69,9 @@ class ManualControlWidget(QWidget):
         send_layout.setContentsMargins(2, 2, 2, 2)
         send_layout.setSpacing(5)
         
-        self.input_text = QLineEdit() # QTextEdit -> QLineEdit 변경
-        self.input_text.setPlaceholderText("Enter command here...")
-        self.input_text.returnPressed.connect(self.on_send_clicked) # Enter 키 지원
+        self.input_field = QLineEdit() # QTextEdit -> QLineEdit 변경
+        self.input_field.setPlaceholderText("Enter command here...")
+        self.input_field.returnPressed.connect(self.on_send_clicked) # Enter 키 지원
         
         self.send_btn = QPushButton("Send")
         self.send_btn.setCursor(Qt.PointingHandCursor)
@@ -80,7 +80,7 @@ class ManualControlWidget(QWidget):
         self.send_btn.setProperty("class", "accent") 
         self.send_btn.clicked.connect(self.on_send_clicked)
         
-        send_layout.addWidget(self.input_text, 1)
+        send_layout.addWidget(self.input_field, 1)
         send_layout.addWidget(self.send_btn)
         
         send_group.setLayout(send_layout)
@@ -117,7 +117,7 @@ class ManualControlWidget(QWidget):
         self.set_controls_enabled(False)
         
     def on_send_clicked(self) -> None:
-        text = self.input_text.text()
+        text = self.input_field.text()
         if text:
             self.send_command_requested.emit(
                 text, 
@@ -125,7 +125,7 @@ class ManualControlWidget(QWidget):
                 self.enter_check.isChecked()
             )
             # 입력 후 지우지 않음 (히스토리 기능이 없으므로 유지하는 편이 나음)
-            # self.input_text.clear() 
+            # self.input_field.clear() 
             
     def on_select_file_clicked(self) -> None:
         path, _ = QFileDialog.getOpenFileName(self, "Select File to Send")

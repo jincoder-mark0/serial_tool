@@ -32,6 +32,11 @@ def main():
 
     # MainWindow 초기화
     window = MainWindow()
+    
+    # MainPresenter 초기화 (View와 Model 연결)
+    from presenter.main_presenter import MainPresenter
+    presenter = MainPresenter(window)
+    
     window.show()
 
     logging.info("Application initialized")

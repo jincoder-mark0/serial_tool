@@ -21,6 +21,25 @@
   - [ ] `model/packet_parser.py` (Factory, AT/Delimiter/Fixed Parsers) <!-- id: 39 -->
   - [ ] `model/serial_manager.py` (PortRegistry, Multi-port Management) <!-- id: 40 -->
 
+- [x] 테마 및 스타일링 시스템 (Theme & Styling System)
+  - [x] `view/styles/theme_manager.py` (QSS Loading & Application)
+  - [x] `view/styles/dark_theme.qss` (Dark Mode Style)
+  - [x] `view/styles/light_theme.qss` (Light Mode Style)
+  - [x] UI 컴포넌트 테마 적용 및 동적 전환 (Dynamic Switching)
+  - [x] UI 개선 (UI Refinement)
+    - [x] 폰트 변경 기능 추가 (View -> Font Menu)
+    - [x] 콤보박스 화살표 아이콘 추가 (Base64 SVG)
+    - [x] 포트 설정 위젯 레이아웃 개선 (Component Sizing)
+  - [x] UI 레이아웃 최적화 및 기능 업데이트 (Layout & Features)
+    - [x] `PortSettingsWidget` 레이아웃 컴팩트화 (2줄 구성)
+    - [x] 콤보박스 화살표 표시 문제 해결 (Style Fix)
+    - [x] `CommandList`: Enter -> Tail 변경 및 Head 추가 (Checkboxes)
+    - [x] `CommandControl`: Head/Tail 입력 필드 추가
+  - [x] UI 추가 개선 및 리네이밍 (Refinement & Renaming)
+    - [x] `PortSettingsWidget`: Port Combo 크기 조정 (Baud Combo와 동일하게)
+    - [x] 아이콘 적용 (SVG): Close Tab, Add, Del, Up, Down (White/Black)
+    - [x] 용어 변경: Head/Tail -> Prefix/Suffix (`CommandList`, `CommandControl`)
+
 - [ ] Presenter 및 로직 연결 (Presenter Integration) <!-- id: 14 -->
   - [ ] `presenter/event_router.py` (Event Routing) <!-- id: 41 -->
   - [ ] `presenter/main_presenter.py` (Central Logic) <!-- id: 15 -->

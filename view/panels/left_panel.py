@@ -49,13 +49,13 @@ class LeftPanel(QWidget):
              index = self.port_tabs.insertTab(count - 1, panel, "-")
         else:
              index = self.port_tabs.addTab(panel, "-")
+        
+        # Connect port settings connection state to manual control
+        panel.port_settings.connection_state_changed.connect(
+            self._on_port_connection_changed
+        )
              
         self.port_tabs.setCurrentIndex(index)
-        
-    def add_plus_tab(self) -> None:
-        """'+' 탭을 추가합니다."""
-        self.port_tabs.addTab(QWidget(), "+")
-        self.disable_close_button_for_plus_tab()
 
     def disable_close_button_for_plus_tab(self) -> None:
         """'+' 탭의 닫기 버튼을 비활성화/제거합니다."""
@@ -79,3 +79,19 @@ class LeftPanel(QWidget):
         
     def update_tab_title(self, index: int, title: str) -> None:
         self.port_tabs.setTabText(index, title)
+    
+    def _on_port_connection_changed(self, connected: bool) -> None:
+        """
+        포트 연결 상태 변경 핸들러.
+        현재 활성 탭의 연결 상태가 변경되면 ManualControl을 활성화/비활성화합니다.
+        """
+        # 현재 활성 탭의 변경인지 확인
+        sender_widget = self.sender()
+        if sender_widget:
+            # sender의 부모를 찾아서 현재 활성 탭인지 확인
+            current_index = self.port_tabs.currentIndex()
+            current_widget = self.port_tabs.widget(current_index)
+            if current_widget and hasattr(current_widget, 'port_settings'):
+                if current_widget.port_settings == sender_widget:
+                    # 현재 탭의 변경이면 ManualControl 업데이트
+                    self.manual_control.set_controls_enabled(connected)

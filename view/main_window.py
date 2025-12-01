@@ -15,19 +15,9 @@ class MainWindow(QMainWindow):
     
     def __init__(self) -> None:
         super().__init__()
-        self.setWindowTitle("SerialTool v1.0")
-        self.resize(1400, 900)
         
-        self.init_ui()
-        self.init_menu()
-        
-        # Apply default theme
-        self.switch_theme("dark")
-        
-    def init_ui(self) -> None:
-        """UI 컴포넌트 및 레이아웃 초기화"""
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
+        # Initialize Settings Manager
+        self.settings = SettingsManager()
         
         main_layout = QVBoxLayout(central_widget)
         main_layout.setContentsMargins(5, 5, 5, 5)
@@ -100,26 +90,6 @@ class MainWindow(QMainWindow):
         
         # Tools Menu
         tools_menu = menubar.addMenu("Tools")
-        
-        # Help Menu
-        help_menu = menubar.addMenu("Help")
-        about_action = QAction("About", self)
-        help_menu.addAction(about_action)
-
-    def switch_theme(self, theme_name: str):
-        """Switches the application theme."""
-        app = QApplication.instance()
-        if app:
-            ThemeManager.apply_theme(app, theme_name)
-
-    def change_font(self, font_family: str):
-        """Changes the application font."""
-        app = QApplication.instance()
-        if app:
-            ThemeManager.set_font(app, font_family)
-
-    def open_font_dialog(self):
-        """Opens a font selection dialog."""
         from PyQt5.QtWidgets import QFontDialog, QApplication
         
         current_font = QApplication.font()
@@ -128,3 +98,47 @@ class MainWindow(QMainWindow):
             app = QApplication.instance()
             if app:
                 app.setFont(font)
+    
+    def _load_window_state(self) -> None:
+        """
+        저장된 윈도우 상태를 로드합니다.
+        (크기, 위치)
+        """
+        # Window geometry
+        width = self.settings.get('ui.window_width', 1400)
+        height = self.settings.get('ui.window_height', 900)
+        self.resize(width, height)
+        
+        # Position (optional)
+        x = self.settings.get('ui.window_x')
+        y = self.settings.get('ui.window_y')
+        if x is not None and y is not None:
+            self.move(x, y)
+    
+    def _save_window_state(self) -> None:
+        """
+        현재 윈도우 상태를 설정에 저장합니다.
+        """
+        # Save window geometry
+        self.settings.set('ui.window_width', self.width())
+        self.settings.set('ui.window_height', self.height())
+        self.settings.set('ui.window_x', self.x())
+        self.settings.set('ui.window_y', self.y())
+    
+    def closeEvent(self, event) -> None:
+        """
+        윈도우 종료 이벤트를 처리합니다.
+        설정을 저장하고 종료합니다.
+        
+        Args:
+            event: 종료 이벤트
+        """
+        # Save window state
+        self._save_window_state()
+        
+        # Save settings to file
+        self.settings.save_settings()
+        
+        # Accept the close event
+        event.accept()
+
