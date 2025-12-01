@@ -1,3 +1,20 @@
+from PyQt5.QtCore import QObject
+import serial.tools.list_ports
+from typing import Optional
+
+from view.panels.left_panel import LeftPanel
+from model.port_controller import PortController
+
+class PortPresenter(QObject):
+    """
+    포트 설정 및 제어를 위한 Presenter.
+    PortSettingsWidget(View)와 PortController(Model)를 연결합니다.
+    """
+    def __init__(self, left_panel: LeftPanel, port_controller: PortController) -> None:
+        """
+        PortPresenter 초기화.
+        
+        Args:
             left_panel: 좌측 패널 (포트 탭 및 설정 포함)
             port_controller: 포트 제어기
         """
