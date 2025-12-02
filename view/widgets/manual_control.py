@@ -140,11 +140,13 @@ class ManualControlWidget(QWidget):
         
         self.send_group.setTitle(language_manager.get_text("manual_send"))
         self.send_btn.setText(language_manager.get_text("send"))
+        self.input_field.setPlaceholderText(language_manager.get_text("input_placeholder"))
         
         self.file_group.setTitle(language_manager.get_text("file_transfer"))
-        if self.file_path_label.text() == language_manager.get_text("no_file_selected", "en") or \
-           self.file_path_label.text() == language_manager.get_text("no_file_selected", "ko"): # 간단한 체크
-             self.file_path_label.setText(language_manager.get_text("no_file_selected"))
+        # 파일이 선택되지 않은 상태인지 확인
+        if "No file selected" in self.file_path_label.text() or \
+           "파일이 선택되지 않음" in self.file_path_label.text():
+              self.file_path_label.setText(language_manager.get_text("no_file_selected"))
              
         self.select_file_btn.setText(language_manager.get_text("select_file"))
         self.send_file_btn.setText(language_manager.get_text("send_file"))
