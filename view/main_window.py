@@ -7,6 +7,7 @@ from view.panels.left_panel import LeftPanel
 from view.panels.right_panel import RightPanel
 from view.theme_manager import ThemeManager
 from view.language_manager import language_manager
+from view.dialogs.font_settings_dialog import FontSettingsDialog
 from core.settings_manager import SettingsManager
 
 class MainWindow(QMainWindow):
@@ -148,8 +149,6 @@ class MainWindow(QMainWindow):
 
     def open_font_settings_dialog(self) -> None:
         """듀얼 폰트 설정 대화상자를 엽니다."""
-        from view.dialogs.font_settings_dialog import FontSettingsDialog
-        
         dialog = FontSettingsDialog(self.theme_manager, self)
         if dialog.exec_():
             # 폰트 설정 저장

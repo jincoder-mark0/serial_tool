@@ -14,6 +14,12 @@
   - PortSettingsWidget 부분 한글화 (포트, 스캔, 보레이트 버튼)
   - **리팩토링**: 언어 리소스를 코드에서 JSON 파일로 분리 (`config/languages/*.json`)
 
+#### 수정 사항 (Fixed)
+
+- **ThemeManager**: `load_theme()` 메서드의 `@staticmethod` 데코레이터 제거 (NameError 방지)
+- **ColorRulesManager**: 설정 파일 경로 계산 오류 수정 (`parent.parent.parent` → `parent.parent`)
+- **MainWindow**: Import 구문을 파일 상단으로 이동 (코드 스타일 가이드 준수)
+
 - **PreferencesDialog**: 설정 다이얼로그 구현 (General, Serial, Logging 탭)
 - **AboutDialog**: 애플리케이션 정보 다이얼로그 구현
 - **FileProgressWidget**: 파일 전송 진행률 표시 위젯 구현 (진행률 바, 속도, ETA)

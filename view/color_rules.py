@@ -63,7 +63,7 @@ class ColorRulesManager:
             base_path = Path(os._MEIPASS)
         else:
             # 개발 모드 환경
-            base_path = Path(__file__).parent.parent.parent
+            base_path = Path(__file__).parent.parent
         
         return base_path / 'config' / 'color_rules.json'
         
