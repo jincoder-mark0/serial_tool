@@ -6,6 +6,13 @@
 
 #### 추가 사항 (Added)
 
+- **다국어 지원 (Phase 1)**
+  - LanguageManager 확장: 50+ UI 문자열 추가 (한국어/영어)
+  - MainWindow 메뉴 시스템 한글화 (파일, 보기, 도움말 메뉴)
+  - 윈도우 제목 및 상태바 한글화
+  - 언어 동적 변경 핸들러 구현 (on_language_changed)
+  - PortSettingsWidget 부분 한글화 (포트, 스캔, 보레이트 버튼)
+
 - **PreferencesDialog**: 설정 다이얼로그 구현 (General, Serial, Logging 탭)
 - **AboutDialog**: 애플리케이션 정보 다이얼로그 구현
 - **FileProgressWidget**: 파일 전송 진행률 표시 위젯 구현 (진행률 바, 속도, ETA)

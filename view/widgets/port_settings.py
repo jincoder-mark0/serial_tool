@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import (
     QLabel, QGroupBox, QCheckBox, QGridLayout, QFormLayout, QSizePolicy
 )
 from PyQt5.QtCore import pyqtSignal, Qt
+from view.language_manager import language_manager
 from typing import Optional, List, Dict, Any
 
 class PortSettingsWidget(QGroupBox):
@@ -42,7 +43,7 @@ class PortSettingsWidget(QGroupBox):
         self.port_combo.setMinimumWidth(80)
         self.port_combo.setToolTip("시리얼 포트를 선택합니다.")
         
-        self.scan_btn = QPushButton("Scan")
+        self.scan_btn = QPushButton(language_manager.get_text("scan"))
         self.scan_btn.setFixedWidth(50)
         self.scan_btn.setToolTip("포트 목록을 새로고침합니다.")
         self.scan_btn.clicked.connect(self.scan_requested.emit)
@@ -63,16 +64,16 @@ class PortSettingsWidget(QGroupBox):
         self.baud_combo.setValidator(self.baud_validator)
         
         # 연결 버튼
-        self.connect_btn = QPushButton("Open")
+        self.connect_btn = QPushButton(language_manager.get_text("open_port"))
         self.connect_btn.setCheckable(True)
         self.connect_btn.setToolTip("시리얼 포트를 연결하거나 해제합니다.")
         self.connect_btn.clicked.connect(self.on_connect_clicked)
         self.connect_btn.setFixedWidth(60)
         
-        row1_layout.addWidget(QLabel("Port:"))
+        row1_layout.addWidget(QLabel(language_manager.get_text("port") + ":"))
         row1_layout.addWidget(self.port_combo)
         row1_layout.addWidget(self.scan_btn)
-        row1_layout.addWidget(QLabel("Baud:"))
+        row1_layout.addWidget(QLabel(language_manager.get_text("baudrate") + ":"))
         row1_layout.addWidget(self.baud_combo)
         row1_layout.addWidget(self.connect_btn)
         
