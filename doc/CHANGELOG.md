@@ -12,6 +12,7 @@
   - 윈도우 제목 및 상태바 한글화
   - 언어 동적 변경 핸들러 구현 (on_language_changed)
   - PortSettingsWidget 부분 한글화 (포트, 스캔, 보레이트 버튼)
+  - **리팩토링**: 언어 리소스를 코드에서 JSON 파일로 분리 (`config/languages/*.json`)
 
 - **PreferencesDialog**: 설정 다이얼로그 구현 (General, Serial, Logging 탭)
 - **AboutDialog**: 애플리케이션 정보 다이얼로그 구현
