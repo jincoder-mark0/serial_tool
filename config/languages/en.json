@@ -167,5 +167,10 @@
     "command_list_tab": "Command List",
     "inspector_tab": "Inspector",
     "command_list_panel_tooltip": "Manage and execute commands",
-    "packet_inspector_tooltip": "Inspect packet structure"
+    "packet_inspector_tooltip": "Inspect packet structure",
+    "port_tab_tooltip": "Port configuration and control tabs",
+    "eta_placeholder": "--:--",
+    "sending_status": "Sending: {0}",
+    "completed_status": "Completed: {0}",
+    "failed_status": "Failed: {0}"
 }

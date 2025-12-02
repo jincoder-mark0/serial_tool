@@ -167,5 +167,10 @@
     "command_list_tab": "명령 리스트",
     "inspector_tab": "인스펙터",
     "command_list_panel_tooltip": "명령어 관리 및 실행",
-    "packet_inspector_tooltip": "패킷 구조 검사"
+    "packet_inspector_tooltip": "패킷 구조 검사",
+    "port_tab_tooltip": "포트 설정 및 제어 탭",
+    "eta_placeholder": "--:--",
+    "sending_status": "전송 중: {0}",
+    "completed_status": "완료: {0}",
+    "failed_status": "실패: {0}"
 }
