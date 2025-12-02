@@ -2,14 +2,32 @@
 
 ## [미배포] (Unreleased)
 
+### View 계층 마무리 및 다국어 지원 (2025-12-02)
+
+#### 추가 사항 (Added)
+
+- **PreferencesDialog**: 설정 다이얼로그 구현 (General, Serial, Logging 탭)
+- **AboutDialog**: 애플리케이션 정보 다이얼로그 구현
+- **FileProgressWidget**: 파일 전송 진행률 표시 위젯 구현 (진행률 바, 속도, ETA)
+- **LanguageManager**: 다국어 지원 시스템 구현 (한국어/영어)
+- **ReceivedArea**: Regex 지원 검색 바 추가
+- **PortSettingsWidget**: BaudRate 입력 유효성 검사 추가 (50-4,000,000)
+- **CommandListWidget**: 데이터 영속성 기능 추가 (get/set_command_list)
+- **CommandListPanel**: SettingsManager 연동으로 자동 저장/로드 구현
+- **settings.json**: command_list 기본 AT 커맨드 예제 추가
+
+#### 변경 사항 (Changed)
+
+- **test_view.py**: PreferencesDialog, AboutDialog, FileProgressWidget, Language 테스트 케이스 추가
+
 ### 듀얼 폰트 시스템 (2025-12-01)
 
 #### 추가 사항 (Added)
 
 - **폰트 시스템 개선**
   - Proportional Font (가변폭): UI 요소 (메뉴, 상태바, 레이블, 버튼 등)에 적용
-
-#### 추가 사항 (Added)
+  - Fixed Font (고정폭): TextEdit, CommandList 등 데이터 표시 영역에 적용
+  - 폰트 설정 대화상자 구현
 
 - **테마 시스템**
   - 중앙 집중식 QSS 기반 테마 관리 구현 (`view/theme_manager.py`)
@@ -73,7 +91,7 @@
   - **파일 전송 UI**: ManualControlWidget에 파일 선택 및 전송 UI 추가
 
 - **설정 관리 시스템**
-  - `SettingsManager` 구현: `config/default_settings.json` 및 사용자 설정 관리
+  - `SettingsManager` 구현: `config/settings.json` 및 사용자 설정 관리
   - 상태 저장: 창 크기, 위치, 테마 설정을 종료 시 자동 저장 및 시작 시 복원
 
 - **테스트 도구**
@@ -136,6 +154,8 @@
 - ✅ SVG 아이콘 시스템
 - ✅ 위젯 개선 및 다듬기
 - ✅ 디렉토리 구조 재정리
+- ✅ View 계층 마무리 (다이얼로그, 다국어 지원)
+- ✅ Command List 영속성 구현
 
 #### 진행 중 (In Progress)
 

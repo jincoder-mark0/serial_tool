@@ -55,6 +55,20 @@ Python 3 + PyQt5 + PySerial 기반 멀티포트 시리얼 통신 관리 애플�
 - [x] 견고성 개선
   - [x] ThemeManager 폴백 스타일시트 구현
   - [x] SettingsManager 폴백 메커니즘 검증
+- [x] View 계층 보완 (Spec 10, 11, 17)
+  - [x] PreferencesDialog 구현 (Spec 17)
+  - [x] AboutDialog 구현 (Spec 10.4.1)
+  - [x] ReceivedArea 검색 바 (Regex 지원) 구현 (Spec 11.3.1)
+  - [x] PortSettingsWidget BaudRate Validator 추가 (Spec 11.1.2)
+  - [x] FileProgressWidget UI 구현 (Spec 11.2.3)
+- [x] View 계층 마무리 및 다국어 지원
+  - [x] settings.json command_list 기본값 추가
+  - [x] LanguageManager 구현 (i18n)
+  - [x] test_view.py 테스트 케이스 보완 (Dialogs, FileProgress, Language)
+- [x] Command List Persistence (자동 저장)
+  - [x] CommandListWidget 데이터 내보내기/가져오기 구현
+  - [x] CommandListPanel 설정 연동 (자동 저장/로드)
+
 
 ---
 

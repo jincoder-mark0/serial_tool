@@ -57,6 +57,10 @@ class PortSettingsWidget(QGroupBox):
         ])
         self.baud_combo.setCurrentText("115200")
         self.baud_combo.setEditable(True)
+        # Baudrate 유효성 검사 (50 ~ 4000000)
+        from PyQt5.QtGui import QIntValidator
+        self.baud_validator = QIntValidator(50, 4000000)
+        self.baud_combo.setValidator(self.baud_validator)
         
         # 연결 버튼
         self.connect_btn = QPushButton("Open")

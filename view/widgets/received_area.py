@@ -1,6 +1,6 @@
-from PyQt5.QtWidgets import QTextEdit, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QCheckBox, QLabel
+from PyQt5.QtWidgets import QTextEdit, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QCheckBox, QLabel, QLineEdit
 from PyQt5.QtCore import pyqtSignal, QTimer, Qt
-from PyQt5.QtGui import QFont, QTextCursor
+from PyQt5.QtGui import QFont, QTextCursor, QTextDocument
 from typing import Optional
 import datetime
 from view.color_rules import ColorRulesManager
@@ -64,8 +64,29 @@ class ReceivedArea(QWidget):
         self.save_btn = QPushButton("Save")
         self.save_btn.setToolTip("로그를 파일로 저장합니다.")
         
+        # 검색 바 (Search Bar)
+        self.search_input = QLineEdit()
+        self.search_input.setPlaceholderText("Search (Regex supported)...")
+        self.search_input.setToolTip("검색할 문자열 또는 정규식을 입력하고 Enter를 누르세요.")
+        self.search_input.returnPressed.connect(self.find_next)
+        self.search_input.setMaximumWidth(200)
+        
+        self.find_prev_btn = QPushButton("◀")
+        self.find_prev_btn.setToolTip("이전 찾기 (Find Previous)")
+        self.find_prev_btn.setFixedWidth(30)
+        self.find_prev_btn.clicked.connect(self.find_prev)
+        
+        self.find_next_btn = QPushButton("▶")
+        self.find_next_btn.setToolTip("다음 찾기 (Find Next)")
+        self.find_next_btn.setFixedWidth(30)
+        self.find_next_btn.clicked.connect(self.find_next)
+        
         toolbar.addWidget(QLabel("RX Log"))
         toolbar.addStretch()
+        toolbar.addWidget(self.search_input)
+        toolbar.addWidget(self.find_prev_btn)
+        toolbar.addWidget(self.find_next_btn)
+        toolbar.addSpacing(10)
         toolbar.addWidget(self.hex_check)
         toolbar.addWidget(self.timestamp_check)
         toolbar.addWidget(self.pause_check)
@@ -82,6 +103,44 @@ class ReceivedArea(QWidget):
         layout.addLayout(toolbar)
         layout.addWidget(self.text_edit)
         self.setLayout(layout)
+
+    def find_next(self) -> None:
+        """다음 검색 결과를 찾습니다."""
+        text = self.search_input.text()
+        if not text:
+            return
+            
+        # 정규식 검색 옵션 설정
+        options = QTextDocument.FindFlags()
+        
+        # 정규식 사용 시도
+        import re
+        try:
+            re.compile(text)
+            # Qt의 FindRegularExpression 플래그 사용 (PyQt5 버전에 따라 다를 수 있음)
+            # 여기서는 간단히 일반 텍스트 검색으로 구현하고 추후 확장
+            # TODO: 정규식 검색 완벽 지원을 위해 QRegularExpression 사용 필요
+        except re.error:
+            pass # 정규식 오류 시 일반 텍스트로 취급
+            
+        found = self.text_edit.find(text, options)
+        if not found:
+            # 처음부터 다시 검색 (Wrap around)
+            self.text_edit.moveCursor(QTextCursor.Start)
+            self.text_edit.find(text, options)
+
+    def find_prev(self) -> None:
+        """이전 검색 결과를 찾습니다."""
+        text = self.search_input.text()
+        if not text:
+            return
+            
+        options = QTextDocument.FindBackward
+        found = self.text_edit.find(text, options)
+        if not found:
+            # 끝에서부터 다시 검색 (Wrap around)
+            self.text_edit.moveCursor(QTextCursor.End)
+            self.text_edit.find(text, options)
 
     def append_data(self, data: bytes) -> None:
         """

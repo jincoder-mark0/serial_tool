@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtCore import Qt, pyqtSignal, QModelIndex
-from typing import Optional, List
+from typing import Optional, List, Dict, Any
 
 class CommandListWidget(QWidget):
     """
@@ -14,6 +14,7 @@ class CommandListWidget(QWidget):
     
     # 시그널 정의
     send_row_requested = pyqtSignal(int) # row_index
+    command_list_changed = pyqtSignal()  # 데이터 변경 시그널
     
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -109,39 +110,70 @@ class CommandListWidget(QWidget):
         
         # 모델 시그널 연결
         self.model.itemChanged.connect(self.on_item_changed)
+        self.model.rowsInserted.connect(lambda: self.command_list_changed.emit())
+        self.model.rowsRemoved.connect(lambda: self.command_list_changed.emit())
+        self.model.rowsMoved.connect(lambda: self.command_list_changed.emit())
         
-        # 더미 데이터 추가 (테스트용)
-        self.add_dummy_row("AT", False, True, "100")
-        self.add_dummy_row("AT+VER?", False, True, "500")
-    
     def on_item_changed(self, item: QStandardItem) -> None:
         """
         모델 아이템 변경 핸들러입니다.
         Select 컬럼이 변경되면 Select All 상태를 업데이트합니다.
-        
-        Args:
-            item (QStandardItem): 변경된 아이템.
         """
         if item.column() == 0:  # Select column
             self.update_select_all_state()
+        
+        # 데이터 변경 시그널 발생 (Select 컬럼 제외)
+        if item.column() != 0:
+            self.command_list_changed.emit()
 
-    def add_dummy_row(self, cmd: str, hex_mode: bool, suffix: bool, delay: str) -> None:
+    def get_command_list(self) -> List[Dict[str, Any]]:
         """
-        테스트용 더미 데이터를 추가합니다.
+        현재 커맨드 리스트 데이터를 반환합니다.
+        
+        Returns:
+            List[Dict[str, Any]]: 커맨드 데이터 리스트.
+        """
+        commands = []
+        for row in range(self.model.rowCount()):
+            cmd_data = {
+                "enabled": self.model.item(row, 0).checkState() == Qt.Checked,
+                "prefix": self.model.item(row, 1).checkState() == Qt.Checked,
+                "command": self.model.item(row, 2).text(),
+                "suffix": self.model.item(row, 3).checkState() == Qt.Checked,
+                "hex_mode": self.model.item(row, 4).checkState() == Qt.Checked,
+                "delay": self.model.item(row, 5).text()
+            }
+            commands.append(cmd_data)
+        return commands
+
+    def set_command_list(self, commands: List[Dict[str, Any]]) -> None:
+        """
+        커맨드 리스트 데이터를 설정합니다.
         
         Args:
-            cmd (str): 명령어.
-            hex_mode (bool): HEX 모드 여부.
-            suffix (bool): 접미사 사용 여부.
-            delay (str): 지연 시간(ms).
+            commands (List[Dict[str, Any]]): 커맨드 데이터 리스트.
         """
+        self.model.removeRows(0, self.model.rowCount())
+        for cmd in commands:
+            self._append_row(
+                cmd.get("command", ""),
+                cmd.get("prefix", True),
+                cmd.get("hex_mode", False),
+                cmd.get("suffix", True),
+                str(cmd.get("delay", "100")),
+                cmd.get("enabled", True)
+            )
+        self.update_select_all_state()
+
+    def add_dummy_row(self, cmd: str, hex_mode: bool, suffix: bool, delay: str) -> None:
+        """테스트용 더미 데이터를 추가합니다."""
         self._append_row(cmd, True, hex_mode, suffix, delay)
 
     def add_empty_row(self) -> None:
         """빈 행을 추가합니다."""
         self._append_row("", True, False, True, "100")
         
-    def _append_row(self, cmd: str, prefix: bool, hex_mode: bool, suffix: bool, delay: str) -> None:
+    def _append_row(self, cmd: str, prefix: bool, hex_mode: bool, suffix: bool, delay: str, enabled: bool = True) -> None:
         """
         새로운 행을 모델에 추가합니다.
         
@@ -151,13 +183,14 @@ class CommandListWidget(QWidget):
             hex_mode (bool): HEX 모드 여부.
             suffix (bool): 접미사 사용 여부.
             delay (str): 지연 시간.
+            enabled (bool): 활성화 여부 (Select).
         """
         row_idx = self.model.rowCount()
         
         # 0: Select Checkbox
         item_select = QStandardItem()
         item_select.setCheckable(True)
-        item_select.setCheckState(Qt.Checked)
+        item_select.setCheckState(Qt.Checked if enabled else Qt.Unchecked)
         item_select.setEditable(False)
         
         # 1: Prefix Checkbox

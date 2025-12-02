@@ -96,18 +96,6 @@ serial_tool2/
 │   └── session_summary_*.md
 ├── main.py                  # 진입점 [완료]
 ├── version.py              # 버전 정보 [완료]
-├── requirements.txt        # 의존성 [완료]
-└── README.md               # 프로젝트 개요 [완료]
-```
-
----
-
-### 2. Core 계층 (Core Layer)
-
-#### [완료] `core/settings_manager.py`
-- ✅ JSON 기반 설정 저장/로드
-- ✅ 전역 설정 및 포트별 프로파일 관리
-- ✅ 백업/복원 기능
 
 #### [진행 필요] `core/utils.py`
 **RingBuffer 구현**
@@ -182,20 +170,6 @@ serial_tool2/
 #### [진행 필요] `model/serial_manager.py`
 **PortRegistry 구현**
 - 포트 목록 관리 (최대 16개)
-- 포트 스캔 기능 (OS별 구현)
-  - Windows: `COM1`~`COM256`
-  - Linux: `/dev/ttyUSB*`, `/dev/ttyACM*`
-- 포트 상태 모니터링
-- 통계 수집 (Rx/Tx 바이트, 에러 카운트)
-
-#### [진행 필요] `model/packet_parser.py`
-**Parser Factory 패턴**
-- `ParserBase` 추상 클래스
-- 구체 파서 구현
-  - `DelimiterParser`: 개행, 커스텀 구분자
-  - `FixedLengthParser`: 고정 길이 패킷
-  - `ATParser`: AT 명령 응답 (OK, ERROR, +URC)
-  - `HexParser`: 바이너리 데이터
 
 **Expect/Timeout 처리**
 - 정규식 기반 매칭
