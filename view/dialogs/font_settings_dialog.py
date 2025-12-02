@@ -178,7 +178,6 @@ class FontSettingsDialog(QDialog):
     
     def reset_to_defaults(self):
         """폰트 설정을 플랫폼별 기본값으로 리셋합니다."""
-        import platform
         system = platform.system()
         
         # 가변폭 폰트 기본값
