@@ -5,29 +5,29 @@ from .port_presenter import PortPresenter
 
 class MainPresenter(QObject):
     """
-    애플리케이션을 조율하는 메인 Presenter.
+    애플리케이션을 조율하는 메인 Presenter 클래스입니다.
     하위 Presenter들을 초기화하고 전역 상태를 관리합니다.
     """
     def __init__(self, view: MainWindow) -> None:
         """
-        MainPresenter 초기화.
+        MainPresenter를 초기화합니다.
         
         Args:
-            view: 메인 윈도우 인스턴스
+            view (MainWindow): 메인 윈도우 인스턴스.
         """
         super().__init__()
         self.view = view
         
-        # Initialize Models
+        # 모델 초기화 (Initialize Models)
         self.port_controller = PortController()
         
-        # Initialize Sub-Presenters
+        # 하위 Presenter 초기화 (Initialize Sub-Presenters)
         self.port_presenter = PortPresenter(self.view.left_panel, self.port_controller)
         
-        # Connect data received signal to log view
+        # 데이터 수신 시그널을 로그 뷰에 연결
         self.port_controller.data_received.connect(self.on_data_received)
         
-        # Connect manual send button
+        # 수동 전송 버튼 연결
         self.view.left_panel.manual_control.send_btn.clicked.connect(self.on_manual_send)
         
     def on_data_received(self, data: bytes) -> None:
@@ -36,9 +36,9 @@ class MainPresenter(QObject):
         현재 활성 포트 패널의 ReceivedArea로 데이터를 전달합니다.
         
         Args:
-            data: 수신된 바이트 데이터
+            data (bytes): 수신된 바이트 데이터.
         """
-        # Get current active port panel and forward data to its ReceivedArea
+        # 현재 활성 포트 패널을 가져와서 ReceivedArea로 데이터 전달
         index = self.view.left_panel.port_tabs.currentIndex()
         if index >= 0:
             widget = self.view.left_panel.port_tabs.widget(index)
@@ -52,11 +52,11 @@ class MainPresenter(QObject):
         """
         text = self.view.left_panel.manual_control.input_field.text()
         if text and self.port_controller.is_open:
-            # Convert text to bytes
-            # TODO: Handle hex mode, line endings, etc.
+            # 텍스트를 바이트로 변환
+            # TODO: HEX 모드, 라인 엔딩 등을 처리해야 함
             data = text.encode('utf-8')
             self.port_controller.send_data(data)
-            # Clear input after send
+            # 전송 후 입력 필드 초기화
             self.view.left_panel.manual_control.input_field.clear()
         elif not self.port_controller.is_open:
             print("Port not open")

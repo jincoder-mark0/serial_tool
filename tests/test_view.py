@@ -8,7 +8,7 @@ from PyQt5.QtCore import Qt
 
 import os
 
-# Add parent directory to path correctly
+# 부모 디렉토리를 경로에 추가하여 모듈 import 가능하게 함
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
@@ -22,30 +22,32 @@ from view.theme_manager import ThemeManager
 from core.settings_manager import SettingsManager
 
 class ViewTestWindow(QMainWindow):
-    """View 컴포넌트 테스트용 윈도우"""
+    """View 컴포넌트 테스트용 윈도우 클래스입니다."""
     
-    def __init__(self):
+    def __init__(self) -> None:
+        """ViewTestWindow를 초기화합니다."""
         super().__init__()
         self.setWindowTitle("View Components Test")
         self.resize(1200, 800)
         
-        # Settings Manager Test
+        # 설정 관리자 테스트 (Settings Manager Test)
         self.settings = SettingsManager()
         
         self.init_ui()
         
-        # Apply theme
+        # 테마 적용 (Apply theme)
         theme = self.settings.get('global.theme', 'dark')
-        ThemeManager.apply_theme(QApplication.instance(), theme)
+        self.theme_manager = ThemeManager()
+        self.theme_manager.apply_theme(QApplication.instance(), theme)
         
-    def init_ui(self):
-        """UI 초기화"""
+    def init_ui(self) -> None:
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
         
         layout = QVBoxLayout(central_widget)
         
-        # Tab Widget for different tests
+        # 테스트용 탭 위젯 (Tab Widget for different tests)
         tabs = QTabWidget()
         
         # Test 1: ReceivedArea (색상 규칙, Trim, 타임스탬프 테스트)
@@ -65,24 +67,29 @@ class ViewTestWindow(QMainWindow):
         
         layout.addWidget(tabs)
         
-        # Status bar
+        # 상태 표시줄 (Status bar)
         self.statusBar().showMessage("Ready - View Components Test")
     
     def create_received_area_test(self) -> QWidget:
-        """ReceivedArea 테스트 위젯"""
+        """
+        ReceivedArea 테스트 위젯을 생성합니다.
+        
+        Returns:
+            QWidget: 테스트 위젯.
+        """
         from PyQt5.QtWidgets import QPushButton, QHBoxLayout, QLabel
         
         widget = QWidget()
         layout = QVBoxLayout(widget)
         
-        # ReceivedArea instance
+        # ReceivedArea 인스턴스
         self.received_area = ReceivedArea()
         layout.addWidget(self.received_area)
         
-        # Test buttons
+        # 테스트 버튼 (Test buttons)
         button_layout = QHBoxLayout()
         
-        # Test data buttons
+        # 테스트 데이터 버튼
         btn_ok = QPushButton("Add OK")
         btn_ok.clicked.connect(lambda: self.received_area.append_data(b"AT\r\nOK\r\n"))
         button_layout.addWidget(btn_ok)
@@ -105,35 +112,40 @@ class ViewTestWindow(QMainWindow):
         
         layout.addLayout(button_layout)
         
-        # Info label
+        # 정보 레이블
         info = QLabel("✅ 테스트: 색상 규칙 (OK=녹색, ERROR=빨강), Trim (2000줄 제한), 타임스탬프 (TS 체크박스)")
         layout.addWidget(info)
         
         return widget
     
-    def add_many_lines(self):
-        """많은 라인 추가 (Trim 테스트)"""
+    def add_many_lines(self) -> None:
+        """많은 라인을 추가하여 Trim 기능을 테스트합니다."""
         for i in range(100):
             self.received_area.append_data(f"Line {i+1}: Test data\r\n".encode())
     
     def create_manual_control_test(self) -> QWidget:
-        """ManualControl 테스트 위젯"""
+        """
+        ManualControl 테스트 위젯을 생성합니다.
+        
+        Returns:
+            QWidget: 테스트 위젯.
+        """
         from PyQt5.QtWidgets import QTextEdit
         
         widget = QWidget()
         layout = QVBoxLayout(widget)
         
-        # ManualControl instance
+        # ManualControl 인스턴스
         self.manual_control = ManualControlWidget()
         layout.addWidget(self.manual_control)
         
-        # Output area
+        # 출력 영역 (Output area)
         self.manual_output = QTextEdit()
         self.manual_output.setReadOnly(True)
         self.manual_output.setMaximumHeight(200)
         layout.addWidget(self.manual_output)
         
-        # Connect signals
+        # 시그널 연결
         self.manual_control.send_command_requested.connect(
             lambda text, hex_mode, enter: self.manual_output.append(
                 f"Send: {text} (hex={hex_mode}, enter={enter})"
@@ -146,12 +158,12 @@ class ViewTestWindow(QMainWindow):
             lambda: self.manual_output.append("Send file requested")
         )
         
-        # Info label
+        # 정보 레이블
         from PyQt5.QtWidgets import QLabel
         info = QLabel("✅ 테스트: Send 버튼, HEX 모드, Enter 추가, 파일 선택/전송")
         layout.addWidget(info)
         
-        # Enable/Disable test
+        # 제어 활성화/비활성화 테스트
         from PyQt5.QtWidgets import QPushButton, QHBoxLayout
         btn_layout = QHBoxLayout()
         btn_enable = QPushButton("Enable Controls")
@@ -167,15 +179,20 @@ class ViewTestWindow(QMainWindow):
         return widget
     
     def create_command_list_test(self) -> QWidget:
-        """CommandList 테스트 위젯"""
+        """
+        CommandList 테스트 위젯을 생성합니다.
+        
+        Returns:
+            QWidget: 테스트 위젯.
+        """
         widget = QWidget()
         layout = QVBoxLayout(widget)
         
-        # CommandList instance
+        # CommandList 인스턴스
         self.command_list = CommandListWidget()
         layout.addWidget(self.command_list)
         
-        # Info label
+        # 정보 레이블
         from PyQt5.QtWidgets import QLabel
         info = QLabel("✅ 테스트: 행 추가/삭제/이동, Select All, Send 버튼")
         layout.addWidget(info)
@@ -183,17 +200,22 @@ class ViewTestWindow(QMainWindow):
         return widget
     
     def create_status_area_test(self) -> QWidget:
-        """StatusArea 테스트 위젯"""
+        """
+        StatusArea 테스트 위젯을 생성합니다.
+        
+        Returns:
+            QWidget: 테스트 위젯.
+        """
         from PyQt5.QtWidgets import QPushButton, QHBoxLayout, QLabel
         
         widget = QWidget()
         layout = QVBoxLayout(widget)
         
-        # StatusArea instance
+        # StatusArea 인스턴스
         self.status_area = StatusArea()
         layout.addWidget(self.status_area)
         
-        # Test buttons
+        # 테스트 버튼
         button_layout = QHBoxLayout()
         
         btn_info = QPushButton("Log INFO")
@@ -214,39 +236,49 @@ class ViewTestWindow(QMainWindow):
         
         layout.addLayout(button_layout)
         
-        # Info label
+        # 정보 레이블
         info = QLabel("✅ 테스트: 로그 레벨별 색상 (INFO=파랑, ERROR=빨강, WARN=주황, SUCCESS=녹색)")
         layout.addWidget(info)
         
         return widget
     
     def create_port_panel_test(self) -> QWidget:
-        """PortPanel 전체 테스트"""
+        """
+        PortPanel 전체 테스트 위젯을 생성합니다.
+        
+        Returns:
+            QWidget: 테스트 위젯.
+        """
         from PyQt5.QtWidgets import QLabel
         
         widget = QWidget()
         layout = QVBoxLayout(widget)
         
-        # PortPanel instance
+        # PortPanel 인스턴스
         self.port_panel = PortPanel()
         layout.addWidget(self.port_panel)
         
-        # Info label
+        # 정보 레이블
         info = QLabel("✅ 테스트: 전체 포트 패널 (설정 + ReceivedArea + StatusArea)")
         layout.addWidget(info)
         
         return widget
     
-    def closeEvent(self, event):
-        """종료 시 설정 저장"""
+    def closeEvent(self, event) -> None:
+        """
+        종료 시 설정을 저장합니다.
+        
+        Args:
+            event: 종료 이벤트.
+        """
         self.settings.set('ui.window_width', self.width())
         self.settings.set('ui.window_height', self.height())
         self.settings.save_settings()
         event.accept()
 
 
-def main():
-    """메인 함수"""
+def main() -> None:
+    """메인 함수입니다."""
     app = QApplication(sys.argv)
     app.setApplicationName("SerialTool View Test")
     

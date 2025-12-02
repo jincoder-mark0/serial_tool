@@ -7,10 +7,11 @@ from typing import Optional, List, Dict, Any
 
 class PortSettingsWidget(QGroupBox):
     """
-    시리얼 포트 설정(Baudrate, Parity 등)을 제어하는 위젯입니다.
+    시리얼 포트 설정(Baudrate, Parity 등)을 제어하는 위젯 클래스입니다.
+    포트 스캔, 연결/해제 및 통신 파라미터 설정을 담당합니다.
     """
     
-    # Signals
+    # 시그널 정의
     port_open_requested = pyqtSignal(dict)  # config dict
     port_close_requested = pyqtSignal()
     scan_requested = pyqtSignal()
@@ -18,38 +19,38 @@ class PortSettingsWidget(QGroupBox):
     
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
-        PortSettingsWidget 초기화.
+        PortSettingsWidget을 초기화합니다.
         
         Args:
-            parent: 부모 위젯
+            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__("Port Settings", parent)
         self.init_ui()
         
     def init_ui(self) -> None:
-        """UI 컴포넌트 및 레이아웃 초기화"""
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
         main_layout = QVBoxLayout()
         main_layout.setContentsMargins(5, 5, 5, 5)
         main_layout.setSpacing(5)
         
-        # Row 1: Port | Scan | Baud | Open
+        # 1행: Port | Scan | Baud | Open
         row1_layout = QHBoxLayout()
         row1_layout.setSpacing(5)
         
-        # Port
+        # 포트 선택 콤보박스
         self.port_combo = QComboBox()
         self.port_combo.setMinimumWidth(80)
-        self.port_combo.setToolTip("Select serial port")
+        self.port_combo.setToolTip("시리얼 포트를 선택합니다.")
         
         self.scan_btn = QPushButton("Scan")
         self.scan_btn.setFixedWidth(50)
-        self.scan_btn.setToolTip("Refresh port list")
+        self.scan_btn.setToolTip("포트 목록을 새로고침합니다.")
         self.scan_btn.clicked.connect(self.scan_requested.emit)
         
-        # Baud
+        # 보드레이트 선택 콤보박스
         self.baud_combo = QComboBox()
         self.baud_combo.setMinimumWidth(80)
-        self.baud_combo.setToolTip("Select baud rate")
+        self.baud_combo.setToolTip("통신 속도(Baudrate)를 선택합니다.")
         self.baud_combo.addItems([
             "9600", "19200", "38400", "57600", "115200", 
             "230400", "460800", "921600", "1000000", "2000000", "4000000"
@@ -57,10 +58,10 @@ class PortSettingsWidget(QGroupBox):
         self.baud_combo.setCurrentText("115200")
         self.baud_combo.setEditable(True)
         
-        # Connect Button
+        # 연결 버튼
         self.connect_btn = QPushButton("Open")
         self.connect_btn.setCheckable(True)
-        self.connect_btn.setToolTip("Open/Close serial port connection")
+        self.connect_btn.setToolTip("시리얼 포트를 연결하거나 해제합니다.")
         self.connect_btn.clicked.connect(self.on_connect_clicked)
         self.connect_btn.setFixedWidth(60)
         
@@ -73,36 +74,36 @@ class PortSettingsWidget(QGroupBox):
         
         main_layout.addLayout(row1_layout)
         
-        # Row 2: Data | Parity | Stop | Flow | DTR | RTS
+        # 2행: Data | Parity | Stop | Flow | DTR | RTS
         row2_layout = QHBoxLayout()
         row2_layout.setSpacing(5)
         
-        # Data
+        # 데이터 비트
         self.bytesize_combo = QComboBox()
         self.bytesize_combo.addItems(["5", "6", "7", "8"])
         self.bytesize_combo.setCurrentText("8")
-        self.bytesize_combo.setToolTip("Data Bits")
+        self.bytesize_combo.setToolTip("데이터 비트 (Data Bits)")
         self.bytesize_combo.setFixedWidth(40)
         
-        # Parity
+        # 패리티 비트
         self.parity_combo = QComboBox()
         self.parity_combo.addItems(["N", "E", "O", "M", "S"])
-        self.parity_combo.setToolTip("Parity")
+        self.parity_combo.setToolTip("패리티 비트 (Parity)")
         self.parity_combo.setFixedWidth(40)
         
-        # Stop
+        # 정지 비트
         self.stopbits_combo = QComboBox()
         self.stopbits_combo.addItems(["1", "1.5", "2"])
-        self.stopbits_combo.setToolTip("Stop Bits")
+        self.stopbits_combo.setToolTip("정지 비트 (Stop Bits)")
         self.stopbits_combo.setFixedWidth(45)
         
-        # Flow
+        # 흐름 제어
         self.flow_combo = QComboBox()
         self.flow_combo.addItems(["None", "RTS/CTS", "XON/XOFF"])
-        self.flow_combo.setToolTip("Flow Control")
+        self.flow_combo.setToolTip("흐름 제어 (Flow Control)")
         self.flow_combo.setMinimumWidth(70)
         
-        # Signals
+        # 제어 신호
         self.dtr_check = QCheckBox("DTR")
         self.dtr_check.setChecked(True)
         self.rts_check = QCheckBox("RTS")
@@ -125,9 +126,9 @@ class PortSettingsWidget(QGroupBox):
         self.setLayout(main_layout)
         
     def on_connect_clicked(self) -> None:
-        """연결 버튼 클릭 핸들러"""
+        """연결 버튼 클릭 핸들러입니다."""
         if self.connect_btn.isChecked():
-            # Request Open
+            # 연결 요청 (Request Open)
             config: Dict[str, Any] = {
                 "port": self.port_combo.currentText(),
                 "baudrate": int(self.baud_combo.currentText()),
@@ -141,7 +142,7 @@ class PortSettingsWidget(QGroupBox):
             self.port_open_requested.emit(config)
             self.connect_btn.setText("Close Port")
         else:
-            # Request Close
+            # 해제 요청 (Request Close)
             self.port_close_requested.emit()
             self.connect_btn.setText("Open Port")
 
@@ -150,7 +151,7 @@ class PortSettingsWidget(QGroupBox):
         포트 목록을 업데이트합니다.
         
         Args:
-            ports: 포트 이름 리스트
+            ports (List[str]): 포트 이름 리스트.
         """
         current = self.port_combo.currentText()
         self.port_combo.clear()
@@ -163,7 +164,7 @@ class PortSettingsWidget(QGroupBox):
         연결 상태에 따라 UI를 갱신합니다.
         
         Args:
-            connected: 연결 여부
+            connected (bool): 연결 여부.
         """
         self.connect_btn.setChecked(connected)
         self.connect_btn.setText("Close Port" if connected else "Open Port")
@@ -174,5 +175,5 @@ class PortSettingsWidget(QGroupBox):
         self.stopbits_combo.setEnabled(not connected)
         self.flow_combo.setEnabled(not connected)
         
-        # Emit connection state changed signal
+        # 연결 상태 변경 시그널 발생
         self.connection_state_changed.emit(connected)

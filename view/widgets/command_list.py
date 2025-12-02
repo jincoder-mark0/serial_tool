@@ -8,48 +8,55 @@ from typing import Optional, List
 
 class CommandListWidget(QWidget):
     """
-    Command List를 관리하는 위젯입니다.
-    명령 추가/삭제/이동 기능을 제공합니다.
+    명령어 목록(Command List)을 관리하는 위젯 클래스입니다.
+    명령어의 추가, 삭제, 순서 변경 및 선택 기능을 제공합니다.
     """
     
-    # Signals
+    # 시그널 정의
     send_row_requested = pyqtSignal(int) # row_index
     
     def __init__(self, parent: Optional[QWidget] = None) -> None:
+        """
+        CommandListWidget을 초기화합니다.
+        
+        Args:
+            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
+        """
         super().__init__(parent)
         self.init_ui()
         
     def init_ui(self) -> None:
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         
-        # Header / Controls
+        # 헤더 / 제어 버튼 (Header / Controls)
         header_layout = QHBoxLayout()
         
-        # Select All Checkbox (Tristate)
+        # 전체 선택 체크박스 (Tristate 지원)
         self.select_all_check = QCheckBox("Select All")
-        self.select_all_check.setToolTip("Select/Deselect all steps")
+        self.select_all_check.setToolTip("모든 단계를 선택/해제합니다.")
         self.select_all_check.setTristate(True)
         self.select_all_check.stateChanged.connect(self.on_select_all_changed)
         
         self.add_btn = QPushButton()
         self.add_btn.setObjectName("add_btn")
-        self.add_btn.setToolTip("Add new command step")
+        self.add_btn.setToolTip("새 명령 단계를 추가합니다.")
         self.add_btn.setFixedSize(30, 30)
         
         self.del_btn = QPushButton()
         self.del_btn.setObjectName("del_btn")
-        self.del_btn.setToolTip("Delete selected step")
+        self.del_btn.setToolTip("선택된 단계를 삭제합니다.")
         self.del_btn.setFixedSize(30, 30)
         
         self.up_btn = QPushButton()
         self.up_btn.setObjectName("up_btn")
-        self.up_btn.setToolTip("Move step up")
+        self.up_btn.setToolTip("선택된 단계를 위로 이동합니다.")
         self.up_btn.setFixedSize(30, 30)
         
         self.down_btn = QPushButton()
         self.down_btn.setObjectName("down_btn")
-        self.down_btn.setToolTip("Move step down")
+        self.down_btn.setToolTip("선택된 단계를 아래로 이동합니다.")
         self.down_btn.setFixedSize(30, 30)
         
         header_layout.addWidget(self.select_all_check)
@@ -59,32 +66,33 @@ class CommandListWidget(QWidget):
         header_layout.addWidget(self.up_btn)
         header_layout.addWidget(self.down_btn)
         
-        # Connect signals
+        # 시그널 연결
         self.add_btn.clicked.connect(self.add_empty_row)
         self.del_btn.clicked.connect(self.delete_selected_rows)
         self.up_btn.clicked.connect(self.move_row_up)
         self.down_btn.clicked.connect(self.move_row_down)
         
-        # Table View
+        # 테이블 뷰 (Table View)
         self.table_view = QTableView()
+        self.table_view.setProperty("class", "fixed-font")  # 테이블에 고정폭 폰트 적용
         self.model = QStandardItemModel()
-        # Columns: Select, Prefix, Command, Suffix, HEX, Delay, Send
+        # 컬럼: 선택, 접두사, 명령어, 접미사, HEX, 지연시간, 전송버튼
         self.model.setHorizontalHeaderLabels(["", "Prefix", "Command", "Suffix", "HEX", "Delay", "Send"])
         self.table_view.setModel(self.model)
-        self.table_view.setToolTip("List of commands to execute")
+        self.table_view.setToolTip("실행할 명령어 목록")
         
-        # Scroll bar policy - always show
+        # 스크롤바 정책 - 항상 표시
         self.table_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.table_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         
-        # Hide vertical header (row numbers)
+        # 수직 헤더(행 번호) 숨김
         self.table_view.verticalHeader().setVisible(False)
         
-        # Selection Mode
+        # 선택 모드 설정
         self.table_view.setSelectionBehavior(QTableView.SelectRows)
         self.table_view.setSelectionMode(QTableView.ExtendedSelection)
         
-        # Adjust column widths
+        # 컬럼 너비 조정
         header = self.table_view.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents) # Select
         header.setSectionResizeMode(1, QHeaderView.ResizeToContents) # Prefix
@@ -99,27 +107,51 @@ class CommandListWidget(QWidget):
         
         self.setLayout(layout)
         
-        # Connect model signals
+        # 모델 시그널 연결
         self.model.itemChanged.connect(self.on_item_changed)
         
-        # Add dummy data
+        # 더미 데이터 추가 (테스트용)
         self.add_dummy_row("AT", False, True, "100")
         self.add_dummy_row("AT+VER?", False, True, "500")
     
     def on_item_changed(self, item: QStandardItem) -> None:
-        """모델 아이템 변경 핸들러 - Select 컬럼이 변경되면 Select All 상태 업데이트"""
+        """
+        모델 아이템 변경 핸들러입니다.
+        Select 컬럼이 변경되면 Select All 상태를 업데이트합니다.
+        
+        Args:
+            item (QStandardItem): 변경된 아이템.
+        """
         if item.column() == 0:  # Select column
             self.update_select_all_state()
 
     def add_dummy_row(self, cmd: str, hex_mode: bool, suffix: bool, delay: str) -> None:
-        """테스트용 더미 데이터 추가"""
+        """
+        테스트용 더미 데이터를 추가합니다.
+        
+        Args:
+            cmd (str): 명령어.
+            hex_mode (bool): HEX 모드 여부.
+            suffix (bool): 접미사 사용 여부.
+            delay (str): 지연 시간(ms).
+        """
         self._append_row(cmd, True, hex_mode, suffix, delay)
 
     def add_empty_row(self) -> None:
-        """빈 행 추가"""
+        """빈 행을 추가합니다."""
         self._append_row("", True, False, True, "100")
         
     def _append_row(self, cmd: str, prefix: bool, hex_mode: bool, suffix: bool, delay: str) -> None:
+        """
+        새로운 행을 모델에 추가합니다.
+        
+        Args:
+            cmd (str): 명령어.
+            prefix (bool): 접두사 사용 여부.
+            hex_mode (bool): HEX 모드 여부.
+            suffix (bool): 접미사 사용 여부.
+            delay (str): 지연 시간.
+        """
         row_idx = self.model.rowCount()
         
         # 0: Select Checkbox
@@ -158,14 +190,19 @@ class CommandListWidget(QWidget):
         
         self.model.appendRow([item_select, item_prefix, item_cmd, item_suffix, item_hex, item_delay, item_send])
         
-        # Set Send Button
+        # Send 버튼 설정
         self._set_send_button(row_idx)
         
-        # Update Select All state
+        # Select All 상태 업데이트
         self.update_select_all_state()
 
     def _set_send_button(self, row: int) -> None:
-        """해당 행에 Send 버튼 설정 (레이아웃 개선)"""
+        """
+        해당 행에 Send 버튼을 설정합니다.
+        
+        Args:
+            row (int): 행 인덱스.
+        """
         widget = QWidget()
         layout = QHBoxLayout(widget)
         layout.setContentsMargins(2, 2, 2, 2)
@@ -185,7 +222,13 @@ class CommandListWidget(QWidget):
         self.table_view.setIndexWidget(index, widget)
 
     def _on_send_btn_clicked(self, btn: QPushButton) -> None:
-        """Send 버튼 클릭 핸들러"""
+        """
+        Send 버튼 클릭 핸들러입니다.
+        버튼의 위치를 기반으로 행 인덱스를 찾아 시그널을 발생시킵니다.
+        
+        Args:
+            btn (QPushButton): 클릭된 버튼 객체.
+        """
         # 버튼의 부모 위젯(컨테이너)을 통해 위치 확인
         # btn -> layout -> widget -> table_view
         # viewport mapFromGlobal을 사용하는 것이 가장 정확함
@@ -195,7 +238,12 @@ class CommandListWidget(QWidget):
             self.send_row_requested.emit(index.row())
 
     def set_send_enabled(self, enabled: bool) -> None:
-        """모든 Send 버튼의 활성화 상태 변경"""
+        """
+        모든 Send 버튼의 활성화 상태를 변경합니다.
+        
+        Args:
+            enabled (bool): 활성화 여부.
+        """
         for row in range(self.model.rowCount()):
             index = self.model.index(row, 6)
             widget = self.table_view.indexWidget(index)
@@ -206,14 +254,14 @@ class CommandListWidget(QWidget):
                     btn.setEnabled(enabled)
 
     def delete_selected_rows(self) -> None:
-        """선택된 행 삭제"""
+        """선택된 행들을 삭제합니다."""
         rows = sorted(set(index.row() for index in self.table_view.selectionModel().selectedRows()), reverse=True)
         for row in rows:
             self.model.removeRow(row)
         self.update_select_all_state()
             
     def move_row_up(self) -> None:
-        """선택된 행 위로 이동"""
+        """선택된 행들을 위로 이동합니다."""
         rows = sorted(set(index.row() for index in self.table_view.selectionModel().selectedRows()))
         if not rows or rows[0] == 0:
             return
@@ -222,12 +270,12 @@ class CommandListWidget(QWidget):
         for row in rows:
             self._move_row(row, row - 1)
             
-        # Selection 복구
+        # 선택 상태 복구
         for row in rows:
             self.table_view.selectRow(row - 1)
 
     def move_row_down(self) -> None:
-        """선택된 행 아래로 이동"""
+        """선택된 행들을 아래로 이동합니다."""
         rows = sorted(set(index.row() for index in self.table_view.selectionModel().selectedRows()), reverse=True)
         if not rows or rows[0] == self.model.rowCount() - 1:
             return
@@ -236,12 +284,18 @@ class CommandListWidget(QWidget):
         for row in rows:
             self._move_row(row, row + 1)
             
-        # Selection 복구
+        # 선택 상태 복구
         for row in rows:
             self.table_view.selectRow(row + 1)
             
     def _move_row(self, source_row: int, dest_row: int) -> None:
-        """행 이동 및 위젯(버튼) 복구"""
+        """
+        행을 이동하고 위젯(버튼)을 복구합니다.
+        
+        Args:
+            source_row (int): 원본 행 인덱스.
+            dest_row (int): 대상 행 인덱스.
+        """
         # 1. 데이터 가져오기
         items = self.model.takeRow(source_row)
         
@@ -250,17 +304,18 @@ class CommandListWidget(QWidget):
         
         # 3. 위젯(버튼) 복구
         # 이동 시 기존 위젯은 삭제되므로 새로 생성해야 함
-        # 단, 기존 버튼의 활성화 상태를 유지하려면 상태를 저장해야 하지만,
-        # 현재는 일괄 제어하므로 새로 생성해도 무방함 (set_send_enabled 호출 필요할 수 있음)
         self._set_send_button(dest_row)
         
-        # 현재 활성화 상태에 맞춰 버튼 상태 업데이트 필요
-        # (최적화를 위해 상태 변수를 클래스에 저장하는 것이 좋음)
-        # 여기서는 간단히 기본값(False)로 생성되므로, 외부에서 상태 관리가 필요함.
-        # 개선: 클래스 멤버로 _is_connected 상태 저장
+        # 참고: 현재 활성화 상태에 맞춰 버튼 상태 업데이트가 필요할 수 있음
+        # 현재는 기본값(False)로 생성되므로, 외부에서 상태 관리가 필요함.
 
     def get_selected_indices(self) -> List[int]:
-        """체크된 항목의 인덱스 리스트 반환"""
+        """
+        체크박스가 선택된 항목의 인덱스 리스트를 반환합니다.
+        
+        Returns:
+            List[int]: 선택된 행 인덱스 리스트.
+        """
         indices: List[int] = []
         for row in range(self.model.rowCount()):
             item = self.model.item(row, 0)
@@ -269,9 +324,14 @@ class CommandListWidget(QWidget):
         return indices
         
     def on_select_all_changed(self, state: int) -> None:
-        """Select All checkbox 상태 변경 핸들러"""
+        """
+        Select All 체크박스 상태 변경 핸들러입니다.
+        
+        Args:
+            state (int): 체크박스 상태.
+        """
         if state == Qt.PartiallyChecked:
-            # PartiallyChecked 상태에서 클릭하면 모두 선택으로
+            # PartiallyChecked 상태에서 클릭하면 모두 선택으로 변경
             self.select_all_check.setCheckState(Qt.Checked)
         elif state == Qt.Checked:
             self.set_all_checked(True)
@@ -279,7 +339,12 @@ class CommandListWidget(QWidget):
             self.set_all_checked(False)
     
     def set_all_checked(self, checked: bool) -> None:
-        """모든 항목 체크/해제"""
+        """
+        모든 항목의 체크 상태를 변경합니다.
+        
+        Args:
+            checked (bool): 체크 여부.
+        """
         state = Qt.Checked if checked else Qt.Unchecked
         for row in range(self.model.rowCount()):
             item = self.model.item(row, 0)
@@ -287,7 +352,7 @@ class CommandListWidget(QWidget):
         self.update_select_all_state()
     
     def update_select_all_state(self) -> None:
-        """Select All checkbox 상태 업데이트 (전체/부분/없음)"""
+        """Select All 체크박스의 상태(전체/부분/없음)를 업데이트합니다."""
         total = self.model.rowCount()
         if total == 0:
             self.select_all_check.setCheckState(Qt.Unchecked)
@@ -299,7 +364,7 @@ class CommandListWidget(QWidget):
             if item and item.checkState() == Qt.Checked:
                 checked_count += 1
         
-        # Block signals to prevent recursive calls
+        # 재귀 호출 방지를 위해 시그널 차단
         self.select_all_check.blockSignals(True)
         if checked_count == 0:
             self.select_all_check.setCheckState(Qt.Unchecked)
