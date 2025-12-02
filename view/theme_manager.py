@@ -75,7 +75,37 @@ class ThemeManager:
         else:
             print(f"테마 파일을 찾을 수 없음: {qss_path}")
             
+        # 3. 폴백 스타일시트 (파일 로드 실패 시)
+        if not qss_content.strip():
+            print("테마 파일 로드 실패, 폴백 스타일시트를 사용합니다.")
+            qss_content = self._get_fallback_stylesheet(theme_name)
+            
         return qss_content
+
+    def _get_fallback_stylesheet(self, theme_name: str) -> str:
+        """
+        테마 파일이 없을 경우 사용할 최소한의 스타일시트를 반환합니다.
+        
+        Args:
+            theme_name (str): 테마 이름.
+            
+        Returns:
+            str: 폴백 QSS 문자열.
+        """
+        if theme_name == "dark":
+            return """
+            QMainWindow, QWidget { background-color: #2b2b2b; color: #ffffff; }
+            QLineEdit, QTextEdit, QPlainTextEdit { background-color: #3b3b3b; color: #ffffff; border: 1px solid #555555; }
+            QComboBox, QPushButton { background-color: #444444; color: #ffffff; border: 1px solid #555555; padding: 5px; }
+            QHeaderView::section { background-color: #444444; color: #ffffff; }
+            QTableView { background-color: #2b2b2b; color: #ffffff; gridline-color: #555555; }
+            """
+        else:
+            return """
+            QMainWindow, QWidget { background-color: #f0f0f0; color: #000000; }
+            QLineEdit, QTextEdit, QPlainTextEdit { background-color: #ffffff; color: #000000; border: 1px solid #cccccc; }
+            QComboBox, QPushButton { background-color: #e0e0e0; color: #000000; border: 1px solid #cccccc; padding: 5px; }
+            """
 
     def apply_theme(self, app: QApplication, theme_name: str = "dark"):
         """

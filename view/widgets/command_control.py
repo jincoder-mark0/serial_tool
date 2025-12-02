@@ -7,11 +7,11 @@ from typing import Optional
 
 class CommandControlWidget(QWidget):
     """
-    Command List 실행을 제어하는 위젯입니다.
-    Run, Stop, Auto Run, Script Load/Save 기능을 제공합니다.
+    Command List 실행을 제어하는 위젯 클래스입니다.
+    실행(Run), 정지(Stop), 자동 실행(Auto Run), 스크립트 저장/로드 기능을 제공합니다.
     """
     
-    # Signals
+    # 시그널 정의
     run_single_requested = pyqtSignal()
     stop_requested = pyqtSignal()
     start_auto_requested = pyqtSignal(int, int) # delay_ms, max_runs
@@ -21,38 +21,45 @@ class CommandControlWidget(QWidget):
     load_script_requested = pyqtSignal()
     
     def __init__(self, parent: Optional[QWidget] = None) -> None:
+        """
+        CommandControlWidget을 초기화합니다.
+        
+        Args:
+            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
+        """
         super().__init__(parent)
         self.init_ui()
         
     def init_ui(self) -> None:
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
         
-        # 1. Top Row: Script Controls
+        # 1. 상단 행: 스크립트 제어 및 접두사/접미사 (Top Row)
         top_layout = QHBoxLayout()
         top_layout.setContentsMargins(0, 0, 0, 0)
         
         self.save_script_btn = QPushButton("Save")
-        self.save_script_btn.setToolTip("Save current command list to JSON")
+        self.save_script_btn.setToolTip("현재 명령어 목록을 JSON 파일로 저장합니다.")
         self.save_script_btn.clicked.connect(self.save_script_requested.emit)
         
         self.load_script_btn = QPushButton("Load")
-        self.load_script_btn.setToolTip("Load command list from JSON")
+        self.load_script_btn.setToolTip("JSON 파일에서 명령어 목록을 불러옵니다.")
         self.load_script_btn.clicked.connect(self.load_script_requested.emit)
         
-        # Prefix / Suffix Inputs
+        # 접두사 / 접미사 입력 (Prefix / Suffix Inputs)
         self.prefix_input = QLineEdit()
         self.prefix_input.setPlaceholderText("Prefix")
         self.prefix_input.setFixedWidth(60)
-        self.prefix_input.setToolTip("Global command prefix")
-        self.prefix_input.setProperty("class", "fixed-font")  # Apply fixed-width font
+        self.prefix_input.setToolTip("전역 명령어 접두사")
+        self.prefix_input.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
         
         self.suffix_input = QLineEdit()
         self.suffix_input.setPlaceholderText("Suffix")
         self.suffix_input.setFixedWidth(60)
-        self.suffix_input.setToolTip("Global command suffix")
-        self.suffix_input.setProperty("class", "fixed-font")  # Apply fixed-width font
+        self.suffix_input.setToolTip("전역 명령어 접미사")
+        self.suffix_input.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
         
         top_layout.addWidget(QLabel("Pre:"))
         top_layout.addWidget(self.prefix_input)
@@ -62,27 +69,27 @@ class CommandControlWidget(QWidget):
         top_layout.addWidget(self.save_script_btn)
         top_layout.addWidget(self.load_script_btn)
         
-        # 2. Auto Run Settings Group
+        # 2. 자동 실행 설정 그룹 (Auto Run Settings Group)
         auto_group = QGroupBox("Execution Control")
         auto_layout = QGridLayout()
         auto_layout.setContentsMargins(2, 2, 2, 2)
         auto_layout.setSpacing(5)
         
-        # Row 0: Single Run & Stop
+        # Row 0: 단일 실행 및 정지
         self.run_btn = QPushButton("Run Once (F5)")
-        self.run_btn.setToolTip("Execute selected commands once")
+        self.run_btn.setToolTip("선택된 명령어들을 한 번 실행합니다.")
         self.run_btn.clicked.connect(self.run_single_requested.emit)
         
         self.stop_btn = QPushButton("Stop (Esc)")
-        self.stop_btn.setToolTip("Stop execution")
+        self.stop_btn.setToolTip("실행을 중지합니다.")
         self.stop_btn.clicked.connect(self.stop_requested.emit)
         self.stop_btn.setEnabled(False)
-        self.stop_btn.setProperty("class", "danger") # Red style
+        self.stop_btn.setProperty("class", "danger") # 빨간색 스타일
         
         auto_layout.addWidget(self.run_btn, 0, 0, 1, 2)
         auto_layout.addWidget(self.stop_btn, 0, 2, 1, 2)
         
-        # Row 1: Auto Run Settings
+        # Row 1: 자동 실행 설정
         auto_layout.addWidget(QLabel("Delay(ms):"), 1, 0)
         self.global_delay_input = QLineEdit("1000")
         self.global_delay_input.setFixedWidth(50)
@@ -93,12 +100,12 @@ class CommandControlWidget(QWidget):
         self.auto_run_max_spin = QSpinBox()
         self.auto_run_max_spin.setRange(0, 9999)
         self.auto_run_max_spin.setValue(0)
-        self.auto_run_max_spin.setToolTip("0 for infinite")
+        self.auto_run_max_spin.setToolTip("0이면 무한 반복합니다.")
         auto_layout.addWidget(self.auto_run_max_spin, 1, 3)
         
-        # Row 2: Auto Run Controls
+        # Row 2: 자동 실행 제어
         self.auto_run_btn = QPushButton("Start Auto Run")
-        self.auto_run_btn.setProperty("class", "accent") # Green style
+        self.auto_run_btn.setProperty("class", "accent") # 초록색 스타일
         self.auto_run_btn.clicked.connect(self.on_start_auto)
         
         self.stop_auto_btn = QPushButton("Stop Auto")
@@ -119,10 +126,11 @@ class CommandControlWidget(QWidget):
         
         self.setLayout(layout)
         
-        # Initial State: Disabled until connected
+        # 초기 상태: 연결 전까지 비활성화
         self.set_controls_enabled(False)
         
     def on_start_auto(self) -> None:
+        """자동 실행 시작 버튼 핸들러"""
         try:
             delay = int(self.global_delay_input.text())
         except ValueError:
@@ -131,7 +139,13 @@ class CommandControlWidget(QWidget):
         self.start_auto_requested.emit(delay, max_runs)
         
     def set_running_state(self, running: bool, is_auto: bool = False) -> None:
-        """실행 상태에 따라 버튼 활성화/비활성화"""
+        """
+        실행 상태에 따라 버튼 활성화/비활성화를 설정합니다.
+        
+        Args:
+            running (bool): 실행 중 여부.
+            is_auto (bool): 자동 실행 모드 여부.
+        """
         if running:
             self.run_btn.setEnabled(False)
             self.auto_run_btn.setEnabled(False)
@@ -145,11 +159,23 @@ class CommandControlWidget(QWidget):
             self.stop_auto_btn.setEnabled(False)
 
     def update_auto_count(self, current: int, total: int) -> None:
+        """
+        자동 실행 카운트를 업데이트합니다.
+        
+        Args:
+            current (int): 현재 실행 횟수.
+            total (int): 총 실행 횟수 (0이면 무한).
+        """
         total_str = "∞" if total == 0 else str(total)
         self.auto_run_count_label.setText(f"{current} / {total_str}")
 
     def set_controls_enabled(self, enabled: bool) -> None:
-        """포트 연결 상태에 따라 제어 버튼 활성화/비활성화"""
+        """
+        포트 연결 상태에 따라 제어 버튼을 활성화/비활성화합니다.
+        
+        Args:
+            enabled (bool): 활성화 여부.
+        """
         self.run_btn.setEnabled(enabled)
         self.auto_run_btn.setEnabled(enabled)
         self.stop_btn.setEnabled(False) # Stop은 실행 중에만 활성화

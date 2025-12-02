@@ -1,11 +1,23 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QTreeWidget, QTreeWidgetItem
+from typing import Optional
 
 class PacketInspector(QWidget):
-    def __init__(self, parent=None):
+    """
+    패킷 구조를 트리 형태로 시각화하여 보여주는 위젯 클래스입니다.
+    (현재는 더미 데이터로 구현되어 있으며, 추후 실제 패킷 분석 기능이 추가될 예정입니다.)
+    """
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        """
+        PacketInspector를 초기화합니다.
+        
+        Args:
+            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
+        """
         super().__init__(parent)
         self.init_ui()
         
-    def init_ui(self):
+    def init_ui(self) -> None:
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         
@@ -14,7 +26,7 @@ class PacketInspector(QWidget):
         self.tree = QTreeWidget()
         self.tree.setHeaderLabels(["Field", "Value"])
         
-        # Dummy Data
+        # 더미 데이터 (Dummy Data)
         root = QTreeWidgetItem(self.tree)
         root.setText(0, "Packet #1")
         root.setText(1, "AT_OK")

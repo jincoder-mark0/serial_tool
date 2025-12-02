@@ -7,35 +7,42 @@ from view.widgets.manual_control import ManualControlWidget
 
 class LeftPanel(QWidget):
     """
-    MainWindow의 좌측 영역을 담당하는 패널입니다.
-    포트 탭(PortTabs)과 수동 제어(ManualControlWidget)를 포함합니다.
+    MainWindow의 좌측 영역을 담당하는 패널 클래스입니다.
+    여러 포트 탭(PortTabs)과 전역 수동 제어(ManualControlWidget)를 포함합니다.
     """
     
     def __init__(self, parent: Optional[QWidget] = None) -> None:
+        """
+        LeftPanel을 초기화합니다.
+        
+        Args:
+            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
+        """
         super().__init__(parent)
         self.init_ui()
         
     def init_ui(self) -> None:
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(5)
         
-        # Port Tabs
+        # 포트 탭 (Port Tabs)
         self.port_tabs = QTabWidget()
         self.port_tabs.setTabsClosable(True)
         self.port_tabs.tabCloseRequested.connect(self.close_port_tab)
         self.port_tabs.currentChanged.connect(self.on_tab_changed)
-        self.port_tabs.setToolTip("Manage multiple serial port connections")
+        self.port_tabs.setToolTip("여러 시리얼 포트 연결을 관리합니다.")
         
-        # Manual Control Widget (Global for current port)
+        # 수동 제어 위젯 (현재 포트에 대한 전역 제어)
         self.manual_control = ManualControlWidget()
         
-        layout.addWidget(self.port_tabs, 1) # Tabs take remaining space
-        layout.addWidget(self.manual_control) # Manual Control at bottom
+        layout.addWidget(self.port_tabs, 1) # 탭이 남은 공간 차지
+        layout.addWidget(self.manual_control) # 수동 제어는 하단에 위치
         
         self.setLayout(layout)
         
-        # Initialize Tabs
+        # 탭 초기화
         self.add_new_port_tab()
         self.add_plus_tab()
 
@@ -50,7 +57,7 @@ class LeftPanel(QWidget):
         else:
              index = self.port_tabs.addTab(panel, "-")
         
-        # Connect port settings connection state to manual control
+        # 포트 설정의 연결 상태 변경 시그널을 수동 제어 위젯에 연결
         panel.port_settings.connection_state_changed.connect(
             self._on_port_connection_changed
         )
@@ -70,25 +77,45 @@ class LeftPanel(QWidget):
             self.port_tabs.tabBar().setTabButton(count - 1, QTabBar.LeftSide, None)
 
     def on_tab_changed(self, index: int) -> None:
-        """탭 변경 시 처리"""
+        """
+        탭 변경 시 처리 핸들러입니다.
+        
+        Args:
+            index (int): 변경된 탭의 인덱스.
+        """
         if index == -1: return
         
         if self.port_tabs.tabText(index) == "+":
             self.add_new_port_tab()
             
     def close_port_tab(self, index: int) -> None:
-        """탭 닫기 요청 처리"""
+        """
+        탭 닫기 요청 처리 핸들러입니다.
+        
+        Args:
+            index (int): 닫을 탭의 인덱스.
+        """
         if self.port_tabs.tabText(index) == "+":
             return
         self.port_tabs.removeTab(index)
         
     def update_tab_title(self, index: int, title: str) -> None:
+        """
+        탭의 제목을 업데이트합니다.
+        
+        Args:
+            index (int): 탭 인덱스.
+            title (str): 새로운 제목.
+        """
         self.port_tabs.setTabText(index, title)
     
     def _on_port_connection_changed(self, connected: bool) -> None:
         """
-        포트 연결 상태 변경 핸들러.
+        포트 연결 상태 변경 핸들러입니다.
         현재 활성 탭의 연결 상태가 변경되면 ManualControl을 활성화/비활성화합니다.
+        
+        Args:
+            connected (bool): 연결 여부.
         """
         # 현재 활성 탭의 변경인지 확인
         sender_widget = self.sender()

@@ -7,42 +7,41 @@ from model.port_controller import PortController
 
 class PortPresenter(QObject):
     """
-    포트 설정 및 제어를 위한 Presenter.
+    포트 설정 및 제어를 위한 Presenter 클래스입니다.
     PortSettingsWidget(View)와 PortController(Model)를 연결합니다.
     """
     def __init__(self, left_panel: LeftPanel, port_controller: PortController) -> None:
         """
-        PortPresenter 초기화.
+        PortPresenter를 초기화합니다.
         
         Args:
-            left_panel: 좌측 패널 (포트 탭 및 설정 포함)
-            port_controller: 포트 제어기
+            left_panel (LeftPanel): 좌측 패널 (포트 탭 및 설정 포함).
+            port_controller (PortController): 포트 제어기 모델.
         """
         super().__init__()
         self.left_panel = left_panel
         
-        # Get current active port panel
+        # 현재 활성 포트 패널 가져오기
         self.current_port_panel = None
         self.update_current_port_panel()
         
         self.port_controller = port_controller
         
-        # Scan ports initially
+        # 초기 포트 스캔
         self.scan_ports()
         
-        # Connect View signals (from current port panel's settings widget)
+        # View 시그널 연결 (현재 포트 패널의 설정 위젯에서)
         if self.current_port_panel:
             self.current_port_panel.port_settings.scan_requested.connect(self.scan_ports)
-            # Note: connect_btn has its own handler that emits signals, 
-            # but we'll override by connecting directly
-            # Disconnect existing handler first
+            # 참고: connect_btn은 자체 핸들러가 있지만, 여기서 직접 연결하여 오버라이드합니다.
+            # 기존 핸들러 연결 해제
             try:
                 self.current_port_panel.port_settings.connect_btn.clicked.disconnect()
             except:
                 pass
             self.current_port_panel.port_settings.connect_btn.clicked.connect(self.handle_connect_click)
         
-        # Connect Model signals
+        # Model 시그널 연결
         self.port_controller.port_opened.connect(self.on_port_opened)
         self.port_controller.port_closed.connect(self.on_port_closed)
         self.port_controller.error_occurred.connect(self.on_error)
@@ -90,11 +89,11 @@ class PortPresenter(QObject):
         UI를 연결됨 상태로 업데이트하고 탭 제목을 변경합니다.
         
         Args:
-            port_name: 열린 포트의 이름
+            port_name (str): 열린 포트의 이름.
         """
         if self.current_port_panel:
             self.current_port_panel.port_settings.set_connected(True)
-            # Update tab title
+            # 탭 제목 업데이트
             index = self.left_panel.port_tabs.currentIndex()
             self.left_panel.update_tab_title(index, port_name)
         
@@ -104,11 +103,11 @@ class PortPresenter(QObject):
         UI를 연결 해제됨 상태로 업데이트하고 탭 제목을 기본값으로 변경합니다.
         
         Args:
-            port_name: 닫힌 포트의 이름
+            port_name (str): 닫힌 포트의 이름.
         """
         if self.current_port_panel:
             self.current_port_panel.port_settings.set_connected(False)
-            # Update tab title
+            # 탭 제목 업데이트
             index = self.left_panel.port_tabs.currentIndex()
             self.left_panel.update_tab_title(index, "-")
         
@@ -118,10 +117,10 @@ class PortPresenter(QObject):
         현재는 콘솔에 출력하며, 향후 상태바에 표시할 예정입니다.
         
         Args:
-            message: 에러 메시지
+            message (str): 에러 메시지.
         """
-        # TODO: Show error in status bar
+        # TODO: 상태바에 에러 표시
         print(f"Port Error: {message}")
-        # If error occurred during open/close, ensure UI is synced
+        # 열기/닫기 중 에러 발생 시 UI 동기화 보장
         if not self.port_controller.is_open and self.current_port_panel:
             self.current_port_panel.port_settings.set_connected(False)

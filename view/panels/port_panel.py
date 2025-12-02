@@ -8,39 +8,39 @@ from view.widgets.status_area import StatusArea
 
 class PortPanel(QWidget):
     """
-    개별 시리얼 포트 탭의 메인 위젯입니다.
-    설정, 수신 로그, 상태 로그 영역을 포함합니다.
+    개별 시리얼 포트 탭의 메인 위젯 클래스입니다.
+    포트 설정(PortSettings), 수신 로그(ReceivedArea), 상태 로그(StatusArea) 영역을 포함합니다.
     """
     
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
-        PortPanel 초기화.
+        PortPanel을 초기화합니다.
         
         Args:
-            parent: 부모 위젯
+            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
         self.init_ui()
         
     def init_ui(self) -> None:
-        """UI 컴포넌트 및 레이아웃 초기화"""
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
         
-        # Components
+        # 컴포넌트 생성
         self.port_settings = PortSettingsWidget()
         self.received_area = ReceivedArea()
         self.status_area = StatusArea()
         
-        # Layout
-        # Top: Settings
+        # 레이아웃 구성
+        # 상단: 설정 (Top: Settings)
         layout.addWidget(self.port_settings)
         
-        # Middle: Log
+        # 중간: 로그 (Middle: Log)
         layout.addWidget(self.received_area, 1) # Stretch 1
         
-        # Bottom: Status Log Area
+        # 하단: 상태 로그 영역 (Bottom: Status Log Area)
         layout.addWidget(self.status_area)
         
         self.setLayout(layout)
