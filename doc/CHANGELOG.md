@@ -20,16 +20,6 @@
 - **ColorRulesManager**: 설정 파일 경로 계산 오류 수정 (`parent.parent.parent` → `parent.parent`)
 - **MainWindow**: Import 구문을 파일 상단으로 이동 (코드 스타일 가이드 준수)
 
-- **PreferencesDialog**: 설정 다이얼로그 구현 (General, Serial, Logging 탭)
-- **AboutDialog**: 애플리케이션 정보 다이얼로그 구현
-- **FileProgressWidget**: 파일 전송 진행률 표시 위젯 구현 (진행률 바, 속도, ETA)
-- **LanguageManager**: 다국어 지원 시스템 구현 (한국어/영어)
-- **ReceivedArea**: Regex 지원 검색 바 추가
-- **PortSettingsWidget**: BaudRate 입력 유효성 검사 추가 (50-4,000,000)
-- **CommandListWidget**: 데이터 영속성 기능 추가 (get/set_command_list)
-- **CommandListPanel**: SettingsManager 연동으로 자동 저장/로드 구현
-- **settings.json**: command_list 기본 AT 커맨드 예제 추가
-
 #### 변경 사항 (Changed)
 
 - **test_view.py**: PreferencesDialog, AboutDialog, FileProgressWidget, Language 테스트 케이스 추가
