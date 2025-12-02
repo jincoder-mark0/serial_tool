@@ -1,5 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QTreeWidget, QTreeWidgetItem
 from typing import Optional
+from view.language_manager import language_manager
 
 class PacketInspector(QWidget):
     """
@@ -16,15 +17,22 @@ class PacketInspector(QWidget):
         super().__init__(parent)
         self.init_ui()
         
+        # 언어 변경 시 UI 업데이트 연결
+        language_manager.language_changed.connect(self.retranslate_ui)
+        
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         
-        layout.addWidget(QLabel("Packet Inspector"))
+        self.title_label = QLabel(language_manager.get_text("packet_inspector"))
+        layout.addWidget(self.title_label)
         
         self.tree = QTreeWidget()
-        self.tree.setHeaderLabels(["Field", "Value"])
+        self.tree.setHeaderLabels([
+            language_manager.get_text("inspector_field"), 
+            language_manager.get_text("inspector_value")
+        ])
         
         # 더미 데이터 (Dummy Data)
         root = QTreeWidgetItem(self.tree)
@@ -43,3 +51,11 @@ class PacketInspector(QWidget):
         
         layout.addWidget(self.tree)
         self.setLayout(layout)
+
+    def retranslate_ui(self) -> None:
+        """언어 변경 시 UI 텍스트를 업데이트합니다."""
+        self.title_label.setText(language_manager.get_text("packet_inspector"))
+        self.tree.setHeaderLabels([
+            language_manager.get_text("inspector_field"), 
+            language_manager.get_text("inspector_value")
+        ])

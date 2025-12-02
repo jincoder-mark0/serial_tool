@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QTabBar
 from PyQt5.QtCore import Qt
 from typing import Optional
+from view.language_manager import language_manager
 
 from view.panels.port_panel import PortPanel
 from view.widgets.manual_control import ManualControlWidget
@@ -21,6 +22,9 @@ class LeftPanel(QWidget):
         super().__init__(parent)
         self.init_ui()
         
+        # 언어 변경 시 UI 업데이트 연결
+        language_manager.language_changed.connect(self.retranslate_ui)
+        
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
         layout = QVBoxLayout()
@@ -32,7 +36,7 @@ class LeftPanel(QWidget):
         self.port_tabs.setTabsClosable(True)
         self.port_tabs.tabCloseRequested.connect(self.close_port_tab)
         self.port_tabs.currentChanged.connect(self.on_tab_changed)
-        self.port_tabs.setToolTip("여러 시리얼 포트 연결을 관리합니다.")
+        self.port_tabs.setToolTip(language_manager.get_text("port_tab_tooltip"))
         
         # 수동 제어 위젯 (현재 포트에 대한 전역 제어)
         self.manual_control = ManualControlWidget()
@@ -45,6 +49,10 @@ class LeftPanel(QWidget):
         # 탭 초기화
         self.add_new_port_tab()
         self.add_plus_tab()
+
+    def retranslate_ui(self) -> None:
+        """언어 변경 시 UI 텍스트를 업데이트합니다."""
+        self.port_tabs.setToolTip(language_manager.get_text("port_tab_tooltip"))
 
     def add_new_port_tab(self) -> None:
         """새로운 포트 탭을 추가합니다."""

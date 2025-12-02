@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 import platform
+from view.language_manager import language_manager
 
 class FontSettingsDialog(QDialog):
     """
@@ -23,7 +24,7 @@ class FontSettingsDialog(QDialog):
         super().__init__(parent)
         self.theme_manager = theme_manager
         
-        self.setWindowTitle("Font Settings")
+        self.setWindowTitle(language_manager.get_text("font_settings_title"))
         self.setMinimumWidth(600)
         self.setMinimumHeight(500)
         
@@ -36,19 +37,21 @@ class FontSettingsDialog(QDialog):
         layout.setSpacing(15)
         
         # 가변폭 폰트 그룹 (Proportional Font Group)
-        prop_group = QGroupBox("Proportional Font (UI Elements)")
-        prop_group.setToolTip("메뉴, 라벨, 버튼 등 일반 UI 요소에 사용됩니다.")
-        prop_layout = QVBoxLayout(prop_group)
+        self.prop_group = QGroupBox(language_manager.get_text("prop_font_group"))
+        self.prop_group.setToolTip(language_manager.get_text("prop_font_tooltip"))
+        prop_layout = QVBoxLayout(self.prop_group)
         
         # 가변폭 폰트 컨트롤
         prop_controls = QHBoxLayout()
-        prop_controls.addWidget(QLabel("Font:"))
+        self.prop_font_label = QLabel(language_manager.get_text("font_label"))
+        prop_controls.addWidget(self.prop_font_label)
         self.prop_font_combo = QFontComboBox()
         self.prop_font_combo.setFontFilters(QFontComboBox.ScalableFonts)
         self.prop_font_combo.currentFontChanged.connect(self.update_prop_preview)
         prop_controls.addWidget(self.prop_font_combo, 1)
         
-        prop_controls.addWidget(QLabel("Size:"))
+        self.prop_size_label = QLabel(language_manager.get_text("size_label"))
+        prop_controls.addWidget(self.prop_size_label)
         self.prop_size_spin = QSpinBox()
         self.prop_size_spin.setRange(6, 16)
         self.prop_size_spin.setValue(9)
@@ -63,25 +66,28 @@ class FontSettingsDialog(QDialog):
         self.prop_preview.setReadOnly(True)
         self.prop_preview.setMaximumHeight(80)
         self.prop_preview.setText("The quick brown fox jumps over the lazy dog.\n빠른 갈색 여우가 게으른 개를 뛰어넘습니다.")
-        prop_layout.addWidget(QLabel("Preview:"))
+        self.prop_preview_label = QLabel(language_manager.get_text("preview_label"))
+        prop_layout.addWidget(self.prop_preview_label)
         prop_layout.addWidget(self.prop_preview)
         
-        layout.addWidget(prop_group)
+        layout.addWidget(self.prop_group)
         
         # 고정폭 폰트 그룹 (Fixed Font Group)
-        fixed_group = QGroupBox("Fixed Font (Text Data)")
-        fixed_group.setToolTip("TextEdit, LineEdit, CommandList 등 텍스트 데이터 표시에 사용됩니다.")
-        fixed_layout = QVBoxLayout(fixed_group)
+        self.fixed_group = QGroupBox(language_manager.get_text("fixed_font_group"))
+        self.fixed_group.setToolTip(language_manager.get_text("fixed_font_tooltip"))
+        fixed_layout = QVBoxLayout(self.fixed_group)
         
         # 고정폭 폰트 컨트롤
         fixed_controls = QHBoxLayout()
-        fixed_controls.addWidget(QLabel("Font:"))
+        self.fixed_font_label = QLabel(language_manager.get_text("font_label"))
+        fixed_controls.addWidget(self.fixed_font_label)
         self.fixed_font_combo = QFontComboBox()
         self.fixed_font_combo.setFontFilters(QFontComboBox.MonospacedFonts)
         self.fixed_font_combo.currentFontChanged.connect(self.update_fixed_preview)
         fixed_controls.addWidget(self.fixed_font_combo, 1)
         
-        fixed_controls.addWidget(QLabel("Size:"))
+        self.fixed_size_label = QLabel(language_manager.get_text("size_label"))
+        fixed_controls.addWidget(self.fixed_size_label)
         self.fixed_size_spin = QSpinBox()
         self.fixed_size_spin.setRange(6, 16)
         self.fixed_size_spin.setValue(9)
@@ -96,18 +102,19 @@ class FontSettingsDialog(QDialog):
         self.fixed_preview.setReadOnly(True)
         self.fixed_preview.setMaximumHeight(80)
         self.fixed_preview.setText("AT+CMD=OK\\r\\n0123456789ABCDEF\\r\\nMonospace Text Display")
-        fixed_layout.addWidget(QLabel("Preview:"))
+        self.fixed_preview_label = QLabel(language_manager.get_text("preview_label"))
+        fixed_layout.addWidget(self.fixed_preview_label)
         fixed_layout.addWidget(self.fixed_preview)
         
-        layout.addWidget(fixed_group)
+        layout.addWidget(self.fixed_group)
         
         # 버튼 영역
         button_layout = QHBoxLayout()
         
-        reset_button = QPushButton("Reset to Defaults")
-        reset_button.setToolTip("플랫폼 기본 폰트로 초기화합니다.")
-        reset_button.clicked.connect(self.reset_to_defaults)
-        button_layout.addWidget(reset_button)
+        self.reset_button = QPushButton(language_manager.get_text("reset_defaults"))
+        self.reset_button.setToolTip(language_manager.get_text("reset_defaults_tooltip"))
+        self.reset_button.clicked.connect(self.reset_to_defaults)
+        button_layout.addWidget(self.reset_button)
         
         button_layout.addStretch()
         

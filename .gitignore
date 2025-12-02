@@ -150,3 +150,6 @@ Thumbs.db
 # ETC
 *.bak
 *복사본*
+
+# Ignore folder (practice/test files)
+ignore/

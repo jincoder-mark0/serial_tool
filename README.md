@@ -115,6 +115,7 @@ serial_tool2/
 ├── config/         # 설정 파일
 ├── tests/          # 테스트 코드
 ├── doc/            # 문서
+├── ignore/         # 연습용/테스트 파일 (Git 무시)
 └── main.py         # 애플리케이션 진입점
 ```
 

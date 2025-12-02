@@ -4,6 +4,7 @@ from PyQt5.QtGui import QFont, QTextCursor, QTextDocument
 from typing import Optional
 import datetime
 from view.color_rules import ColorRulesManager
+from view.language_manager import language_manager
 
 class ReceivedArea(QWidget):
     """
@@ -35,6 +36,9 @@ class ReceivedArea(QWidget):
         self.batch_timer.setInterval(50) # 50ms 간격
         self.batch_timer.timeout.connect(self.flush_batch)
         self.batch_timer.start()
+        
+        # 언어 변경 시 UI 업데이트 연결
+        language_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
@@ -45,64 +49,93 @@ class ReceivedArea(QWidget):
         # 툴바 (Toolbar)
         toolbar = QHBoxLayout()
         
-        self.clear_btn = QPushButton("Clear")
-        self.clear_btn.setToolTip("로그 화면을 지웁니다.")
+        self.clear_btn = QPushButton(language_manager.get_text("clear"))
+        self.clear_btn.setToolTip(language_manager.get_text("clear_tooltip"))
         self.clear_btn.clicked.connect(self.clear_log)
         
-        self.hex_check = QCheckBox("HEX")
-        self.hex_check.setToolTip("데이터를 16진수(Hex) 형식으로 표시합니다.")
+        self.hex_check = QCheckBox(language_manager.get_text("hex_mode"))
+        self.hex_check.setToolTip(language_manager.get_text("hex_tooltip"))
         self.hex_check.stateChanged.connect(self.toggle_hex_mode)
         
-        self.timestamp_check = QCheckBox("TS")
-        self.timestamp_check.setToolTip("데이터 앞에 타임스탬프를 표시합니다.")
+        self.timestamp_check = QCheckBox(language_manager.get_text("timestamp"))
+        self.timestamp_check.setToolTip(language_manager.get_text("timestamp_tooltip"))
         self.timestamp_check.stateChanged.connect(self.toggle_timestamp)
         
-        self.pause_check = QCheckBox("Pause")
-        self.pause_check.setToolTip("화면 업데이트를 일시 정지합니다 (데이터는 계속 수신됩니다).")
+        self.pause_check = QCheckBox(language_manager.get_text("pause"))
+        self.pause_check.setToolTip(language_manager.get_text("pause_tooltip"))
         self.pause_check.stateChanged.connect(self.toggle_pause)
         
-        self.save_btn = QPushButton("Save")
-        self.save_btn.setToolTip("로그를 파일로 저장합니다.")
+        self.save_btn = QPushButton(language_manager.get_text("save"))
+        self.save_btn.setToolTip(language_manager.get_text("save_tooltip"))
         
         # 검색 바 (Search Bar)
         self.search_input = QLineEdit()
-        self.search_input.setPlaceholderText("Search (Regex supported)...")
-        self.search_input.setToolTip("검색할 문자열 또는 정규식을 입력하고 Enter를 누르세요.")
+        self.search_input.setPlaceholderText(language_manager.get_text("search"))
+        self.search_input.setToolTip(language_manager.get_text("search_tooltip"))
         self.search_input.returnPressed.connect(self.find_next)
         self.search_input.setMaximumWidth(200)
         
         self.find_prev_btn = QPushButton("◀")
-        self.find_prev_btn.setToolTip("이전 찾기 (Find Previous)")
+        self.find_prev_btn.setToolTip(language_manager.get_text("find_prev_tooltip"))
         self.find_prev_btn.setFixedWidth(30)
         self.find_prev_btn.clicked.connect(self.find_prev)
         
         self.find_next_btn = QPushButton("▶")
-        self.find_next_btn.setToolTip("다음 찾기 (Find Next)")
+        self.find_next_btn.setToolTip(language_manager.get_text("find_next_tooltip"))
         self.find_next_btn.setFixedWidth(30)
         self.find_next_btn.clicked.connect(self.find_next)
         
-        toolbar.addWidget(QLabel("RX Log"))
+        self.rx_log_label = QLabel(language_manager.get_text("rx_log"))
+        
+        toolbar.addWidget(self.rx_log_label)
         toolbar.addStretch()
         toolbar.addWidget(self.search_input)
         toolbar.addWidget(self.find_prev_btn)
         toolbar.addWidget(self.find_next_btn)
-        toolbar.addSpacing(10)
         toolbar.addWidget(self.hex_check)
         toolbar.addWidget(self.timestamp_check)
         toolbar.addWidget(self.pause_check)
         toolbar.addWidget(self.clear_btn)
         toolbar.addWidget(self.save_btn)
         
-        # 로그 뷰 (Log View)
+        # 로그 표시 영역 (Log Display Area)
         self.text_edit = QTextEdit()
         self.text_edit.setReadOnly(True)
-        self.text_edit.setToolTip("수신 데이터 표시 영역")
-        self.text_edit.setPlaceholderText("수신된 데이터가 여기에 표시됩니다.")
+        self.text_edit.setPlaceholderText(language_manager.get_text("rx_log_placeholder"))
+        self.text_edit.setToolTip(language_manager.get_text("rx_log_tooltip"))
         self.text_edit.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
         
         layout.addLayout(toolbar)
         layout.addWidget(self.text_edit)
         self.setLayout(layout)
+
+    def retranslate_ui(self) -> None:
+        """언어 변경 시 UI 텍스트를 업데이트합니다."""
+        self.clear_btn.setText(language_manager.get_text("clear"))
+        self.clear_btn.setToolTip(language_manager.get_text("clear_tooltip"))
+        
+        self.hex_check.setText(language_manager.get_text("hex_mode"))
+        self.hex_check.setToolTip(language_manager.get_text("hex_tooltip"))
+        
+        self.timestamp_check.setText(language_manager.get_text("timestamp"))
+        self.timestamp_check.setToolTip(language_manager.get_text("timestamp_tooltip"))
+        
+        self.pause_check.setText(language_manager.get_text("pause"))
+        self.pause_check.setToolTip(language_manager.get_text("pause_tooltip"))
+        
+        self.save_btn.setText(language_manager.get_text("save"))
+        self.save_btn.setToolTip(language_manager.get_text("save_tooltip"))
+        
+        self.search_input.setPlaceholderText(language_manager.get_text("search"))
+        self.search_input.setToolTip(language_manager.get_text("search_tooltip"))
+        
+        self.find_prev_btn.setToolTip(language_manager.get_text("find_prev_tooltip"))
+        self.find_next_btn.setToolTip(language_manager.get_text("find_next_tooltip"))
+        
+        self.rx_log_label.setText(language_manager.get_text("rx_log"))
+        
+        self.text_edit.setToolTip(language_manager.get_text("rx_log_tooltip"))
+        self.text_edit.setPlaceholderText(language_manager.get_text("rx_log_placeholder"))
 
     def find_next(self) -> None:
         """다음 검색 결과를 찾습니다."""
