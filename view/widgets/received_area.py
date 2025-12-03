@@ -274,3 +274,34 @@ class ReceivedArea(QWidget):
                     for _ in range(400):
                         cursor.movePosition(QTextCursor.Down, QTextCursor.KeepAnchor)
                     cursor.removeSelectedText()
+    def save_state(self) -> dict:
+        """
+        현재 위젯 상태를 딕셔너리로 반환합니다.
+        
+        Returns:
+            dict: 위젯 상태.
+        """
+        state = {
+            "hex_mode": self.hex_mode,
+            "timestamp": self.timestamp_enabled,
+            "paused": self.paused
+        }
+        print(f"[DEBUG] ReceivedArea.save_state: {state}")
+        return state
+        
+    def load_state(self, state: dict) -> None:
+        """
+        저장된 상태를 위젯에 적용합니다.
+        
+        Args:
+            state (dict): 위젯 상태.
+        """
+        if not state:
+            return
+            
+        print(f"[DEBUG] ReceivedArea.load_state: {state}")
+        
+        # 체크박스 상태 업데이트 (시그널 발생으로 내부 변수도 업데이트됨)
+        self.hex_check.setChecked(state.get("hex_mode", False))
+        self.timestamp_check.setChecked(state.get("timestamp", False))
+        self.pause_check.setChecked(state.get("paused", False))

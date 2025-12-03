@@ -53,7 +53,8 @@ class PortPanel(QWidget):
             dict: 패널 상태 데이터.
         """
         return {
-            "port_settings": self.port_settings.save_state()
+            "port_settings": self.port_settings.save_state(),
+            "received_area": self.received_area.save_state()
         }
         
     def load_state(self, state: dict) -> None:
@@ -66,3 +67,4 @@ class PortPanel(QWidget):
         if not state:
             return
         self.port_settings.load_state(state.get("port_settings", {}))
+        self.received_area.load_state(state.get("received_area", {}))
