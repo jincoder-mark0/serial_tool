@@ -35,8 +35,7 @@ class ThemeManager:
         self._fixed_font = QFont(fixed_family, fixed_size)
         self._fixed_font.setStyleHint(QFont.Monospace)
     
-    @staticmethod
-    def load_theme(theme_name: str = "dark") -> str:
+    def load_theme(self, theme_name: str = "dark") -> str:
         """
         지정된 테마의 QSS 콘텐츠를 로드합니다. 공통 스타일을 먼저 로드합니다.
         

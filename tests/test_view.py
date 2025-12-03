@@ -3,8 +3,8 @@ View 컴포넌트 테스트 애플리케이션
 개별 위젯들을 독립적으로 테스트할 수 있습니다.
 """
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget
-from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget, QPushButton, QLabel, QHBoxLayout
+from PyQt5.QtCore import Qt, QTimer
 
 import os
 
@@ -19,6 +19,10 @@ from view.widgets.command_list import CommandListWidget
 from view.widgets.status_area import StatusArea
 from view.panels.port_panel import PortPanel
 from view.theme_manager import ThemeManager
+from view.language_manager import language_manager
+from view.dialogs.preferences_dialog import PreferencesDialog
+from view.dialogs.about_dialog import AboutDialog
+from view.widgets.file_progress_widget import FileProgressWidget
 from core.settings_manager import SettingsManager
 
 class ViewTestWindow(QMainWindow):
@@ -64,6 +68,15 @@ class ViewTestWindow(QMainWindow):
         
         # Test 5: PortPanel (전체 패널 테스트)
         tabs.addTab(self.create_port_panel_test(), "PortPanel Test")
+
+        # Test 6: Dialogs (Preferences, About)
+        tabs.addTab(self.create_dialog_test(), "Dialogs Test")
+
+        # Test 7: FileProgress (파일 전송 진행률)
+        tabs.addTab(self.create_file_progress_test(), "FileProgress Test")
+
+        # Test 8: Language (다국어 지원)
+        tabs.addTab(self.create_language_test(), "Language Test")
         
         layout.addWidget(tabs)
         
@@ -194,8 +207,23 @@ class ViewTestWindow(QMainWindow):
         
         # 정보 레이블
         from PyQt5.QtWidgets import QLabel
-        info = QLabel("✅ 테스트: 행 추가/삭제/이동, Select All, Send 버튼")
+        info = QLabel("✅ 테스트: 행 추가/삭제/이동, Select All, Send 버튼, 데이터 유지(Persistence)")
         layout.addWidget(info)
+        
+        # Persistence Test Buttons
+        btn_layout = QHBoxLayout()
+        btn_save = QPushButton("Save to Console")
+        btn_save.clicked.connect(lambda: print(self.command_list.get_command_list()))
+        
+        btn_load = QPushButton("Load Dummy Data")
+        btn_load.clicked.connect(lambda: self.command_list.set_command_list([
+            {"command": "LOADED_CMD_1", "delay": "200", "enabled": True},
+            {"command": "LOADED_CMD_2", "delay": "500", "enabled": False}
+        ]))
+        
+        btn_layout.addWidget(btn_save)
+        btn_layout.addWidget(btn_load)
+        layout.addLayout(btn_layout)
         
         return widget
     
@@ -264,6 +292,114 @@ class ViewTestWindow(QMainWindow):
         
         return widget
     
+    def create_dialog_test(self) -> QWidget:
+        """Dialog 테스트 위젯을 생성합니다."""
+        from PyQt5.QtWidgets import QPushButton, QHBoxLayout, QLabel
+        
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        btn_pref = QPushButton("Open Preferences Dialog")
+        btn_pref.clicked.connect(self.open_preferences)
+        
+        btn_about = QPushButton("Open About Dialog")
+        btn_about.clicked.connect(self.open_about)
+        
+        layout.addWidget(btn_pref)
+        layout.addWidget(btn_about)
+        layout.addWidget(QLabel("✅ 테스트: 설정 다이얼로그 및 정보 다이얼로그 호출"))
+        layout.addStretch()
+        
+        return widget
+
+    def open_preferences(self) -> None:
+        """설정 다이얼로그를 엽니다."""
+        # 현재 설정 로드 (테스트용 임시 데이터)
+        current_settings = self.settings.get_all_settings().get('global', {})
+        # Serial/Logging 설정도 포함해야 하지만 여기선 간단히
+        
+        dlg = PreferencesDialog(self, self.settings.get_all_settings())
+        if dlg.exec_():
+            print("Preferences Saved")
+            # 실제로는 여기서 설정을 저장하고 적용해야 함
+
+    def open_about(self) -> None:
+        """정보 다이얼로그를 엽니다."""
+        dlg = AboutDialog(self)
+        dlg.exec_()
+
+    def create_file_progress_test(self) -> QWidget:
+        """FileProgressWidget 테스트 위젯을 생성합니다."""
+        from PyQt5.QtCore import QTimer
+        
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        self.file_progress = FileProgressWidget()
+        layout.addWidget(self.file_progress)
+        
+        btn_start = QPushButton("Start Mock Transfer")
+        btn_start.clicked.connect(self.start_mock_transfer)
+        
+        layout.addWidget(btn_start)
+        layout.addWidget(QLabel("✅ 테스트: 진행률 바, 속도, ETA 업데이트 및 취소 버튼"))
+        layout.addStretch()
+        
+        return widget
+
+    def start_mock_transfer(self) -> None:
+        """모의 파일 전송을 시작합니다."""
+        self.mock_sent = 0
+        self.mock_total = 1024 * 1024 * 10 # 10MB
+        self.file_progress.reset()
+        
+        self.transfer_timer = QTimer(self)
+        self.transfer_timer.timeout.connect(self.update_mock_transfer)
+        self.transfer_timer.start(100) # 100ms 마다 업데이트
+
+    def update_mock_transfer(self) -> None:
+        """모의 전송 상태를 업데이트합니다."""
+        chunk = 1024 * 100 # 100KB
+        self.mock_sent += chunk
+        
+        if self.mock_sent >= self.mock_total:
+            self.mock_sent = self.mock_total
+            self.transfer_timer.stop()
+            self.file_progress.set_complete(True, "Transfer Finished")
+        
+        # Mock speed calculation
+        speed = chunk * 10 # 1MB/s
+        eta = (self.mock_total - self.mock_sent) / speed
+        
+        self.file_progress.update_progress(self.mock_sent, self.mock_total, speed, eta)
+
+    def create_language_test(self) -> QWidget:
+        """LanguageManager 테스트 위젯을 생성합니다."""
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        self.lang_label = QLabel(language_manager.get_text("app_title"))
+        self.lang_label.setStyleSheet("font-size: 20px; font-weight: bold;")
+        
+        btn_en = QPushButton("English")
+        btn_en.clicked.connect(lambda: self.change_language("en"))
+        
+        btn_ko = QPushButton("한국어")
+        btn_ko.clicked.connect(lambda: self.change_language("ko"))
+        
+        layout.addWidget(self.lang_label)
+        layout.addWidget(btn_en)
+        layout.addWidget(btn_ko)
+        layout.addWidget(QLabel("✅ 테스트: 버튼 클릭 시 앱 타이틀 언어 변경 확인"))
+        layout.addStretch()
+        
+        return widget
+
+    def change_language(self, lang: str) -> None:
+        """언어를 변경하고 UI를 업데이트합니다."""
+        language_manager.set_language(lang)
+        self.lang_label.setText(language_manager.get_text("app_title"))
+
     def closeEvent(self, event) -> None:
         """
         종료 시 설정을 저장합니다.

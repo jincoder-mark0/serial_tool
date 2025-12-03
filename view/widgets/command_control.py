@@ -4,6 +4,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Optional
+from view.language_manager import language_manager
 
 class CommandControlWidget(QWidget):
     """
@@ -30,6 +31,9 @@ class CommandControlWidget(QWidget):
         super().__init__(parent)
         self.init_ui()
         
+        # 언어 변경 시 UI 업데이트 연결
+        language_manager.language_changed.connect(self.retranslate_ui)
+        
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
         layout = QVBoxLayout()
@@ -40,48 +44,51 @@ class CommandControlWidget(QWidget):
         top_layout = QHBoxLayout()
         top_layout.setContentsMargins(0, 0, 0, 0)
         
-        self.save_script_btn = QPushButton("Save")
-        self.save_script_btn.setToolTip("현재 명령어 목록을 JSON 파일로 저장합니다.")
+        self.save_script_btn = QPushButton(language_manager.get_text("save_script"))
+        self.save_script_btn.setToolTip(language_manager.get_text("save_script_tooltip"))
         self.save_script_btn.clicked.connect(self.save_script_requested.emit)
         
-        self.load_script_btn = QPushButton("Load")
-        self.load_script_btn.setToolTip("JSON 파일에서 명령어 목록을 불러옵니다.")
+        self.load_script_btn = QPushButton(language_manager.get_text("load_script"))
+        self.load_script_btn.setToolTip(language_manager.get_text("load_script_tooltip"))
         self.load_script_btn.clicked.connect(self.load_script_requested.emit)
         
         # 접두사 / 접미사 입력 (Prefix / Suffix Inputs)
         self.prefix_input = QLineEdit()
         self.prefix_input.setPlaceholderText("Prefix")
         self.prefix_input.setFixedWidth(60)
-        self.prefix_input.setToolTip("전역 명령어 접두사")
+        self.prefix_input.setToolTip(language_manager.get_text("prefix_tooltip"))
         self.prefix_input.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
         
         self.suffix_input = QLineEdit()
         self.suffix_input.setPlaceholderText("Suffix")
         self.suffix_input.setFixedWidth(60)
-        self.suffix_input.setToolTip("전역 명령어 접미사")
+        self.suffix_input.setToolTip(language_manager.get_text("suffix_tooltip"))
         self.suffix_input.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
         
-        top_layout.addWidget(QLabel("Pre:"))
+        self.prefix_label = QLabel(language_manager.get_text("prefix_label"))
+        self.suffix_label = QLabel(language_manager.get_text("suffix_label"))
+        
+        top_layout.addWidget(self.prefix_label)
         top_layout.addWidget(self.prefix_input)
-        top_layout.addWidget(QLabel("Suf:"))
+        top_layout.addWidget(self.suffix_label)
         top_layout.addWidget(self.suffix_input)
         top_layout.addStretch()
         top_layout.addWidget(self.save_script_btn)
         top_layout.addWidget(self.load_script_btn)
         
         # 2. 자동 실행 설정 그룹 (Auto Run Settings Group)
-        auto_group = QGroupBox("Execution Control")
+        self.auto_group = QGroupBox(language_manager.get_text("execution_control"))
         auto_layout = QGridLayout()
         auto_layout.setContentsMargins(2, 2, 2, 2)
         auto_layout.setSpacing(5)
         
         # Row 0: 단일 실행 및 정지
-        self.run_btn = QPushButton("Run Once (F5)")
-        self.run_btn.setToolTip("선택된 명령어들을 한 번 실행합니다.")
+        self.run_btn = QPushButton(language_manager.get_text("run_once"))
+        self.run_btn.setToolTip(language_manager.get_text("run_once_tooltip"))
         self.run_btn.clicked.connect(self.run_single_requested.emit)
         
-        self.stop_btn = QPushButton("Stop (Esc)")
-        self.stop_btn.setToolTip("실행을 중지합니다.")
+        self.stop_btn = QPushButton(language_manager.get_text("stop_run"))
+        self.stop_btn.setToolTip(language_manager.get_text("stop_run_tooltip"))
         self.stop_btn.clicked.connect(self.stop_requested.emit)
         self.stop_btn.setEnabled(False)
         self.stop_btn.setProperty("class", "danger") # 빨간색 스타일
@@ -90,25 +97,27 @@ class CommandControlWidget(QWidget):
         auto_layout.addWidget(self.stop_btn, 0, 2, 1, 2)
         
         # Row 1: 자동 실행 설정
-        auto_layout.addWidget(QLabel("Delay(ms):"), 1, 0)
+        self.delay_label = QLabel(language_manager.get_text("delay_ms"))
+        auto_layout.addWidget(self.delay_label, 1, 0)
         self.global_delay_input = QLineEdit("1000")
         self.global_delay_input.setFixedWidth(50)
         self.global_delay_input.setAlignment(Qt.AlignRight)
         auto_layout.addWidget(self.global_delay_input, 1, 1)
         
-        auto_layout.addWidget(QLabel("Max Runs:"), 1, 2)
+        self.max_runs_label = QLabel(language_manager.get_text("max_runs") + ":")
+        auto_layout.addWidget(self.max_runs_label, 1, 2)
         self.auto_run_max_spin = QSpinBox()
         self.auto_run_max_spin.setRange(0, 9999)
         self.auto_run_max_spin.setValue(0)
-        self.auto_run_max_spin.setToolTip("0이면 무한 반복합니다.")
+        self.auto_run_max_spin.setToolTip(language_manager.get_text("max_runs_tooltip"))
         auto_layout.addWidget(self.auto_run_max_spin, 1, 3)
         
         # Row 2: 자동 실행 제어
-        self.auto_run_btn = QPushButton("Start Auto Run")
+        self.auto_run_btn = QPushButton(language_manager.get_text("start_auto_run"))
         self.auto_run_btn.setProperty("class", "accent") # 초록색 스타일
         self.auto_run_btn.clicked.connect(self.on_start_auto)
         
-        self.stop_auto_btn = QPushButton("Stop Auto")
+        self.stop_auto_btn = QPushButton(language_manager.get_text("stop_auto_run"))
         self.stop_auto_btn.clicked.connect(self.stop_auto_requested.emit)
         self.stop_auto_btn.setEnabled(False)
         
@@ -119,16 +128,45 @@ class CommandControlWidget(QWidget):
         auto_layout.addWidget(self.stop_auto_btn, 2, 2)
         auto_layout.addWidget(self.auto_run_count_label, 2, 3)
         
-        auto_group.setLayout(auto_layout)
+        self.auto_group.setLayout(auto_layout)
         
         layout.addLayout(top_layout)
-        layout.addWidget(auto_group)
+        layout.addWidget(self.auto_group)
         
         self.setLayout(layout)
         
         # 초기 상태: 연결 전까지 비활성화
         self.set_controls_enabled(False)
+
+    def retranslate_ui(self) -> None:
+        """언어 변경 시 UI 텍스트를 업데이트합니다."""
+        self.save_script_btn.setText(language_manager.get_text("save_script"))
+        self.save_script_btn.setToolTip(language_manager.get_text("save_script_tooltip"))
         
+        self.load_script_btn.setText(language_manager.get_text("load_script"))
+        self.load_script_btn.setToolTip(language_manager.get_text("load_script_tooltip"))
+        
+        self.prefix_input.setToolTip(language_manager.get_text("prefix_tooltip"))
+        self.suffix_input.setToolTip(language_manager.get_text("suffix_tooltip"))
+        
+        self.prefix_label.setText(language_manager.get_text("prefix_label"))
+        self.suffix_label.setText(language_manager.get_text("suffix_label"))
+        
+        self.auto_group.setTitle(language_manager.get_text("execution_control"))
+        
+        self.run_btn.setText(language_manager.get_text("run_once"))
+        self.run_btn.setToolTip(language_manager.get_text("run_once_tooltip"))
+        
+        self.stop_btn.setText(language_manager.get_text("stop_run"))
+        self.stop_btn.setToolTip(language_manager.get_text("stop_run_tooltip"))
+        
+        self.delay_label.setText(language_manager.get_text("delay_ms"))
+        self.max_runs_label.setText(language_manager.get_text("max_runs") + ":")
+        self.auto_run_max_spin.setToolTip(language_manager.get_text("max_runs_tooltip"))
+        
+        self.auto_run_btn.setText(language_manager.get_text("start_auto_run"))
+        self.stop_auto_btn.setText(language_manager.get_text("stop_auto_run"))
+
     def on_start_auto(self) -> None:
         """자동 실행 시작 버튼 핸들러"""
         try:

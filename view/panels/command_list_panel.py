@@ -33,16 +33,38 @@ class CommandListPanel(QWidget):
         self.command_list = CommandListWidget()
         self.command_control = CommandControlWidget()
         
+        # 설정 관리자 (Settings Manager)
+        from core.settings_manager import SettingsManager
+        self.settings = SettingsManager()
+        
+        # 초기 데이터 로드
+        self.load_command_list()
+        
         # 시그널 연결
         self.command_control.run_single_requested.connect(self.on_run_single_requested)
         self.command_control.stop_requested.connect(self.stop_requested.emit)
         self.command_control.start_auto_requested.connect(self.on_start_auto_requested)
         self.command_control.stop_auto_requested.connect(self.stop_requested.emit) # Stop signal is same for now
         
+        # 데이터 변경 시 자동 저장
+        self.command_list.command_list_changed.connect(self.save_command_list)
+        
         layout.addWidget(self.command_list)
         layout.addWidget(self.command_control)
         
         self.setLayout(layout)
+        
+    def load_command_list(self) -> None:
+        """설정에서 커맨드 리스트를 로드합니다."""
+        commands = self.settings.get("command_list.default_commands", [])
+        if commands:
+            self.command_list.set_command_list(commands)
+            
+    def save_command_list(self) -> None:
+        """현재 커맨드 리스트를 설정에 저장합니다."""
+        commands = self.command_list.get_command_list()
+        self.settings.set("command_list.default_commands", commands)
+        self.settings.save_settings()
         
     def on_run_single_requested(self) -> None:
         """Run(Single) 버튼 클릭 핸들러입니다."""
