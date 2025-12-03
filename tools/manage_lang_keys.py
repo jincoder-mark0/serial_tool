@@ -238,11 +238,11 @@ def main():
     
     # 2. 템플릿 생성
     print("\n[2] 언어 템플릿 생성 중...")
-    # generate_template(
-    #     keys_by_module,
-    #     "config/languages/template_en.json",
-    #     "en"
-    # )
+    generate_template(
+        keys_by_module,
+        "config/languages/template_en.json",
+        "en"
+    )
     
     # 3. 누락/미사용 키 확인
     print("\n[3] 키 검증 중...")

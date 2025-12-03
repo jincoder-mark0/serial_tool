@@ -37,9 +37,6 @@ class CommandListPanel(QWidget):
         from core.settings_manager import SettingsManager
         self.settings = SettingsManager()
         
-        # 초기 데이터 로드
-        self.load_state()
-        
         # 시그널 연결
         self.command_control.run_single_requested.connect(self.on_run_single_requested)
         self.command_control.stop_requested.connect(self.stop_requested.emit)
@@ -49,10 +46,19 @@ class CommandListPanel(QWidget):
         # 데이터 변경 시 자동 저장
         self.command_list.command_list_changed.connect(self.save_state)
         
+        # CommandControl의 입력 필드 변경 시에도 저장 (textChanged, valueChanged 등)
+        self.command_control.prefix_input.textChanged.connect(self.save_state)
+        self.command_control.suffix_input.textChanged.connect(self.save_state)
+        self.command_control.global_delay_input.textChanged.connect(self.save_state)
+        self.command_control.auto_run_max_spin.valueChanged.connect(self.save_state)
+        
         layout.addWidget(self.command_list)
         layout.addWidget(self.command_control)
         
         self.setLayout(layout)
+        
+        # 초기 데이터 로드 (위젯 생성 후)
+        self.load_state()
         
     def load_state(self) -> None:
         """설정에서 상태를 로드합니다."""
