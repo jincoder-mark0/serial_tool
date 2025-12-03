@@ -3,7 +3,8 @@
   "global": {
     "menu_theme": "dark",
     "menu_language": "ko",
-    "theme": "dark"
+    "theme": "dark",
+    "language": "en"
   },
   "ui": {
     "log_max_lines": 2000,
@@ -13,8 +14,8 @@
     "fixed_font_size": 9,
     "window_width": 1413,
     "window_height": 900,
-    "window_x": 259,
-    "window_y": 44
+    "window_x": 178,
+    "window_y": 37
   },
   "ports": {
     "default_config": {
@@ -52,7 +53,40 @@
     ]
   },
   "command_list": {
-    "commands": [],
+    "commands": [
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      }
+    ],
     "control_state": {
       "prefix": "",
       "suffix": "",

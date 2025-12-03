@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QSplitter, QAction, QStatusBar, QApplication
+    QMainWindow, QWidget, QVBoxLayout, QSplitter, QApplication
 )
 from PyQt5.QtCore import Qt
 
@@ -9,6 +9,8 @@ from view.theme_manager import ThemeManager
 from view.language_manager import language_manager
 from view.dialogs.font_settings_dialog import FontSettingsDialog
 from core.settings_manager import SettingsManager
+from view.widgets.main_menu_bar import MainMenuBar
+from view.widgets.main_status_bar import MainStatusBar
 
 class MainWindow(QMainWindow):
     """
@@ -36,7 +38,11 @@ class MainWindow(QMainWindow):
         self.resize(1400, 900)
 
         self.init_ui()
-        self.init_menu()
+
+        # 메뉴바 초기화 (위젯 사용)
+        self.menu_bar = MainMenuBar(self)
+        self.setMenuBar(self.menu_bar)
+        self._connect_menu_signals()
 
         # 설정에서 테마 적용
         theme = self.settings.get('global.theme', 'dark')
@@ -80,76 +86,19 @@ class MainWindow(QMainWindow):
 
         main_layout.addWidget(splitter)
 
-        # 전역 상태바 설정
-        self.global_status_bar = QStatusBar()
+        # 전역 상태바 설정 (위젯 사용)
+        self.global_status_bar = MainStatusBar()
         self.setStatusBar(self.global_status_bar)
-        self.global_status_bar.showMessage(language_manager.get_text("status_ready"))
 
-    def init_menu(self) -> None:
-        """메뉴바를 초기화하고 액션을 설정합니다."""
-        menubar = self.menuBar()
-        menubar.clear() # 기존 메뉴 제거 (재진입 시 중복 방지)
-
-        # 파일 메뉴 (File Menu)
-        file_menu = menubar.addMenu(language_manager.get_text("menu_file"))
-
-        new_tab_action = QAction(language_manager.get_text("new_port_tab"), self)
-        new_tab_action.setShortcut("Ctrl+T")
-        new_tab_action.setToolTip(language_manager.get_text("new_port_tab"))
-        # LeftPanel의 add_new_port_tab 호출
-        new_tab_action.triggered.connect(self.left_panel.add_new_port_tab)
-        file_menu.addAction(new_tab_action)
-
-        exit_action = QAction(language_manager.get_text("menu_exit"), self)
-        exit_action.setShortcut("Ctrl+Q")
-        exit_action.setToolTip(language_manager.get_text("menu_exit"))
-        exit_action.triggered.connect(self.close)
-        file_menu.addAction(exit_action)
-
-        # 보기 메뉴 (View Menu)
-        view_menu = menubar.addMenu(language_manager.get_text("menu_view"))
-
-        # 테마 서브메뉴
-        theme_menu = view_menu.addMenu(language_manager.get_text("menu_theme"))
-
-        dark_action = QAction(language_manager.get_text("menu_dark_theme"), self)
-        dark_action.triggered.connect(lambda: self.switch_theme("dark"))
-        theme_menu.addAction(dark_action)
-
-        light_action = QAction(language_manager.get_text("menu_light_theme"), self)
-        light_action.triggered.connect(lambda: self.switch_theme("light"))
-        theme_menu.addAction(light_action)
-
-        # 폰트 설정 액션
-        font_settings_action = QAction(language_manager.get_text("menu_font_setting"), self)
-        font_settings_action.setShortcut("Ctrl+Shift+F")
-        font_settings_action.setToolTip(language_manager.get_text("menu_font_setting_tooltip"))
-        font_settings_action.triggered.connect(self.open_font_settings_dialog)
-        view_menu.addAction(font_settings_action)
-
-        # 언어 서브메뉴 (Language Submenu)
-        language_menu = view_menu.addMenu(language_manager.get_text("menu_language"))
-
-        en_action = QAction(language_manager.get_text("menu_english"), self)
-        en_action.triggered.connect(lambda: language_manager.set_language("en"))
-        language_menu.addAction(en_action)
-
-        ko_action = QAction(language_manager.get_text("menu_korean"), self)
-        ko_action.triggered.connect(lambda: language_manager.set_language("ko"))
-        language_menu.addAction(ko_action)
-
-        # Preferences 액션
-        preferences_action = QAction(language_manager.get_text("menu_preferences"), self)
-        preferences_action.setShortcut("Ctrl+,")
-        view_menu.addAction(preferences_action)
-
-        # 도구 메뉴 (Tools Menu)
-        tools_menu = menubar.addMenu(language_manager.get_text("menu_tools"))
-
-        # 도움말 메뉴 (Help Menu)
-        help_menu = menubar.addMenu(language_manager.get_text("menu_help"))
-        about_action = QAction(language_manager.get_text("menu_about"), self)
-        help_menu.addAction(about_action)
+    def _connect_menu_signals(self) -> None:
+        """메뉴바 시그널을 슬롯에 연결합니다."""
+        self.menu_bar.new_tab_requested.connect(self.left_panel.add_new_port_tab)
+        self.menu_bar.exit_requested.connect(self.close)
+        self.menu_bar.theme_changed.connect(self.switch_theme)
+        self.menu_bar.font_settings_requested.connect(self.open_font_settings_dialog)
+        self.menu_bar.language_changed.connect(lambda lang: language_manager.set_language(lang))
+        # self.menu_bar.preferences_requested.connect(...) # 추후 구현
+        # self.menu_bar.about_requested.connect(...) # 추후 구현
 
     def switch_theme(self, theme_name: str) -> None:
         """
@@ -165,9 +114,9 @@ class MainWindow(QMainWindow):
             self.settings.set('global.theme', theme_name)
 
         if theme_name == "dark":
-            self.global_status_bar.showMessage("Theme changed to Dark", 2000)
+            self.global_status_bar.show_message("Theme changed to Dark", 2000)
         else:
-            self.global_status_bar.showMessage("Theme changed to Light", 2000)
+            self.global_status_bar.show_message("Theme changed to Light", 2000)
 
     def open_font_settings_dialog(self) -> None:
         """듀얼 폰트 설정 대화상자를 엽니다."""
@@ -182,7 +131,7 @@ class MainWindow(QMainWindow):
             prop_font = self.theme_manager.get_proportional_font()
             QApplication.instance().setFont(prop_font)
 
-            self.global_status_bar.showMessage("Font settings updated", 2000)
+            self.global_status_bar.show_message("Font settings updated", 2000)
 
 
     def _load_window_state(self) -> None:
@@ -220,10 +169,10 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"{language_manager.get_text('app_title')} v1.0")
 
         # 상태바 업데이트
-        self.global_status_bar.showMessage(language_manager.get_text("status_ready"))
+        self.global_status_bar.retranslate_ui()
 
         # 메뉴 재생성
-        self.init_menu()
+        self.menu_bar.retranslate_ui()
 
         # 설정에 언어 저장
         self.settings.set('global.language', lang_code)

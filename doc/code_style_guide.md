@@ -25,27 +25,75 @@
 
 ### 기본 형식
 - **요약**: 함수/클래스가 수행하는 작업에 대한 간략한 설명
+- **Logic**: 핵심 알고리즘 또는 패턴
 - **Args**: 각 매개변수에 대한 설명
 - **Returns**: 반환값 설명 (복잡한 구조는 상세히 기술)
 - **Raises**: (선택 사항) 발생 가능한 예외
 
-### 예시 1: 간단한 함수
+
+
+### 예시 1: 모듈 Docstring
+- Import 이전에 작성합니다.
+
+**핵심 원칙:**
+1. **WHY를 먼저**: 이 코드가 왜 존재하는지 명확히 설명
+2. **WHAT은 구체적으로**: 제공하는 기능을 명확하게 나열
+3. **HOW는 간결하게**: 핵심 알고리즘이나 패턴만 언급 (세부사항은 코드 참조)
+4. **최소 3줄 이상**: 각 섹션은 최소 1개 이상의 bullet point
+
 ```python
-def add_file(self, file_path: str) -> bool:
-    """파일을 리네임 대상 목록에 추가
+"""
+모듈의 주요 역할을 한 줄로 요약.
+
+WHY (왜 필요한가):
+    - 이 모듈이 해결하는 문제나 필요성
+    - 비즈니스 또는 기술적 요구사항
+    - 없으면 어떤 문제가 발생하는지
+
+WHAT (무엇을 하는가):
+    - 주요 기능 나열
+    - 제공하는 클래스/함수/인터페이스
+    - 관리하는 데이터 구조
+
+HOW (어떻게 동작하는가):
+    - 핵심 알고리즘 또는 패턴
+    - 의존성 (다른 모듈과의 통신 방법)
+    - 중요한 구현 세부사항
+"""
+import ...
+```
+
+### 예시 2: 간단한 함수
+```python
+def method_name(self, param1, param2):
+    """
+    메서드의 주요 기능을 한 줄로 요약.
+
+    더 상세한 설명이 필요한 경우 여기에 작성합니다.
+    여러 줄로 작성할 수 있으며, 메서드의 주요 기능과
+    사용 목적을 명확히 설명합니다.
+
+    Logic:
+        - 로직설명
 
     Args:
-        file_path: 추가할 파일의 경로
+        param1 (type): 파라미터 설명
+        param2 (type): 파라미터 설명
+            - 세부 항목이 있는 경우 들여쓰기로 표현
+            - 추가 세부 정보
 
     Returns:
-        bool: 추가 성공 여부
+        type: 반환값 설명
 
     Raises:
-        FileNotFoundError: 파일이 존재하지 않는 경우
+        ExceptionType: 예외가 발생하는 조건 (필요시)
+
+    Note:
+        추가 참고사항 (필요시)
     """
 ```
 
-### 예시 2: 복잡한 반환값
+### 예시 3: 복잡한 반환값
 ```python
 def execute_rename(self) -> Dict[str, Any]:
     """리네임 실행
@@ -60,21 +108,21 @@ def execute_rename(self) -> Dict[str, Any]:
     """
 ```
 
-### 예시 3: 클래스
+### 예시 4: 클래스
 ```python
 class SerialWorker(QThread):
     """시리얼 포트 통신을 처리하는 워커 스레드
-    
+
     이 클래스는 별도 스레드에서 시리얼 포트 읽기/쓰기를 수행하여
     메인 UI 스레드의 블로킹을 방지합니다.
-    
+
     Attributes:
         port_name: 연결할 시리얼 포트 이름
         baudrate: 통신 속도
     """
 ```
 
-### 예시 4: 매개변수가 없는 함수
+### 예시 5: 매개변수가 없는 함수
 ```python
 def generate_rename_plan(self) -> List[Tuple[str, str]]:
     """현재 설정에 따른 리네임 계획 생성
@@ -97,7 +145,7 @@ from typing import List, Optional
 def get_available_ports() -> List[str]:
     """
     사용 가능한 시리얼 포트 목록을 반환합니다.
-    
+
     Returns:
         List[str]: 포트 이름 리스트.
     """

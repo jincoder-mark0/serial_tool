@@ -10,7 +10,7 @@ class AboutDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(language_manager.get_text("title_about"))
+        self.setWindowTitle(language_manager.get_text("about_title"))
         self.setFixedSize(400, 300)
         self.init_ui()
 
@@ -20,25 +20,25 @@ class AboutDialog(QDialog):
         layout.setSpacing(20)
 
         # 앱 이름 및 버전
-        title_label = QLabel("Serial Tool")
+        title_label = QLabel(language_manager.get_text("about_app_name"))
         title_label.setStyleSheet("font-size: 24px; font-weight: bold;")
         title_label.setAlignment(Qt.AlignCenter)
 
-        version_label = QLabel("Version 1.0.0")
+        version_label = QLabel(language_manager.get_text("about_version"))
         version_label.setStyleSheet("font-size: 14px; color: #888;")
         version_label.setAlignment(Qt.AlignCenter)
 
         # 설명
-        desc_label = QLabel("A powerful serial communication tool\nfor developers.")
+        desc_label = QLabel(language_manager.get_text("about_description"))
         desc_label.setAlignment(Qt.AlignCenter)
 
         # 저작권
-        copyright_label = QLabel("© 2024 Jincoder. All rights reserved.")
+        copyright_label = QLabel(language_manager.get_text("about_copyright"))
         copyright_label.setStyleSheet("font-size: 12px; color: #666;")
         copyright_label.setAlignment(Qt.AlignCenter)
 
         # 닫기 버튼
-        close_btn = QPushButton(language_manager.get_text("btn_close"))
+        close_btn = QPushButton(language_manager.get_text("global_btn_close"))
         close_btn.setFixedWidth(100)
         close_btn.clicked.connect(self.accept)
 

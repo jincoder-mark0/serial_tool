@@ -6,6 +6,7 @@ except ImportError:
 import os
 from typing import Dict, Optional
 from PyQt5.QtCore import QObject, pyqtSignal
+from core.logger import logger
 
 class LanguageManager(QObject):
     """
@@ -40,7 +41,7 @@ class LanguageManager(QObject):
         lang_dir = os.path.join(base_dir, 'config', 'languages')
 
         if not os.path.exists(lang_dir):
-            print(f"Language directory not found: {lang_dir}")
+            logger.error(f"Language directory not found: {lang_dir}")
             return
 
         for filename in os.listdir(lang_dir):
@@ -51,12 +52,12 @@ class LanguageManager(QObject):
                     with open(file_path, 'r', encoding='utf-8') as f:
                         self.resources[lang_code] = json.load(f)
                 except Exception as e:
-                    print(f"Failed to load language file {filename}: {e}")
+                    logger.error(f"Failed to load language file {filename}: {e}")
 
     def set_language(self, lang_code: str) -> None:
         """
         현재 언어를 설정하고 시그널을 발생시킵니다.
-        
+
         Args:
             lang_code (str): 설정할 언어 코드 (예: 'en', 'ko').
         """
@@ -67,22 +68,22 @@ class LanguageManager(QObject):
     def get_text(self, key: str) -> str:
         """
         현재 언어에 맞는 텍스트를 반환합니다.
-        
+
         Args:
             key (str): 텍스트 키.
-            
+
         Returns:
             str: 번역된 텍스트. 키가 없으면 키 자체를 반환.
         """
         lang_dict = self.resources.get(self.current_language, {})
         text = lang_dict.get(key)
-        
+
         if text is None:
             # 현재 언어에 키가 없으면 기본 언어(영어)에서 시도
             if self.current_language != 'en':
                 fallback_dict = self.resources.get('en', {})
                 text = fallback_dict.get(key)
-        
+
         # 여전히 없으면 키 자체를 반환
         return text if text is not None else key
 
