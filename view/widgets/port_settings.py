@@ -73,8 +73,8 @@ class PortSettingsWidget(QGroupBox):
         self.connect_btn.clicked.connect(self.on_connect_clicked)
         self.connect_btn.setFixedWidth(60)
         
-        self.port_label = QLabel(language_manager.get_text("port") + ":")
-        self.baud_label = QLabel(language_manager.get_text("baudrate") + ":")
+        self.port_label = QLabel(language_manager.get_text("port_label"))
+        self.baud_label = QLabel(language_manager.get_text("baudrate_label"))
         
         row1_layout.addWidget(self.port_label)
         row1_layout.addWidget(self.port_combo)
@@ -120,10 +120,10 @@ class PortSettingsWidget(QGroupBox):
         self.rts_check = QCheckBox("RTS")
         self.rts_check.setChecked(True)
         
-        self.data_label = QLabel(language_manager.get_text("data_bits"))
-        self.parity_label = QLabel(language_manager.get_text("parity"))
-        self.stop_label = QLabel(language_manager.get_text("stop_bits"))
-        self.flow_label = QLabel(language_manager.get_text("flow_control"))
+        self.data_label = QLabel(language_manager.get_text("data_label"))
+        self.parity_label = QLabel(language_manager.get_text("parity_label"))
+        self.stop_label = QLabel(language_manager.get_text("stop_label"))
+        self.flow_label = QLabel(language_manager.get_text("flow_label"))
         
         row2_layout.addWidget(self.data_label)
         row2_layout.addWidget(self.bytesize_combo)
@@ -159,18 +159,18 @@ class PortSettingsWidget(QGroupBox):
             self.connect_btn.setText(language_manager.get_text("open_port"))
         self.connect_btn.setToolTip(language_manager.get_text("connect_btn_tooltip"))
         
-        self.port_label.setText(language_manager.get_text("port") + ":")
-        self.baud_label.setText(language_manager.get_text("baudrate") + ":")
+        self.port_label.setText(language_manager.get_text("port_label"))
+        self.baud_label.setText(language_manager.get_text("baudrate_label"))
         
         self.bytesize_combo.setToolTip(language_manager.get_text("data_bits_tooltip"))
         self.parity_combo.setToolTip(language_manager.get_text("parity_tooltip"))
         self.stopbits_combo.setToolTip(language_manager.get_text("stop_bits_tooltip"))
         self.flow_combo.setToolTip(language_manager.get_text("flow_control_tooltip"))
         
-        self.data_label.setText(language_manager.get_text("data_bits"))
-        self.parity_label.setText(language_manager.get_text("parity"))
-        self.stop_label.setText(language_manager.get_text("stop_bits"))
-        self.flow_label.setText(language_manager.get_text("flow_control"))
+        self.data_label.setText(language_manager.get_text("data_label"))
+        self.parity_label.setText(language_manager.get_text("parity_label"))
+        self.stop_label.setText(language_manager.get_text("stop_label"))
+        self.flow_label.setText(language_manager.get_text("flow_label"))
         
     def on_connect_clicked(self) -> None:
         """연결 버튼 클릭 핸들러입니다."""
