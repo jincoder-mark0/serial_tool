@@ -53,5 +53,6 @@ class RightPanel(QWidget):
 
     def save_state(self) -> None:
         """패널 상태를 저장합니다."""
+        print("[DEBUG] RightPanel.save_state: Saving command list panel state")
         self.command_list_panel.save_state()
         # PacketInspector 상태 저장도 필요하다면 여기에 추가

@@ -235,7 +235,7 @@ class PortSettingsWidget(QGroupBox):
         Returns:
             dict: 설정 데이터.
         """
-        return {
+        state = {
             "port": self.port_combo.currentText(),
             "baudrate": self.baud_combo.currentText(),
             "bytesize": self.bytesize_combo.currentText(),
@@ -245,6 +245,8 @@ class PortSettingsWidget(QGroupBox):
             "dtr": self.dtr_check.isChecked(),
             "rts": self.rts_check.isChecked()
         }
+        print(f"[DEBUG] PortSettingsWidget.save_state: {state}")
+        return state
         
     def load_state(self, state: dict) -> None:
         """
@@ -256,6 +258,7 @@ class PortSettingsWidget(QGroupBox):
         if not state:
             return
             
+        print(f"[DEBUG] PortSettingsWidget.load_state: {state}")
         # 포트는 목록에 없을 수도 있으므로 addItem으로 추가 후 설정
         port = state.get("port", "")
         if port:

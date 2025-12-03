@@ -238,17 +238,21 @@ class MainWindow(QMainWindow):
             event (QCloseEvent): 종료 이벤트 객체.
         """
         # 윈도우 상태 저장
+        print("[DEBUG] MainWindow.closeEvent: Saving window state")
         self._save_window_state()
         
         # 패널 상태 저장
         if hasattr(self, 'right_panel'):
+            print("[DEBUG] MainWindow.closeEvent: Saving RightPanel state")
             self.right_panel.save_state()
             
         if hasattr(self, 'left_panel'):
+            print("[DEBUG] MainWindow.closeEvent: Saving LeftPanel state")
             port_states = self.left_panel.save_state()
             self.settings.set('ports.tabs', port_states)
         
         # 설정 파일 저장
+        print("[DEBUG] MainWindow.closeEvent: Saving settings to file")
         self.settings.save_settings()
         
         # 종료 이벤트 수락
