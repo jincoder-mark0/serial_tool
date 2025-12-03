@@ -132,7 +132,9 @@ def generate_template(keys_by_module: Dict[str, Set[str]], output_file: str, lan
     
     # 공통 키 먼저 출력
     if common_keys:
-
+        lines.append('  // ============================================\n')
+        lines.append('  // Common Keys (Used in multiple modules)\n')
+        lines.append('  // ============================================\n')
         for key in sorted(common_keys):
             value = existing_values.get(key, f"TODO: {key}")
             lines.append(f'  "{key}": "{value}",\n')
@@ -145,10 +147,12 @@ def generate_template(keys_by_module: Dict[str, Set[str]], output_file: str, lan
         module_specific_keys = keys - common_keys
         
         if module_specific_keys:
-            # display_name = get_module_display_name(module_path)
-            # lines.append(f'  "// ============================================",\n')
-            # lines.append(f'  "// {display_name}",\n')
-            # lines.append(f'  "// ============================================",\n')
+            display_name = get_module_display_name(module_path)
+            # 파일 경로 추가 (예: widgets/port_settings.py)
+            file_path = f"{module_path}.py"
+            lines.append('  // ============================================\n')
+            lines.append(f'  // {display_name} ({file_path}),\n')
+            lines.append('  // ============================================\n')
             
             for key in sorted(module_specific_keys):
                 value = existing_values.get(key, f"TODO: {key}")

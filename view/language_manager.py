@@ -1,4 +1,8 @@
-import json
+try:
+    import commentjson as json
+except ImportError:
+    import json
+    print("Warning: commentjson not found, using standard json. Comments in language files will not be supported.")
 import os
 from typing import Dict, Optional
 from PyQt5.QtCore import QObject, pyqtSignal
