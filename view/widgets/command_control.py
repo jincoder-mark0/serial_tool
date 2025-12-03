@@ -225,12 +225,14 @@ class CommandControlWidget(QWidget):
         Returns:
             dict: 위젯 상태 데이터.
         """
-        return {
+        state = {
             "prefix": self.prefix_input.text(),
             "suffix": self.suffix_input.text(),
             "delay": self.global_delay_input.text(),
             "max_runs": self.auto_run_max_spin.value()
         }
+        print(f"[DEBUG] CommandControlWidget.save_state: {state}")
+        return state
         
     def load_state(self, state: dict) -> None:
         """
@@ -242,6 +244,7 @@ class CommandControlWidget(QWidget):
         if not state:
             return
             
+        print(f"[DEBUG] CommandControlWidget.load_state: {state}")
         self.prefix_input.setText(state.get("prefix", ""))
         self.suffix_input.setText(state.get("suffix", ""))
         self.global_delay_input.setText(state.get("delay", "1000"))

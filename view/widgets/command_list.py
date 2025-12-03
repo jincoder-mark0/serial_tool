@@ -417,7 +417,9 @@ class CommandListWidget(QWidget):
         Returns:
             list: 명령어 목록 데이터.
         """
-        return self.get_command_list()
+        commands = self.get_command_list()
+        print(f"[DEBUG] CommandListWidget.save_state: {len(commands)} commands")
+        return commands
         
     def load_state(self, state: list) -> None:
         """
@@ -429,6 +431,7 @@ class CommandListWidget(QWidget):
         if not state:
             return
             
+        print(f"[DEBUG] CommandListWidget.load_state: {len(state)} commands")
         self.set_command_list(state)
         
 

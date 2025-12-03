@@ -206,12 +206,14 @@ class ManualControlWidget(QWidget):
         Returns:
             dict: 위젯 상태.
         """
-        return {
+        state = {
             "hex_mode": self.hex_mode_check.isChecked(),
             "add_enter": self.enter_check.isChecked(),
             "rts": self.rts_check.isChecked(),
             "dtr": self.dtr_check.isChecked()
         }
+        print(f"[DEBUG] ManualControlWidget.save_state: {state}")
+        return state
         
     def load_state(self, state: dict) -> None:
         """
@@ -223,6 +225,7 @@ class ManualControlWidget(QWidget):
         if not state:
             return
             
+        print(f"[DEBUG] ManualControlWidget.load_state: {state}")
         self.hex_mode_check.setChecked(state.get("hex_mode", False))
         self.enter_check.setChecked(state.get("add_enter", True))
         self.rts_check.setChecked(state.get("rts", False))

@@ -5,6 +5,7 @@ from view.language_manager import language_manager
 
 from view.panels.port_panel import PortPanel
 from view.widgets.manual_control import ManualControlWidget
+from core.settings_manager import SettingsManager
 
 class LeftPanel(QWidget):
     """
@@ -96,7 +97,7 @@ class LeftPanel(QWidget):
         if self.port_tabs.tabText(index) == "+":
             self.add_new_port_tab()
             
-from core.settings_manager import SettingsManager
+
 
     def save_state(self) -> list:
         """
@@ -139,33 +140,39 @@ from core.settings_manager import SettingsManager
             self.manual_control.load_state(manual_state)
             
         print(f"[DEBUG] LeftPanel.load_state: Loading {len(states)} tab states")
-        # 기존 탭 모두 제거 (플러스 탭 제외)
-        # 역순으로 제거해야 인덱스 문제 없음, 단 플러스 탭은 유지
-        count = self.port_tabs.count()
-        for i in range(count - 1, -1, -1):
-            if self.port_tabs.tabText(i) == "+":
-                continue
-            self.port_tabs.removeTab(i)
-            
-        # 저장된 상태가 없으면 기본 탭 하나 추가
-        if not states:
-            print("[DEBUG] LeftPanel.load_state: No states, adding default tab")
-            self.add_new_port_tab()
-            return
-            
-        # 상태 복원
-        for i, state in enumerate(states):
-            print(f"[DEBUG] LeftPanel.load_state: Restoring tab {i+1}/{len(states)}")
-            self.add_new_port_tab()
-            # 방금 추가된 탭 가져오기 (플러스 탭 바로 앞)
-            current_count = self.port_tabs.count()
-            # 플러스 탭이 있으면 마지막은 플러스 탭이므로 그 앞의 탭
-            # 플러스 탭이 없으면(혹시라도) 마지막 탭
-            target_index = current_count - 2 if current_count > 1 else 0
-            
-            widget = self.port_tabs.widget(target_index)
-            if isinstance(widget, PortPanel):
-                widget.load_state(state)
+        
+        # 시그널 차단 (탭 삭제/추가 시 on_tab_changed가 호출되어 불필요한 탭이 생성되는 것을 방지)
+        self.port_tabs.blockSignals(True)
+        try:
+            # 기존 탭 모두 제거 (플러스 탭 제외)
+            # 역순으로 제거해야 인덱스 문제 없음, 단 플러스 탭은 유지
+            count = self.port_tabs.count()
+            for i in range(count - 1, -1, -1):
+                if self.port_tabs.tabText(i) == "+":
+                    continue
+                self.port_tabs.removeTab(i)
+                
+            # 저장된 상태가 없으면 기본 탭 하나 추가
+            if not states:
+                print("[DEBUG] LeftPanel.load_state: No states, adding default tab")
+                self.add_new_port_tab()
+                return
+                
+            # 상태 복원
+            for i, state in enumerate(states):
+                print(f"[DEBUG] LeftPanel.load_state: Restoring tab {i+1}/{len(states)}")
+                self.add_new_port_tab()
+                # 방금 추가된 탭 가져오기 (플러스 탭 바로 앞)
+                current_count = self.port_tabs.count()
+                # 플러스 탭이 있으면 마지막은 플러스 탭이므로 그 앞의 탭
+                # 플러스 탭이 없으면(혹시라도) 마지막 탭
+                target_index = current_count - 2 if current_count > 1 else 0
+                
+                widget = self.port_tabs.widget(target_index)
+                if isinstance(widget, PortPanel):
+                    widget.load_state(state)
+        finally:
+            self.port_tabs.blockSignals(False)
             
     def close_port_tab(self, index: int) -> None:
         """
