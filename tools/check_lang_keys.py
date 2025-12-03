@@ -6,7 +6,7 @@ except ImportError:
 from pathlib import Path
 
 # view 폴더의 모든 .py 파일에서 get_text 호출을 찾기
-root_dir = Path(__file__).parent
+root_dir = Path(__file__).parent.parent
 view_dir = root_dir / "view"
 used_keys = set()
 

@@ -114,7 +114,6 @@ class LeftPanel(QWidget):
         
         states = []
         count = self.port_tabs.count()
-        print(f"[DEBUG] LeftPanel.save_state: Total tabs count: {count}")
         for i in range(count):
             if self.port_tabs.tabText(i) == "+":
                 continue
@@ -122,7 +121,6 @@ class LeftPanel(QWidget):
             if isinstance(widget, PortPanel):
                 state = widget.save_state()
                 states.append(state)
-        print(f"[DEBUG] LeftPanel.save_state: Saved {len(states)} tab states")
         return states
         
     def load_state(self, states: list) -> None:
@@ -138,9 +136,7 @@ class LeftPanel(QWidget):
         manual_state = settings.get("ports.manual_control", {})
         if manual_state:
             self.manual_control.load_state(manual_state)
-            
-        print(f"[DEBUG] LeftPanel.load_state: Loading {len(states)} tab states")
-        
+                   
         # 시그널 차단 (탭 삭제/추가 시 on_tab_changed가 호출되어 불필요한 탭이 생성되는 것을 방지)
         self.port_tabs.blockSignals(True)
         try:
@@ -154,13 +150,11 @@ class LeftPanel(QWidget):
                 
             # 저장된 상태가 없으면 기본 탭 하나 추가
             if not states:
-                print("[DEBUG] LeftPanel.load_state: No states, adding default tab")
                 self.add_new_port_tab()
                 return
                 
             # 상태 복원
             for i, state in enumerate(states):
-                print(f"[DEBUG] LeftPanel.load_state: Restoring tab {i+1}/{len(states)}")
                 self.add_new_port_tab()
                 # 방금 추가된 탭 가져오기 (플러스 탭 바로 앞)
                 current_count = self.port_tabs.count()

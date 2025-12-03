@@ -1,131 +1,63 @@
 {
   "version": "1.0",
   "global": {
-    "theme": "light",
-    "language": "en",
-    "auto_update_check": true,
-    "log_level": "INFO",
-    "port_scan_interval": 5000
+    "menu_theme": "dark",
+    "menu_language": "ko",
+    "theme": "dark"
   },
   "ui": {
-    "timestamp_format": "[HH:MM:SS.mmm]",
     "log_max_lines": 2000,
-    "hex_mode_default": false,
     "proportional_font_family": "Segoe UI",
-    "proportional_font_size": 11,
+    "proportional_font_size": 9,
     "fixed_font_family": "Consolas",
-    "fixed_font_size": 11,
-    "window_width": 1400,
+    "fixed_font_size": 9,
+    "window_width": 1413,
     "window_height": 900,
-    "window_x": 108,
-    "window_y": 21
+    "window_x": 259,
+    "window_y": 44
   },
   "ports": {
-    "recent_ports": [],
     "default_config": {
       "baudrate": 115200,
       "parity": "N",
       "bytesize": 8,
-      "stopbits": 1,
-      "flow_control": "none",
-      "timeout_ms": 100
+      "stopbits": 1
+    },
+    "manual_control": {
+      "hex_mode": false,
+      "add_enter": true,
+      "rts": false,
+      "dtr": false,
+      "input_text": ""
     },
     "tabs": [
       {
         "port_settings": {
-          "port": "COM3",
-          "baudrate": "19200",
-          "bytesize": "6",
-          "parity": "O",
-          "stopbits": "1",
-          "flow_control": "XON/XOFF",
-          "dtr": false,
-          "rts": false
-        },
-        "received_area": {
-          "hex_mode": false,
-          "timestamp": false,
-          "paused": false
-        }
-      },
-      {
-        "port_settings": {
           "port": "COM1",
           "baudrate": "115200",
-          "bytesize": "7",
-          "parity": "O",
-          "stopbits": "1.5",
-          "flow_control": "RTS/CTS",
+          "bytesize": "8",
+          "parity": "N",
+          "stopbits": "1",
+          "flow_control": "None",
           "dtr": true,
           "rts": true
         },
         "received_area": {
-          "hex_mode": true,
-          "timestamp": true,
-          "paused": true
+          "hex_mode": false,
+          "timestamp": false,
+          "paused": false,
+          "search_text": ""
         }
       }
-    ],
-    "manual_control": {
-      "hex_mode": true,
-      "add_enter": false,
-      "rts": false,
-      "dtr": false
-    }
+    ]
   },
   "command_list": {
-    "recent_profiles": [],
-    "auto_run_defaults": {
-      "interval_ms": 100,
-      "max_loops": 10
-    },
-    "commands": [
-      {
-        "enabled": true,
-        "prefix": true,
-        "command": "",
-        "suffix": true,
-        "hex_mode": false,
-        "delay": "100"
-      },
-      {
-        "enabled": true,
-        "prefix": true,
-        "command": "",
-        "suffix": true,
-        "hex_mode": false,
-        "delay": "100"
-      },
-      {
-        "enabled": false,
-        "prefix": false,
-        "command": "dddd",
-        "suffix": false,
-        "hex_mode": true,
-        "delay": "222"
-      },
-      {
-        "enabled": true,
-        "prefix": false,
-        "command": "",
-        "suffix": true,
-        "hex_mode": false,
-        "delay": "100"
-      },
-      {
-        "enabled": true,
-        "prefix": true,
-        "command": "",
-        "suffix": true,
-        "hex_mode": false,
-        "delay": "100"
-      }
-    ],
+    "commands": [],
     "control_state": {
-      "prefix": "2",
-      "suffix": "3",
-      "delay": "4",
-      "max_runs": 5
+      "prefix": "",
+      "suffix": "",
+      "delay": "1000",
+      "max_runs": 0
     }
   }
 }

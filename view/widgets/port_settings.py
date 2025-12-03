@@ -46,9 +46,9 @@ class PortSettingsWidget(QGroupBox):
         self.port_combo.setMinimumWidth(80)
         self.port_combo.setToolTip(language_manager.get_text("port_combo_tooltip"))
         
-        self.scan_btn = QPushButton(language_manager.get_text("scan"))
+        self.scan_btn = QPushButton(language_manager.get_text("btn_scan"))
         self.scan_btn.setFixedWidth(50)
-        self.scan_btn.setToolTip(language_manager.get_text("scan_tooltip"))
+        self.scan_btn.setToolTip(language_manager.get_text("btn_scan_tooltip"))
         self.scan_btn.clicked.connect(self.scan_requested.emit)
         
         # 보드레이트 선택 콤보박스
@@ -67,9 +67,9 @@ class PortSettingsWidget(QGroupBox):
         self.baud_combo.setValidator(self.baud_validator)
         
         # 연결 버튼
-        self.connect_btn = QPushButton(language_manager.get_text("open_port"))
+        self.connect_btn = QPushButton(language_manager.get_text("btn_connect"))
         self.connect_btn.setCheckable(True)
-        self.connect_btn.setToolTip(language_manager.get_text("connect_btn_tooltip"))
+        self.connect_btn.setToolTip(language_manager.get_text("btn_connect_tooltip"))
         self.connect_btn.clicked.connect(self.on_connect_clicked)
         self.connect_btn.setFixedWidth(60)
         
@@ -147,17 +147,17 @@ class PortSettingsWidget(QGroupBox):
         
         self.port_combo.setToolTip(language_manager.get_text("port_combo_tooltip"))
         
-        self.scan_btn.setText(language_manager.get_text("scan"))
-        self.scan_btn.setToolTip(language_manager.get_text("scan_tooltip"))
+        self.scan_btn.setText(language_manager.get_text("btn_scan"))
+        self.scan_btn.setToolTip(language_manager.get_text("btn_scan_tooltip"))
         
         self.baud_combo.setToolTip(language_manager.get_text("baud_combo_tooltip"))
         
         # 연결 버튼 텍스트는 상태에 따라 다르므로 현재 상태 확인 필요
         if self.connect_btn.isChecked():
-            self.connect_btn.setText(language_manager.get_text("close_port"))
+            self.connect_btn.setText(language_manager.get_text("btn_disconnect"))
         else:
-            self.connect_btn.setText(language_manager.get_text("open_port"))
-        self.connect_btn.setToolTip(language_manager.get_text("connect_btn_tooltip"))
+            self.connect_btn.setText(language_manager.get_text("btn_connect"))
+        self.connect_btn.setToolTip(language_manager.get_text("btn_connect_tooltip"))
         
         self.port_label.setText(language_manager.get_text("port_label"))
         self.baud_label.setText(language_manager.get_text("baudrate_label"))
@@ -187,11 +187,11 @@ class PortSettingsWidget(QGroupBox):
                 "rts": self.rts_check.isChecked()
             }
             self.port_open_requested.emit(config)
-            self.connect_btn.setText(language_manager.get_text("close_port"))
+            self.connect_btn.setText(language_manager.get_text("btn_disconnect"))
         else:
             # 해제 요청 (Request Close)
             self.port_close_requested.emit()
-            self.connect_btn.setText(language_manager.get_text("open_port"))
+            self.connect_btn.setText(language_manager.get_text("btn_connect"))
 
 
     def set_port_list(self, ports: List[str]) -> None:
@@ -217,7 +217,7 @@ class PortSettingsWidget(QGroupBox):
             connected (bool): 연결 여부.
         """
         self.connect_btn.setChecked(connected)
-        self.connect_btn.setText(language_manager.get_text("close_port") if connected else language_manager.get_text("open_port"))
+        self.connect_btn.setText(language_manager.get_text("btn_disconnect") if connected else language_manager.get_text("btn_connect"))
         self.port_combo.setEnabled(not connected)
         self.baud_combo.setEnabled(not connected)
         self.bytesize_combo.setEnabled(not connected)
@@ -245,7 +245,6 @@ class PortSettingsWidget(QGroupBox):
             "dtr": self.dtr_check.isChecked(),
             "rts": self.rts_check.isChecked()
         }
-        print(f"[DEBUG] PortSettingsWidget.save_state: {state}")
         return state
         
     def load_state(self, state: dict) -> None:
@@ -258,7 +257,6 @@ class PortSettingsWidget(QGroupBox):
         if not state:
             return
             
-        print(f"[DEBUG] PortSettingsWidget.load_state: {state}")
         # 포트는 목록에 없을 수도 있으므로 addItem으로 추가 후 설정
         port = state.get("port", "")
         if port:

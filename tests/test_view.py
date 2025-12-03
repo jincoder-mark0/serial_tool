@@ -379,7 +379,7 @@ class ViewTestWindow(QMainWindow):
         widget = QWidget()
         layout = QVBoxLayout(widget)
         
-        self.lang_label = QLabel(language_manager.get_text("app_title"))
+        self.lang_label = QLabel(language_manager.get_text("title_main"))
         self.lang_label.setStyleSheet("font-size: 20px; font-weight: bold;")
         
         btn_en = QPushButton("English")
@@ -399,7 +399,7 @@ class ViewTestWindow(QMainWindow):
     def change_language(self, lang: str) -> None:
         """언어를 변경하고 UI를 업데이트합니다."""
         language_manager.set_language(lang)
-        self.lang_label.setText(language_manager.get_text("app_title"))
+        self.lang_label.setText(language_manager.get_text("title_main"))
 
     def closeEvent(self, event) -> None:
         """

@@ -51,12 +51,12 @@ class ManualControlWidget(QWidget):
         self.enter_check.setChecked(True)
         self.enter_check.setToolTip(language_manager.get_text("add_enter_tooltip"))
         
-        self.clear_btn = QPushButton(language_manager.get_text("clear"))
-        self.clear_btn.setToolTip(language_manager.get_text("clear_tooltip"))
+        self.clear_btn = QPushButton(language_manager.get_text("btn_clear"))
+        self.clear_btn.setToolTip(language_manager.get_text("btn_clear_tooltip"))
         self.clear_btn.clicked.connect(self.clear_info_requested.emit)
         
-        self.save_log_btn = QPushButton(language_manager.get_text("save"))
-        self.save_log_btn.setToolTip(language_manager.get_text("save_tooltip"))
+        self.save_log_btn = QPushButton(language_manager.get_text("btn_save"))
+        self.save_log_btn.setToolTip(language_manager.get_text("btn_save_tooltip"))
         self.save_log_btn.clicked.connect(self.on_save_log_clicked)
         
         # 흐름 제어 (Flow Control - RTS/DTR)
@@ -133,8 +133,8 @@ class ManualControlWidget(QWidget):
         self.option_group.setTitle(language_manager.get_text("control_options"))
         self.hex_mode_check.setText(language_manager.get_text("hex_mode"))
         self.enter_check.setText(language_manager.get_text("add_enter"))
-        self.clear_btn.setText(language_manager.get_text("clear"))
-        self.save_log_btn.setText(language_manager.get_text("save"))
+        self.clear_btn.setText(language_manager.get_text("btn_clear"))
+        self.save_log_btn.setText(language_manager.get_text("btn_save"))
         self.rts_check.setText(language_manager.get_text("rts"))
         self.dtr_check.setText(language_manager.get_text("dtr"))
         
@@ -213,7 +213,6 @@ class ManualControlWidget(QWidget):
             "dtr": self.dtr_check.isChecked(),
             "input_text": self.input_field.text()
         }
-        print(f"[DEBUG] ManualControlWidget.save_state: {state}")
         return state
         
     def load_state(self, state: dict) -> None:
@@ -226,7 +225,6 @@ class ManualControlWidget(QWidget):
         if not state:
             return
             
-        print(f"[DEBUG] ManualControlWidget.load_state: {state}")
         self.hex_mode_check.setChecked(state.get("hex_mode", False))
         self.enter_check.setChecked(state.get("add_enter", True))
         self.rts_check.setChecked(state.get("rts", False))

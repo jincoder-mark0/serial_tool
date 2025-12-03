@@ -49,24 +49,24 @@ class ReceivedArea(QWidget):
         # 툴바 (Toolbar)
         toolbar = QHBoxLayout()
         
-        self.clear_btn = QPushButton(language_manager.get_text("clear"))
-        self.clear_btn.setToolTip(language_manager.get_text("clear_tooltip"))
+        self.clear_btn = QPushButton(language_manager.get_text("btn_clear"))
+        self.clear_btn.setToolTip(language_manager.get_text("btn_clear_tooltip"))
         self.clear_btn.clicked.connect(self.clear_log)
         
         self.hex_check = QCheckBox(language_manager.get_text("hex_mode"))
         self.hex_check.setToolTip(language_manager.get_text("hex_tooltip"))
         self.hex_check.stateChanged.connect(self.toggle_hex_mode)
         
-        self.timestamp_check = QCheckBox(language_manager.get_text("timestamp"))
-        self.timestamp_check.setToolTip(language_manager.get_text("timestamp_tooltip"))
+        self.timestamp_check = QCheckBox(language_manager.get_text("btn_timestamp"))
+        self.timestamp_check.setToolTip(language_manager.get_text("btn_timestamp_tooltip"))
         self.timestamp_check.stateChanged.connect(self.toggle_timestamp)
         
-        self.pause_check = QCheckBox(language_manager.get_text("pause"))
-        self.pause_check.setToolTip(language_manager.get_text("pause_tooltip"))
+        self.pause_check = QCheckBox(language_manager.get_text("chk_pause"))
+        self.pause_check.setToolTip(language_manager.get_text("chk_pause_tooltip"))
         self.pause_check.stateChanged.connect(self.toggle_pause)
         
-        self.save_btn = QPushButton(language_manager.get_text("save"))
-        self.save_btn.setToolTip(language_manager.get_text("save_tooltip"))
+        self.save_btn = QPushButton(language_manager.get_text("btn_save"))
+        self.save_btn.setToolTip(language_manager.get_text("btn_save_tooltip"))
         
         # 검색 바 (Search Bar)
         self.search_input = QLineEdit()
@@ -76,12 +76,12 @@ class ReceivedArea(QWidget):
         self.search_input.setMaximumWidth(200)
         
         self.find_prev_btn = QPushButton("◀")
-        self.find_prev_btn.setToolTip(language_manager.get_text("find_prev_tooltip"))
+        self.find_prev_btn.setToolTip(language_manager.get_text("btn_find_prev_tooltip"))
         self.find_prev_btn.setFixedWidth(30)
         self.find_prev_btn.clicked.connect(self.find_prev)
         
         self.find_next_btn = QPushButton("▶")
-        self.find_next_btn.setToolTip(language_manager.get_text("find_next_tooltip"))
+        self.find_next_btn.setToolTip(language_manager.get_text("btn_find_next_tooltip"))
         self.find_next_btn.setFixedWidth(30)
         self.find_next_btn.clicked.connect(self.find_next)
         
@@ -111,26 +111,26 @@ class ReceivedArea(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.clear_btn.setText(language_manager.get_text("clear"))
-        self.clear_btn.setToolTip(language_manager.get_text("clear_tooltip"))
+        self.clear_btn.setText(language_manager.get_text("btn_clear"))
+        self.clear_btn.setToolTip(language_manager.get_text("btn_clear_tooltip"))
         
         self.hex_check.setText(language_manager.get_text("hex_mode"))
         self.hex_check.setToolTip(language_manager.get_text("hex_tooltip"))
         
-        self.timestamp_check.setText(language_manager.get_text("timestamp"))
-        self.timestamp_check.setToolTip(language_manager.get_text("timestamp_tooltip"))
+        self.timestamp_check.setText(language_manager.get_text("btn_timestamp"))
+        self.timestamp_check.setToolTip(language_manager.get_text("btn_timestamp_tooltip"))
         
-        self.pause_check.setText(language_manager.get_text("pause"))
-        self.pause_check.setToolTip(language_manager.get_text("pause_tooltip"))
+        self.pause_check.setText(language_manager.get_text("chk_pause"))
+        self.pause_check.setToolTip(language_manager.get_text("chk_pause_tooltip"))
         
-        self.save_btn.setText(language_manager.get_text("save"))
-        self.save_btn.setToolTip(language_manager.get_text("save_tooltip"))
+        self.save_btn.setText(language_manager.get_text("btn_save"))
+        self.save_btn.setToolTip(language_manager.get_text("btn_save_tooltip"))
         
         self.search_input.setPlaceholderText(language_manager.get_text("search"))
         self.search_input.setToolTip(language_manager.get_text("search_tooltip"))
         
-        self.find_prev_btn.setToolTip(language_manager.get_text("find_prev_tooltip"))
-        self.find_next_btn.setToolTip(language_manager.get_text("find_next_tooltip"))
+        self.find_prev_btn.setToolTip(language_manager.get_text("btn_find_prev_tooltip"))
+        self.find_next_btn.setToolTip(language_manager.get_text("btn_find_next_tooltip"))
         
         self.rx_log_label.setText(language_manager.get_text("rx_log"))
         
@@ -287,7 +287,6 @@ class ReceivedArea(QWidget):
             "paused": self.paused,
             "search_text": self.search_input.text()
         }
-        print(f"[DEBUG] ReceivedArea.save_state: {state}")
         return state
         
     def load_state(self, state: dict) -> None:
@@ -299,9 +298,7 @@ class ReceivedArea(QWidget):
         """
         if not state:
             return
-            
-        print(f"[DEBUG] ReceivedArea.load_state: {state}")
-        
+       
         # 체크박스 상태 업데이트 (시그널 발생으로 내부 변수도 업데이트됨)
         self.hex_check.setChecked(state.get("hex_mode", False))
         self.timestamp_check.setChecked(state.get("timestamp", False))

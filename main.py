@@ -35,9 +35,6 @@ def main() -> None:
 
     app = QApplication(sys.argv)
     
-    # 테마 적용 (MainWindow에서 처리됨)
-    # ThemeManager.apply_theme(app, "dark")
-
     # MainWindow 초기화
     window = MainWindow()
     

@@ -39,29 +39,29 @@ class CommandListWidget(QWidget):
         header_layout = QHBoxLayout()
         
         # 전체 선택 체크박스 (Tristate 지원)
-        self.select_all_check = QCheckBox(language_manager.get_text("select_all"))
-        self.select_all_check.setToolTip(language_manager.get_text("select_all_tooltip"))
+        self.select_all_check = QCheckBox(language_manager.get_text("chk_select_all"))
+        self.select_all_check.setToolTip(language_manager.get_text("chk_select_all_tooltip"))
         self.select_all_check.setTristate(True)
         self.select_all_check.stateChanged.connect(self.on_select_all_changed)
         
         self.add_btn = QPushButton()
-        self.add_btn.setObjectName("add_btn")
-        self.add_btn.setToolTip(language_manager.get_text("add_cmd_tooltip"))
+        self.add_btn.setObjectName("btn_add")
+        self.add_btn.setToolTip(language_manager.get_text("btn_add_tooltip"))
         self.add_btn.setFixedSize(30, 30)
         
         self.del_btn = QPushButton()
-        self.del_btn.setObjectName("del_btn")
-        self.del_btn.setToolTip(language_manager.get_text("del_cmd_tooltip"))
+        self.del_btn.setObjectName("btn_del")
+        self.del_btn.setToolTip(language_manager.get_text("btn_del_tooltip"))
         self.del_btn.setFixedSize(30, 30)
         
         self.up_btn = QPushButton()
-        self.up_btn.setObjectName("up_btn")
-        self.up_btn.setToolTip(language_manager.get_text("up_cmd_tooltip"))
+        self.up_btn.setObjectName("btn_up")
+        self.up_btn.setToolTip(language_manager.get_text("btn_up_tooltip"))
         self.up_btn.setFixedSize(30, 30)
         
         self.down_btn = QPushButton()
-        self.down_btn.setObjectName("down_btn")
-        self.down_btn.setToolTip(language_manager.get_text("down_cmd_tooltip"))
+        self.down_btn.setObjectName("btn_down")
+        self.down_btn.setToolTip(language_manager.get_text("btn_down_tooltip"))
         self.down_btn.setFixedSize(30, 30)
         
         header_layout.addWidget(self.select_all_check)
@@ -78,27 +78,27 @@ class CommandListWidget(QWidget):
         self.down_btn.clicked.connect(self.move_row_down)
         
         # 테이블 뷰 (Table View)
-        self.table_view = QTableView()
-        self.table_view.setProperty("class", "fixed-font")  # 테이블에 고정폭 폰트 적용
+        self.cmd_table = QTableView()
+        self.cmd_table.setProperty("class", "fixed-font")  # 테이블에 고정폭 폰트 적용
         self.model = QStandardItemModel()
         # 컬럼: 선택, 접두사, 명령어, 접미사, HEX, 지연시간, 전송버튼
         self.update_header_labels()
-        self.table_view.setModel(self.model)
-        self.table_view.setToolTip(language_manager.get_text("command_list_tooltip"))
+        self.cmd_table.setModel(self.model)
+        self.cmd_table.setToolTip(language_manager.get_text("table_cmd_tooltip"))
         
         # 스크롤바 정책 - 항상 표시
-        self.table_view.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
-        self.table_view.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.cmd_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.cmd_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
         
         # 수직 헤더(행 번호) 숨김
-        self.table_view.verticalHeader().setVisible(False)
+        self.cmd_table.verticalHeader().setVisible(False)
         
         # 선택 모드 설정
-        self.table_view.setSelectionBehavior(QTableView.SelectRows)
-        self.table_view.setSelectionMode(QTableView.ExtendedSelection)
+        self.cmd_table.setSelectionBehavior(QTableView.SelectRows)
+        self.cmd_table.setSelectionMode(QTableView.ExtendedSelection)
         
         # 컬럼 너비 조정
-        header = self.table_view.horizontalHeader()
+        header = self.cmd_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents) # Select
         header.setSectionResizeMode(1, QHeaderView.ResizeToContents) # Prefix
         header.setSectionResizeMode(2, QHeaderView.Stretch)          # Command
@@ -108,7 +108,7 @@ class CommandListWidget(QWidget):
         header.setSectionResizeMode(6, QHeaderView.ResizeToContents) # Send Btn
         
         layout.addLayout(header_layout)
-        layout.addWidget(self.table_view)
+        layout.addWidget(self.cmd_table)
         
         self.setLayout(layout)
         
@@ -120,21 +120,21 @@ class CommandListWidget(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.select_all_check.setText(language_manager.get_text("select_all"))
-        self.select_all_check.setToolTip(language_manager.get_text("select_all_tooltip"))
+        self.select_all_check.setText(language_manager.get_text("chk_select_all"))
+        self.select_all_check.setToolTip(language_manager.get_text("chk_select_all_tooltip"))
         
-        self.add_btn.setToolTip(language_manager.get_text("add_cmd_tooltip"))
-        self.del_btn.setToolTip(language_manager.get_text("del_cmd_tooltip"))
-        self.up_btn.setToolTip(language_manager.get_text("up_cmd_tooltip"))
-        self.down_btn.setToolTip(language_manager.get_text("down_cmd_tooltip"))
+        self.add_btn.setToolTip(language_manager.get_text("btn_add_tooltip"))
+        self.del_btn.setToolTip(language_manager.get_text("btn_del_tooltip"))
+        self.up_btn.setToolTip(language_manager.get_text("btn_up_tooltip"))
+        self.down_btn.setToolTip(language_manager.get_text("btn_down_tooltip"))
         
-        self.table_view.setToolTip(language_manager.get_text("command_list_tooltip"))
+        self.cmd_table.setToolTip(language_manager.get_text("table_cmd_tooltip"))
         self.update_header_labels()
         
         # Send 버튼 텍스트 업데이트 (모든 행)
         for row in range(self.model.rowCount()):
             index = self.model.index(row, 6)
-            widget = self.table_view.indexWidget(index)
+            widget = self.cmd_table.indexWidget(index)
             if widget:
                 btn = widget.findChild(QPushButton)
                 if btn:
@@ -291,7 +291,7 @@ class CommandListWidget(QWidget):
         layout.addWidget(btn)
         
         index = self.model.index(row, 6)
-        self.table_view.setIndexWidget(index, widget)
+        self.cmd_table.setIndexWidget(index, widget)
 
     def _on_send_btn_clicked(self, btn: QPushButton) -> None:
         """
@@ -304,8 +304,8 @@ class CommandListWidget(QWidget):
         # 버튼의 부모 위젯(컨테이너)을 통해 위치 확인
         # btn -> layout -> widget -> table_view
         # viewport mapFromGlobal을 사용하는 것이 가장 정확함
-        pos = self.table_view.viewport().mapFromGlobal(btn.mapToGlobal(btn.rect().center()))
-        index = self.table_view.indexAt(pos)
+        pos = self.cmd_table.viewport().mapFromGlobal(btn.mapToGlobal(btn.rect().center()))
+        index = self.cmd_table.indexAt(pos)
         if index.isValid():
             self.send_row_requested.emit(index.row())
 
@@ -318,7 +318,7 @@ class CommandListWidget(QWidget):
         """
         for row in range(self.model.rowCount()):
             index = self.model.index(row, 6)
-            widget = self.table_view.indexWidget(index)
+            widget = self.cmd_table.indexWidget(index)
             if widget:
                 # widget은 컨테이너이므로 그 안의 버튼을 찾아야 함
                 btn = widget.findChild(QPushButton)
@@ -327,14 +327,14 @@ class CommandListWidget(QWidget):
 
     def delete_selected_rows(self) -> None:
         """선택된 행들을 삭제합니다."""
-        rows = sorted(set(index.row() for index in self.table_view.selectionModel().selectedRows()), reverse=True)
+        rows = sorted(set(index.row() for index in self.cmd_table.selectionModel().selectedRows()), reverse=True)
         for row in rows:
             self.model.removeRow(row)
         self.update_select_all_state()
             
     def move_row_up(self) -> None:
         """선택된 행들을 위로 이동합니다."""
-        rows = sorted(set(index.row() for index in self.table_view.selectionModel().selectedRows()))
+        rows = sorted(set(index.row() for index in self.cmd_table.selectionModel().selectedRows()))
         if not rows or rows[0] == 0:
             return
             
@@ -344,11 +344,11 @@ class CommandListWidget(QWidget):
             
         # 선택 상태 복구
         for row in rows:
-            self.table_view.selectRow(row - 1)
+            self.cmd_table.selectRow(row - 1)
 
     def move_row_down(self) -> None:
         """선택된 행들을 아래로 이동합니다."""
-        rows = sorted(set(index.row() for index in self.table_view.selectionModel().selectedRows()), reverse=True)
+        rows = sorted(set(index.row() for index in self.cmd_table.selectionModel().selectedRows()), reverse=True)
         if not rows or rows[0] == self.model.rowCount() - 1:
             return
             
@@ -358,7 +358,7 @@ class CommandListWidget(QWidget):
             
         # 선택 상태 복구
         for row in rows:
-            self.table_view.selectRow(row + 1)
+            self.cmd_table.selectRow(row + 1)
             
     def _move_row(self, source_row: int, dest_row: int) -> None:
         """
@@ -418,7 +418,6 @@ class CommandListWidget(QWidget):
             list: 명령어 목록 데이터.
         """
         commands = self.get_command_list()
-        print(f"[DEBUG] CommandListWidget.save_state: {len(commands)} commands")
         return commands
         
     def load_state(self, state: list) -> None:
@@ -431,7 +430,6 @@ class CommandListWidget(QWidget):
         if not state:
             return
             
-        print(f"[DEBUG] CommandListWidget.load_state: {len(state)} commands")
         self.set_command_list(state)
         
 
