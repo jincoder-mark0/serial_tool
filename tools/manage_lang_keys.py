@@ -78,7 +78,13 @@ def generate_template(keys_by_module: Dict[str, Set[str]], output_file: str, lan
     # 기존 JSON 파일이 있으면 값을 가져옴
     existing_values = {}
     if Path(output_file).exists():
-        existing_values = json.loads(Path(output_file).read_text(encoding='utf-8'))
+        try:
+            existing_values = json.loads(Path(output_file).read_text(encoding='utf-8'))
+            # 주석 키 제거 (이전 버전에서 생성된 경우)
+            existing_values = {k: v for k, v in existing_values.items() if not k.startswith("//")}
+        except json.JSONDecodeError:
+            print(f"⚠ 기존 템플릿 파일이 손상되어 새로 생성합니다: {output_file}")
+            existing_values = {}
     
     # 모듈을 논리적 순서로 정렬
     module_order = [
