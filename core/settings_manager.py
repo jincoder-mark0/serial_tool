@@ -2,7 +2,10 @@
 설정 관리자 (Settings Manager)
 애플리케이션 설정을 로드하고 저장합니다.
 """
-import json
+try:
+    import commentjson as json
+except ImportError:
+    import json
 from pathlib import Path
 from typing import Dict, Any, Optional
 import os

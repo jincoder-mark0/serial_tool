@@ -1,23 +1,6 @@
 """
 언어 키 관리 도구
 
-이 스크립트는 다음 작업을 수행합니다:
-1. view 폴더의 모든 .py 파일에서 사용되는 language_manager.get_text() 호출을 분석
-2. 모듈별로 키를 그룹화
-3. 주석이 추가된 언어 템플릿 JSON 파일 생성
-4. 누락되거나 사용되지 않는 키 확인
-"""
-
-import re
-import json
-from pathlib import Path
-from collections import defaultdict
-from typing import Dict, Set, List
-
-# view 폴더의 모든 .py 파일에서 get_text 호출을 찾고 모듈별로 그룹화
-def extract_keys_by_module() -> Dict[str, Set[str]]:
-    """
-    view 폴더의 각 모듈에서 사용되는 키를 추출합니다.
     
     Returns:
         Dict[str, Set[str]]: 모듈명을 키로, 사용되는 키 집합을 값으로 하는 딕셔너리

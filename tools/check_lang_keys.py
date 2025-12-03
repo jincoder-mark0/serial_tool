@@ -1,5 +1,8 @@
 import re
-import json
+try:
+    import commentjson as json
+except ImportError:
+    import json
 from pathlib import Path
 
 # view 폴더의 모든 .py 파일에서 get_text 호출을 찾기
