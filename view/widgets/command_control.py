@@ -104,7 +104,7 @@ class CommandControlWidget(QWidget):
         self.global_delay_input.setAlignment(Qt.AlignRight)
         auto_layout.addWidget(self.global_delay_input, 1, 1)
         
-        self.max_runs_label = QLabel(language_manager.get_text("max_runs") + ":")
+        self.max_runs_label = QLabel(language_manager.get_text("max_runs_label"))
         auto_layout.addWidget(self.max_runs_label, 1, 2)
         self.auto_run_max_spin = QSpinBox()
         self.auto_run_max_spin.setRange(0, 9999)
@@ -161,7 +161,7 @@ class CommandControlWidget(QWidget):
         self.stop_btn.setToolTip(language_manager.get_text("stop_run_tooltip"))
         
         self.delay_label.setText(language_manager.get_text("delay_ms"))
-        self.max_runs_label.setText(language_manager.get_text("max_runs") + ":")
+        self.max_runs_label.setText(language_manager.get_text("max_runs_label"))
         self.auto_run_max_spin.setToolTip(language_manager.get_text("max_runs_tooltip"))
         
         self.auto_run_btn.setText(language_manager.get_text("start_auto_run"))

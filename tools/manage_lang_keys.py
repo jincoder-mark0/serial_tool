@@ -240,7 +240,7 @@ def main():
     print("\n[2] 언어 템플릿 생성 중...")
     # generate_template(
     #     keys_by_module,
-    #     "e:/_Python/serial_tool2/config/languages/template_en.json",
+    #     "config/languages/template_en.json",
     #     "en"
     # )
     
