@@ -246,26 +246,4 @@ class CommandControlWidget(QWidget):
         self.suffix_input.setText(state.get("suffix", ""))
         self.global_delay_input.setText(state.get("delay", "1000"))
         self.auto_run_max_spin.setValue(state.get("max_runs", 0))
-        자동 실행 카운트를 업데이트합니다.
-        
-        Args:
-            current (int): 현재 실행 횟수.
-            total (int): 총 실행 횟수 (0이면 무한).
-        """
-        total_str = "∞" if total == 0 else str(total)
-        self.auto_run_count_label.setText(f"{current} / {total_str}")
 
-    def set_controls_enabled(self, enabled: bool) -> None:
-        """
-        포트 연결 상태에 따라 제어 버튼을 활성화/비활성화합니다.
-        
-        Args:
-            enabled (bool): 활성화 여부.
-        """
-        self.run_btn.setEnabled(enabled)
-        self.auto_run_btn.setEnabled(enabled)
-        self.stop_btn.setEnabled(False) # Stop은 실행 중에만 활성화
-        self.stop_auto_btn.setEnabled(False)
-        
-        self.save_script_btn.setEnabled(True)
-        self.load_script_btn.setEnabled(True)
