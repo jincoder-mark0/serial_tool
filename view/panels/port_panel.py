@@ -44,3 +44,25 @@ class PortPanel(QWidget):
         layout.addWidget(self.status_area)
         
         self.setLayout(layout)
+
+    def save_state(self) -> dict:
+        """
+        패널 상태를 저장합니다.
+        
+        Returns:
+            dict: 패널 상태 데이터.
+        """
+        return {
+            "port_settings": self.port_settings.save_state()
+        }
+        
+    def load_state(self, state: dict) -> None:
+        """
+        패널 상태를 복원합니다.
+        
+        Args:
+            state (dict): 패널 상태 데이터.
+        """
+        if not state:
+            return
+        self.port_settings.load_state(state.get("port_settings", {}))

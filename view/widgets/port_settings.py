@@ -195,22 +195,6 @@ class PortSettingsWidget(QGroupBox):
 
     def set_port_list(self, ports: List[str]) -> None:
         """
-        포트 목록을 업데이트합니다.
-        
-        Args:
-            ports (List[str]): 포트 이름 리스트.
-        """
-        current = self.port_combo.currentText()
-        self.port_combo.clear()
-        self.port_combo.addItems(ports)
-        if current in ports:
-            self.port_combo.setCurrentText(current)
-
-    def set_connected(self, connected: bool) -> None:
-        """
-        연결 상태에 따라 UI를 갱신합니다.
-        
-        Args:
             connected (bool): 연결 여부.
         """
         self.connect_btn.setChecked(connected)

@@ -53,6 +53,11 @@ class MainWindow(QMainWindow):
         # 저장된 윈도우 상태(크기, 위치) 로드
         self._load_window_state()
         
+        # 포트 탭 상태 복원
+        port_states = self.settings.get('ports.tabs', [])
+        if hasattr(self, 'left_panel'):
+            self.left_panel.load_state(port_states)
+        
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
         central_widget = QWidget()
@@ -237,6 +242,10 @@ class MainWindow(QMainWindow):
         # 패널 상태 저장
         if hasattr(self, 'right_panel'):
             self.right_panel.save_state()
+            
+        if hasattr(self, 'left_panel'):
+            port_states = self.left_panel.save_state()
+            self.settings.set('ports.tabs', port_states)
         
         # 설정 파일 저장
         self.settings.save_settings()

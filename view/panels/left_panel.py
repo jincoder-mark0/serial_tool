@@ -47,7 +47,7 @@ class LeftPanel(QWidget):
         self.setLayout(layout)
         
         # 탭 초기화
-        self.add_new_port_tab()
+        # self.add_new_port_tab() # MainWindow에서 load_state 호출 시 처리됨
         self.add_plus_tab()
 
     def retranslate_ui(self) -> None:
@@ -95,6 +95,56 @@ class LeftPanel(QWidget):
         
         if self.port_tabs.tabText(index) == "+":
             self.add_new_port_tab()
+            
+    def save_state(self) -> list:
+        """
+        모든 포트 탭의 상태를 리스트로 저장합니다.
+        
+        Returns:
+            list: 탭 상태 리스트.
+        """
+        states = []
+        count = self.port_tabs.count()
+        for i in range(count):
+            if self.port_tabs.tabText(i) == "+":
+                continue
+            widget = self.port_tabs.widget(i)
+            if isinstance(widget, PortPanel):
+                states.append(widget.save_state())
+        return states
+        
+    def load_state(self, states: list) -> None:
+        """
+        저장된 상태 리스트를 기반으로 탭을 복원합니다.
+        
+        Args:
+            states (list): 탭 상태 리스트.
+        """
+        # 기존 탭 모두 제거 (플러스 탭 제외)
+        # 역순으로 제거해야 인덱스 문제 없음, 단 플러스 탭은 유지
+        count = self.port_tabs.count()
+        for i in range(count - 1, -1, -1):
+            if self.port_tabs.tabText(i) == "+":
+                continue
+            self.port_tabs.removeTab(i)
+            
+        # 저장된 상태가 없으면 기본 탭 하나 추가
+        if not states:
+            self.add_new_port_tab()
+            return
+            
+        # 상태 복원
+        for state in states:
+            self.add_new_port_tab()
+            # 방금 추가된 탭 가져오기 (플러스 탭 바로 앞)
+            current_count = self.port_tabs.count()
+            # 플러스 탭이 있으면 마지막은 플러스 탭이므로 그 앞의 탭
+            # 플러스 탭이 없으면(혹시라도) 마지막 탭
+            target_index = current_count - 2 if current_count > 1 else 0
+            
+            widget = self.port_tabs.widget(target_index)
+            if isinstance(widget, PortPanel):
+                widget.load_state(state)
             
     def close_port_tab(self, index: int) -> None:
         """

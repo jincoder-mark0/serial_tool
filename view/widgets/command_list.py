@@ -402,10 +402,13 @@ class CommandListWidget(QWidget):
         Args:
             state (int): 체크박스 상태 (Qt.Checked 등).
         """
-        checked = (state == Qt.Checked)
-        for row in range(self.model.rowCount()):
-            item = self.model.item(row, 0)
-            item.setCheckState(Qt.Checked if checked else Qt.Unchecked)
+        if state == Qt.PartiallyChecked:
+            # PartiallyChecked 상태에서 클릭하면 모두 선택으로 변경
+            self.select_all_check.setCheckState(Qt.Checked)
+        elif state == Qt.Checked:
+            self.set_all_checked(True)
+        else:  # Qt.Unchecked
+            self.set_all_checked(False)
 
     def save_state(self) -> list:
         """
@@ -428,16 +431,7 @@ class CommandListWidget(QWidget):
             
         self.set_command_list(state)
         
-        Args:
-            state (int): 체크박스 상태.
-        """
-        if state == Qt.PartiallyChecked:
-            # PartiallyChecked 상태에서 클릭하면 모두 선택으로 변경
-            self.select_all_check.setCheckState(Qt.Checked)
-        elif state == Qt.Checked:
-            self.set_all_checked(True)
-        else:  # Qt.Unchecked
-            self.set_all_checked(False)
+
     
     def set_all_checked(self, checked: bool) -> None:
         """
