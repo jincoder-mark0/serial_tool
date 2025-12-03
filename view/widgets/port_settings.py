@@ -193,8 +193,27 @@ class PortSettingsWidget(QGroupBox):
             self.port_close_requested.emit()
             self.connect_btn.setText(language_manager.get_text("open_port"))
 
+
     def set_port_list(self, ports: List[str]) -> None:
         """
+        포트 목록을 업데이트합니다.
+        
+        Args:
+            ports (List[str]): 포트 이름 리스트.
+        """
+        current_port = self.port_combo.currentText()
+        self.port_combo.clear()
+        self.port_combo.addItems(ports)
+        
+        # 이전에 선택된 포트가 목록에 있으면 유지
+        if current_port in ports:
+            self.port_combo.setCurrentText(current_port)
+
+    def set_connected(self, connected: bool) -> None:
+        """
+        연결 상태에 따라 UI를 갱신합니다.
+        
+        Args:
             connected (bool): 연결 여부.
         """
         self.connect_btn.setChecked(connected)
@@ -208,3 +227,47 @@ class PortSettingsWidget(QGroupBox):
         
         # 연결 상태 변경 시그널 발생
         self.connection_state_changed.emit(connected)
+
+    def save_state(self) -> dict:
+        """
+        현재 설정을 딕셔너리로 반환합니다.
+        
+        Returns:
+            dict: 설정 데이터.
+        """
+        return {
+            "port": self.port_combo.currentText(),
+            "baudrate": self.baud_combo.currentText(),
+            "bytesize": self.bytesize_combo.currentText(),
+            "parity": self.parity_combo.currentText(),
+            "stopbits": self.stopbits_combo.currentText(),
+            "flow_control": self.flow_combo.currentText(),
+            "dtr": self.dtr_check.isChecked(),
+            "rts": self.rts_check.isChecked()
+        }
+        
+    def load_state(self, state: dict) -> None:
+        """
+        저장된 설정을 적용합니다.
+        
+        Args:
+            state (dict): 설정 데이터.
+        """
+        if not state:
+            return
+            
+        # 포트는 목록에 없을 수도 있으므로 addItem으로 추가 후 설정
+        port = state.get("port", "")
+        if port:
+            if self.port_combo.findText(port) == -1:
+                self.port_combo.addItem(port)
+            self.port_combo.setCurrentText(port)
+            
+        self.baud_combo.setCurrentText(str(state.get("baudrate", "115200")))
+        self.bytesize_combo.setCurrentText(str(state.get("bytesize", "8")))
+        self.parity_combo.setCurrentText(state.get("parity", "N"))
+        self.stopbits_combo.setCurrentText(str(state.get("stopbits", "1")))
+        self.flow_combo.setCurrentText(state.get("flow_control", "None"))
+        self.dtr_check.setChecked(state.get("dtr", True))
+        self.rts_check.setChecked(state.get("rts", True))
+
