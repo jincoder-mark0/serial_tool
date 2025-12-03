@@ -55,6 +55,7 @@ class MainWindow(QMainWindow):
         
         # 포트 탭 상태 복원
         port_states = self.settings.get('ports.tabs', [])
+        print(f"[DEBUG] MainWindow.__init__: Loading {len(port_states)} port tabs from settings")
         if hasattr(self, 'left_panel'):
             self.left_panel.load_state(port_states)
         

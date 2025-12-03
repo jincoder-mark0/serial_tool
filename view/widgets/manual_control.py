@@ -198,3 +198,32 @@ class ManualControlWidget(QWidget):
         self.clear_btn.setEnabled(True)
         self.save_log_btn.setEnabled(True)
         self.select_file_btn.setEnabled(True)
+
+    def save_state(self) -> dict:
+        """
+        현재 위젯 상태를 딕셔너리로 반환합니다.
+        
+        Returns:
+            dict: 위젯 상태.
+        """
+        return {
+            "hex_mode": self.hex_mode_check.isChecked(),
+            "add_enter": self.enter_check.isChecked(),
+            "rts": self.rts_check.isChecked(),
+            "dtr": self.dtr_check.isChecked()
+        }
+        
+    def load_state(self, state: dict) -> None:
+        """
+        저장된 상태를 위젯에 적용합니다.
+        
+        Args:
+            state (dict): 위젯 상태.
+        """
+        if not state:
+            return
+            
+        self.hex_mode_check.setChecked(state.get("hex_mode", False))
+        self.enter_check.setChecked(state.get("add_enter", True))
+        self.rts_check.setChecked(state.get("rts", False))
+        self.dtr_check.setChecked(state.get("dtr", False))

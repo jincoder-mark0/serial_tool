@@ -17,8 +17,8 @@
     "fixed_font_size": 9,
     "window_width": 1400,
     "window_height": 900,
-    "window_x": 259,
-    "window_y": 44
+    "window_x": 108,
+    "window_y": 21
   },
   "ports": {
     "recent_ports": [],
@@ -34,73 +34,13 @@
       {
         "port_settings": {
           "port": "",
-          "baudrate": "115200",
-          "bytesize": "8",
-          "parity": "N",
-          "stopbits": "1",
-          "flow_control": "None",
-          "dtr": true,
-          "rts": true
-        }
-      },
-      {
-        "port_settings": {
-          "port": "",
-          "baudrate": "115200",
-          "bytesize": "8",
-          "parity": "N",
-          "stopbits": "1",
-          "flow_control": "None",
-          "dtr": true,
-          "rts": true
-        }
-      },
-      {
-        "port_settings": {
-          "port": "",
-          "baudrate": "115200",
-          "bytesize": "8",
-          "parity": "N",
-          "stopbits": "1",
-          "flow_control": "None",
-          "dtr": true,
-          "rts": true
-        }
-      },
-      {
-        "port_settings": {
-          "port": "",
-          "baudrate": "115200",
-          "bytesize": "8",
-          "parity": "N",
-          "stopbits": "1",
-          "flow_control": "None",
-          "dtr": true,
-          "rts": true
-        }
-      },
-      {
-        "port_settings": {
-          "port": "",
-          "baudrate": "115200",
-          "bytesize": "8",
-          "parity": "N",
-          "stopbits": "1",
-          "flow_control": "None",
-          "dtr": true,
-          "rts": true
-        }
-      },
-      {
-        "port_settings": {
-          "port": "COM1",
-          "baudrate": "115200",
-          "bytesize": "8",
-          "parity": "N",
-          "stopbits": "1",
-          "flow_control": "None",
-          "dtr": true,
-          "rts": true
+          "baudrate": "460800",
+          "bytesize": "5",
+          "parity": "E",
+          "stopbits": "1.5",
+          "flow_control": "RTS/CTS",
+          "dtr": false,
+          "rts": false
         }
       }
     ]
@@ -110,6 +50,38 @@
     "auto_run_defaults": {
       "interval_ms": 100,
       "max_loops": 10
+    },
+    "commands": [
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      },
+      {
+        "enabled": false,
+        "prefix": false,
+        "command": "dddd",
+        "suffix": false,
+        "hex_mode": true,
+        "delay": "222"
+      }
+    ],
+    "control_state": {
+      "prefix": "aa",
+      "suffix": "aa",
+      "delay": "22",
+      "max_runs": 555
     }
   }
 }

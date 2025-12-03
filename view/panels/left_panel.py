@@ -96,30 +96,49 @@ class LeftPanel(QWidget):
         if self.port_tabs.tabText(index) == "+":
             self.add_new_port_tab()
             
+from core.settings_manager import SettingsManager
+
     def save_state(self) -> list:
         """
         모든 포트 탭의 상태를 리스트로 저장합니다.
+        또한 ManualControlWidget의 상태를 별도로 저장합니다.
         
         Returns:
             list: 탭 상태 리스트.
         """
+        # ManualControl 상태 저장
+        settings = SettingsManager()
+        manual_state = self.manual_control.save_state()
+        settings.set("ports.manual_control", manual_state)
+        
         states = []
         count = self.port_tabs.count()
+        print(f"[DEBUG] LeftPanel.save_state: Total tabs count: {count}")
         for i in range(count):
             if self.port_tabs.tabText(i) == "+":
                 continue
             widget = self.port_tabs.widget(i)
             if isinstance(widget, PortPanel):
-                states.append(widget.save_state())
+                state = widget.save_state()
+                states.append(state)
+        print(f"[DEBUG] LeftPanel.save_state: Saved {len(states)} tab states")
         return states
         
     def load_state(self, states: list) -> None:
         """
         저장된 상태 리스트를 기반으로 탭을 복원합니다.
+        또한 ManualControlWidget의 상태를 복원합니다.
         
         Args:
             states (list): 탭 상태 리스트.
         """
+        # ManualControl 상태 복원
+        settings = SettingsManager()
+        manual_state = settings.get("ports.manual_control", {})
+        if manual_state:
+            self.manual_control.load_state(manual_state)
+            
+        print(f"[DEBUG] LeftPanel.load_state: Loading {len(states)} tab states")
         # 기존 탭 모두 제거 (플러스 탭 제외)
         # 역순으로 제거해야 인덱스 문제 없음, 단 플러스 탭은 유지
         count = self.port_tabs.count()
@@ -130,11 +149,13 @@ class LeftPanel(QWidget):
             
         # 저장된 상태가 없으면 기본 탭 하나 추가
         if not states:
+            print("[DEBUG] LeftPanel.load_state: No states, adding default tab")
             self.add_new_port_tab()
             return
             
         # 상태 복원
-        for state in states:
+        for i, state in enumerate(states):
+            print(f"[DEBUG] LeftPanel.load_state: Restoring tab {i+1}/{len(states)}")
             self.add_new_port_tab()
             # 방금 추가된 탭 가져오기 (플러스 탭 바로 앞)
             current_count = self.port_tabs.count()
