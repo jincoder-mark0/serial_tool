@@ -201,28 +201,6 @@ class MainWindow(QMainWindow):
             self.move(x, y)
     
     def _save_window_state(self) -> None:
-        """
-        현재 윈도우 상태(크기, 위치)를 설정에 저장합니다.
-        """
-        self.settings.set('ui.window_width', self.width())
-        self.settings.set('ui.window_height', self.height())
-        self.settings.set('ui.window_x', self.x())
-        self.settings.set('ui.window_y', self.y())
-    
-    def on_language_changed(self, lang_code: str) -> None:
-        """
-        언어가 변경되면 UI를 업데이트합니다.
-        
-        Args:
-            lang_code (str): 새 언어 코드.
-        """
-        # 윈도우 타이틀 업데이트
-        self.setWindowTitle(f"{language_manager.get_text('app_title')} v1.0")
-        
-        # 상태바 업데이트
-        self.global_status_bar.showMessage(language_manager.get_text("ready"))
-        
-        # 메뉴 재생성
         self.init_menu()
         
         # 설정에 언어 저장
