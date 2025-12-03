@@ -3,7 +3,8 @@ import json
 from pathlib import Path
 
 # view 폴더의 모든 .py 파일에서 get_text 호출을 찾기
-view_dir = Path("e:/_Python/serial_tool2/view")
+root_dir = Path(__file__).parent
+view_dir = root_dir / "view"
 used_keys = set()
 
 for py_file in view_dir.rglob("*.py"):
@@ -13,8 +14,8 @@ for py_file in view_dir.rglob("*.py"):
     used_keys.update(matches)
 
 # JSON 파일의 키들 읽기
-en_json = Path("e:/_Python/serial_tool2/config/languages/en.json")
-ko_json = Path("e:/_Python/serial_tool2/config/languages/ko.json")
+en_json = root_dir / "config/languages/en.json"
+ko_json = root_dir / "config/languages/ko.json"
 
 en_keys = set(json.loads(en_json.read_text(encoding='utf-8')).keys())
 ko_keys = set(json.loads(ko_json.read_text(encoding='utf-8')).keys())
