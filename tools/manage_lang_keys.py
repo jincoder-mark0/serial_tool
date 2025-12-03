@@ -22,13 +22,16 @@ def extract_keys_by_module() -> Dict[str, Set[str]]:
     Returns:
         Dict[str, Set[str]]: 모듈명을 키로, 사용되는 키 집합을 값으로 하는 딕셔너리
     """
-    view_dir = Path("e:/_Python/serial_tool2/view")
+    view_dir = Path(__file__).parent.parent / "view"
     keys_by_module = defaultdict(set)
     
     for py_file in view_dir.rglob("*.py"):
         # 모듈 경로 생성 (예: widgets/manual_control, dialogs/font_settings)
-        relative_path = py_file.relative_to(view_dir)
-        module_path = str(relative_path.with_suffix('')).replace('\\', '/')
+        try:
+            relative_path = py_file.relative_to(view_dir)
+            module_path = str(relative_path.with_suffix('')).replace('\\', '/')
+        except ValueError:
+            continue
         
         content = py_file.read_text(encoding='utf-8')
         # get_text("key") 또는 get_text('key') 패턴 찾기
@@ -172,7 +175,8 @@ def generate_template(keys_by_module: Dict[str, Set[str]], output_file: str, lan
 
 def check_missing_and_unused():
     """누락되거나 사용되지 않는 키를 확인"""
-    view_dir = Path("e:/_Python/serial_tool2/view")
+    root_dir = Path(__file__).parent.parent
+    view_dir = root_dir / "view"
     used_keys = set()
     
     for py_file in view_dir.rglob("*.py"):
@@ -181,8 +185,8 @@ def check_missing_and_unused():
         used_keys.update(matches)
     
     # JSON 파일의 키들 읽기
-    en_json = Path("e:/_Python/serial_tool2/config/languages/en.json")
-    ko_json = Path("e:/_Python/serial_tool2/config/languages/ko.json")
+    en_json = root_dir / "config/languages/en.json"
+    ko_json = root_dir / "config/languages/ko.json"
     
     en_keys = set(json.loads(en_json.read_text(encoding='utf-8')).keys())
     ko_keys = set(json.loads(ko_json.read_text(encoding='utf-8')).keys())

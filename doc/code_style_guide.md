@@ -19,27 +19,71 @@
 
 ## 3. Docstrings
 - **형식**: Google 스타일 Docstring 형식을 사용합니다.
-- **내용**:
-    - **요약**: 클래스나 함수가 수행하는 작업에 대한 간략한 설명.
-    - **Args**: 각 인수에 대한 상세 설명 및 타입.
-    - **Returns**: 반환 값 및 타입에 대한 설명.
-    - **Raises**: (선택 사항) 발생할 수 있는 예외 목록.
+- **언어**: 모든 Docstring은 **한국어**로 작성합니다.
+- **간결함**: 첫 줄은 마침표 없이 간단명료하게 작성합니다.
+- **타입**: 타입 힌트는 함수 시그니처에 명시하므로 docstring에서는 생략 가능합니다.
 
-### 예시
+### 기본 형식
+- **요약**: 함수/클래스가 수행하는 작업에 대한 간략한 설명
+- **Args**: 각 매개변수에 대한 설명
+- **Returns**: 반환값 설명 (복잡한 구조는 상세히 기술)
+- **Raises**: (선택 사항) 발생 가능한 예외
+
+### 예시 1: 간단한 함수
 ```python
-def connect_to_port(self, port_name: str, baudrate: int) -> bool:
-    """
-    지정된 시리얼 포트에 연결합니다.
-    
+def add_file(self, file_path: str) -> bool:
+    """파일을 리네임 대상 목록에 추가
+
     Args:
-        port_name (str): 연결할 포트 이름 (예: "COM3").
-        baudrate (int): 통신 속도 (예: 115200).
-        
+        file_path: 추가할 파일의 경로
+
     Returns:
-        bool: 연결 성공 시 True, 실패 시 False.
+        bool: 추가 성공 여부
+
+    Raises:
+        FileNotFoundError: 파일이 존재하지 않는 경우
     """
-    # 구현 내용...
 ```
+
+### 예시 2: 복잡한 반환값
+```python
+def execute_rename(self) -> Dict[str, Any]:
+    """리네임 실행
+
+    Returns:
+        Dict[str, Any]: 실행 결과
+        {
+            'success': int,     # 성공한 파일 수
+            'failed': int,      # 실패한 파일 수
+            'errors': List[str] # 오류 메시지 목록
+        }
+    """
+```
+
+### 예시 3: 클래스
+```python
+class SerialWorker(QThread):
+    """시리얼 포트 통신을 처리하는 워커 스레드
+    
+    이 클래스는 별도 스레드에서 시리얼 포트 읽기/쓰기를 수행하여
+    메인 UI 스레드의 블로킹을 방지합니다.
+    
+    Attributes:
+        port_name: 연결할 시리얼 포트 이름
+        baudrate: 통신 속도
+    """
+```
+
+### 예시 4: 매개변수가 없는 함수
+```python
+def generate_rename_plan(self) -> List[Tuple[str, str]]:
+    """현재 설정에 따른 리네임 계획 생성
+
+    Returns:
+        List[Tuple[str, str]]: (원본 경로, 새 경로) 튜플의 리스트
+    """
+```
+
 
 ## 4. 타입 힌팅 (Type Hinting)
 - **필수**: 모든 함수 인수 및 반환 값에 대해 타입 힌트가 필수입니다.
