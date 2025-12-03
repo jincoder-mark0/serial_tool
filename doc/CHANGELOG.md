@@ -2,7 +2,48 @@
 
 ## [미배포] (Unreleased)
 
+### 언어 키 표준화 및 로깅 프레임워크 (2025-12-03)
+
+#### 추가 사항 (Added)
+
+- **로깅 프레임워크**
+  - `core/logger.py` 구현: 싱글톤 패턴 기반 Logger 클래스
+  - 로그 레벨: DEBUG, INFO, WARNING, ERROR, CRITICAL
+  - 파일 로깅: RotatingFileHandler (10MB x 5개 파일)
+  - 콘솔 로깅: 색상 구분 출력
+  - 타임스탬프 자동 추가
+
+- **자동화 테스트**
+  - `tests/test_ui_translations.py`: UI 컴포넌트 번역 자동 검증
+  - 8개 위젯/패널 언어 전환 테스트 (6개 통과)
+
+- **도구**
+  - `tools/manage_lang_keys.py` 개선: 자동 모듈 탐지 기능
+
+#### 변경 사항 (Changed)
+
+- **언어 키 표준화**
+  - 모든 언어 키를 `[context]_[type]_[name]` 규칙으로 리팩토링
+  - `en.json`, `ko.json` 업데이트 (192개 키)
+  - 모든 UI 컴포넌트의 `get_text()` 호출 수정
+  - 주석 제거 및 JSON 구조 정리
+
+- **MainWindow 구조 개선**
+  - `MainMenuBar`를 별도 위젯으로 분리 (`view/widgets/main_menu_bar.py`)
+  - `MainStatusBar`를 별도 위젯으로 분리 (`view/widgets/main_status_bar.py`)
+  - 코드 재사용성 및 가독성 향상
+
+- **로깅 개선**
+  - `ThemeManager`, `LanguageManager`의 print 문을 logger 호출로 교체
+  - 구조화된 로그 메시지 형식
+
+#### 수정 사항 (Fixed)
+
+- **About Dialog**: `MainWindow`에서 시그널 연결 누락 수정
+- **manage_lang_keys.py**: 하드코딩된 모듈 리스트 제거, 자동 탐지로 개선
+
 ### View 계층 마무리 및 다국어 지원 (2025-12-02)
+
 
 #### 추가 사항 (Added)
 
@@ -38,7 +79,7 @@
   - 다크 테마 (`resources/themes/dark_theme.qss`) 및 라이트 테마 (`resources/themes/light_theme.qss`) 생성
   - View 메뉴를 통한 동적 테마 전환
   - 폰트 커스터마이징 메뉴 (사전 정의 폰트 및 커스텀 폰트 대화상자)
-  
+
 - **SVG 아이콘 시스템**
   - 아이콘 리소스 디렉토리 생성 (`resources/icons/`)
   - 테마 인식 SVG 아이콘 구현 (다크 테마용 흰색, 라이트 테마용 검은색)

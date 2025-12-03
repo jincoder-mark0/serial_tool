@@ -8,6 +8,7 @@ from view.panels.right_panel import RightPanel
 from view.theme_manager import ThemeManager
 from view.language_manager import language_manager
 from view.dialogs.font_settings_dialog import FontSettingsDialog
+from view.dialogs.about_dialog import AboutDialog
 from core.settings_manager import SettingsManager
 from view.widgets.main_menu_bar import MainMenuBar
 from view.widgets.main_status_bar import MainStatusBar
@@ -98,7 +99,7 @@ class MainWindow(QMainWindow):
         self.menu_bar.font_settings_requested.connect(self.open_font_settings_dialog)
         self.menu_bar.language_changed.connect(lambda lang: language_manager.set_language(lang))
         # self.menu_bar.preferences_requested.connect(...) # 추후 구현
-        # self.menu_bar.about_requested.connect(...) # 추후 구현
+        self.menu_bar.about_requested.connect(self.open_about_dialog)
 
     def switch_theme(self, theme_name: str) -> None:
         """
@@ -132,6 +133,11 @@ class MainWindow(QMainWindow):
             QApplication.instance().setFont(prop_font)
 
             self.global_status_bar.show_message("Font settings updated", 2000)
+
+    def open_about_dialog(self) -> None:
+        """About 다이얼로그를 엽니다."""
+        dialog = AboutDialog(self)
+        dialog.exec_()
 
 
     def _load_window_state(self) -> None:

@@ -30,6 +30,10 @@ def extract_keys_by_module() -> Dict[str, Set[str]]:
     keys_by_module = defaultdict(set)
 
     for py_file in view_dir.rglob("*.py"):
+        # __pycache__ 및 __init__.py 제외
+        if '__pycache__' in str(py_file) or py_file.name == '__init__.py':
+            continue
+
         # 모듈 경로 생성 (예: widgets/manual_control, dialogs/font_settings)
         try:
             relative_path = py_file.relative_to(view_dir)
@@ -48,27 +52,18 @@ def extract_keys_by_module() -> Dict[str, Set[str]]:
 
 def get_module_display_name(module_path: str) -> str:
     """모듈 경로를 사람이 읽기 쉬운 이름으로 변환"""
-    name_map = {
-        'main_window': 'Main Window',
-        'language_manager': 'Language Manager',
-        'theme_manager': 'Theme Manager',
-        'panels/left_panel': 'Left Panel',
-        'panels/right_panel': 'Right Panel',
-        'panels/port_panel': 'Port Panel',
-        'panels/command_list_panel': 'Command List Panel',
-        'widgets/port_settings': 'Port Settings Widget',
-        'widgets/manual_control': 'Manual Control Widget',
-        'widgets/received_area': 'Received Area Widget',
-        'widgets/command_list': 'Command List Widget',
-        'widgets/command_control': 'Command Control Widget',
-        'widgets/packet_inspector': 'Packet Inspector Widget',
-        'widgets/file_progress_widget': 'File Progress Widget',
-        'widgets/status_area': 'Status Area Widget',
-        'dialogs/font_settings_dialog': 'Font Settings Dialog',
-        'dialogs/preferences_dialog': 'Preferences Dialog',
-        'dialogs/about_dialog': 'About Dialog',
-    }
-    return name_map.get(module_path, module_path)
+    # 파일 이름을 기반으로 자동 생성
+    parts = module_path.split('/')
+    if len(parts) == 1:
+        # 단일 파일 (예: main_window)
+        name = parts[0].replace('_', ' ').title()
+    else:
+        # 중첩된 파일 (예: widgets/port_settings)
+        category = parts[-2].rstrip('s').title()  # 'widgets' -> 'Widget'
+        name = parts[-1].replace('_', ' ').title()
+        name = f"{name} {category}"
+
+    return name
 
 def generate_template(keys_by_module: Dict[str, Set[str]], output_file: str, language: str = "en"):
     """
@@ -90,36 +85,16 @@ def generate_template(keys_by_module: Dict[str, Set[str]], output_file: str, lan
             print(f"⚠ 기존 템플릿 파일이 손상되어 새로 생성합니다: {output_file}")
             existing_values = {}
 
-    # 모듈을 논리적 순서로 정렬
-    module_order = [
-        'main_window',
-        'panels/left_panel',
-        'panels/right_panel',
-        'panels/port_panel',
-        'panels/command_list_panel',
-        'widgets/port_settings',
-        'widgets/manual_control',
-        'widgets/received_area',
-        'widgets/command_list',
-        'widgets/command_control',
-        'widgets/packet_inspector',
-        'widgets/file_progress_widget',
-        'widgets/status_area',
-        'dialogs/font_settings_dialog',
-        'dialogs/preferences_dialog',
-        'dialogs/about_dialog',
-    ]
+    # 모듈을 알파벳순으로 정렬하되, 중요한 순서를 우선
+    priority_order = ['main_window', 'widgets', 'panels', 'dialogs']
 
-    # 정렬된 모듈 리스트 생성 (정의된 순서 + 나머지)
-    sorted_modules = []
-    for mod in module_order:
-        if mod in keys_by_module:
-            sorted_modules.append(mod)
+    def get_sort_key(module_path):
+        for idx, priority in enumerate(priority_order):
+            if module_path.startswith(priority):
+                return (idx, module_path)
+        return (len(priority_order), module_path)
 
-    # 나머지 모듈 추가
-    for mod in sorted(keys_by_module.keys()):
-        if mod not in sorted_modules:
-            sorted_modules.append(mod)
+    sorted_modules = sorted(keys_by_module.keys(), key=get_sort_key)
 
     # JSON 파일 생성 (주석은 별도 처리)
     lines = ["{\n"]
@@ -170,13 +145,6 @@ def generate_template(keys_by_module: Dict[str, Set[str]], output_file: str, lan
 
     lines.append("}\n")
 
-    # 파일 쓰기 (주석 라인 제거하고 실제 JSON 생성)
-    output_data = {}
-    for line in lines:
-        # 주석이 아닌 라인만 파싱
-        if not line.strip().startswith('"//'):
-            continue
-
     # 실제로는 정상 JSON으로 저장 (주석은 키로 포함)
     output_path = Path(output_file)
     output_path.write_text(''.join(lines), encoding='utf-8')
@@ -184,14 +152,17 @@ def generate_template(keys_by_module: Dict[str, Set[str]], output_file: str, lan
     print(f"✓ 템플릿 파일 생성: {output_file}")
     print(f"  - 공통 키: {len(common_keys)}개")
     print(f"  - 모듈별 키: {sum(len(keys - common_keys) for keys in keys_by_module.values())}개")
+    print(f"  - 발견된 모듈: {len(sorted_modules)}개")
 
 def check_missing_and_unused():
     """누락되거나 사용되지 않는 키를 확인"""
     root_dir = Path(__file__).parent.parent
-    view_dir = root_dir / "menu_view"
+    view_dir = root_dir / "view"
     used_keys = set()
 
     for py_file in view_dir.rglob("*.py"):
+        if '__pycache__' in str(py_file):
+            continue
         content = py_file.read_text(encoding='utf-8')
         matches = re.findall(r'get_text\(["\']([^"\']+)["\']\)', content)
         used_keys.update(matches)
