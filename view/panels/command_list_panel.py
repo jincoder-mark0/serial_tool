@@ -64,7 +64,6 @@ class CommandListPanel(QWidget):
         """설정에서 상태를 로드합니다."""
         # 커맨드 리스트 로드
         commands = self.settings.get("command_list.commands", [])
-        print(f"[DEBUG] Loading command list: {len(commands)} commands, data: {commands}")
         if commands:
             self.command_list.load_state(commands)
             
@@ -83,7 +82,6 @@ class CommandListPanel(QWidget):
         control_state = self.command_control.save_state()
         self.settings.set("command_list.control_state", control_state)
         
-        print(f"[DEBUG] Saving command list: {len(commands)} commands")
         self.settings.save_settings()
         
     def on_run_single_requested(self) -> None:
