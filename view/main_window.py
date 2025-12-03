@@ -234,6 +234,10 @@ class MainWindow(QMainWindow):
         # 윈도우 상태 저장
         self._save_window_state()
         
+        # 패널 상태 저장
+        if hasattr(self, 'right_panel'):
+            self.right_panel.save_state()
+        
         # 설정 파일 저장
         self.settings.save_settings()
         

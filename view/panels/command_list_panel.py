@@ -38,7 +38,7 @@ class CommandListPanel(QWidget):
         self.settings = SettingsManager()
         
         # 초기 데이터 로드
-        self.load_command_list()
+        self.load_state()
         
         # 시그널 연결
         self.command_control.run_single_requested.connect(self.on_run_single_requested)
@@ -47,23 +47,35 @@ class CommandListPanel(QWidget):
         self.command_control.stop_auto_requested.connect(self.stop_requested.emit) # Stop signal is same for now
         
         # 데이터 변경 시 자동 저장
-        self.command_list.command_list_changed.connect(self.save_command_list)
+        self.command_list.command_list_changed.connect(self.save_state)
         
         layout.addWidget(self.command_list)
         layout.addWidget(self.command_control)
         
         self.setLayout(layout)
         
-    def load_command_list(self) -> None:
-        """설정에서 커맨드 리스트를 로드합니다."""
-        commands = self.settings.get("command_list.default_commands", [])
+    def load_state(self) -> None:
+        """설정에서 상태를 로드합니다."""
+        # 커맨드 리스트 로드
+        commands = self.settings.get("command_list.commands", [])
         if commands:
-            self.command_list.set_command_list(commands)
+            self.command_list.load_state(commands)
             
-    def save_command_list(self) -> None:
-        """현재 커맨드 리스트를 설정에 저장합니다."""
-        commands = self.command_list.get_command_list()
-        self.settings.set("command_list.default_commands", commands)
+        # 컨트롤 설정 로드
+        control_state = self.settings.get("command_list.control_state", {})
+        if control_state:
+            self.command_control.load_state(control_state)
+            
+    def save_state(self) -> None:
+        """현재 상태를 설정에 저장합니다."""
+        # 커맨드 리스트 저장
+        commands = self.command_list.save_state()
+        self.settings.set("command_list.commands", commands)
+        
+        # 컨트롤 설정 저장
+        control_state = self.command_control.save_state()
+        self.settings.set("command_list.control_state", control_state)
+        
         self.settings.save_settings()
         
     def on_run_single_requested(self) -> None:

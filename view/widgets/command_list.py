@@ -400,6 +400,35 @@ class CommandListWidget(QWidget):
         Select All 체크박스 상태 변경 핸들러입니다.
         
         Args:
+            state (int): 체크박스 상태 (Qt.Checked 등).
+        """
+        checked = (state == Qt.Checked)
+        for row in range(self.model.rowCount()):
+            item = self.model.item(row, 0)
+            item.setCheckState(Qt.Checked if checked else Qt.Unchecked)
+
+    def save_state(self) -> list:
+        """
+        현재 명령어 목록을 리스트로 반환합니다.
+        
+        Returns:
+            list: 명령어 목록 데이터.
+        """
+        return self.get_command_list()
+        
+    def load_state(self, state: list) -> None:
+        """
+        저장된 명령어 목록을 위젯에 적용합니다.
+        
+        Args:
+            state (list): 명령어 목록 데이터.
+        """
+        if not state:
+            return
+            
+        self.set_command_list(state)
+        
+        Args:
             state (int): 체크박스 상태.
         """
         if state == Qt.PartiallyChecked:

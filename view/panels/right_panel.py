@@ -50,3 +50,8 @@ class RightPanel(QWidget):
         
         self.tabs.setTabText(0, language_manager.get_text("command_list_tab"))
         self.tabs.setTabText(1, language_manager.get_text("inspector_tab"))
+
+    def save_state(self) -> None:
+        """패널 상태를 저장합니다."""
+        self.command_list_panel.save_state()
+        # PacketInspector 상태 저장도 필요하다면 여기에 추가

@@ -202,6 +202,54 @@ class CommandControlWidget(QWidget):
         
         Args:
             current (int): 현재 실행 횟수.
+            total (int): 전체 실행 횟수 (0이면 무한).
+        """
+        total_str = "∞" if total == 0 else str(total)
+        self.auto_run_count_label.setText(f"{current} / {total_str}")
+
+    def set_controls_enabled(self, enabled: bool) -> None:
+        """
+        제어 위젯들의 활성화 상태를 설정합니다.
+        
+        Args:
+            enabled (bool): 활성화 여부.
+        """
+        self.run_btn.setEnabled(enabled)
+        self.auto_run_btn.setEnabled(enabled)
+        # Stop 버튼들은 실행 상태에 따라 별도 관리되므로 여기서는 건드리지 않음
+        
+    def save_state(self) -> dict:
+        """
+        현재 위젯의 상태를 딕셔너리로 반환합니다.
+        
+        Returns:
+            dict: 위젯 상태 데이터.
+        """
+        return {
+            "prefix": self.prefix_input.text(),
+            "suffix": self.suffix_input.text(),
+            "delay": self.global_delay_input.text(),
+            "max_runs": self.auto_run_max_spin.value()
+        }
+        
+    def load_state(self, state: dict) -> None:
+        """
+        저장된 상태를 위젯에 적용합니다.
+        
+        Args:
+            state (dict): 위젯 상태 데이터.
+        """
+        if not state:
+            return
+            
+        self.prefix_input.setText(state.get("prefix", ""))
+        self.suffix_input.setText(state.get("suffix", ""))
+        self.global_delay_input.setText(state.get("delay", "1000"))
+        self.auto_run_max_spin.setValue(state.get("max_runs", 0))
+        자동 실행 카운트를 업데이트합니다.
+        
+        Args:
+            current (int): 현재 실행 횟수.
             total (int): 총 실행 횟수 (0이면 무한).
         """
         total_str = "∞" if total == 0 else str(total)
