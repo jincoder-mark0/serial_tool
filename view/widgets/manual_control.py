@@ -210,7 +210,8 @@ class ManualControlWidget(QWidget):
             "hex_mode": self.hex_mode_check.isChecked(),
             "add_enter": self.enter_check.isChecked(),
             "rts": self.rts_check.isChecked(),
-            "dtr": self.dtr_check.isChecked()
+            "dtr": self.dtr_check.isChecked(),
+            "input_text": self.input_field.text()
         }
         print(f"[DEBUG] ManualControlWidget.save_state: {state}")
         return state
@@ -230,3 +231,4 @@ class ManualControlWidget(QWidget):
         self.enter_check.setChecked(state.get("add_enter", True))
         self.rts_check.setChecked(state.get("rts", False))
         self.dtr_check.setChecked(state.get("dtr", False))
+        self.input_field.setText(state.get("input_text", ""))

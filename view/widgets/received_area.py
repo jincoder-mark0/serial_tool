@@ -284,7 +284,8 @@ class ReceivedArea(QWidget):
         state = {
             "hex_mode": self.hex_mode,
             "timestamp": self.timestamp_enabled,
-            "paused": self.paused
+            "paused": self.paused,
+            "search_text": self.search_input.text()
         }
         print(f"[DEBUG] ReceivedArea.save_state: {state}")
         return state
@@ -305,3 +306,4 @@ class ReceivedArea(QWidget):
         self.hex_check.setChecked(state.get("hex_mode", False))
         self.timestamp_check.setChecked(state.get("timestamp", False))
         self.pause_check.setChecked(state.get("paused", False))
+        self.search_input.setText(state.get("search_text", ""))
