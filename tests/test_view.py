@@ -24,6 +24,7 @@ from view.dialogs.preferences_dialog import PreferencesDialog
 from view.dialogs.about_dialog import AboutDialog
 from view.widgets.file_progress_widget import FileProgressWidget
 from core.settings_manager import SettingsManager
+from PyQt5.QtWidgets import QPushButton, QHBoxLayout, QLabel, QTextEdit
 
 class ViewTestWindow(QMainWindow):
     """View 컴포넌트 테스트용 윈도우 클래스입니다."""
@@ -90,7 +91,7 @@ class ViewTestWindow(QMainWindow):
         Returns:
             QWidget: 테스트 위젯.
         """
-        from PyQt5.QtWidgets import QPushButton, QHBoxLayout, QLabel
+
         
         widget = QWidget()
         layout = QVBoxLayout(widget)
@@ -143,7 +144,7 @@ class ViewTestWindow(QMainWindow):
         Returns:
             QWidget: 테스트 위젯.
         """
-        from PyQt5.QtWidgets import QTextEdit
+
         
         widget = QWidget()
         layout = QVBoxLayout(widget)
@@ -172,7 +173,7 @@ class ViewTestWindow(QMainWindow):
         )
         
         # 정보 레이블
-        from PyQt5.QtWidgets import QLabel
+
         info = QLabel("✅ 테스트: Send 버튼, HEX 모드, Enter 추가, 파일 선택/전송")
         layout.addWidget(info)
         
@@ -206,7 +207,7 @@ class ViewTestWindow(QMainWindow):
         layout.addWidget(self.command_list)
         
         # 정보 레이블
-        from PyQt5.QtWidgets import QLabel
+
         info = QLabel("✅ 테스트: 행 추가/삭제/이동, Select All, Send 버튼, 데이터 유지(Persistence)")
         layout.addWidget(info)
         
@@ -234,7 +235,7 @@ class ViewTestWindow(QMainWindow):
         Returns:
             QWidget: 테스트 위젯.
         """
-        from PyQt5.QtWidgets import QPushButton, QHBoxLayout, QLabel
+
         
         widget = QWidget()
         layout = QVBoxLayout(widget)
@@ -277,7 +278,7 @@ class ViewTestWindow(QMainWindow):
         Returns:
             QWidget: 테스트 위젯.
         """
-        from PyQt5.QtWidgets import QLabel
+
         
         widget = QWidget()
         layout = QVBoxLayout(widget)
@@ -294,7 +295,7 @@ class ViewTestWindow(QMainWindow):
     
     def create_dialog_test(self) -> QWidget:
         """Dialog 테스트 위젯을 생성합니다."""
-        from PyQt5.QtWidgets import QPushButton, QHBoxLayout, QLabel
+
         
         widget = QWidget()
         layout = QVBoxLayout(widget)
@@ -330,7 +331,7 @@ class ViewTestWindow(QMainWindow):
 
     def create_file_progress_test(self) -> QWidget:
         """FileProgressWidget 테스트 위젯을 생성합니다."""
-        from PyQt5.QtCore import QTimer
+
         
         widget = QWidget()
         layout = QVBoxLayout(widget)
