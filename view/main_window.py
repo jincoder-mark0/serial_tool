@@ -32,7 +32,7 @@ class MainWindow(QMainWindow):
         language_manager.set_language(lang)
         language_manager.language_changed.connect(self.on_language_changed)
         
-        self.setWindowTitle(language_manager.get_text("app_title") + " v1.0")
+        self.setWindowTitle(f"{language_manager.get_text('app_title')} v1.0")
         self.resize(1400, 900)
         
         self.init_ui()
@@ -116,7 +116,7 @@ class MainWindow(QMainWindow):
         theme_menu.addAction(light_action)
         
         # 폰트 설정 액션
-        font_settings_action = QAction(language_manager.get_text("font") + "...", self)
+        font_settings_action = QAction(language_manager.get_text("font_settings_menu"), self)
         font_settings_action.setShortcut("Ctrl+Shift+F")
         font_settings_action.setToolTip(language_manager.get_text("font"))
         font_settings_action.triggered.connect(self.open_font_settings_dialog)
@@ -134,7 +134,7 @@ class MainWindow(QMainWindow):
         language_menu.addAction(ko_action)
         
         # Preferences 액션
-        preferences_action = QAction(language_manager.get_text("preferences") + "...", self)
+        preferences_action = QAction(language_manager.get_text("preferences_menu"), self)
         preferences_action.setShortcut("Ctrl+,")
         view_menu.addAction(preferences_action)
         
@@ -212,7 +212,7 @@ class MainWindow(QMainWindow):
             lang_code (str): 새 언어 코드.
         """
         # 윈도우 타이틀 업데이트
-        self.setWindowTitle(language_manager.get_text("app_title") + " v1.0")
+        self.setWindowTitle(f"{language_manager.get_text('app_title')} v1.0")
         
         # 상태바 업데이트
         self.global_status_bar.showMessage(language_manager.get_text("ready"))
