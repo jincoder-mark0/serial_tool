@@ -44,41 +44,27 @@ class SettingsManager:
     def _get_user_settings_path(self) -> Path:
         """
         사용자 설정 파일의 경로를 반환합니다.
-        OS별 표준 사용자 데이터 디렉토리를 사용합니다.
+        개발 모드에서는 config/settings.json을 직접 사용합니다.
         
         Returns:
-            Path: 사용자 설정 파일(user_settings.json)의 Path 객체.
+            Path: 사용자 설정 파일의 Path 객체.
         """
-        # OS별 사용자 설정 디렉토리 결정
-        if os.name == 'nt':  # Windows
-            settings_dir = Path(os.environ.get('APPDATA', '')) / 'SerialTool'
-        else:  # Linux/Mac
-            settings_dir = Path.home() / '.config' / 'serial_tool'
-        
-        settings_dir.mkdir(parents=True, exist_ok=True)
-        return settings_dir / 'user_settings.json'
+        # 개발 모드: config/settings.json을 직접 사용
+        return self.config_path
     
     def load_settings(self) -> None:
         """
         설정을 로드합니다.
-        기본 설정을 먼저 로드한 후, 사용자 설정이 존재하면 덮어씁니다.
+        config/settings.json 파일을 읽어옵니다.
         """
-        # 기본 설정 로드
         try:
             with open(self.config_path, 'r', encoding='utf-8') as f:
                 self.settings = json.load(f)
         except (FileNotFoundError, json.JSONDecodeError) as e:
-            print(f"기본 설정 로드 실패: {e}")
+            print(f"설정 로드 실패: {e}")
             self.settings = self._get_fallback_settings()
-        
-        # 사용자 설정이 있으면 병합
-        if self.user_settings_path.exists():
-            try:
-                with open(self.user_settings_path, 'r', encoding='utf-8') as f:
-                    user_settings = json.load(f)
-                    self._merge_settings(user_settings)
-            except json.JSONDecodeError as e:
-                print(f"사용자 설정 로드 실패: {e}")
+            # 기본 설정으로 파일 생성
+            self.save_settings()
     
     def _merge_settings(self, user_settings: Dict[str, Any]) -> None:
         """
@@ -98,10 +84,10 @@ class SettingsManager:
     
     def save_settings(self) -> None:
         """
-        현재 설정을 사용자 설정 파일에 저장합니다.
+        현재 설정을 config/settings.json 파일에 저장합니다.
         """
         try:
-            with open(self.user_settings_path, 'w', encoding='utf-8') as f:
+            with open(self.config_path, 'w', encoding='utf-8') as f:
                 json.dump(self.settings, f, indent=2, ensure_ascii=False)
         except IOError as e:
             print(f"설정 저장 실패: {e}")
