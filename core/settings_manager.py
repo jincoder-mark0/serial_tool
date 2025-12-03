@@ -16,14 +16,26 @@ class SettingsManager:
     config/settings.json에서 기본 설정을 로드하고, 사용자별 설정을 관리합니다.
     """
     
+    _instance = None
+    _initialized = False
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(SettingsManager, cls).__new__(cls)
+        return cls._instance
+
     def __init__(self):
         """SettingsManager를 초기화하고 설정을 로드합니다."""
+        if self._initialized:
+            return
+            
         self.settings: Dict[str, Any] = {}
         self.config_path = self._get_config_path()
         self.user_settings_path = self._get_user_settings_path()
         
         # 설정 로드
         self.load_settings()
+        self._initialized = True
     
     def _get_config_path(self) -> Path:
         """
