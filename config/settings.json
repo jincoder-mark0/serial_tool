@@ -14,7 +14,11 @@
     "proportional_font_family": "Segoe UI",
     "proportional_font_size": 9,
     "fixed_font_family": "Consolas",
-    "fixed_font_size": 9
+    "fixed_font_size": 9,
+    "window_width": 1400,
+    "window_height": 900,
+    "window_x": 259,
+    "window_y": 44
   },
   "ports": {
     "recent_ports": [],
@@ -25,7 +29,81 @@
       "stopbits": 1,
       "flow_control": "none",
       "timeout_ms": 100
-    }
+    },
+    "tabs": [
+      {
+        "port_settings": {
+          "port": "",
+          "baudrate": "115200",
+          "bytesize": "8",
+          "parity": "N",
+          "stopbits": "1",
+          "flow_control": "None",
+          "dtr": true,
+          "rts": true
+        }
+      },
+      {
+        "port_settings": {
+          "port": "",
+          "baudrate": "115200",
+          "bytesize": "8",
+          "parity": "N",
+          "stopbits": "1",
+          "flow_control": "None",
+          "dtr": true,
+          "rts": true
+        }
+      },
+      {
+        "port_settings": {
+          "port": "",
+          "baudrate": "115200",
+          "bytesize": "8",
+          "parity": "N",
+          "stopbits": "1",
+          "flow_control": "None",
+          "dtr": true,
+          "rts": true
+        }
+      },
+      {
+        "port_settings": {
+          "port": "",
+          "baudrate": "115200",
+          "bytesize": "8",
+          "parity": "N",
+          "stopbits": "1",
+          "flow_control": "None",
+          "dtr": true,
+          "rts": true
+        }
+      },
+      {
+        "port_settings": {
+          "port": "",
+          "baudrate": "115200",
+          "bytesize": "8",
+          "parity": "N",
+          "stopbits": "1",
+          "flow_control": "None",
+          "dtr": true,
+          "rts": true
+        }
+      },
+      {
+        "port_settings": {
+          "port": "COM1",
+          "baudrate": "115200",
+          "bytesize": "8",
+          "parity": "N",
+          "stopbits": "1",
+          "flow_control": "None",
+          "dtr": true,
+          "rts": true
+        }
+      }
+    ]
   },
   "command_list": {
     "recent_profiles": [],

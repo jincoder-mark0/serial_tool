@@ -87,8 +87,11 @@ class SettingsManager:
         현재 설정을 config/settings.json 파일에 저장합니다.
         """
         try:
+            print(f"[DEBUG] Writing to {self.config_path}")
+            print(f"[DEBUG] command_list.commands in settings: {self.settings.get('command_list', {}).get('commands', 'NOT FOUND')}")
             with open(self.config_path, 'w', encoding='utf-8') as f:
                 json.dump(self.settings, f, indent=2, ensure_ascii=False)
+            print(f"[DEBUG] Settings saved successfully")
         except IOError as e:
             print(f"설정 저장 실패: {e}")
     
