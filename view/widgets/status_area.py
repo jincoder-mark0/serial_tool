@@ -36,8 +36,8 @@ class StatusAreaWidget(QWidget):
         self.log_edit = QTextEdit()
         self.log_edit.setReadOnly(True)
         self.log_edit.setMaximumHeight(100) # 높이 제한
-        self.log_edit.setToolTip(language_manager.get_text("status_tooltip_log"))
-        self.log_edit.setPlaceholderText(language_manager.get_text("status_placeholder_log"))
+        self.log_edit.setToolTip(language_manager.get_text("status_txt_log_tooltip"))
+        self.log_edit.setPlaceholderText(language_manager.get_text("status_txt_log_placeholder"))
         self.log_edit.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
 
         layout.addWidget(self.label)
@@ -47,8 +47,8 @@ class StatusAreaWidget(QWidget):
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
         self.label.setText(language_manager.get_text("status_lbl_log"))
-        self.log_edit.setToolTip(language_manager.get_text("status_tooltip_log"))
-        self.log_edit.setPlaceholderText(language_manager.get_text("status_placeholder_log"))
+        self.log_edit.setToolTip(language_manager.get_text("status_txt_log_tooltip"))
+        self.log_edit.setPlaceholderText(language_manager.get_text("status_txt_log_placeholder"))
 
     def log(self, message: str, level: str = "INFO") -> None:
         """

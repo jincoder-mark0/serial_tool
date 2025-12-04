@@ -103,7 +103,7 @@ class ReceivedAreaWidget(QWidget):
         # 로그 표시 영역 (Log Display Area)
         self.text_edit = QTextEdit()
         self.text_edit.setReadOnly(True)
-        self.text_edit.setPlaceholderText(language_manager.get_text("recv_log_placeholder"))
+        self.text_edit.setPlaceholderText(language_manager.get_text("recv_txt_log_placeholder"))
         self.text_edit.setToolTip(language_manager.get_text("recv_lbl_log"))
         self.text_edit.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
 
@@ -137,7 +137,7 @@ class ReceivedAreaWidget(QWidget):
         self.rx_log_label.setText(language_manager.get_text("recv_lbl_log"))
 
         self.text_edit.setToolTip(language_manager.get_text("recv_lbl_log"))
-        self.text_edit.setPlaceholderText(language_manager.get_text("recv_log_placeholder"))
+        self.text_edit.setPlaceholderText(language_manager.get_text("recv_txt_log_placeholder"))
 
     def find_next(self) -> None:
         """다음 검색 결과를 찾습니다."""

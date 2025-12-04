@@ -172,7 +172,7 @@ class PreferencesDialog(QDialog):
 
     def browse_log_path(self) -> None:
         """로그 저장 경로 선택 다이얼로그를 엽니다."""
-        directory = QFileDialog.getExistingDirectory(self, language_manager.get_text("pref_dialog_select_dir"))
+        directory = QFileDialog.getExistingDirectory(self, language_manager.get_text("pref_dialog_title_select_dir"))
         if directory:
             self.log_path_edit.setText(directory)
 

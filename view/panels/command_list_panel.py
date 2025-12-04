@@ -133,7 +133,7 @@ class CommandListPanel(QWidget):
     def save_script_to_file(self) -> None:
         """현재 커맨드 리스트와 설정을 파일로 저장합니다."""
         filter_str = "JSON Files (*.json);;All Files (*)"
-        path, _ = QFileDialog.getSaveFileName(self, language_manager.get_text("cmd_list_dialog_save_title"), "", filter_str)
+        path, _ = QFileDialog.getSaveFileName(self, language_manager.get_text("cmd_list_dialog_title_save"), "", filter_str)
 
         if not path:
             return
@@ -152,7 +152,7 @@ class CommandListPanel(QWidget):
     def load_script_from_file(self) -> None:
         """파일에서 커맨드 리스트와 설정을 로드합니다."""
         filter_str = "JSON Files (*.json);;All Files (*)"
-        path, _ = QFileDialog.getOpenFileName(self, language_manager.get_text("cmd_list_dialog_open_title"), "", filter_str)
+        path, _ = QFileDialog.getOpenFileName(self, language_manager.get_text("cmd_list_dialog_title_open"), "", filter_str)
 
         if not path:
             return

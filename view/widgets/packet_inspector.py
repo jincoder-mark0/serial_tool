@@ -25,13 +25,13 @@ class PacketInspectorWidget(QWidget):
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.title_label = QLabel(language_manager.get_text("inspector_title"))
+        self.title_label = QLabel(language_manager.get_text("inspector_grp_title"))
         layout.addWidget(self.title_label)
 
         self.tree = QTreeWidget()
         self.tree.setHeaderLabels([
-            language_manager.get_text("inspector_field"),
-            language_manager.get_text("inspector_value")
+            language_manager.get_text("inspector_col_field"),
+            language_manager.get_text("inspector_col_value")
         ])
 
         # 더미 데이터 (Dummy Data)
@@ -54,7 +54,7 @@ class PacketInspectorWidget(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.title_label.setText(language_manager.get_text("inspector_title"))
+        self.title_label.setText(language_manager.get_text("inspector_grp_title"))
         self.tree.setHeaderLabels([
             language_manager.get_text("inspector_col_field"),
             language_manager.get_text("inspector_col_value")

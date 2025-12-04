@@ -38,7 +38,7 @@ class FontSettingsDialog(QDialog):
 
         # 가변폭 폰트 그룹 (Proportional Font Group)
         self.prop_group = QGroupBox(language_manager.get_text("font_grp_proportional"))
-        self.prop_group.setToolTip(language_manager.get_text("font_tooltip_proportional"))
+        self.prop_group.setToolTip(language_manager.get_text("font_grp_proportional_tooltip"))
         prop_layout = QVBoxLayout(self.prop_group)
 
         # 가변폭 폰트 컨트롤
@@ -74,7 +74,7 @@ class FontSettingsDialog(QDialog):
 
         # 고정폭 폰트 그룹 (Fixed Font Group)
         self.fixed_group = QGroupBox(language_manager.get_text("font_grp_fixed"))
-        self.fixed_group.setToolTip(language_manager.get_text("font_tooltip_fixed"))
+        self.fixed_group.setToolTip(language_manager.get_text("font_grp_fixed_tooltip"))
         fixed_layout = QVBoxLayout(self.fixed_group)
 
         # 고정폭 폰트 컨트롤

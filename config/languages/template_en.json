@@ -47,7 +47,7 @@
   "cmd_list_grp_list": "TODO: cmd_list_grp_list",
 
   // ============================================
-  // File Progress Widget Widget (widgets/file_progress_widget.py),
+  // File Progress Widget (widgets/file_progress.py),
   // ============================================
   "file_prog_btn_cancel": "TODO: file_prog_btn_cancel",
   "file_prog_lbl_eta_placeholder": "TODO: file_prog_lbl_eta_placeholder",
@@ -102,6 +102,8 @@
   "manual_ctrl_chk_rts": "TODO: manual_ctrl_chk_rts",
   "manual_ctrl_chk_rts_tooltip": "TODO: manual_ctrl_chk_rts_tooltip",
   "manual_ctrl_chk_suffix": "TODO: manual_ctrl_chk_suffix",
+  "manual_ctrl_dialog_file_filter_all": "TODO: manual_ctrl_dialog_file_filter_all",
+  "manual_ctrl_dialog_file_filter_txt": "TODO: manual_ctrl_dialog_file_filter_txt",
   "manual_ctrl_dialog_save_log_title": "TODO: manual_ctrl_dialog_save_log_title",
   "manual_ctrl_dialog_select_file": "TODO: manual_ctrl_dialog_select_file",
   "manual_ctrl_grp_control": "TODO: manual_ctrl_grp_control",
@@ -110,23 +112,17 @@
   "manual_ctrl_grp_manual": "TODO: manual_ctrl_grp_manual",
   "manual_ctrl_input_cmd_placeholder": "TODO: manual_ctrl_input_cmd_placeholder",
   "manual_ctrl_lbl_no_file": "TODO: manual_ctrl_lbl_no_file",
-  "manual_dialog_file_filter_all": "TODO: dialog_file_filter_all",
-  "manual_dialog_file_filter_txt": "TODO: dialog_file_filter_txt",
 
   // ============================================
   // Packet Inspector Widget (widgets/packet_inspector.py),
   // ============================================
   "inspector_col_field": "TODO: inspector_col_field",
   "inspector_col_value": "TODO: inspector_col_value",
-  "inspector_field": "TODO: inspector_field",
-  "inspector_title": "TODO: inspector_title",
-  "inspector_value": "TODO: inspector_value",
+  "inspector_grp_title": "TODO: inspector_grp_title",
 
   // ============================================
   // Port Settings Widget (widgets/port_settings.py),
   // ============================================
-  "port_baud_combo_tooltip": "TODO: port_baud_combo_tooltip",
-  "port_baudrate_label": "TODO: port_baudrate_label",
   "port_btn_connect": "TODO: port_btn_connect",
   "port_btn_connect_tooltip": "TODO: port_btn_connect_tooltip",
   "port_btn_disconnect": "TODO: port_btn_disconnect",
@@ -139,23 +135,13 @@
   "port_combo_port_tooltip": "TODO: port_combo_port_tooltip",
   "port_combo_stop_tooltip": "TODO: port_combo_stop_tooltip",
   "port_combo_tooltip": "TODO: port_combo_tooltip",
-  "port_data_bits_tooltip": "TODO: port_data_bits_tooltip",
-  "port_data_label": "TODO: port_data_label",
-  "port_flow_control_tooltip": "TODO: port_flow_control_tooltip",
-  "port_flow_label": "TODO: port_flow_label",
   "port_grp_settings": "TODO: port_grp_settings",
-  "port_label": "TODO: port_label",
   "port_lbl_baudrate": "TODO: port_lbl_baudrate",
   "port_lbl_data": "TODO: port_lbl_data",
   "port_lbl_flow": "TODO: port_lbl_flow",
   "port_lbl_parity": "TODO: port_lbl_parity",
   "port_lbl_port": "TODO: port_lbl_port",
   "port_lbl_stop": "TODO: port_lbl_stop",
-  "port_parity_label": "TODO: port_parity_label",
-  "port_parity_tooltip": "TODO: port_parity_tooltip",
-  "port_settings": "TODO: port_settings",
-  "port_stop_bits_tooltip": "TODO: port_stop_bits_tooltip",
-  "port_stop_label": "TODO: port_stop_label",
 
   // ============================================
   // Received Area Widget (widgets/received_area.py),
@@ -175,45 +161,30 @@
   "recv_input_search_placeholder": "TODO: recv_input_search_placeholder",
   "recv_input_search_tooltip": "TODO: recv_input_search_tooltip",
   "recv_lbl_log": "TODO: recv_lbl_log",
-  "recv_log_placeholder": "TODO: recv_log_placeholder",
+  "recv_txt_log_placeholder": "TODO: recv_txt_log_placeholder",
 
   // ============================================
   // Status Area Widget (widgets/status_area.py),
   // ============================================
   "status_lbl_log": "TODO: status_lbl_log",
-  "status_placeholder_log": "TODO: status_placeholder_log",
-  "status_tooltip_log": "TODO: status_tooltip_log",
+  "status_txt_log_placeholder": "TODO: status_txt_log_placeholder",
+  "status_txt_log_tooltip": "TODO: status_txt_log_tooltip",
 
   // ============================================
   // Command List Panel Panel (panels/command_list_panel.py),
   // ============================================
-  "manual_dialog_open_title": "TODO: manual_dialog_open_title",
-  "manual_dialog_save_title": "TODO: manual_dialog_save_title",
-
-  // ============================================
-  // Left Panel Panel (panels/left_panel.py),
-  // ============================================
-  "left_tooltip_port_tab": "TODO: left_tooltip_port_tab",
-
-  // ============================================
-  // Right Panel Panel (panels/right_panel.py),
-  // ============================================
-  "right_command_list_panel_tooltip": "TODO: right_command_list_panel_tooltip",
-  "right_packet_inspector_tooltip": "TODO: right_packet_inspector_tooltip",
-  "right_tab_cmd_list": "TODO: right_tab_cmd_list",
-  "right_tab_inspector": "TODO: right_tab_inspector",
-  "right_tooltip_cmd_list": "TODO: right_tooltip_cmd_list",
-  "right_tooltip_inspector": "TODO: right_tooltip_inspector",
+  "cmd_list_dialog_title_open": "TODO: cmd_list_dialog_title_open",
+  "cmd_list_dialog_title_save": "TODO: cmd_list_dialog_title_save",
 
   // ============================================
   // About Dialog Dialog (dialogs/about_dialog.py),
   // ============================================
-  "about_app_name": "TODO: about_app_name",
   "about_btn_close": "TODO: about_btn_close",
-  "about_copyright": "TODO: about_copyright",
-  "about_description": "TODO: about_description",
+  "about_lbl_app_name": "TODO: about_lbl_app_name",
+  "about_lbl_copyright": "TODO: about_lbl_copyright",
+  "about_lbl_description": "TODO: about_lbl_description",
+  "about_lbl_version": "TODO: about_lbl_version",
   "about_title": "TODO: about_title",
-  "about_version": "TODO: about_version",
 
   // ============================================
   // Font Settings Dialog Dialog (dialogs/font_settings_dialog.py),
@@ -221,13 +192,13 @@
   "font_btn_reset": "TODO: font_btn_reset",
   "font_btn_reset_tooltip": "TODO: font_btn_reset_tooltip",
   "font_grp_fixed": "TODO: font_grp_fixed",
+  "font_grp_fixed_tooltip": "TODO: font_grp_fixed_tooltip",
   "font_grp_proportional": "TODO: font_grp_proportional",
+  "font_grp_proportional_tooltip": "TODO: font_grp_proportional_tooltip",
   "font_lbl_font": "TODO: font_lbl_font",
   "font_lbl_preview": "TODO: font_lbl_preview",
   "font_lbl_size": "TODO: font_lbl_size",
   "font_title_settings": "TODO: font_title_settings",
-  "font_tooltip_fixed": "TODO: font_tooltip_fixed",
-  "font_tooltip_proportional": "TODO: font_tooltip_proportional",
 
   // ============================================
   // Preferences Dialog Dialog (dialogs/preferences_dialog.py),
@@ -236,7 +207,7 @@
   "pref_btn_browse": "TODO: pref_btn_browse",
   "pref_btn_cancel": "TODO: pref_btn_cancel",
   "pref_btn_ok": "TODO: pref_btn_ok",
-  "pref_dialog_select_dir": "TODO: pref_dialog_select_dir",
+  "pref_dialog_title_select_dir": "TODO: pref_dialog_title_select_dir",
   "pref_grp_command_format": "TODO: pref_grp_command_format",
   "pref_grp_default": "TODO: pref_grp_default",
   "pref_grp_logging": "TODO: pref_grp_logging",
@@ -254,5 +225,20 @@
   "pref_tab_general": "TODO: pref_tab_general",
   "pref_tab_logging": "TODO: pref_tab_logging",
   "pref_tab_serial": "TODO: pref_tab_serial",
-  "pref_title": "TODO: pref_title"
+  "pref_title": "TODO: pref_title",
+
+  // ============================================
+  // Left Section Section (sections/left_section.py),
+  // ============================================
+  "left_tooltip_port_tab": "TODO: left_tooltip_port_tab",
+
+  // ============================================
+  // Right Section Section (sections/right_section.py),
+  // ============================================
+  "right_command_list_panel_tooltip": "TODO: right_command_list_panel_tooltip",
+  "right_packet_inspector_tooltip": "TODO: right_packet_inspector_tooltip",
+  "right_tab_cmd_list": "TODO: right_tab_cmd_list",
+  "right_tab_inspector": "TODO: right_tab_inspector",
+  "right_tooltip_cmd_list": "TODO: right_tooltip_cmd_list",
+  "right_tooltip_inspector": "TODO: right_tooltip_inspector"
 }

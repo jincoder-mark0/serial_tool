@@ -20,20 +20,20 @@ class AboutDialog(QDialog):
         layout.setSpacing(20)
 
         # 앱 이름 및 버전
-        title_label = QLabel(language_manager.get_text("about_app_name"))
+        title_label = QLabel(language_manager.get_text("about_lbl_app_name"))
         title_label.setStyleSheet("font-size: 24px; font-weight: bold;")
         title_label.setAlignment(Qt.AlignCenter)
 
-        version_label = QLabel(language_manager.get_text("about_version"))
+        version_label = QLabel(language_manager.get_text("about_lbl_version"))
         version_label.setStyleSheet("font-size: 14px; color: #888;")
         version_label.setAlignment(Qt.AlignCenter)
 
         # 설명
-        desc_label = QLabel(language_manager.get_text("about_description"))
+        desc_label = QLabel(language_manager.get_text("about_lbl_description"))
         desc_label.setAlignment(Qt.AlignCenter)
 
         # 저작권
-        copyright_label = QLabel(language_manager.get_text("about_copyright"))
+        copyright_label = QLabel(language_manager.get_text("about_lbl_copyright"))
         copyright_label.setStyleSheet("font-size: 12px; color: #666;")
         copyright_label.setAlignment(Qt.AlignCenter)
 
