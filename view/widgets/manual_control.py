@@ -17,7 +17,12 @@ class ManualControlWidget(QWidget):
     send_file_requested = pyqtSignal(str) # filepath
     file_selected = pyqtSignal(str) # filepath
     save_log_requested = pyqtSignal(str) # filepath
+    save_log_requested = pyqtSignal(str) # filepath
     clear_info_requested = pyqtSignal()
+
+    # 접두사/접미사 상수 (CommandControl과 동일)
+    PREFIX_KEY = "prefix"
+    SUFFIX_KEY = "suffix"
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -75,7 +80,33 @@ class ManualControlWidget(QWidget):
 
         self.option_group.setLayout(option_layout)
 
-        # 2. 수동 전송 영역 (Manual Send Area)
+        # 2. 접두사/접미사 설정 그룹 (Prefix/Suffix Group) - New
+        self.format_group = QGroupBox(language_manager.get_text("manual_grp_format"))
+        format_layout = QHBoxLayout()
+        format_layout.setContentsMargins(2, 2, 2, 2)
+        format_layout.setSpacing(5)
+
+        self.prefix_check = QCheckBox(language_manager.get_text("manual_chk_prefix"))
+        self.prefix_input = QLineEdit()
+        self.prefix_input.setPlaceholderText("Prefix")
+        self.prefix_input.setFixedWidth(60)
+        self.prefix_input.setProperty("class", "fixed-font")
+
+        self.suffix_check = QCheckBox(language_manager.get_text("manual_chk_suffix"))
+        self.suffix_input = QLineEdit()
+        self.suffix_input.setPlaceholderText("Suffix")
+        self.suffix_input.setFixedWidth(60)
+        self.suffix_input.setProperty("class", "fixed-font")
+
+        format_layout.addWidget(self.prefix_check)
+        format_layout.addWidget(self.prefix_input)
+        format_layout.addWidget(self.suffix_check)
+        format_layout.addWidget(self.suffix_input)
+        format_layout.addStretch()
+
+        self.format_group.setLayout(format_layout)
+
+        # 3. 수동 전송 영역 (Manual Send Area)
         self.send_group = QGroupBox(language_manager.get_text("manual_grp_manual"))
         send_layout = QHBoxLayout()
         send_layout.setContentsMargins(2, 2, 2, 2)
@@ -119,6 +150,7 @@ class ManualControlWidget(QWidget):
         self.file_group.setLayout(file_layout)
 
         layout.addWidget(self.option_group)
+        layout.addWidget(self.format_group) # 추가됨
         layout.addWidget(self.send_group)
         layout.addWidget(self.file_group)
         layout.addStretch() # 하단 여백 추가
@@ -138,6 +170,10 @@ class ManualControlWidget(QWidget):
         self.rts_check.setText(language_manager.get_text("manual_chk_rts"))
         self.dtr_check.setText(language_manager.get_text("manual_chk_dtr"))
 
+        self.format_group.setTitle(language_manager.get_text("manual_grp_format"))
+        self.prefix_check.setText(language_manager.get_text("manual_chk_prefix"))
+        self.suffix_check.setText(language_manager.get_text("manual_chk_suffix"))
+
         self.send_group.setTitle(language_manager.get_text("manual_grp_manual"))
         self.send_btn.setText(language_manager.get_text("manual_btn_send"))
         self.input_field.setPlaceholderText(language_manager.get_text("manual_input_cmd_placeholder"))
@@ -155,8 +191,15 @@ class ManualControlWidget(QWidget):
         """전송 버튼 클릭 시 호출됩니다."""
         text = self.input_field.text()
         if text:
+            # 접두사/접미사 처리
+            final_text = text
+            if self.prefix_check.isChecked():
+                final_text = self.prefix_input.text() + final_text
+            if self.suffix_check.isChecked():
+                final_text = final_text + self.suffix_input.text()
+
             self.send_command_requested.emit(
-                text,
+                final_text,
                 self.hex_mode_check.isChecked(),
                 self.enter_check.isChecked()
             )
@@ -211,7 +254,12 @@ class ManualControlWidget(QWidget):
             "add_enter": self.enter_check.isChecked(),
             "rts": self.rts_check.isChecked(),
             "dtr": self.dtr_check.isChecked(),
-            "input_text": self.input_field.text()
+            "dtr": self.dtr_check.isChecked(),
+            "input_text": self.input_field.text(),
+            "use_prefix": self.prefix_check.isChecked(),
+            "prefix": self.prefix_input.text(),
+            "use_suffix": self.suffix_check.isChecked(),
+            "suffix": self.suffix_input.text()
         }
         return state
 
@@ -230,3 +278,7 @@ class ManualControlWidget(QWidget):
         self.rts_check.setChecked(state.get("rts", False))
         self.dtr_check.setChecked(state.get("dtr", False))
         self.input_field.setText(state.get("input_text", ""))
+        self.prefix_check.setChecked(state.get("use_prefix", False))
+        self.prefix_input.setText(state.get("prefix", ""))
+        self.suffix_check.setChecked(state.get("use_suffix", False))
+        self.suffix_input.setText(state.get("suffix", ""))

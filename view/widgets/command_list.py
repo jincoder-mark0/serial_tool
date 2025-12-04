@@ -45,22 +45,22 @@ class CommandListWidget(QWidget):
         self.select_all_check.stateChanged.connect(self.on_select_all_changed)
 
         self.add_btn = QPushButton()
-        self.add_btn.setObjectName("btn_add")
+        self.add_btn.setObjectName("add_btn")
         self.add_btn.setToolTip(language_manager.get_text("cmd_btn_add_tooltip"))
         self.add_btn.setFixedSize(30, 30)
 
         self.del_btn = QPushButton()
-        self.del_btn.setObjectName("btn_del")
+        self.del_btn.setObjectName("del_btn")
         self.del_btn.setToolTip(language_manager.get_text("cmd_btn_delete_tooltip"))
         self.del_btn.setFixedSize(30, 30)
 
         self.up_btn = QPushButton()
-        self.up_btn.setObjectName("btn_up")
+        self.up_btn.setObjectName("up_btn")
         self.up_btn.setToolTip(language_manager.get_text("cmd_btn_up_tooltip"))
         self.up_btn.setFixedSize(30, 30)
 
         self.down_btn = QPushButton()
-        self.down_btn.setObjectName("btn_down")
+        self.down_btn.setObjectName("down_btn")
         self.down_btn.setToolTip(language_manager.get_text("cmd_btn_down_tooltip"))
         self.down_btn.setFixedSize(30, 30)
 

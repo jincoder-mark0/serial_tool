@@ -75,12 +75,14 @@ class ReceivedArea(QWidget):
         self.search_input.returnPressed.connect(self.find_next)
         self.search_input.setMaximumWidth(200)
 
-        self.find_prev_btn = QPushButton("◀")
+        self.find_prev_btn = QPushButton()
+        self.find_prev_btn.setObjectName("find_prev_btn")
         self.find_prev_btn.setToolTip(language_manager.get_text("recv_btn_prev_tooltip"))
         self.find_prev_btn.setFixedWidth(30)
         self.find_prev_btn.clicked.connect(self.find_prev)
 
-        self.find_next_btn = QPushButton("▶")
+        self.find_next_btn = QPushButton()
+        self.find_next_btn.setObjectName("find_next_btn")
         self.find_next_btn.setToolTip(language_manager.get_text("recv_btn_next_tooltip"))
         self.find_next_btn.setFixedWidth(30)
         self.find_next_btn.clicked.connect(self.find_next)

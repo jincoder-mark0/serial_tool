@@ -79,6 +79,8 @@ QPushButton#add_btn { qproperty-icon: url(resources/icons/add_white.svg); }
 QPushButton#del_btn { qproperty-icon: url(resources/icons/delete_white.svg); }
 QPushButton#up_btn { qproperty-icon: url(resources/icons/up_white.svg); }
 QPushButton#down_btn { qproperty-icon: url(resources/icons/down_white.svg); }
+QPushButton#find_prev_btn { qproperty-icon: url(resources/icons/find_prev_white.svg); }
+QPushButton#find_next_btn { qproperty-icon: url(resources/icons/find_next_white.svg); }
 
 /* QLineEdit, QTextEdit */
 QLineEdit, QTextEdit, QPlainTextEdit {

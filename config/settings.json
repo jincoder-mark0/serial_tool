@@ -3,7 +3,7 @@
   "global": {
     "menu_theme": "dark",
     "menu_language": "ko",
-    "theme": "dark",
+    "theme": "light",
     "language": "en"
   },
   "ui": {
@@ -29,7 +29,11 @@
       "add_enter": true,
       "rts": false,
       "dtr": false,
-      "input_text": ""
+      "input_text": "",
+      "use_prefix": false,
+      "prefix": "",
+      "use_suffix": false,
+      "suffix": ""
     },
     "tabs": [
       {
@@ -58,6 +62,30 @@
         "enabled": true,
         "prefix": true,
         "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "asdf",
         "suffix": true,
         "hex_mode": false,
         "delay": "100"

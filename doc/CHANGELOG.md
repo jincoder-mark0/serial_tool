@@ -2,6 +2,28 @@
 
 ## [미배포] (Unreleased)
 
+### UI 개선 및 기능 강화 (2025-12-04)
+
+#### 추가 사항 (Added)
+
+- **ManualControlWidget 기능 확장**
+  - 접두사(Prefix) 및 접미사(Suffix) 입력 필드 및 체크박스 추가
+  - 데이터 전송 시 포맷팅 옵션 적용 기능
+
+- **스크립트 저장/로드**
+  - Command List 및 실행 설정을 JSON 파일로 저장/로드하는 기능 구현 (`CommandListPanel`)
+  - `save_script_to_file`, `load_script_from_file` 메서드 추가
+
+- **아이콘**
+  - 검색 탐색 버튼용 아이콘 추가 (`find_prev`, `find_next`)
+
+#### 수정 사항 (Fixed)
+
+- **UI 아이콘 표시**
+  - `CommandListWidget` 버튼의 objectName 불일치 수정 (`btn_add` → `add_btn` 등)으로 아이콘 미표시 문제 해결
+- **테마 스타일**
+  - 다크 테마에서 Placeholder 텍스트 색상 문제 수정 (`placeholder-text-color` 추가)
+
 ### 언어 키 표준화 및 로깅 프레임워크 (2025-12-03)
 
 #### 추가 사항 (Added)
@@ -55,15 +77,44 @@
   - PortSettingsWidget 부분 한글화 (포트, 스캔, 보레이트 버튼)
   - **리팩토링**: 언어 리소스를 코드에서 JSON 파일로 분리 (`config/languages/*.json`)
 
+- **commentjson 지원**
+  - 모든 JSON 파일 처리에 commentjson 라이브러리 적용
+  - JSON 파일에 주석 사용 가능 (가독성 향상)
+  - 설정 파일 및 언어 파일에 설명 주석 추가 가능
+
+- **설정 관리 개선**
+  - 설정 저장 위치를 `config/settings.json`으로 변경 (프로젝트 루트에서 config 폴더로)
+  - SettingsManager에 싱글톤 패턴 적용하여 설정 동기화 문제 해결
+
+- **위젯 상태 저장/복원 구현**
+  - ManualControlWidget: 입력 텍스트, HEX 모드, RTS/DTR 상태 저장/복원
+  - ReceivedArea: 검색어, HEX 모드, 타임스탬프, 일시정지 상태 저장/복원
+  - CommandControl: 초기화 문제 수정 및 상태 저장/복원 안정화
+  - CommandListPanel: 초기화 순서 변경으로 load_state 오류 해결
+
 #### 수정 사항 (Fixed)
 
 - **ThemeManager**: `load_theme()` 메서드의 `@staticmethod` 데코레이터 제거 (NameError 방지)
 - **ColorRulesManager**: 설정 파일 경로 계산 오류 수정 (`parent.parent.parent` → `parent.parent`)
-- **MainWindow**: Import 구문을 파일 상단으로 이동 (코드 스타일 가이드 준수)
+- **MainWindow**:
+  - Import 구문을 파일 상단으로 이동 (코드 스타일 가이드 준수)
+  - `on_language_changed` 및 `_save_window_state` 메서드 복구
+- **PortSettingsWidget**: 필수 메서드 복원 (`set_port_list`, `set_connected`)
+- **CommandControl**: SyntaxError 수정 (중복 코드 제거)
+- **CommandListPanel**: 초기화 순서 변경으로 상태 복원 시 오류 해결
+- **탭 관리**:
+  - 포트 탭 증식 문제 수정 (재시작 시 탭이 계속 추가되던 버그)
+  - LeftPanel의 탭 추가 로직 개선
+- **About Dialog**: 구현 완료 및 manage_lang_keys.py JSON 주석 처리 개선
+- **manage_lang_keys.py**: JSON 파싱 오류 처리 추가
 
 #### 변경 사항 (Changed)
 
 - **test_view.py**: PreferencesDialog, AboutDialog, FileProgressWidget, Language 테스트 케이스 추가
+- **디버그 로깅**:
+  - 모든 주요 컴포넌트에 저장/복구 디버그 로그 추가 (개발 중)
+  - 검증 완료 후 디버그 로그 제거
+
 
 ### 듀얼 폰트 시스템 (2025-12-01)
 
