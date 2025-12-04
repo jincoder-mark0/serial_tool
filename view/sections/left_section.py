@@ -4,10 +4,10 @@ from typing import Optional
 from view.language_manager import language_manager
 
 from view.panels.port_panel import PortPanel
-from view.widgets.manual_control import ManualControlWidget
+from view.panels.manual_control_panel import ManualControlPanel
 from core.settings_manager import SettingsManager
 
-class LeftPanel(QWidget):
+class LeftSection(QWidget):
     """
     MainWindow의 좌측 영역을 담당하는 패널 클래스입니다.
     여러 포트 탭(PortTabs)과 전역 수동 제어(ManualControlWidget)를 포함합니다.
@@ -15,7 +15,7 @@ class LeftPanel(QWidget):
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
-        LeftPanel을 초기화합니다.
+        LeftSection을 초기화합니다.
 
         Args:
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
@@ -39,8 +39,8 @@ class LeftPanel(QWidget):
         self.port_tabs.currentChanged.connect(self.on_tab_changed)
         self.port_tabs.setToolTip(language_manager.get_text("left_tooltip_port_tab"))
 
-        # 수동 제어 위젯 (현재 포트에 대한 전역 제어)
-        self.manual_control = ManualControlWidget()
+        # 수동 제어 패널 (현재 포트에 대한 전역 제어)
+        self.manual_control = ManualControlPanel()
 
         layout.addWidget(self.port_tabs, 1) # 탭이 남은 공간 차지
         layout.addWidget(self.manual_control) # 수동 제어는 하단에 위치

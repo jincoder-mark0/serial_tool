@@ -168,33 +168,43 @@ def check_missing_and_unused():
         used_keys.update(matches)
 
     # JSON 파일의 키들 읽기
-    en_json = root_dir / "config/languages/en.json"
-    ko_json = root_dir / "config/languages/ko.json"
+    lang_files = {
+        "en": root_dir / "config/languages/en.json",
+        "ko": root_dir / "config/languages/ko.json"
+    }
 
-    en_keys = set(json.loads(en_json.read_text(encoding='utf-8')).keys())
-    ko_keys = set(json.loads(ko_json.read_text(encoding='utf-8')).keys())
+    lang_keys = {}
+    for lang, json_path in lang_files.items():
+        try:
+            if not json_path.exists():
+                print(f"⚠ 경고: {lang}.json 파일이 존재하지 않습니다: {json_path}")
+                lang_keys[lang] = set()
+                continue
+
+            content = json_path.read_text(encoding='utf-8')
+            lang_keys[lang] = set(json.loads(content).keys())
+        except json.JSONDecodeError as e:
+            print(f"⚠ 경고: {lang}.json 파일 파싱 오류: {e}")
+            lang_keys[lang] = set()
+        except Exception as e:
+            print(f"⚠ 경고: {lang}.json 파일 읽기 오류: {e}")
+            lang_keys[lang] = set()
 
     # 비교
     print("\n=== 누락된 키 확인 ===")
-    missing_in_en = used_keys - en_keys
-    missing_in_ko = used_keys - ko_keys
 
-    if missing_in_en:
-        print(f"\n❌ en.json에 없는 키 ({len(missing_in_en)}개):")
-        for key in sorted(missing_in_en):
-            print(f"  - {key}")
-    else:
-        print("\n✓ en.json: 모든 키가 존재합니다!")
-
-    if missing_in_ko:
-        print(f"\n❌ ko.json에 없는 키 ({len(missing_in_ko)}개):")
-        for key in sorted(missing_in_ko):
-            print(f"  - {key}")
-    else:
-        print("\n✓ ko.json: 모든 키가 존재합니다!")
+    for lang, keys in lang_keys.items():
+        missing = used_keys - keys
+        if missing:
+            print(f"\n❌ {lang}.json에 없는 키 ({len(missing)}개):")
+            for key in sorted(missing):
+                print(f"  - {key}")
+        else:
+            print(f"\n✓ {lang}.json: 모든 키가 존재합니다!")
 
     print("\n=== 사용되지 않는 키 확인 ===")
-    unused = (en_keys | ko_keys) - used_keys
+    all_keys = set().union(*lang_keys.values()) if lang_keys.values() else set()
+    unused = all_keys - used_keys
 
     if unused:
         print(f"\n⚠ 사용되지 않는 키 ({len(unused)}개):")
@@ -205,8 +215,9 @@ def check_missing_and_unused():
 
     print(f"\n=== 통계 ===")
     print(f"코드에서 사용: {len(used_keys)}개")
-    print(f"en.json: {len(en_keys)}개")
-    print(f"ko.json: {len(ko_keys)}개")
+    for lang, keys in lang_keys.items():
+        print(f"{lang}.json: {len(keys)}개")
+
 
 def main():
     """메인 함수"""

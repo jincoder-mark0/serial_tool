@@ -11,7 +11,7 @@ class MainStatusBar(QStatusBar):
 
     def init_ui(self) -> None:
         """상태바 초기화"""
-        self.showMessage(language_manager.get_text("status_ready"))
+        self.showMessage(language_manager.get_text("main_status_ready"))
 
     def show_message(self, message: str, timeout: int = 0) -> None:
         """
@@ -29,4 +29,4 @@ class MainStatusBar(QStatusBar):
         # (임시 메시지가 떠있는 경우는 그대로 둠)
         current_msg = self.currentMessage()
         if not current_msg or current_msg == "Ready" or current_msg == "준비":
-             self.showMessage(language_manager.get_text("status_ready"))
+             self.showMessage(language_manager.get_text("main_status_ready"))

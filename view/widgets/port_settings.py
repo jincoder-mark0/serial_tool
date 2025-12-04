@@ -147,30 +147,30 @@ class PortSettingsWidget(QGroupBox):
 
         self.port_combo.setToolTip(language_manager.get_text("port_combo_tooltip"))
 
-        self.scan_btn.setText(language_manager.get_text("btn_scan"))
-        self.scan_btn.setToolTip(language_manager.get_text("btn_scan_tooltip"))
+        self.scan_btn.setText(language_manager.get_text("port_btn_scan"))
+        self.scan_btn.setToolTip(language_manager.get_text("port_btn_scan_tooltip"))
 
-        self.baud_combo.setToolTip(language_manager.get_text("baud_combo_tooltip"))
+        self.baud_combo.setToolTip(language_manager.get_text("port_baud_combo_tooltip"))
 
         # 연결 버튼 텍스트는 상태에 따라 다르므로 현재 상태 확인 필요
         if self.connect_btn.isChecked():
-            self.connect_btn.setText(language_manager.get_text("btn_disconnect"))
+            self.connect_btn.setText(language_manager.get_text("port_btn_disconnect"))
         else:
-            self.connect_btn.setText(language_manager.get_text("btn_connect"))
-        self.connect_btn.setToolTip(language_manager.get_text("btn_connect_tooltip"))
+            self.connect_btn.setText(language_manager.get_text("port_btn_connect"))
+        self.connect_btn.setToolTip(language_manager.get_text("port_btn_connect_tooltip"))
 
         self.port_label.setText(language_manager.get_text("port_label"))
-        self.baud_label.setText(language_manager.get_text("baudrate_label"))
+        self.baud_label.setText(language_manager.get_text("port_baudrate_label"))
 
-        self.bytesize_combo.setToolTip(language_manager.get_text("data_bits_tooltip"))
-        self.parity_combo.setToolTip(language_manager.get_text("parity_tooltip"))
-        self.stopbits_combo.setToolTip(language_manager.get_text("stop_bits_tooltip"))
-        self.flow_combo.setToolTip(language_manager.get_text("flow_control_tooltip"))
+        self.bytesize_combo.setToolTip(language_manager.get_text("port_data_bits_tooltip"))
+        self.parity_combo.setToolTip(language_manager.get_text("port_parity_tooltip"))
+        self.stopbits_combo.setToolTip(language_manager.get_text("port_stop_bits_tooltip"))
+        self.flow_combo.setToolTip(language_manager.get_text("port_flow_control_tooltip"))
 
-        self.data_label.setText(language_manager.get_text("data_label"))
-        self.parity_label.setText(language_manager.get_text("parity_label"))
-        self.stop_label.setText(language_manager.get_text("stop_label"))
-        self.flow_label.setText(language_manager.get_text("flow_label"))
+        self.data_label.setText(language_manager.get_text("port_data_label"))
+        self.parity_label.setText(language_manager.get_text("port_parity_label"))
+        self.stop_label.setText(language_manager.get_text("port_stop_label"))
+        self.flow_label.setText(language_manager.get_text("port_flow_label"))
 
     def on_connect_clicked(self) -> None:
         """연결 버튼 클릭 핸들러입니다."""

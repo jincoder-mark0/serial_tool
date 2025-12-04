@@ -3,9 +3,9 @@ from typing import Optional
 from view.language_manager import language_manager
 
 from view.panels.command_list_panel import CommandListPanel
-from view.widgets.packet_inspector import PacketInspector
+from view.panels.packet_inspector_panel import PacketInspectorPanel
 
-class RightPanel(QWidget):
+class RightSection(QWidget):
     """
     MainWindow의 우측 영역을 담당하는 패널 클래스입니다.
     Command List와 Packet Inspector를 탭으로 관리합니다.
@@ -13,7 +13,7 @@ class RightPanel(QWidget):
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
-        RightPanel을 초기화합니다.
+        RightSection을 초기화합니다.
 
         Args:
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
@@ -34,7 +34,7 @@ class RightPanel(QWidget):
         self.command_list_panel = CommandListPanel()
         self.command_list_panel.setToolTip(language_manager.get_text("right_tooltip_cmd_list"))
 
-        self.packet_inspector = PacketInspector()
+        self.packet_inspector = PacketInspectorPanel()
         self.packet_inspector.setToolTip(language_manager.get_text("right_tooltip_inspector"))
 
         self.tabs.addTab(self.command_list_panel, language_manager.get_text("right_tab_cmd_list"))
@@ -45,8 +45,8 @@ class RightPanel(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.command_list_panel.setToolTip(language_manager.get_text("command_list_panel_tooltip"))
-        self.packet_inspector.setToolTip(language_manager.get_text("packet_inspector_tooltip"))
+        self.command_list_panel.setToolTip(language_manager.get_text("right_command_list_panel_tooltip"))
+        self.packet_inspector.setToolTip(language_manager.get_text("right_packet_inspector_tooltip"))
 
         self.tabs.setTabText(0, language_manager.get_text("right_tab_cmd_list"))
         self.tabs.setTabText(1, language_manager.get_text("right_tab_inspector"))

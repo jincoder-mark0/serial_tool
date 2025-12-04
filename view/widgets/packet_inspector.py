@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QTreeWidget, QTreeWidg
 from typing import Optional
 from view.language_manager import language_manager
 
-class PacketInspector(QWidget):
+class PacketInspectorWidget(QWidget):
     """
     패킷 구조를 트리 형태로 시각화하여 보여주는 위젯 클래스입니다.
     (현재는 더미 데이터로 구현되어 있으며, 추후 실제 패킷 분석 기능이 추가될 예정입니다.)

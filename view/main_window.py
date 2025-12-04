@@ -3,8 +3,8 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt
 
-from view.panels.left_panel import LeftPanel
-from view.panels.right_panel import RightPanel
+from view.sections.left_section import LeftSection
+from view.sections.right_section import RightSection
 from view.theme_manager import ThemeManager
 from view.language_manager import language_manager
 from view.dialogs.font_settings_dialog import FontSettingsDialog
@@ -16,7 +16,7 @@ from view.widgets.main_status_bar import MainStatusBar
 class MainWindow(QMainWindow):
     """
     애플리케이션의 메인 윈도우 클래스입니다.
-    LeftPanel(포트/제어)과 RightPanel(커맨드/인스펙터)을 포함하며,
+    LeftSection(포트/제어)과 RightSection(커맨드/인스펙터)을 포함하며,
     메뉴바, 상태바 및 전역 설정을 관리합니다.
     """
 
@@ -62,8 +62,8 @@ class MainWindow(QMainWindow):
 
         # 포트 탭 상태 복원
         port_states = self.settings.get('ports.tabs', [])
-        if hasattr(self, 'left_panel'):
-            self.left_panel.load_state(port_states)
+        if hasattr(self, 'left_section'):
+            self.left_section.load_state(port_states)
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
@@ -77,11 +77,11 @@ class MainWindow(QMainWindow):
         # 스플리터 구성 (좌: 포트/제어, 우: 커맨드/인스펙터)
         splitter = QSplitter(Qt.Horizontal)
 
-        self.left_panel = LeftPanel()
-        self.right_panel = RightPanel()
+        self.left_section = LeftSection()
+        self.right_section = RightSection()
 
-        splitter.addWidget(self.left_panel)
-        splitter.addWidget(self.right_panel)
+        splitter.addWidget(self.left_section)
+        splitter.addWidget(self.right_section)
         splitter.setStretchFactor(0, 1) # 좌측 패널 비율
         splitter.setStretchFactor(1, 1) # 우측 패널 비율
 
@@ -93,7 +93,7 @@ class MainWindow(QMainWindow):
 
     def _connect_menu_signals(self) -> None:
         """메뉴바 시그널을 슬롯에 연결합니다."""
-        self.menu_bar.new_tab_requested.connect(self.left_panel.add_new_port_tab)
+        self.menu_bar.new_tab_requested.connect(self.left_section.add_new_port_tab)
         self.menu_bar.exit_requested.connect(self.close)
         self.menu_bar.theme_changed.connect(self.switch_theme)
         self.menu_bar.font_settings_requested.connect(self.open_font_settings_dialog)
@@ -195,11 +195,11 @@ class MainWindow(QMainWindow):
         self._save_window_state()
 
         # 패널 상태 저장
-        if hasattr(self, 'right_panel'):
-            self.right_panel.save_state()
+        if hasattr(self, 'right_section'):
+            self.right_section.save_state()
 
-        if hasattr(self, 'left_panel'):
-            port_states = self.left_panel.save_state()
+        if hasattr(self, 'left_section'):
+            port_states = self.left_section.save_state()
             self.settings.set('ports.tabs', port_states)
 
         # 설정 파일 저장

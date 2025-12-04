@@ -38,7 +38,7 @@ class AboutDialog(QDialog):
         copyright_label.setAlignment(Qt.AlignCenter)
 
         # 닫기 버튼
-        close_btn = QPushButton(language_manager.get_text("global_btn_close"))
+        close_btn = QPushButton(language_manager.get_text("about_btn_close"))
         close_btn.setFixedWidth(100)
         close_btn.clicked.connect(self.accept)
 

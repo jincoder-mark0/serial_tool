@@ -32,6 +32,7 @@ class PreferencesDialog(QDialog):
         self.tabs = QTabWidget()
         self.tabs.addTab(self.create_general_tab(), language_manager.get_text("pref_tab_general"))
         self.tabs.addTab(self.create_serial_tab(), language_manager.get_text("pref_tab_serial"))
+        self.tabs.addTab(self.create_command_tab(), language_manager.get_text("pref_tab_command")) # New Tab
         self.tabs.addTab(self.create_logging_tab(), language_manager.get_text("pref_tab_logging"))
 
         layout.addWidget(self.tabs)
@@ -40,13 +41,13 @@ class PreferencesDialog(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
 
-        self.ok_btn = QPushButton(language_manager.get_text("global_btn_ok"))
+        self.ok_btn = QPushButton(language_manager.get_text("pref_btn_ok"))
         self.ok_btn.clicked.connect(self.accept)
 
-        self.cancel_btn = QPushButton(language_manager.get_text("global_btn_cancel"))
+        self.cancel_btn = QPushButton(language_manager.get_text("pref_btn_cancel"))
         self.cancel_btn.clicked.connect(self.reject)
 
-        self.apply_btn = QPushButton(language_manager.get_text("global_btn_apply"))
+        self.apply_btn = QPushButton(language_manager.get_text("pref_btn_apply"))
         self.apply_btn.clicked.connect(self.apply_settings)
 
         btn_layout.addWidget(self.ok_btn)
@@ -112,6 +113,32 @@ class PreferencesDialog(QDialog):
         widget.setLayout(layout)
         return widget
 
+    def create_command_tab(self) -> QWidget:
+        """Command 설정 탭을 생성합니다."""
+        widget = QWidget()
+        layout = QVBoxLayout()
+
+        # Prefix/Suffix 그룹
+        format_group = QGroupBox(language_manager.get_text("pref_grp_command_format"))
+        format_layout = QFormLayout()
+
+        self.prefix_combo = QComboBox()
+        self.prefix_combo.setEditable(True)
+        self.prefix_combo.addItems(["", "\\r", "\\n", "\\r\\n", "AT", "AT+"])
+
+        self.suffix_combo = QComboBox()
+        self.suffix_combo.setEditable(True)
+        self.suffix_combo.addItems(["", "\\r", "\\n", "\\r\\n"])
+
+        format_layout.addRow(language_manager.get_text("pref_lbl_prefix"), self.prefix_combo)
+        format_layout.addRow(language_manager.get_text("pref_lbl_suffix"), self.suffix_combo)
+        format_group.setLayout(format_layout)
+
+        layout.addWidget(format_group)
+        layout.addStretch()
+        widget.setLayout(layout)
+        return widget
+
     def create_logging_tab(self) -> QWidget:
         """Logging 설정 탭을 생성합니다."""
         widget = QWidget()
@@ -160,6 +187,10 @@ class PreferencesDialog(QDialog):
         self.default_baud_combo.setCurrentText(str(self.current_settings.get("default_baudrate", 115200)))
         self.scan_interval_spin.setValue(self.current_settings.get("scan_interval", 5000))
 
+        # Command
+        self.prefix_combo.setCurrentText(self.current_settings.get("command_prefix", ""))
+        self.suffix_combo.setCurrentText(self.current_settings.get("command_suffix", "\\r\\n"))
+
         # Logging
         self.log_path_edit.setText(self.current_settings.get("log_path", os.getcwd()))
         self.max_lines_spin.setValue(self.current_settings.get("max_log_lines", 2000))
@@ -172,6 +203,8 @@ class PreferencesDialog(QDialog):
             "font_size": self.font_size_spin.value(),
             "default_baudrate": int(self.default_baud_combo.currentText()),
             "scan_interval": self.scan_interval_spin.value(),
+            "command_prefix": self.prefix_combo.currentText(),
+            "command_suffix": self.suffix_combo.currentText(),
             "log_path": self.log_path_edit.text(),
             "max_log_lines": self.max_lines_spin.value()
         }

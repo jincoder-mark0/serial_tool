@@ -5,7 +5,7 @@ from typing import Optional
 import datetime
 from view.language_manager import language_manager
 
-class StatusArea(QWidget):
+class StatusAreaWidget(QWidget):
     """
     시스템 상태 메시지 및 에러 로그를 표시하는 위젯 클래스입니다.
     QTextEdit를 사용하여 여러 줄의 상태 이력을 관리합니다.

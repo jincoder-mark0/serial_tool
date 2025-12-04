@@ -39,29 +39,29 @@ class CommandListWidget(QWidget):
         header_layout = QHBoxLayout()
 
         # 전체 선택 체크박스 (Tristate 지원)
-        self.select_all_check = QCheckBox(language_manager.get_text("cmd_chk_select_all"))
-        self.select_all_check.setToolTip(language_manager.get_text("cmd_chk_select_all_tooltip"))
+        self.select_all_check = QCheckBox(language_manager.get_text("cmd_list_chk_select_all"))
+        self.select_all_check.setToolTip(language_manager.get_text("cmd_list_chk_select_all_tooltip"))
         self.select_all_check.setTristate(True)
         self.select_all_check.stateChanged.connect(self.on_select_all_changed)
 
         self.add_btn = QPushButton()
         self.add_btn.setObjectName("add_btn")
-        self.add_btn.setToolTip(language_manager.get_text("cmd_btn_add_tooltip"))
+        self.add_btn.setToolTip(language_manager.get_text("cmd_list_btn_add_tooltip"))
         self.add_btn.setFixedSize(30, 30)
 
         self.del_btn = QPushButton()
         self.del_btn.setObjectName("del_btn")
-        self.del_btn.setToolTip(language_manager.get_text("cmd_btn_delete_tooltip"))
+        self.del_btn.setToolTip(language_manager.get_text("cmd_list_btn_delete_tooltip"))
         self.del_btn.setFixedSize(30, 30)
 
         self.up_btn = QPushButton()
         self.up_btn.setObjectName("up_btn")
-        self.up_btn.setToolTip(language_manager.get_text("cmd_btn_up_tooltip"))
+        self.up_btn.setToolTip(language_manager.get_text("cmd_list_btn_up_tooltip"))
         self.up_btn.setFixedSize(30, 30)
 
         self.down_btn = QPushButton()
         self.down_btn.setObjectName("down_btn")
-        self.down_btn.setToolTip(language_manager.get_text("cmd_btn_down_tooltip"))
+        self.down_btn.setToolTip(language_manager.get_text("cmd_list_btn_down_tooltip"))
         self.down_btn.setFixedSize(30, 30)
 
         header_layout.addWidget(self.select_all_check)
@@ -84,7 +84,7 @@ class CommandListWidget(QWidget):
         # 컬럼: 선택, 접두사, 명령어, 접미사, HEX, 지연시간, 전송버튼
         self.update_header_labels()
         self.cmd_table.setModel(self.model)
-        self.cmd_table.setToolTip(language_manager.get_text("cmd_grp_list"))
+        self.cmd_table.setToolTip(language_manager.get_text("cmd_list_grp_list"))
 
         # 스크롤바 정책 - 항상 표시
         self.cmd_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
@@ -120,15 +120,15 @@ class CommandListWidget(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.select_all_check.setText(language_manager.get_text("cmd_chk_select_all"))
-        self.select_all_check.setToolTip(language_manager.get_text("cmd_chk_select_all_tooltip"))
+        self.select_all_check.setText(language_manager.get_text("cmd_list_chk_select_all"))
+        self.select_all_check.setToolTip(language_manager.get_text("cmd_list_chk_select_all_tooltip"))
 
-        self.add_btn.setToolTip(language_manager.get_text("cmd_btn_add_tooltip"))
-        self.del_btn.setToolTip(language_manager.get_text("cmd_btn_delete_tooltip"))
-        self.up_btn.setToolTip(language_manager.get_text("cmd_btn_up_tooltip"))
-        self.down_btn.setToolTip(language_manager.get_text("cmd_btn_down_tooltip"))
+        self.add_btn.setToolTip(language_manager.get_text("cmd_list_btn_add_tooltip"))
+        self.del_btn.setToolTip(language_manager.get_text("cmd_list_btn_delete_tooltip"))
+        self.up_btn.setToolTip(language_manager.get_text("cmd_list_btn_up_tooltip"))
+        self.down_btn.setToolTip(language_manager.get_text("cmd_list_btn_down_tooltip"))
 
-        self.cmd_table.setToolTip(language_manager.get_text("cmd_grp_list"))
+        self.cmd_table.setToolTip(language_manager.get_text("cmd_list_grp_list"))
         self.update_header_labels()
 
         # Send 버튼 텍스트 업데이트 (모든 행)
@@ -138,18 +138,18 @@ class CommandListWidget(QWidget):
             if widget:
                 btn = widget.findChild(QPushButton)
                 if btn:
-                    btn.setText(language_manager.get_text("cmd_btn_send"))
+                    btn.setText(language_manager.get_text("cmd_list_btn_send"))
 
     def update_header_labels(self) -> None:
         """테이블 헤더 라벨을 업데이트합니다."""
         labels = [
             "",
-            language_manager.get_text("cmd_col_prefix"),
-            language_manager.get_text("cmd_col_command"),
-            language_manager.get_text("cmd_col_suffix"),
-            language_manager.get_text("cmd_col_hex"),
-            language_manager.get_text("cmd_col_delay"),
-            language_manager.get_text("cmd_col_send")
+            language_manager.get_text("cmd_list_col_prefix"),
+            language_manager.get_text("cmd_list_col_command"),
+            language_manager.get_text("cmd_list_col_suffix"),
+            language_manager.get_text("cmd_list_col_hex"),
+            language_manager.get_text("cmd_list_col_delay"),
+            language_manager.get_text("cmd_list_col_send")
         ]
         self.model.setHorizontalHeaderLabels(labels)
 
@@ -280,7 +280,7 @@ class CommandListWidget(QWidget):
         layout.setContentsMargins(2, 2, 2, 2)
         layout.setAlignment(Qt.AlignCenter)
 
-        btn = QPushButton(language_manager.get_text("cmd_btn_send"))
+        btn = QPushButton(language_manager.get_text("cmd_list_btn_send"))
         btn.setCursor(Qt.PointingHandCursor)
         # 초기 상태는 비활성화 (포트 연결 전)
         btn.setEnabled(False)

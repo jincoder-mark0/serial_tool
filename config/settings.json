@@ -3,7 +3,7 @@
   "global": {
     "menu_theme": "dark",
     "menu_language": "ko",
-    "theme": "light",
+    "theme": "dark",
     "language": "en"
   },
   "ui": {
@@ -26,14 +26,11 @@
     },
     "manual_control": {
       "hex_mode": false,
-      "add_enter": true,
       "rts": false,
       "dtr": false,
       "input_text": "",
       "use_prefix": false,
-      "prefix": "",
-      "use_suffix": false,
-      "suffix": ""
+      "use_suffix": false
     },
     "tabs": [
       {
@@ -116,8 +113,6 @@
       }
     ],
     "control_state": {
-      "prefix": "",
-      "suffix": "",
       "delay": "1000",
       "max_runs": 0
     }

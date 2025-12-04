@@ -2,6 +2,26 @@
 
 ## [미배포] (Unreleased)
 
+### UI 아키텍처 리팩토링 (2025-12-04)
+
+#### 변경 사항 (Changed)
+
+- **4단계 계층 구조 확립 (Window → Section → Panel → Widget)**
+  - 기존 `LeftPanel`, `RightPanel`을 `LeftSection`, `RightSection`으로 리팩토링
+  - 새 디렉토리 `view/sections/` 생성
+  - `ManualControlPanel`, `PacketInspectorPanel` 래퍼 추가
+  - 각 계층의 역할 명확화:
+    - **Window**: 최상위 애플리케이션 셸 (`MainWindow`)
+    - **Section**: 화면 구획 분할, Panel만 포함 (`LeftSection`, `RightSection`)
+    - **Panel**: 기능 단위 그룹, Widget만 포함 (`PortPanel`, `CommandListPanel`, `ManualControlPanel` 등)
+    - **Widget**: 실제 UI 요소 및 로직 (`PortSettingsWidget`, `ManualControlWidget` 등)
+  - Presenter 계층 업데이트 (`port_presenter.py`, `main_presenter.py`)
+
+#### 이점 (Benefits)
+- 코드 구조의 일관성 및 가독성 향상
+- 컴포넌트 책임 범위 명확화
+- 유지보수 및 확장성 개선
+
 ### UI 개선 및 기능 강화 (2025-12-04)
 
 #### 추가 사항 (Added)

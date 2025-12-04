@@ -54,8 +54,8 @@ class CommandListPanel(QWidget):
         self.command_list.command_list_changed.connect(self.save_state)
 
         # CommandControl의 입력 필드 변경 시에도 저장 (textChanged, valueChanged 등)
-        self.command_control.prefix_input.textChanged.connect(self.save_state)
-        self.command_control.suffix_input.textChanged.connect(self.save_state)
+        # self.command_control.prefix_input.textChanged.connect(self.save_state) # 제거됨
+        # self.command_control.suffix_input.textChanged.connect(self.save_state) # 제거됨
         self.command_control.global_delay_input.textChanged.connect(self.save_state)
         self.command_control.auto_run_max_spin.valueChanged.connect(self.save_state)
 
@@ -133,7 +133,7 @@ class CommandListPanel(QWidget):
     def save_script_to_file(self) -> None:
         """현재 커맨드 리스트와 설정을 파일로 저장합니다."""
         filter_str = "JSON Files (*.json);;All Files (*)"
-        path, _ = QFileDialog.getSaveFileName(self, language_manager.get_text("dialog_save_log_title"), "", filter_str)
+        path, _ = QFileDialog.getSaveFileName(self, language_manager.get_text("cmd_list_dialog_save_title"), "", filter_str)
 
         if not path:
             return
@@ -152,7 +152,7 @@ class CommandListPanel(QWidget):
     def load_script_from_file(self) -> None:
         """파일에서 커맨드 리스트와 설정을 로드합니다."""
         filter_str = "JSON Files (*.json);;All Files (*)"
-        path, _ = QFileDialog.getOpenFileName(self, language_manager.get_text("manual_dialog_select_file"), "", filter_str)
+        path, _ = QFileDialog.getOpenFileName(self, language_manager.get_text("cmd_list_dialog_open_title"), "", filter_str)
 
         if not path:
             return

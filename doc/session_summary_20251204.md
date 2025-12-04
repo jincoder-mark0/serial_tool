@@ -27,9 +27,20 @@
   - 커맨드 리스트 데이터와 컨트롤 설정(지연 시간, 반복 횟수 등)을 JSON 파일로 일괄 저장/복원
   - `commentjson` 라이브러리 사용하여 JSON 가독성 확보
 
-### C. 문서화
+### C. UI 아키텍처 리팩토링
+- **4단계 계층 구조 확립 (`Window → Section → Panel → Widget`)**:
+  - `view/sections/` 디렉토리 생성
+  - `LeftPanel` → `LeftSection`, `RightPanel` → `RightSection`으로 변경
+  - `ManualControlPanel` (`ManualControlWidget` 래핑), `PacketInspectorPanel` (`PacketInspectorWidget` 래핑) 생성
+  - 각 계층의 역할 명확화:
+    - **Section**: 화면 구획, Panel만 포함
+    - **Panel**: 기능 그룹, Widget만 포함
+    - **Widget**: 실제 UI 요소
+  - Presenter 계층 임포트 및 참조 경로 업데이트 (`port_presenter.py`, `main_presenter.py`)
+
+### D. 문서화
 - **CHANGELOG 업데이트**: 12월 2일~3일 누락된 변경 사항(설정 저장, commentjson 등) 보완
-- **Session Summary 업데이트**: 12월 2일, 3일 요약 문서 현행화
+- **Session Summary 업데이트**: 12월 2일, 3일, 4일 요약 문서 현행화
 
 ## 3. 결과
 - 사용자가 요청한 모든 UI 개선 사항이 적용되었습니다.

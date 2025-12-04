@@ -6,7 +6,7 @@ import datetime
 from view.color_rules import ColorRulesManager
 from view.language_manager import language_manager
 
-class ReceivedArea(QWidget):
+class ReceivedAreaWidget(QWidget):
     """
     수신된 시리얼 데이터를 표시하는 위젯 클래스입니다.
     텍스트/HEX 모드 전환, 일시 정지, 타임스탬프 표시, 로그 저장 및 지우기 기능을 제공합니다.
