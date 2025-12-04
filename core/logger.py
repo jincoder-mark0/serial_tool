@@ -5,16 +5,17 @@ from datetime import datetime
 
 class Logger:
     _instance = None
+    _initialized = False
 
-    @classmethod
-    def get_instance(cls):
+    def __new__(cls):
         if cls._instance is None:
-            cls._instance = cls()
+            cls._instance = super(Logger, cls).__new__(cls)
         return cls._instance
 
     def __init__(self):
-        if Logger._instance is not None:
-            raise Exception("This class is a singleton!")
+        """Logger를 초기화하고 핸들러를 설정합니다."""
+        if self._initialized:
+            return
 
         self.logger = logging.getLogger("SerialTool")
         self.logger.setLevel(logging.DEBUG)
@@ -41,6 +42,8 @@ class Logger:
         self.logger.addHandler(file_handler)
         self.logger.addHandler(console_handler)
 
+        self._initialized = True
+
     def debug(self, message):
         self.logger.debug(message)
 
@@ -57,4 +60,4 @@ class Logger:
         self.logger.critical(message)
 
 # Global logger instance
-logger = Logger.get_instance()
+logger = Logger()

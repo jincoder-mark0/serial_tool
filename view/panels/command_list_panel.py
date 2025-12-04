@@ -54,8 +54,6 @@ class CommandListPanel(QWidget):
         self.command_list.command_list_changed.connect(self.save_state)
 
         # CommandControl의 입력 필드 변경 시에도 저장 (textChanged, valueChanged 등)
-        # self.command_control.prefix_input.textChanged.connect(self.save_state) # 제거됨
-        # self.command_control.suffix_input.textChanged.connect(self.save_state) # 제거됨
         self.command_control.global_delay_input.textChanged.connect(self.save_state)
         self.command_control.auto_run_max_spin.valueChanged.connect(self.save_state)
 

@@ -21,7 +21,6 @@
 - **형식**: Google 스타일 Docstring 형식을 사용합니다.
 - **언어**: 모든 Docstring은 **한국어**로 작성합니다.
 - **간결함**: 첫 줄은 마침표 없이 간단명료하게 작성합니다.
-- **타입**: 타입 힌트는 함수 시그니처에 명시하므로 docstring에서는 생략 가능합니다.
 
 ### 기본 형식
 - **요약**: 함수/클래스가 수행하는 작업에 대한 간략한 설명
@@ -29,8 +28,6 @@
 - **Args**: 각 매개변수에 대한 설명
 - **Returns**: 반환값 설명 (복잡한 구조는 상세히 기술)
 - **Raises**: (선택 사항) 발생 가능한 예외
-
-
 
 ### 예시 1: 모듈 Docstring
 - Import 이전에 작성합니다.
@@ -153,58 +150,19 @@ def get_available_ports() -> List[str]:
 ```
 
 ## 5. 명명 규칙 (Naming Conventions)
+
+자세한 명명 규칙은 [**Naming Convention Guide**](../docs/naming_convention.md)를 참조하세요.
+
+### 5.1 기본 규칙 요약
 - **클래스**: `PascalCase` (예: `SerialManager`, `MainWindow`)
 - **함수/메서드**: `snake_case` (예: `connect_port`, `update_ui`)
 - **변수**: `snake_case` (예: `port_name`, `is_connected`)
 - **상수**: `UPPER_CASE` (예: `DEFAULT_BAUDRATE`, `MAX_RETRIES`)
-- **비공개 멤버**: 밑줄 `_` 접두사 사용 (예: `_internal_helper`, `_buffer`)
+- **비공개 멤버**: `_prefix` (예: `_internal_helper`, `_buffer`)
+- **언어 키**: `[context]_[type]_[name]` 형식 (예: `port_btn_connect`, `manual_ctrl_chk_hex`)
 
-### 5.1 언어 키 네이밍 규칙 (Language Key Naming Convention)
-
-다국어 지원을 위한 언어 키는 다음 형식을 엄격히 준수해야 합니다:
-
-**형식**: `[context]_[type]_[name]`
-
-- **context**: 위젯/컴포넌트 이름 (예: `port`, `cmd_list`, `manual_ctrl`)
-- **type**: UI 요소 타입
-  - `btn`: 버튼 (Button)
-  - `lbl`: 라벨 (Label)
-  - `chk`: 체크박스 (Checkbox)
-  - `combo`: 콤보박스 (ComboBox)
-  - `input`: 입력 필드 (Input Field)
-  - `grp`: 그룹박스 (GroupBox)
-  - `col`: 테이블 컬럼 (Table Column)
-  - `tab`: 탭 (Tab)
-  - `dialog`: 다이얼로그 (Dialog)
-  - `txt`: 텍스트 영역 (TextEdit/TextArea)
-  - `tooltip`: 툴팁 (Tooltip) - 다른 요소의 툴팁인 경우 해당 요소 타입 뒤에 추가
-- **name**: 구체적인 기능/용도 설명
-
-#### 예시
-```python
-# 올바른 예시
-"port_btn_connect"              # 포트 연결 버튼
-"port_combo_baud_tooltip"       # 보드레이트 콤보박스의 툴팁
-"cmd_list_col_command"          # 명령 리스트의 명령 컬럼
-"manual_ctrl_grp_control"       # 수동 제어의 제어 그룹박스
-"recv_txt_log_placeholder"      # 수신 영역의 로그 텍스트 플레이스홀더
-"about_lbl_app_name"            # About 다이얼로그의 앱 이름 라벨
-"font_grp_fixed_tooltip"        # 폰트 설정의 고정폭 그룹박스 툴팁
-
-# 잘못된 예시
-"port_baud_combo_tooltip"       # ❌ type이 name 뒤에 위치
-"port_settings"                 # ❌ type 누락 (port_grp_settings가 올바름)
-"inspector_field"               # ❌ type 누락 (inspector_col_field가 올바름)
-"cmd_list_dialog_open_title"    # ❌ 순서 오류 (cmd_list_dialog_title_open이 올바름)
-```
-
-#### 특수 케이스
-- **다이얼로그 타이틀**: `[context]_dialog_title_[name]`
-  - 예: `cmd_list_dialog_title_save`, `pref_dialog_title_select_dir`
-- **상태 메시지**: `[context]_status_[name]`
-  - 예: `file_prog_status_completed`, `file_prog_status_sending`
-- **필터 문자열**: `[context]_dialog_file_filter_[name]`
-  - 예: `manual_ctrl_dialog_file_filter_txt`, `manual_ctrl_dialog_file_filter_all`
+> [!NOTE]
+> 언어 키의 상세 규칙, 특수 케이스, 적용 가이드는 별도 문서를 참조하세요.
 
 
 ## 6. Git 관리 가이드 (Git Management Guide)

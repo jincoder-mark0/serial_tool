@@ -1,5 +1,5 @@
 {
-    "app_title": "시리얼 도구",
+    "main_title": "시리얼 도구",
     "cmd_ctrl_btn_load_script": "불러오기",
     "cmd_ctrl_btn_load_script_tooltip": "파일에서 명령 스크립트 불러오기",
     "cmd_ctrl_btn_run_once": "실행",

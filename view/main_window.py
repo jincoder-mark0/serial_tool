@@ -36,7 +36,7 @@ class MainWindow(QMainWindow):
         language_manager.set_language(lang)
         language_manager.language_changed.connect(self.on_language_changed)
 
-        self.setWindowTitle(f"{language_manager.get_text('app_title')} v1.0")
+        self.setWindowTitle(f"{language_manager.get_text('main_title')} v1.0")
         self.resize(1400, 900)
 
         self.init_ui()
@@ -149,9 +149,29 @@ class MainWindow(QMainWindow):
         Args:
             new_settings (dict): 변경된 설정 딕셔너리.
         """
-        # 설정 저장
+        # 설정을 논리적 그룹별로 저장
+        settings_map = {
+            # UI/Theme settings
+            'menu_theme': 'global.theme',
+            'menu_language': 'global.language',
+            'font_size': 'ui.font_size',
+            'max_log_lines': 'ui.log_max_lines',
+
+            # Serial settings
+            'default_baudrate': 'serial.default_baudrate',
+            'scan_interval': 'serial.scan_interval',
+
+            # Command settings
+            'command_prefix': 'command.prefix',
+            'command_suffix': 'command.suffix',
+
+            # Logging settings
+            'log_path': 'logging.path',
+        }
+
         for key, value in new_settings.items():
-            self.settings.set(f'global.{key}', value)
+            setting_path = settings_map.get(key, f'global.{key}')  # Fallback to global
+            self.settings.set(setting_path, value)
 
         # 테마 변경
         if 'menu_theme' in new_settings:
@@ -202,7 +222,7 @@ class MainWindow(QMainWindow):
         Args:
             lang_code (str): 변경된 언어 코드 (예: 'en', 'ko').
         """
-        self.setWindowTitle(f"{language_manager.get_text('app_title')} v1.0")
+        self.setWindowTitle(f"{language_manager.get_text('main_title')} v1.0")
 
         # 상태바 업데이트
         self.global_status_bar.retranslate_ui()

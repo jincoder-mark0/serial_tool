@@ -2,7 +2,7 @@
   // ============================================
   // Main Window (main_window.py),
   // ============================================
-  "app_title": "TODO: app_title",
+  "main_title": "TODO: main_title",
 
   // ============================================
   // Command Control Widget (widgets/command_control.py),

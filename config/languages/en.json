@@ -1,5 +1,5 @@
 {
-    "app_title": "Serial Tool",
+    "main_title": "Serial Tool",
     "cmd_ctrl_btn_load_script": "Load",
     "cmd_ctrl_btn_load_script_tooltip": "Load command script from file",
     "cmd_ctrl_btn_run_once": "Run",

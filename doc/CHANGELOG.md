@@ -2,6 +2,41 @@
 
 ## [미배포] (Unreleased)
 
+### MVP 아키텍처 리팩토링 및 코드 품질 개선 (2025-12-05)
+
+#### 변경 사항 (Changed)
+
+- **MVP 아키텍처 준수**
+  - `ManualControlWidget`에서 `SettingsManager` 직접 호출 제거
+  - `send_command_requested` 시그널 변경: 3개 파라미터 → 4개 파라미터 (text, hex_mode, use_prefix, use_suffix)
+  - View는 원본 사용자 입력과 체크박스 상태만 전달
+  - prefix/suffix 처리 로직을 `MainPresenter.on_send_command_requested()`로 이동
+  - View 계층에서 비즈니스 로직 40+ 라인 제거
+
+- **네이밍 규칙 문서 통합**
+  - `docs/naming_convention.md`에 모든 네이밍 규칙 통합 (클래스, 함수, 변수, 상수, 언어 키 등)
+  - `doc/code_style_guide.md`에서 중복 내용 제거, 참조 링크로 대체
+  - 단일 문서로 일관성 및 유지보수성 향상
+
+- **Logger 싱글톤 패턴 개선**
+  - 예외 발생 방식에서 `__new__` + `_initialized` 패턴으로 변경
+  - `SettingsManager`와 동일한 구현 방식 적용
+  - 다중 인스턴스 생성 시도 시 안전하게 동일 인스턴스 반환
+
+- **설정 구조 리팩토링**
+  - 평탄한 `global.*` 네임스페이스에서 논리적 그룹으로 재구조화
+  - 새로운 그룹: `serial.*`, `command.*`, `logging.*`, `ui.*`
+  - `main_window.py` `apply_preferences()` 메서드에 settings_map 추가
+  - `main_presenter.py`에서 `global.command_prefix` → `command.prefix` 경로 변경
+  - `settings.json` 구조 개선
+
+#### 이점 (Benefits)
+
+- **아키텍처 개선**: View와 Presenter 책임 분리 명확화, MVP 패턴 준수
+- **문서 통합**: 단일 소스로 네이밍 규칙 참조, 문서 관리 일원화
+- **안정성 향상**: Logger 싱글톤 패턴 개선으로 애플리케이션 안정성 증대
+- **설정 관리**: 논리적 그룹화로 장기 유지보수 용이
+
 ### 문서 및 Preferences 다이얼로그 개선 (2025-12-04)
 
 #### 변경 사항 (Changed)

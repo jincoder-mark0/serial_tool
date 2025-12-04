@@ -27,8 +27,10 @@ class MainPresenter(QObject):
         # 데이터 수신 시그널을 로그 뷰에 연결
         self.port_controller.data_received.connect(self.on_data_received)
 
-        # 수동 전송 버튼 연결
-        self.view.left_section.manual_control.manual_control_widget.send_btn.clicked.connect(self.on_manual_send)
+        # 수동 전송 시그널 연결
+        self.view.left_section.manual_control.manual_control_widget.send_command_requested.connect(
+            self.on_send_command_requested
+        )
 
     def on_data_received(self, data: bytes) -> None:
         """
@@ -45,18 +47,43 @@ class MainPresenter(QObject):
             if hasattr(widget, 'received_area'):
                 widget.received_area.append_data(data)
 
-    def on_manual_send(self) -> None:
+    def on_send_command_requested(self, text: str, hex_mode: bool, use_prefix: bool, use_suffix: bool) -> None:
         """
-        수동 전송 버튼 클릭을 처리합니다.
-        입력 필드의 텍스트를 가져와 포트로 전송합니다.
+        수동 명령 전송 요청을 처리합니다.
+        prefix/suffix 설정을 적용하고 최종 데이터를 전송합니다.
+
+        Args:
+            text: 사용자가 입력한 원본 텍스트
+            hex_mode: HEX 모드 사용 여부
+            use_prefix: 접두사 사용 여부
+            use_suffix: 접미사 사용 여부
         """
-        text = self.view.left_section.manual_control.manual_control_widget.input_field.text()
-        if text and self.port_controller.is_open:
-            # 텍스트를 바이트로 변환
-            # TODO: HEX 모드, 라인 엔딩 등을 처리해야 함
-            data = text.encode('utf-8')
-            self.port_controller.send_data(data)
-            # 전송 후 입력 필드 초기화
-            self.view.left_section.manual_control.manual_control_widget.input_field.clear()
-        elif not self.port_controller.is_open:
+        if not self.port_controller.is_open:
             print("Port not open")
+            return
+
+        from core.settings_manager import SettingsManager
+        settings = SettingsManager()
+
+        final_text = text
+
+        # Apply prefix if requested
+        if use_prefix:
+            prefix = settings.get("command.prefix", "")
+            prefix = prefix.replace("\\r", "\r").replace("\\n", "\n")
+            final_text = prefix + final_text
+
+        # Apply suffix if requested
+        if use_suffix:
+            suffix = settings.get("command.suffix", "\\r\\n")
+            suffix = suffix.replace("\\r", "\r").replace("\\n", "\n")
+            final_text = final_text + suffix
+
+        # Convert to bytes
+        if hex_mode:
+            # TODO: Implement hex mode conversion
+            data = final_text.encode('utf-8')
+        else:
+            data = final_text.encode('utf-8')
+
+        self.port_controller.send_data(data)

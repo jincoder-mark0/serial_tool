@@ -54,8 +54,6 @@ class CommandControlWidget(QWidget):
 
         # 접두사 / 접미사 입력 (Prefix / Suffix Inputs)
         # 접두사 / 접미사 입력 (Prefix / Suffix Inputs) - Removed
-        # self.prefix_input, self.suffix_input 제거됨
-
         # self.prefix_label = QLabel(language_manager.get_text("cmd_ctrl_lbl_prefix"))
         # self.suffix_label = QLabel(language_manager.get_text("cmd_ctrl_lbl_suffix"))
 
@@ -219,8 +217,6 @@ class CommandControlWidget(QWidget):
             dict: 위젯 상태 데이터.
         """
         state = {
-            # "prefix": self.prefix_input.text(), # 제거됨
-            # "suffix": self.suffix_input.text(), # 제거됨
             "delay": self.global_delay_input.text(),
             "max_runs": self.auto_run_max_spin.value()
         }

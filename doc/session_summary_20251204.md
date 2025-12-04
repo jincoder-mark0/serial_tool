@@ -66,6 +66,8 @@
 - Preferences 다이얼로그가 메뉴에서 정상적으로 접근 가능합니다.
 
 ## 4. 다음 단계 (Next Steps)
+> **Note**: 이후 작업은 2025-12-05 세션에서 진행되었습니다. 자세한 내용은 `doc/session_summary_20251205.md` 참조.
+
 - **Phase 3: Core 유틸리티 구현**
   - `RingBuffer` (core/utils.py): 고속 데이터 처리를 위한 원형 버퍼
   - `ThreadSafeQueue` (core/utils.py): 스레드 간 안전한 데이터 전달
