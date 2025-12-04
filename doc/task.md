@@ -11,8 +11,8 @@
 ## Phase 2: UI Implementation & Theme System (Completed)
 - [x] Implement Main Window Layout
     - [x] Create `MainWindow` class
-    - [x] Implement `LeftPanel` (Port/Control)
-    - [x] Implement `RightPanel` (Command/Inspector)
+    - [x] Implement `LeftSection` (Port/Control)
+    - [x] Implement `RightSection` (Command/Inspector)
 - [x] Implement Widgets
     - [x] `PortSettingsWidget`
     - [x] `ReceivedArea` (Log View)
@@ -35,6 +35,7 @@
     - [x] Move widgets to `view/widgets`
     - [x] Move panels to `view/panels`
     - [x] Move dialogs to `view/dialogs`
+    - [x] Create `view/sections` for Left/Right sections
 - [x] Multi-language Support (Localization)
     - [x] Create `LanguageManager`
     - [x] Create `en.json` and `ko.json`
@@ -45,7 +46,7 @@
     - [x] Apply to `FileProgressWidget`
     - [x] Apply to `PacketInspectorWidget`
     - [x] Apply to `MainWindow` (Menus, Dock Titles)
-    - [x] Apply to `LeftPanel` & `RightPanel` (Tabs)
+    - [x] Apply to `LeftSection` & `RightSection` (Tabs)
     - [x] Apply to `PortSettingsWidget`
     - [x] Apply to `StatusArea`
     - [x] Apply to `FontSettingsDialog`

@@ -54,18 +54,31 @@ serial_tool2/
 ├── view/                    # UI 계층
 │   ├── main_window.py      # 메인 윈도우 [완료]
 │   ├── theme_manager.py    # 테마 관리 [완료]
-│   ├── panels/             # 패널 컴포넌트
-│   │   ├── left_panel.py   # 좌측 패널 (포트 탭) [완료]
-│   │   ├── right_panel.py  # 우측 패널 (커맨드/인스펙터) [완료]
+│   ├── language_manager.py # 언어 관리 [완료]
+│   ├── sections/           # 섹션 (화면 분할) [완료]
+│   │   ├── left_section.py # 좌측 섹션 [완료]
+│   │   └── right_section.py# 우측 섹션 [완료]
+│   ├── panels/             # 패널 (기능 그룹) [완료]
 │   │   ├── port_panel.py   # 포트 패널 [완료]
-│   │   └── command_list_panel.py # 커맨드 리스트 패널 [완료]
-│   └── widgets/            # 위젯 컴포넌트
+│   │   ├── command_list_panel.py # 커맨드 리스트 패널 [완료]
+│   │   ├── manual_control_panel.py # 수동 제어 패널 [완료]
+│   │   ├── packet_inspector_panel.py # 패킷 인스펙터 패널 [완료]
+│   │   └── tx_panel.py     # 전송 패널 (수동+커맨드) [완료]
+│   ├── widgets/            # 위젯 (UI 요소) [완료]
 │       ├── port_settings.py       # 포트 설정 [완료]
 │       ├── received_area.py       # 로그 뷰 [완료]
 │       ├── manual_control.py      # 수동 제어 [완료]
 │       ├── command_list.py        # 커맨드 리스트 [완료]
 │       ├── command_control.py     # 커맨드 제어 [완료]
-│       └── packet_inspector.py    # 패킷 인스펙터 [완료]
+│       ├── packet_inspector.py    # 패킷 인스펙터 [완료]
+│       ├── status_area.py         # 상태 표시 영역 [완료]
+│       ├── file_progress.py       # 파일 전송 진행 [완료]
+│       ├── main_menu_bar.py       # 메인 메뉴바 [완료]
+│       └── main_status_bar.py     # 메인 상태바 [완료]
+│   └── dialogs/            # 대화상자 [완료]
+│       ├── about_dialog.py        # 정보 대화상자 [완료]
+│       ├── font_settings_dialog.py# 폰트 설정 [완료]
+│       └── preferences_dialog.py  # 환경 설정 [완료]
 ├── presenter/               # Presenter 계층
 │   ├── main_presenter.py   # 중앙 제어
 │   ├── port_presenter.py   # 포트 제어
@@ -287,8 +300,9 @@ class CommandEntry:
 
 #### [완료] UI 구조
 - `MainWindow`: 메인 레이아웃, 메뉴, 툴바
-- `LeftPanel`: 포트 탭 + 수동 제어
-- `RightPanel`: 커맨드 리스트 + 패킷 인스펙터
+- `LeftSection`: 포트 탭 + 수동 제어 (화면 좌측)
+- `RightSection`: 커맨드 리스트 + 패킷 인스펙터 (화면 우측)
+- `Panels`: 기능 단위 그룹 (PortPanel, CommandListPanel 등)
 
 #### [완료] 위젯
 - `PortSettingsWidget`: 컴팩트 2줄 레이아웃
@@ -348,7 +362,7 @@ class PluginBase(ABC):
     @abstractmethod
     def register(self, app_context: AppContext) -> None:
         pass
-    
+
     @abstractmethod
     def unregister(self) -> None:
         pass
