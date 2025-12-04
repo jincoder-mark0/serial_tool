@@ -65,6 +65,43 @@
 - 언어 키 네이밍에 대한 명확한 가이드라인이 문서화되었습니다.
 - Preferences 다이얼로그가 메뉴에서 정상적으로 접근 가능합니다.
 
-## 4. 다음 단계
-- Core 유틸리티 구현 (RingBuffer, ThreadSafeQueue, EventBus)
-- Model 계층 구현 시작
+## 4. 다음 단계 (Next Steps)
+- **Phase 3: Core 유틸리티 구현**
+  - `RingBuffer` (core/utils.py): 고속 데이터 처리를 위한 원형 버퍼
+  - `ThreadSafeQueue` (core/utils.py): 스레드 간 안전한 데이터 전달
+  - `EventBus` (core/event_bus.py): 컴포넌트 간 느슨한 결합을 위한 이벤트 버스
+- **Model 계층 구현 시작**
+  - `SerialWorker`: 실제 시리얼 통신 로직
+
+---
+
+## 5. 인수인계 및 환경 설정 (Handover Information)
+
+이 프로젝트를 다른 컴퓨터에서 이어서 작업하기 위한 정보입니다.
+
+### A. 개발 환경 (Environment)
+- **Python**: 3.10 이상 권장 (3.11 테스트 완료)
+- **OS**: Windows 10/11 (기본 개발 환경), Linux/macOS 호환 가능
+- **의존성 (Dependencies)**:
+  ```bash
+  pip install PyQt5 pyserial commentjson
+  ```
+  *(참고: `requirements.txt`가 있다면 `pip install -r requirements.txt` 사용)*
+
+### B. 실행 방법 (Execution)
+프로젝트 루트(`serial_tool2/`)에서 다음 명령어로 실행합니다:
+```bash
+python main.py
+```
+
+### C. 현재 상태 요약 (Current Status)
+- **UI**: 100% 구현 완료 (다국어, 테마, 폰트 적용됨)
+- **로직**:
+  - View 계층 로직 (위젯 동작, 설정 저장/복원) 완료
+  - Core/Model 계층은 아직 구현 전 (Mock 또는 비어 있음)
+- **문서**: `doc/task.md`와 `doc/implementation_plan.md`가 최신 사양(`Implementation_Specification.md`)과 동기화됨 (한글)
+
+### D. 주의 사항 (Notes)
+- **가상 시리얼 포트**: 실제 장비가 없다면 `com0com`(Windows) 또는 `socat`(Linux)을 사용하여 테스트 환경을 구성해야 합니다.
+- **설정 파일**: `config/settings.json`이 없으면 기본값으로 자동 생성됩니다.
+- **로그**: `logs/` 디렉토리에 실행 로그가 저장됩니다. 문제 발생 시 확인하세요.
