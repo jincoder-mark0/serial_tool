@@ -2,9 +2,16 @@
   "version": "1.0",
   "global": {
     "menu_theme": "dark",
-    "menu_language": "ko",
+    "menu_language": "English",
     "theme": "dark",
-    "language": "en"
+    "language": "en",
+    "font_size": 10,
+    "default_baudrate": 115200,
+    "scan_interval": 5000,
+    "command_prefix": "asdfasdf",
+    "command_suffix": "",
+    "log_path": "E:\\_Python\\serial_tool2",
+    "max_log_lines": 2000
   },
   "ui": {
     "log_max_lines": 2000,

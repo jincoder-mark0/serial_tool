@@ -152,6 +152,7 @@ def get_available_ports() -> List[str]:
     # 구현 내용...
 ```
 
+## 5. 명명 규칙 (Naming Conventions)
 - **클래스**: `PascalCase` (예: `SerialManager`, `MainWindow`)
 - **함수/메서드**: `snake_case` (예: `connect_port`, `update_ui`)
 - **변수**: `snake_case` (예: `port_name`, `is_connected`)

@@ -38,7 +38,22 @@
     - **Widget**: 실제 UI 요소
   - Presenter 계층 임포트 및 참조 경로 업데이트 (`port_presenter.py`, `main_presenter.py`)
 
-### D. 문서화
+### E. 코딩 스타일 가이드 및 Preferences 다이얼로그 개선
+- **코딩 스타일 가이드 업데이트**:
+  - `doc/code_style_guide.md`에 언어 키 네이밍 규칙 섹션(5.1) 추가
+  - `[context]_[type]_[name]` 형식 명시
+  - UI 요소 타입 목록 제공: `btn`, `lbl`, `chk`, `combo`, `input`, `grp`, `col`, `tab`, `dialog`, `txt`, `tooltip`
+  - 올바른 예시 및 잘못된 예시 제공
+  - 특수 케이스 문서화 (다이얼로그 타이틀, 상태 메시지 등)
+
+- **Preferences 다이얼로그 접근성 수정**:
+  - `MainWindow`에서 `preferences_requested` 시그널 연결 (이전에 주석 처리되어 있었음)
+  - `PreferencesDialog` import 추가
+  - `open_preferences_dialog()` 메서드 구현
+  - `apply_preferences()` 메서드 구현 (테마/언어 변경 적용)
+  - 메뉴바 → View → Preferences 메뉴 정상 작동
+
+### F. 문서화
 - **CHANGELOG 업데이트**: 12월 2일~3일 누락된 변경 사항(설정 저장, commentjson 등) 보완
 - **Session Summary 업데이트**: 12월 2일, 3일, 4일 요약 문서 현행화
 
@@ -47,6 +62,8 @@
 - Manual Control에서 더 유연한 데이터 전송이 가능해졌습니다.
 - Command List의 스크립트 저장/로드 기능이 정상적으로 동작합니다.
 - UI 테마의 일관성이 향상되었습니다.
+- 언어 키 네이밍에 대한 명확한 가이드라인이 문서화되었습니다.
+- Preferences 다이얼로그가 메뉴에서 정상적으로 접근 가능합니다.
 
 ## 4. 다음 단계
 - Core 유틸리티 구현 (RingBuffer, ThreadSafeQueue, EventBus)

@@ -9,6 +9,7 @@ from view.theme_manager import ThemeManager
 from view.language_manager import language_manager
 from view.dialogs.font_settings_dialog import FontSettingsDialog
 from view.dialogs.about_dialog import AboutDialog
+from view.dialogs.preferences_dialog import PreferencesDialog
 from core.settings_manager import SettingsManager
 from view.widgets.main_menu_bar import MainMenuBar
 from view.widgets.main_status_bar import MainStatusBar
@@ -98,7 +99,7 @@ class MainWindow(QMainWindow):
         self.menu_bar.theme_changed.connect(self.switch_theme)
         self.menu_bar.font_settings_requested.connect(self.open_font_settings_dialog)
         self.menu_bar.language_changed.connect(lambda lang: language_manager.set_language(lang))
-        # self.menu_bar.preferences_requested.connect(...) # 추후 구현
+        self.menu_bar.preferences_requested.connect(self.open_preferences_dialog)
         self.menu_bar.about_requested.connect(self.open_about_dialog)
 
     def switch_theme(self, theme_name: str) -> None:
@@ -133,6 +134,35 @@ class MainWindow(QMainWindow):
             QApplication.instance().setFont(prop_font)
 
             self.global_status_bar.show_message("Font settings updated", 2000)
+
+    def open_preferences_dialog(self) -> None:
+        """Preferences 다이얼로그를 엽니다."""
+        current_settings = self.settings.get_all_settings()
+        dialog = PreferencesDialog(self, current_settings)
+        dialog.settings_changed.connect(self.apply_preferences)
+        dialog.exec_()
+
+    def apply_preferences(self, new_settings: dict) -> None:
+        """
+        Preferences 다이얼로그에서 변경된 설정을 적용합니다.
+
+        Args:
+            new_settings (dict): 변경된 설정 딕셔너리.
+        """
+        # 설정 저장
+        for key, value in new_settings.items():
+            self.settings.set(f'global.{key}', value)
+
+        # 테마 변경
+        if 'menu_theme' in new_settings:
+            self.switch_theme(new_settings['menu_theme'])
+
+        # 언어 변경
+        if 'menu_language' in new_settings:
+            lang_code = 'ko' if new_settings['menu_language'] == 'Korean' else 'en'
+            language_manager.set_language(lang_code)
+
+        self.global_status_bar.show_message("Settings updated", 2000)
 
     def open_about_dialog(self) -> None:
         """About 다이얼로그를 엽니다."""

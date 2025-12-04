@@ -2,6 +2,30 @@
 
 ## [미배포] (Unreleased)
 
+### 문서 및 Preferences 다이얼로그 개선 (2025-12-04)
+
+#### 변경 사항 (Changed)
+
+- **코딩 스타일 가이드 업데이트**
+  - `doc/code_style_guide.md`에 언어 키 네이밍 규칙 섹션(5.1) 추가
+  - `[context]_[type]_[name]` 형식 엄격히 정의
+  - UI 요소 타입별 분류 (`btn`, `lbl`, `chk`, `combo`, `input`, `grp`, `col`, `tab`, `dialog`, `txt`, `tooltip`)
+  - 올바른/잘못된 예시 제공
+  - 특수 케이스 문서화 (다이얼로그 타이틀, 상태 메시지, 필터 문자열)
+
+- **Preferences 다이얼로그 접근성 수정**
+  - `view/main_window.py`에서 `preferences_requested` 시그널 연결
+  - `open_preferences_dialog()` 및 `apply_preferences()` 메서드 추가
+  - 메뉴바 → View → Preferences 정상 작동
+  - 테마 및 언어 변경 즉시 적용
+
+#### 이점 (Benefits)
+
+- 언어 키 네이밍에 대한 명확한 가이드라인 제공
+- 신규 개발자 온보딩 시 참고 자료 확보
+- Preferences 다이얼로그 접근성 개선
+- 일관성 있는 코드베이스 유지
+
 ### UI 아키텍처 리팩토링 (2025-12-04)
 
 #### 변경 사항 (Changed)
