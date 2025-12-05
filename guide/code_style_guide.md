@@ -17,29 +17,32 @@
 - **Docstring**: 모든 Docstring은 **한국어**로 작성해야 합니다.
 - **커밋 메시지**: Git 커밋 메시지는 **한국어**로 작성해야 합니다.
 
-## 3. Docstrings
-- **형식**: Google 스타일 Docstring 형식을 사용합니다.
-- **내용**:
-    - **요약**: 클래스나 함수가 수행하는 작업에 대한 간략한 설명.
-    - **Args**: 각 인수에 대한 상세 설명 및 타입.
-    - **Returns**: 반환 값 및 타입에 대한 설명.
-    - **Raises**: (선택 사항) 발생할 수 있는 예외 목록.
+## 3. 주석 및 Docstrings
 
-### 예시
+**주석 작성에 대한 상세 가이드는 별도 문서를 참조하세요:**
+
+👉 **[주석 가이드 (Comment Guide)](comment_guide.md)**
+
+### 3.1 기본 원칙
+- **언어**: 모든 주석 및 Docstring은 **한국어**로 작성
+- **형식**: Google Style Docstring 사용
+- **타입 힌트**: 함수 시그니처에 타입 힌트 필수
+
+### 3.2 간단한 예시
+
 ```python
-def connect_to_port(self, port_name: str, baudrate: int) -> bool:
-    """
-    지정된 시리얼 포트에 연결합니다.
-    
-    Args:
-        port_name (str): 연결할 포트 이름 (예: "COM3").
-        baudrate (int): 통신 속도 (예: 115200).
-        
+def get_available_ports() -> List[str]:
+    """사용 가능한 시리얼 포트 목록을 반환합니다
+
     Returns:
-        bool: 연결 성공 시 True, 실패 시 False.
+        List[str]: 포트 이름 리스트
     """
     # 구현 내용...
 ```
+
+> [!NOTE]
+> 모듈 Docstring의 WHY/WHAT/HOW 구조, 복잡한 함수 작성법, 인라인 주석 규칙 등 상세한 내용은 [주석 가이드](comment_guide.md)를 참조하세요.
+
 
 ## 4. 타입 힌팅 (Type Hinting)
 - **필수**: 모든 함수 인수 및 반환 값에 대해 타입 힌트가 필수입니다.
@@ -53,7 +56,7 @@ from typing import List, Optional
 def get_available_ports() -> List[str]:
     """
     사용 가능한 시리얼 포트 목록을 반환합니다.
-    
+
     Returns:
         List[str]: 포트 이름 리스트.
     """
@@ -61,64 +64,40 @@ def get_available_ports() -> List[str]:
 ```
 
 ## 5. 명명 규칙 (Naming Conventions)
+
+자세한 명명 규칙은 [**Naming Convention Guide**](../docs/naming_convention.md)를 참조하세요.
+
+### 5.1 기본 규칙 요약
 - **클래스**: `PascalCase` (예: `SerialManager`, `MainWindow`)
 - **함수/메서드**: `snake_case` (예: `connect_port`, `update_ui`)
 - **변수**: `snake_case` (예: `port_name`, `is_connected`)
 - **상수**: `UPPER_CASE` (예: `DEFAULT_BAUDRATE`, `MAX_RETRIES`)
-- **비공개 멤버**: 밑줄 `_` 접두사 사용 (예: `_internal_helper`, `_buffer`)
+- **비공개 멤버**: `_prefix` (예: `_internal_helper`, `_buffer`)
+- **언어 키**: `[context]_[type]_[name]` 형식 (예: `port_btn_connect`, `manual_ctrl_chk_hex`)
 
-## 6. Git 관리 가이드 (Git Management Guide)
+> [!NOTE]
+> 언어 키의 상세 규칙, 특수 케이스, 적용 가이드는 별도 문서를 참조하세요.
 
-### 6.1 지속적인 백업 (Continuous Backup)
-> [!IMPORTANT]
-> **Git을 통한 지속적인 백업은 필수입니다.**
-> - 작업 중 최소 **하루 1회 이상** 커밋하여 변경사항을 기록합니다.
-> - 중요한 기능 구현 후에는 **즉시 커밋**하여 작업 내용을 보존합니다.
-> - 정기적으로 원격 저장소(GitHub 등)에 **push**하여 백업하세요.
 
-### 6.2 브랜치 전략 (Branch Strategy)
-- **main**: 배포 가능한 안정 버전.
-- **develop**: 개발 중인 최신 버전 (선택 사항).
-- **feature/기능명**: 새로운 기능 개발 (예: `feature/dual-font-system`).
-- **fix/버그명**: 버그 수정 (예: `fix/connection-error`).
-- **refactor/대상**: 리팩토링 (예: `refactor/theme-manager`).
+## 6. Git 관리 (Git Management)
 
-### 6.3 커밋 메시지 (Commit Messages)
-- **언어**: 반드시 **한국어**로 작성합니다.
-- **형식**: `태그: 설명` 형식을 권장합니다.
-- **태그 목록**:
-    - `Feat`: 새로운 기능 추가
-    - `Fix`: 버그 수정
-    - `Docs`: 문서 수정
-    - `Style`: 코드 포맷팅, 세미콜론 누락 등 (코드 변경 없음)
-    - `Refactor`: 코드 리팩토링
-    - `Test`: 테스트 코드 추가/수정
-    - `Chore`: 빌드 업무 수정, 패키지 매니저 수정 등
+**Git 사용에 대한 상세 가이드는 별도 문서를 참조하세요:**
 
-### 6.4 권장 워크플로우
-```bash
-# 1. 새 기능 시작 시 브랜치 생성
-git checkout -b feature/새기능명
+👉 **[Git 관리 가이드 (Git Guide)](git_guide.md)**
 
-# 2. 작업 중 자주 커밋 (하루 1회 이상)
-git add .
-git commit -m "Feat: 기능 설명"
+### 6.1 핵심 요약
+- **언어**: 커밋 메시지, PR, 이슈는 **한국어**로 작성
+- **커밋 주기**: 최소 **하루 1회 이상** 권장
+- **메시지 형식**: `태그: 제목` (예: `Feat: 로그인 기능 구현`)
 
-# 3. 원격 저장소에 백업
-git push origin feature/새기능명
+### 6.2 주요 태그
+- `Feat`: 기능 추가
+- `Fix`: 버그 수정
+- `Docs`: 문서 수정
+- `Refactor`: 리팩토링
 
-# 4. 기능 완료 시 main으로 병합
-git checkout main
-git merge feature/새기능명
-git push origin main
-```
-
-### 예시
-```
-Feat: 듀얼 폰트 시스템 구현
-Fix: 포트 연결 실패 시 크래시 수정
-Docs: README.md 사용법 업데이트
-```
+> [!TIP]
+> 커밋 수정(amend), 되돌리기(reset/revert), 임시 저장(stash) 등 유용한 실무 명령어는 [Git 관리 가이드](git_guide.md)의 **실무 Git 레시피** 섹션을 확인하세요.
 
 ## 7. 프로젝트 구조 (Project Structure)
 - **Core**: 핵심 로직 및 유틸리티 (`core/`).

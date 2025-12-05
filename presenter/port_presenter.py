@@ -2,7 +2,7 @@ from PyQt5.QtCore import QObject
 import serial.tools.list_ports
 from typing import Optional
 
-from view.panels.left_panel import LeftPanel
+from view.sections.left_section import LeftSection
 from model.port_controller import PortController
 
 class PortPresenter(QObject):
@@ -10,26 +10,26 @@ class PortPresenter(QObject):
     포트 설정 및 제어를 위한 Presenter 클래스입니다.
     PortSettingsWidget(View)와 PortController(Model)를 연결합니다.
     """
-    def __init__(self, left_panel: LeftPanel, port_controller: PortController) -> None:
+    def __init__(self, left_panel: LeftSection, port_controller: PortController) -> None:
         """
         PortPresenter를 초기화합니다.
-        
+
         Args:
-            left_panel (LeftPanel): 좌측 패널 (포트 탭 및 설정 포함).
+            left_panel (LeftSection): 좌측 패널 (포트 탭 및 설정 포함).
             port_controller (PortController): 포트 제어기 모델.
         """
         super().__init__()
         self.left_panel = left_panel
-        
+
         # 현재 활성 포트 패널 가져오기
         self.current_port_panel = None
         self.update_current_port_panel()
-        
+
         self.port_controller = port_controller
-        
+
         # 초기 포트 스캔
         self.scan_ports()
-        
+
         # View 시그널 연결 (현재 포트 패널의 설정 위젯에서)
         if self.current_port_panel:
             self.current_port_panel.port_settings.scan_requested.connect(self.scan_ports)
@@ -40,12 +40,12 @@ class PortPresenter(QObject):
             except:
                 pass
             self.current_port_panel.port_settings.connect_btn.clicked.connect(self.handle_connect_click)
-        
+
         # Model 시그널 연결
         self.port_controller.port_opened.connect(self.on_port_opened)
         self.port_controller.port_closed.connect(self.on_port_closed)
         self.port_controller.error_occurred.connect(self.on_error)
-        
+
     def update_current_port_panel(self) -> None:
         """현재 활성 포트 패널에 대한 참조를 업데이트합니다."""
         index = self.left_panel.port_tabs.currentIndex()
@@ -53,13 +53,13 @@ class PortPresenter(QObject):
             widget = self.left_panel.port_tabs.widget(index)
             if hasattr(widget, 'port_settings'):
                 self.current_port_panel = widget
-                
+
     def scan_ports(self) -> None:
         """사용 가능한 시리얼 포트를 스캔하여 UI에 표시합니다."""
         ports = [port.device for port in serial.tools.list_ports.comports()]
         if self.current_port_panel:
             self.current_port_panel.port_settings.set_port_list(ports)
-        
+
     def handle_connect_click(self) -> None:
         """
         연결 버튼 클릭을 처리합니다.
@@ -67,7 +67,7 @@ class PortPresenter(QObject):
         """
         if not self.current_port_panel:
             return
-            
+
         if self.port_controller.is_open:
             self.port_controller.close_port()
         else:
@@ -77,7 +77,7 @@ class PortPresenter(QObject):
             except ValueError:
                 print("Invalid baudrate")
                 return
-                
+
             if port:
                 self.port_controller.open_port(port, baud)
             else:
@@ -87,7 +87,7 @@ class PortPresenter(QObject):
         """
         포트 열림 이벤트를 처리합니다.
         UI를 연결됨 상태로 업데이트하고 탭 제목을 변경합니다.
-        
+
         Args:
             port_name (str): 열린 포트의 이름.
         """
@@ -96,12 +96,12 @@ class PortPresenter(QObject):
             # 탭 제목 업데이트
             index = self.left_panel.port_tabs.currentIndex()
             self.left_panel.update_tab_title(index, port_name)
-        
+
     def on_port_closed(self, port_name: str) -> None:
         """
         포트 닫힘 이벤트를 처리합니다.
         UI를 연결 해제됨 상태로 업데이트하고 탭 제목을 기본값으로 변경합니다.
-        
+
         Args:
             port_name (str): 닫힌 포트의 이름.
         """
@@ -110,12 +110,12 @@ class PortPresenter(QObject):
             # 탭 제목 업데이트
             index = self.left_panel.port_tabs.currentIndex()
             self.left_panel.update_tab_title(index, "-")
-        
+
     def on_error(self, message: str) -> None:
         """
         에러 이벤트를 처리합니다.
         현재는 콘솔에 출력하며, 향후 상태바에 표시할 예정입니다.
-        
+
         Args:
             message (str): 에러 메시지.
         """

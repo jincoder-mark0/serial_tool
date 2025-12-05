@@ -54,18 +54,31 @@ serial_tool2/
 ├── view/                    # UI 계층
 │   ├── main_window.py      # 메인 윈도우 [완료]
 │   ├── theme_manager.py    # 테마 관리 [완료]
-│   ├── panels/             # 패널 컴포넌트
-│   │   ├── left_panel.py   # 좌측 패널 (포트 탭) [완료]
-│   │   ├── right_panel.py  # 우측 패널 (커맨드/인스펙터) [완료]
+│   ├── language_manager.py # 언어 관리 [완료]
+│   ├── sections/           # 섹션 (화면 분할) [완료]
+│   │   ├── left_section.py # 좌측 섹션 [완료]
+│   │   └── right_section.py# 우측 섹션 [완료]
+│   ├── panels/             # 패널 (기능 그룹) [완료]
 │   │   ├── port_panel.py   # 포트 패널 [완료]
-│   │   └── command_list_panel.py # 커맨드 리스트 패널 [완료]
-│   └── widgets/            # 위젯 컴포넌트
+│   │   ├── command_list_panel.py # 커맨드 리스트 패널 [완료]
+│   │   ├── manual_control_panel.py # 수동 제어 패널 [완료]
+│   │   ├── packet_inspector_panel.py # 패킷 인스펙터 패널 [완료]
+│   │   └── tx_panel.py     # 전송 패널 (수동+커맨드) [완료]
+│   ├── widgets/            # 위젯 (UI 요소) [완료]
 │       ├── port_settings.py       # 포트 설정 [완료]
 │       ├── received_area.py       # 로그 뷰 [완료]
 │       ├── manual_control.py      # 수동 제어 [완료]
 │       ├── command_list.py        # 커맨드 리스트 [완료]
 │       ├── command_control.py     # 커맨드 제어 [완료]
-│       └── packet_inspector.py    # 패킷 인스펙터 [완료]
+│       ├── packet_inspector.py    # 패킷 인스펙터 [완료]
+│       ├── status_area.py         # 상태 표시 영역 [완료]
+│       ├── file_progress.py       # 파일 전송 진행 [완료]
+│       ├── main_menu_bar.py       # 메인 메뉴바 [완료]
+│       └── main_status_bar.py     # 메인 상태바 [완료]
+│   └── dialogs/            # 대화상자 [완료]
+│       ├── about_dialog.py        # 정보 대화상자 [완료]
+│       ├── font_settings_dialog.py# 폰트 설정 [완료]
+│       └── preferences_dialog.py  # 환경 설정 [완료]
 ├── presenter/               # Presenter 계층
 │   ├── main_presenter.py   # 중앙 제어
 │   ├── port_presenter.py   # 포트 제어
@@ -121,20 +134,32 @@ serial_tool2/
 - 이벤트 필터링 및 우선순위
 
 #### [진행 필요] `core/logger.py`
-**로깅 계층**
-- UI 로그: ReceivedArea에 표시
-- 파일 로그: RotatingFileHandler (10MB x 5개)
-- 성능 로그: CSV 형식 (perf_YYYY-MM-DD.csv)
+**로깅 계층 (Logging Layers)**
+- **UI Log**: `QTextEdit` (메모리), 실시간 표시
+- **File Log**: `RotatingFileHandler` (10MB x 5개), `logs/app_YYYY-MM-DD.log`
+- **Performance Log**: CSV 형식 (`logs/perf_YYYY-MM-DD.csv`), 지표(Rx/Tx 속도, 버퍼 점유율)
 
-**기능**
-- 색상 규칙 (OK/ERROR/URC)
-- 타임스탬프 프리픽스
-- 로그 레벨 (DEBUG/INFO/WARNING/ERROR)
-- 민감 정보 마스킹
+#### [진행 필요] `core/plugin_base.py` & `core/plugin_loader.py`
+**플러그인 시스템 (Plugin System)**
+- **Interface**: `PluginBase` (name, version, register, unregister)
+- **Loader**: `importlib` 기반 동적 로딩 (`plugins/` 디렉토리 스캔)
+- **EventBus Integration**: `register(bus, context)` 필수 구현
 
 ---
 
-### 3. Model 계층 (Model Layer)
+### 3. Model 계층 (Model Layer) - Domain Logic
+
+#### [진행 필요] `model/packet_parser.py`
+**패킷 파서 시스템 (Packet Parser System)**
+- **Factory Pattern**: `ATParser`, `DelimiterParser`, `FixedLengthParser`, `HexParser`
+- **Strategy**: `ParserFactory`를 통해 포트별 파서 인스턴스 생성
+- **Performance**: 1ms 이하 파싱 지연 목표
+
+#### [진행 필요] `model/serial_worker.py`
+**SerialWorker (QThread)**
+- **Non-blocking I/O**: `timeout=0` + 반복 읽기 최적화
+- **RingBuffer Integration**: `bytearray` 기반 고속 버퍼링
+- **Signals**: `rx_data(bytes)`, `tx_complete(int)`, `port_error(str)`
 
 #### [진행 필요] `model/serial_worker.py`
 **SerialWorker(QThread) 구현**
@@ -196,20 +221,11 @@ class CommandEntry:
 - 검증 규칙 (필수 필드, 타입 체크)
 
 #### [진행 필요] `model/cl_runner.py`
-**Command List 실행 엔진**
-- 상태 머신: `Idle` → `Running` → `Paused` → `Stopped`
-- 순차 실행 로직
-  1. 명령 송신
-  2. Expect 매칭 대기 (타임아웃 체크)
-  3. Delay 대기
-  4. 다음 명령
-- 반복 실행 (최대 횟수 설정)
-- 실행 결과 리포트 (JSON)
-
-**시그널**
-- `step_started(int)`: 현재 행 번호
-- `step_completed(int, bool)`: 행 번호, 성공 여부
-- `run_completed(bool)`: 전체 성공 여부
+**Command List 실행 엔진 (CLRunner)**
+- **State Machine**: `Idle` → `Running` → `Paused` → `Stopped`
+- **Step Execution**: Send → Expect Match (Regex) → Delay → Next/Jump/Repeat
+- **Auto Run**: `AutoTxScheduler` (Global Interval + Loop Count)
+- **Signals**: `step_started`, `step_completed`, `cl_finished`
 
 #### [진행 필요] `model/file_transfer.py`
 **FileTransferEngine(QRunnable)**
@@ -276,10 +292,31 @@ class CommandEntry:
   - UI 정리
 
 #### [진행 필요] `presenter/event_router.py`
-**EventBus 기반 라우팅**
-- View 이벤트 → Model 이벤트 변환
-- Model 이벤트 → View 업데이트
-- 플러그인 이벤트 처리
+**EventRouter (View-Model Decoupling)**
+- **Role**: View 이벤트를 Domain 메서드로 라우팅, Domain 시그널을 View 업데이트로 변환
+- **Benefit**: View와 Model 간의 직접 의존성 제거 (Layered MVP 준수)
+
+---
+
+### 5. Performance Strategy (성능 최적화 전략)
+
+#### 1. Rx Data Pipeline
+- **RingBuffer**: `bytearray` 사용으로 메모리 할당 최소화 (O(1))
+- **Non-blocking I/O**: `serial.read()` 타임아웃 0ms 설정 및 루프 최적화
+
+#### 2. UI Rendering (RxLogView)
+- **Batch Renderer**: 50ms 주기로 로그 묶어서 업데이트 (`appendHtml` 호출 횟수 감소)
+- **Virtual Scrolling**: 대량 로그(10K+ 라인) 표시 시 렌더링 부하 분산
+- **Trim Policy**: 2000라인 초과 시 상단 제거 (메모리 관리)
+
+#### 3. Threading Model
+- **SerialWorker**: 포트별 독립 QThread (I/O 격리)
+- **FileTransfer**: `QRunnable` + `QThreadPool` (UI 스레드 영향 최소화)
+- **Lock-free Queue**: `collections.deque` 활용 (GIL 의존)
+
+---
+
+### 6. View 계층 (View Layer) - ✅ 완료
 
 ---
 
@@ -287,8 +324,9 @@ class CommandEntry:
 
 #### [완료] UI 구조
 - `MainWindow`: 메인 레이아웃, 메뉴, 툴바
-- `LeftPanel`: 포트 탭 + 수동 제어
-- `RightPanel`: 커맨드 리스트 + 패킷 인스펙터
+- `LeftSection`: 포트 탭 + 수동 제어 (화면 좌측)
+- `RightSection`: 커맨드 리스트 + 패킷 인스펙터 (화면 우측)
+- `Panels`: 기능 단위 그룹 (PortPanel, CommandListPanel 등)
 
 #### [완료] 위젯
 - `PortSettingsWidget`: 컴팩트 2줄 레이아웃
@@ -348,7 +386,7 @@ class PluginBase(ABC):
     @abstractmethod
     def register(self, app_context: AppContext) -> None:
         pass
-    
+
     @abstractmethod
     def unregister(self) -> None:
         pass
@@ -559,62 +597,43 @@ jobs:
 
 ## 구현 순서 (Implementation Order)
 
-### Phase 1: Core 유틸리티 (1주)
+### Phase 1 & 2: Project Setup & UI (✅ Completed)
+
+### Phase 3: Core Utilities (In Progress)
 1. `core/utils.py`: RingBuffer, ThreadSafeQueue
-2. `core/event_bus.py`: EventBus 구현
-3. `core/logger.py`: 로깅 시스템
-4. 단위 테스트 작성 및 실행
+2. `core/event_bus.py`: EventBus, EventTypes
+3. `core/logger.py`: LogManager, RotatingFileHandler
+4. `core/plugin_base.py`: Plugin Interface
 
-### Phase 2: Model 계층 (2주)
-1. `model/serial_worker.py`: SerialWorker 구현
-2. `model/port_controller.py`: PortController 구현
-3. `model/serial_manager.py`: PortRegistry 구현
-4. Virtual Serial Port 통합 테스트
+### Phase 4: Model Layer (Planned)
+1. `model/serial_worker.py`: SerialWorker (Non-blocking I/O)
+2. `model/port_controller.py`: PortController (State Machine)
+3. `model/serial_manager.py`: PortRegistry
+4. `model/packet_parser.py`: ParserFactory, ExpectMatcher
+5. `presenter/event_router.py`: EventRouter
 
-### Phase 3: Presenter 연동 (1주)
-1. `presenter/port_presenter.py`: 포트 제어 로직
-2. `presenter/main_presenter.py`: 중앙 제어
-3. View ↔ Model 연결
-4. 실제 포트 송수신 테스트
+### Phase 5: Presenter Layer (Planned)
+1. `presenter/port_presenter.py`: Port Control Logic
+2. `presenter/main_presenter.py`: App Lifecycle
+3. `presenter/command_presenter.py`: CL Logic
+4. `presenter/file_presenter.py`: File Transfer Logic
 
-### Phase 4: 자동화 기능 (2주)
-1. `model/packet_parser.py`: 패킷 파서
-2. `model/command_entry.py`: Command DTO
-3. `model/cl_runner.py`: Command List 엔진
-4. `presenter/command_presenter.py`: 커맨드 제어
-5. Command List E2E 테스트
+### Phase 6: Automation & File I/O (Planned)
+1. `model/cl_runner.py`: CL Engine, Auto Run
+2. `model/file_transfer.py`: FileTransferEngine, RxCaptureWriter
+3. `model/auto_tx.py`: AutoTxScheduler
+4. **Performance Optimization**: BatchRenderer, RingBuffer Tuning
 
-### Phase 5: 파일 전송 (1주)
-1. `model/file_transfer.py`: FileTransferEngine
-2. `presenter/file_presenter.py`: 파일 제어
-3. 대용량 파일 전송 테스트
+### Phase 7: Plugin System (Planned)
+1. `core/plugin_loader.py`: Dynamic Loading
+2. `plugins/example_plugin.py`: Reference Implementation
+3. Plugin Management UI
 
-### Phase 6: 고급 기능 (1주)
-1. Preferences Dialog 구현
-2. 로그 내보내기 기능
-3. 패킷 인스펙터 고도화
-
-### Phase 7: 플러그인 시스템 (1주, 선택)
-1. `core/plugin_base.py`, `core/plugin_loader.py`
-2. `plugins/example_plugin/`
-3. 플러그인 관리 UI
-
-### Phase 8: 테스트 및 최적화 (1주)
-1. 단위/통합 테스트 커버리지 70%+
-2. 성능 벤치마크 실행
-3. 메모리 프로파일링 및 최적화
-
-### Phase 9: 배포 준비 (1주)
-1. PyInstaller 빌드 스크립트
-2. CI/CD 파이프라인 구축
-3. 플랫폼별 빌드 테스트
-4. 사용자 문서 작성
-
-### Phase 10: 최종 검증 및 릴리스 (1주)
-1. 수락 기준 검증
-2. 플랫폼별 수동 테스트
-3. 장기 런 테스트 (24시간)
-4. v1.0.0 릴리스
+### Phase 8: Verification & Deployment (Planned)
+1. Virtual Serial Port Setup (com0com/socat)
+2. Unit/Integration Tests
+3. Performance Benchmarks
+4. PyInstaller Build & CI/CD
 
 **총 예상 기간**: 12주 (약 3개월)
 
@@ -622,7 +641,7 @@ jobs:
 
 ## 현재 상태 및 다음 단계
 
-### 완료된 작업 (2025-12-02 기준)
+### 완료된 작업 (2025-12-04 기준)
 - ✅ **프로젝트 구조**: 폴더 구조, 문서, 설정 파일
 ### Phase 2: UI 구현 및 테마 시스템 (✅ 완료)
 - [x] UI 기본 골격 구현
@@ -649,6 +668,12 @@ jobs:
     - [x] StatusArea 다국어 적용
     - [x] FontSettingsDialog 다국어 적용
 - [x] Command List Persistence (자동 저장)
+- [x] **Refactoring & Stabilization (2025-12-04)**
+    - [x] UI Architecture Refactoring (Sections/Panels/Widgets)
+    - [x] Language Key Standardization (`[context]_[type]_[name]`)
+    - [x] Code Style Guide Update
+    - [x] Preferences Dialog Implementation & Fix
+    - [x] Documentation Updates (CHANGELOG, Session Summary)
 
 ### 진행 중인 작업
 - 🔄 **Core 유틸리티**: RingBuffer, ThreadSafeQueue, EventBus 구현 필요
@@ -717,5 +742,5 @@ jobs:
 ---
 
 **문서 버전**: v1.0
-**최종 업데이트**: 2025-12-02
+**최종 업데이트**: 2025-12-04
 **작성자**: AI Assistant (Antigravity)

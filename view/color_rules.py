@@ -5,7 +5,10 @@ ReceivedArea에서 사용하는 패턴 매칭 색상 규칙을 관리합니다.
 from dataclasses import dataclass
 from typing import List
 import re
-import json
+try:
+    import commentjson as json
+except ImportError:
+    import json
 
 @dataclass
 class ColorRule:
