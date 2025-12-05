@@ -81,8 +81,13 @@ class MainPresenter(QObject):
 
         # Convert to bytes
         if hex_mode:
-            # TODO: Implement hex mode conversion
-            data = final_text.encode('utf-8')
+            try:
+                # 16진수 문자열을 실제 바이트로 변환 (예: "01 02 FF" -> b'\x01\x02\xff')
+                data = bytes.fromhex(final_text.replace(' ', ''))
+            except ValueError:
+                # 유효하지 않은 16진수 문자열인 경우 처리 (예: 오류 로깅, 사용자에게 알림)
+                print("Invalid hex string for sending.") # TODO: logger.error로 변경
+                return # 전송 중단
         else:
             data = final_text.encode('utf-8')
 

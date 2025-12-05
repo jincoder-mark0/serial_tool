@@ -59,7 +59,15 @@
   - `Logger()` 다중 호출 시에도 예외 없이 동일 인스턴스 반환
   - `SettingsManager`와 동일한 패턴 적용으로 일관성 확보
 
-#### 3. 설정 구조 리팩토링
+#### 3. 설정 키 일관성 확보
+- **문제**: `settings.json`(`theme`, `language`)과 코드 내부(`menu_theme`, `menu_language`) 간의 키 불일치로 혼란 발생
+- **해결**:
+  - `SettingsManager` Fallback 설정: `menu_theme`, `menu_language` 사용
+  - `PreferencesDialog`: `menu_theme`, `menu_language` 키로 시그널 전송
+  - `MainWindow`: `settings_map`을 통해 내부 키를 `global.theme`, `global.language` 설정 경로로 올바르게 매핑
+- **이점**: 설정 흐름의 일관성 및 안정성 확보
+
+#### 4. 설정 구조 리팩토링
 - **기존 문제**:
   - 모든 설정이 `global.*` 네임스페이스에 평탄하게 저장
   - 예: `global.default_baudrate`, `global.command_prefix`, `global.log_path` 등
@@ -188,6 +196,7 @@
 - ✅ MVP 아키텍처 패턴 준수: View와 Presenter 책임 분리 명확화
 - ✅ 문서 통합: 네이밍 규칙에 대한 단일 참조 문서 확보
 - ✅ 싱글톤 패턴 개선: 예외 발생 제거, 안정성 향상
+- ✅ 설정 키 일관성 확보: 내부 키(`menu_*`)와 저장 키(`global.*`) 매핑 명확화
 - ✅ 설정 구조 개선: 논리적 그룹화로 유지보수성 향상
 - ✅ 문서화 강화: README 업데이트, 주석 가이드 생성, View 구현 계획 보강
 - ✅ 프로젝트 비전 명확화: Serial 전용 → 범용 통신 도구 (SPI/I2C 확장 예정)

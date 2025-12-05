@@ -100,6 +100,11 @@
   - 올바른/잘못된 예시 제공
   - 특수 케이스 문서화 (다이얼로그 타이틀, 상태 메시지, 필터 문자열)
 
+- **설정 키 일관성 확보**
+  - `SettingsManager`의 Fallback 설정 키를 `menu_theme`, `menu_language`로 통일
+  - `PreferencesDialog`와 `MainWindow` 간의 설정 키 매핑 불일치 해결
+  - `settings.json`의 `global.theme`, `global.language`와 내부 키(`menu_theme`, `menu_language`) 간의 명확한 매핑 로직 확립
+
 - **Preferences 다이얼로그 접근성 수정**
   - `view/main_window.py`에서 `preferences_requested` 시그널 연결
   - `open_preferences_dialog()` 및 `apply_preferences()` 메서드 추가
