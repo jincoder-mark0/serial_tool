@@ -2,6 +2,51 @@
 
 ## [미배포] (Unreleased)
 
+### 문서화 및 가이드 개선 (2025-12-05)
+
+#### 추가 사항 (Added)
+
+- **주석 가이드 문서**
+  - `guide/comment_guide.md` 신규 생성: Google Style Docstring 표준 가이드
+  - Google Style 정의 및 공식 문서 링크 추가
+  - 모듈/클래스/함수 Docstring 작성 규칙 상세화
+  - 인라인 주석 작성 규칙 (블록 주석, 분기문, 수식, TODO/FIXME/NOTE 태그)
+  - MkDocs 자동 문서화 설정 가이드
+  - 체크리스트 제공
+
+- **View 구현 계획 보강**
+  - `view/doc/implementation_plan.md`에 Packet Inspector 설정 섹션 추가
+  - Parser 타입 선택 (Auto/AT/Delimiter/Fixed Length/Raw)
+  - Delimiter 설정 (기본값 + 사용자 정의)
+  - AT Parser 색상 규칙 설정
+  - Inspector 동작 옵션 (버퍼 크기, 실시간 추적, 자동 스크롤)
+  - Preferences 다이얼로그 탭 UI 레이아웃 정의
+
+#### 변경 사항 (Changed)
+
+- **README.md 업데이트**
+  - 프로젝트 설명: "시리얼 통신 유틸리티" → "통신 유틸리티" (SPI, I2C 확장 예정 명시)
+  - 폴더 구조 정리: `guide/` 폴더 분리, 중복 파일 제거
+  - 향후 계획 상세화: 단기/중장기 구분, FT4222/SPI/I2C 지원 로드맵 추가
+  - 문서 참조 표 보강: 코딩 규칙, 명명 규칙 추가
+  - Git 관리 가이드 강화: 지속적 백업 권장 명시
+
+- **코드 스타일 가이드 간소화**
+  - `guide/code_style_guide.md`에서 Docstring 상세 내용 제거 (117줄 → 31줄)
+  - 주석 관련 내용을 `guide/comment_guide.md` 참조로 대체
+  - 기본 원칙과 간단한 예시만 유지
+
+- **구현 계획 우선순위 조정**
+  - `view/doc/implementation_plan.md` 우선순위 섹션에서 일정 표기 제거
+  - Packet Inspector 설정을 선택적 항목으로 추가
+
+#### 이점 (Benefits)
+
+- **문서 체계화**: 주석 가이드를 독립 문서로 분리하여 관리 용이
+- **확장성 명시**: README에 향후 프로토콜 확장 계획 명확히 전달
+- **개발 가이드 강화**: Google Style Docstring 표준 및 작성 규칙 상세화
+- **View 계층 완성도**: Packet Inspector UI 설정 요구사항 문서화
+
 ### MVP 아키텍처 리팩토링 및 코드 품질 개선 (2025-12-05)
 
 #### 변경 사항 (Changed)

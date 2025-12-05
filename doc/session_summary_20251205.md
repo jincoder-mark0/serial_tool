@@ -87,17 +87,85 @@
   - 장기 유지보수성 향상
   - 설정 파일 가독성 개선
 
+### C. 문서화 및 가이드 개선
+
+#### 1. README.md 업데이트
+- **변경 사항**:
+  - 프로젝트 설명 확장: Serial 통신뿐만 아니라 향후 SPI, I2C 등 다양한 프로토콜 지원 명시
+  - 폴더 구조 정리:
+    - `guide/` 폴더로 개발 가이드 분리
+    - 중복 파일 제거 (`doc/naming_convention.md` → `guide/naming_convention.md`로 통일)
+  - 향후 계획 상세화:
+    - 단기 (Current Sprint): Command List 자동화, 파일 전송, 패킷 파서
+    - 중장기 (Future): 플러그인 시스템, **통신 프로토콜 확장** (SPI/I2C 지원, FT4222 칩 등)
+  - 문서 참조 표 보강: 코딩 규칙, 명명 규칙 추가
+  - Git 관리 가이드 강화: 지속적 백업 권장 명시
+
+- **이점**:
+  - 프로젝트 비전 명확화 (Serial 전용 → 범용 통신 도구)
+  - 문서 구조 개선 및 중복 제거
+  - 개발자 온보딩 자료 강화
+
+#### 2. 주석 가이드 문서 생성
+- **생성된 파일**: `guide/comment_guide.md`
+- **내용**:
+  - Google Style Docstring 표준 채택 이유 및 정의
+  - 공식 문서 링크: [Google Python Style Guide - Docstrings](https://google.github.io/styleguide/pyguide.html#38-comments-and-docstrings)
+  - 모듈 Docstring: WHY/WHAT/HOW 섹션 구조
+  - 클래스/함수 Docstring: Args/Returns/Raises/Examples 섹션
+  - 타입 힌트 권장 방식 (함수 시그니처 우선)
+  - 인라인 주석 규칙:
+    - 긴 메서드: 블록 주석으로 논리적 단위 구분
+    - 분기문: 비즈니스 시나리오 명시
+    - 수식/상수: 의미, 출처, 정의 설명
+    - 특수 태그: TODO/FIXME/NOTE
+  - MkDocs 자동 문서화 설정
+  - 체크리스트 제공
+
+- **code_style_guide.md 간소화**:
+  - Docstring 상세 내용 제거 (117줄 → 31줄)
+  - `comment_guide.md` 참조 링크로 대체
+
+- **이점**:
+  - 주석 작성 표준 명확화
+  - 자동 문서화 도구 호환성 확보
+  - 문서 관리 일원화 (주석 가이드 독립)
+
+#### 3. View 구현 계획 보강
+- **파일**: `view/doc/implementation_plan.md`
+- **추가 내용**:
+  - 섹션 11: Packet Inspector 설정 (Preferences 다이얼로그 탭)
+  - Parser 타입 선택: Auto Detect, AT Parser, Delimiter Parser, Fixed Length Parser, Raw Parser
+  - Delimiter 설정: 기본값 (`\r\n`, `0xFF`, `0x7E`) + 사용자 정의
+  - Fixed Length 설정: 패킷 길이 (1-4096 바이트)
+  - AT Parser 색상 규칙: OK/ERROR/URC/Prompt 색상 설정
+  - Inspector 동작 옵션: 버퍼 크기, 실시간 추적, 자동 스크롤
+  - UI 레이아웃 정의 (QRadioButton, QListWidget, QSpinBox, QCheckBox, QComboBox)
+  - 설정 저장 경로: `config/settings.json` → `parser.*` 섹션
+
+- **우선순위 조정**:
+  - 일정 표기 제거 ("1-2일" → 제거)
+  - Packet Inspector 설정을 선택적 항목으로 추가
+
+- **이점**:
+  - Packet Inspector UI 요구사항 명확화
+  - View 계층 완성도 향상
+  - 향후 Parser 기능 구현 시 참조 자료 확보
+
 ## 3. 파일 변경 사항
 
 ### 수정된 파일 (Modified)
 - `view/widgets/manual_control.py`: 시그널 변경, SettingsManager 의존성 제거
 - `presenter/main_presenter.py`: prefix/suffix 비즈니스 로직 추가, 설정 경로 변경
-- `doc/code_style_guide.md`: 네이밍 규칙 섹션 간소화
 - `core/logger.py`: 싱글톤 패턴 개선
 - `view/main_window.py`: settings_map 추가
+- `README.md`: 프로젝트 설명 확장, 폴더 구조 정리, 향후 계획 상세화
+- `guide/code_style_guide.md`: Docstring 섹션 간소화 (117줄 → 31줄), comment_guide.md 참조 추가
+- `view/doc/implementation_plan.md`: Packet Inspector 설정 섹션 추가, 우선순위 조정
 
 ### 생성된 파일 (Created)
-- `docs/naming_convention.md`: 통합 네이밍 규칙 가이드
+- `guide/naming_convention.md`: 통합 네이밍 규칙 가이드
+- `guide/comment_guide.md`: Google Style Docstring 주석 가이드
 
 ### 재구조화된 파일 (Restructured)
 - `config/settings.json`: 논리적 그룹 구조로 변경
@@ -107,12 +175,16 @@
 - ✅ 문서 통합: 네이밍 규칙에 대한 단일 참조 문서 확보
 - ✅ 싱글톤 패턴 개선: 예외 발생 제거, 안정성 향상
 - ✅ 설정 구조 개선: 논리적 그룹화로 유지보수성 향상
+- ✅ 문서화 강화: README 업데이트, 주석 가이드 생성, View 구현 계획 보강
+- ✅ 프로젝트 비전 명확화: Serial 전용 → 범용 통신 도구 (SPI/I2C 확장 예정)
 
 ## 5. 다음 단계 (Next Steps)
 - **설정 마이그레이션 로직**: 이전 `global.*` 설정을 새 구조로 자동 변환하는 로직 추가 고려
 - **통합 테스트**: 리팩토링된 코드의 정상 동작 확인
   - Preferences 다이얼로그에서 설정 변경 테스트
   - Manual Control에서 prefix/suffix 기능 테스트
+- **문서 검토**: 새로 작성된 `guide/comment_guide.md` 및 업데이트된 README 검토
+- **Packet Inspector UI 구현**: `view/doc/implementation_plan.md` 기반으로 설정 탭 구현
 - **Model 계층 구현 계속**: Core 유틸리티 및 SerialWorker 구현
 
 ---

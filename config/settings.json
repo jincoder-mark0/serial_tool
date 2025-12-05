@@ -45,6 +45,42 @@
     "tabs": [
       {
         "port_settings": {
+          "port": "",
+          "baudrate": "115200",
+          "bytesize": "8",
+          "parity": "N",
+          "stopbits": "1",
+          "flow_control": "None",
+          "dtr": true,
+          "rts": true
+        },
+        "received_area": {
+          "hex_mode": false,
+          "timestamp": false,
+          "paused": false,
+          "search_text": ""
+        }
+      },
+      {
+        "port_settings": {
+          "port": "",
+          "baudrate": "115200",
+          "bytesize": "8",
+          "parity": "N",
+          "stopbits": "1",
+          "flow_control": "None",
+          "dtr": true,
+          "rts": true
+        },
+        "received_area": {
+          "hex_mode": false,
+          "timestamp": false,
+          "paused": false,
+          "search_text": ""
+        }
+      },
+      {
+        "port_settings": {
           "port": "COM1",
           "baudrate": "115200",
           "bytesize": "8",
