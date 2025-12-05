@@ -131,7 +131,20 @@
   - 자동 문서화 도구 호환성 확보
   - 문서 관리 일원화 (주석 가이드 독립)
 
-#### 3. View 구현 계획 보강
+#### 3. Git 관리 가이드 문서 생성
+- **생성된 파일**: `guide/git_guide.md`
+- **내용**:
+  - 커밋 메시지 규칙: 태그별 상세 예시, Body/Footer 작성법
+  - 워크플로우: 브랜치 전략, PR/이슈 템플릿
+  - **실무 Git 레시피**:
+    - 실수 수습 (Amend, Reset, Revert)
+    - 임시 저장 (Stash)
+    - 로그 확인 및 파일 무시
+- **이점**:
+  - 팀 내 버전 관리 규칙 통일
+  - 실무 팁 공유로 Git 활용 능력 향상
+
+#### 4. View 구현 계획 보강
 - **파일**: `view/doc/implementation_plan.md`
 - **추가 내용**:
   - 섹션 11: Packet Inspector 설정 (Preferences 다이얼로그 탭)
@@ -166,6 +179,7 @@
 ### 생성된 파일 (Created)
 - `guide/naming_convention.md`: 통합 네이밍 규칙 가이드
 - `guide/comment_guide.md`: Google Style Docstring 주석 가이드
+- `guide/git_guide.md`: Git 관리 가이드 (커밋/PR/이슈/실무팁)
 
 ### 재구조화된 파일 (Restructured)
 - `config/settings.json`: 논리적 그룹 구조로 변경

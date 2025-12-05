@@ -14,6 +14,13 @@
   - MkDocs 자동 문서화 설정 가이드
   - 체크리스트 제공
 
+- **Git 관리 가이드 문서**
+  - `guide/git_guide.md` 신규 생성
+  - 커밋 메시지 규칙 (Header/Body/Footer, 태그별 예시)
+  - PR 및 이슈 템플릿 가이드
+  - 실무 Git 레시피 (Amend, Stash, Reset/Revert 등 복구 명령어)
+  - 브랜치 전략 상세
+
 - **View 구현 계획 보강**
   - `view/doc/implementation_plan.md`에 Packet Inspector 설정 섹션 추가
   - Parser 타입 선택 (Auto/AT/Delimiter/Fixed Length/Raw)

@@ -269,6 +269,8 @@ serial_tool2/
 | View 구현 계획 | View 계층 구현 가이드 | `view/doc/implementation_plan.md` |
 | 코딩 규칙 | 코드 스타일 | `guide/code_style_guide.md` |
 | 명명 규칙 | 코드/언어 키 네이밍 | `guide/naming_convention.md` |
+| 주석 가이드 | 주석/Docstring 작성법 | `guide/comment_guide.md` |
+| Git 가이드 | 커밋/PR/이슈 규칙 | `guide/git_guide.md` |
 | 변경 이력 | 세션별 변경 사항 | `doc/changelog.md` |
 
 ### 코드 스타일

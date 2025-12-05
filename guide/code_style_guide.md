@@ -79,58 +79,25 @@ def get_available_ports() -> List[str]:
 > 언어 키의 상세 규칙, 특수 케이스, 적용 가이드는 별도 문서를 참조하세요.
 
 
-## 6. Git 관리 가이드 (Git Management Guide)
+## 6. Git 관리 (Git Management)
 
-### 6.1 지속적인 백업 (Continuous Backup)
-> [!IMPORTANT]
-> **Git을 통한 지속적인 백업은 필수입니다.**
-> - 작업 중 최소 **하루 1회 이상** 커밋하여 변경사항을 기록합니다.
-> - 중요한 기능 구현 후에는 **즉시 커밋**하여 작업 내용을 보존합니다.
-> - 정기적으로 원격 저장소(GitHub 등)에 **push**하여 백업하세요.
+**Git 사용에 대한 상세 가이드는 별도 문서를 참조하세요:**
 
-### 6.2 브랜치 전략 (Branch Strategy)
-- **main**: 배포 가능한 안정 버전.
-- **develop**: 개발 중인 최신 버전 (선택 사항).
-- **feature/기능명**: 새로운 기능 개발 (예: `feature/dual-font-system`).
-- **fix/버그명**: 버그 수정 (예: `fix/connection-error`).
-- **refactor/대상**: 리팩토링 (예: `refactor/theme-manager`).
+👉 **[Git 관리 가이드 (Git Guide)](git_guide.md)**
 
-### 6.3 커밋 메시지 (Commit Messages)
-- **언어**: 반드시 **한국어**로 작성합니다.
-- **형식**: `태그: 설명` 형식을 권장합니다.
-- **태그 목록**:
-    - `Feat`: 새로운 기능 추가
-    - `Fix`: 버그 수정
-    - `Docs`: 문서 수정
-    - `Style`: 코드 포맷팅, 세미콜론 누락 등 (코드 변경 없음)
-    - `Refactor`: 코드 리팩토링
-    - `Test`: 테스트 코드 추가/수정
-    - `Chore`: 빌드 업무 수정, 패키지 매니저 수정 등
+### 6.1 핵심 요약
+- **언어**: 커밋 메시지, PR, 이슈는 **한국어**로 작성
+- **커밋 주기**: 최소 **하루 1회 이상** 권장
+- **메시지 형식**: `태그: 제목` (예: `Feat: 로그인 기능 구현`)
 
-### 6.4 권장 워크플로우
-```bash
-# 1. 새 기능 시작 시 브랜치 생성
-git checkout -b feature/새기능명
+### 6.2 주요 태그
+- `Feat`: 기능 추가
+- `Fix`: 버그 수정
+- `Docs`: 문서 수정
+- `Refactor`: 리팩토링
 
-# 2. 작업 중 자주 커밋 (하루 1회 이상)
-git add .
-git commit -m "Feat: 기능 설명"
-
-# 3. 원격 저장소에 백업
-git push origin feature/새기능명
-
-# 4. 기능 완료 시 main으로 병합
-git checkout main
-git merge feature/새기능명
-git push origin main
-```
-
-### 예시
-```
-Feat: 듀얼 폰트 시스템 구현
-Fix: 포트 연결 실패 시 크래시 수정
-Docs: README.md 사용법 업데이트
-```
+> [!TIP]
+> 커밋 수정(amend), 되돌리기(reset/revert), 임시 저장(stash) 등 유용한 실무 명령어는 [Git 관리 가이드](git_guide.md)의 **실무 Git 레시피** 섹션을 확인하세요.
 
 ## 7. 프로젝트 구조 (Project Structure)
 - **Core**: 핵심 로직 및 유틸리티 (`core/`).
