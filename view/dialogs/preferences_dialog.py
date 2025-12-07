@@ -179,8 +179,8 @@ class PreferencesDialog(QDialog):
     def load_settings(self) -> None:
         """현재 설정을 UI에 반영합니다."""
         # General
-        self.theme_combo.setCurrentText(self.current_settings.get("theme", "Dark").capitalize())
-        self.language_combo.setCurrentText(self.current_settings.get("language", "English"))
+        self.theme_combo.setCurrentText(self.current_settings.get("menu_theme", "Dark").capitalize())
+        self.language_combo.setCurrentText(self.current_settings.get("menu_language", "English"))
         self.font_size_spin.setValue(self.current_settings.get("font_size", 10))
 
         # Serial
@@ -198,8 +198,8 @@ class PreferencesDialog(QDialog):
     def apply_settings(self) -> None:
         """변경된 설정을 수집하여 시그널을 발생시킵니다."""
         new_settings = {
-            "theme": self.theme_combo.currentText().lower(),
-            "language": self.language_combo.currentText(),
+            "menu_theme": self.theme_combo.currentText().lower(),
+            "menu_language": self.language_combo.currentText(),
             "font_size": self.font_size_spin.value(),
             "default_baudrate": int(self.default_baud_combo.currentText()),
             "scan_interval": self.scan_interval_spin.value(),
