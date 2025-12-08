@@ -33,22 +33,22 @@ class StatusAreaWidget(QWidget):
         self.label = QLabel(language_manager.get_text("status_lbl_log"))
         # label.setStyleSheet("font-weight: bold; font-size: 10px;")
 
-        self.log_edit = QTextEdit()
-        self.log_edit.setReadOnly(True)
-        self.log_edit.setMaximumHeight(100) # 높이 제한
-        self.log_edit.setToolTip(language_manager.get_text("status_txt_log_tooltip"))
-        self.log_edit.setPlaceholderText(language_manager.get_text("status_txt_log_placeholder"))
-        self.log_edit.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
+        self.log_txt = QTextEdit()
+        self.log_txt.setReadOnly(True)
+        self.log_txt.setMaximumHeight(100) # 높이 제한
+        self.log_txt.setToolTip(language_manager.get_text("status_txt_log_tooltip"))
+        self.log_txt.setPlaceholderText(language_manager.get_text("status_txt_log_placeholder"))
+        self.log_txt.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
 
         layout.addWidget(self.label)
-        layout.addWidget(self.log_edit)
+        layout.addWidget(self.log_txt)
         self.setLayout(layout)
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
         self.label.setText(language_manager.get_text("status_lbl_log"))
-        self.log_edit.setToolTip(language_manager.get_text("status_txt_log_tooltip"))
-        self.log_edit.setPlaceholderText(language_manager.get_text("status_txt_log_placeholder"))
+        self.log_txt.setToolTip(language_manager.get_text("status_txt_log_tooltip"))
+        self.log_txt.setPlaceholderText(language_manager.get_text("status_txt_log_placeholder"))
 
     def log(self, message: str, level: str = "INFO") -> None:
         """
@@ -69,8 +69,8 @@ class StatusAreaWidget(QWidget):
 
         # 색상 적용을 위한 HTML 포맷팅
         formatted_msg = f'<span style="color:gray;">[{timestamp}]</span> <span style="color:{color};">[{level}]</span> {message}'
-        self.log_edit.append(formatted_msg)
+        self.log_txt.append(formatted_msg)
 
     def clear(self) -> None:
         """로그를 초기화합니다."""
-        self.log_edit.clear()
+        self.log_txt.clear()

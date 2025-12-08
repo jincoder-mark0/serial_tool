@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "global": {
-    "theme": "light",
+    "theme": "dark",
     "language": "en"
   },
   "ui": {
@@ -31,7 +31,7 @@
     "default_config": {
       "baudrate": 115200,
       "parity": "N",
-      "bytesize": 8,
+      "datasize": 8,
       "stopbits": 1
     },
     "manual_control": {
@@ -46,50 +46,12 @@
       {
         "custom_name": "Port",
         "port_settings": {
-          "port": "",
+          "port": "COM1",
           "baudrate": "115200",
-          "bytesize": "8",
+          "datasize": "8",
           "parity": "N",
           "stopbits": "1",
-          "flow_control": "None",
-          "dtr": true,
-          "rts": true
-        },
-        "received_area": {
-          "hex_mode": false,
-          "timestamp": false,
-          "paused": false,
-          "search_text": ""
-        }
-      },
-      {
-        "custom_name": "Port",
-        "port_settings": {
-          "port": "",
-          "baudrate": "115200",
-          "bytesize": "8",
-          "parity": "N",
-          "stopbits": "1",
-          "flow_control": "None",
-          "dtr": true,
-          "rts": true
-        },
-        "received_area": {
-          "hex_mode": false,
-          "timestamp": false,
-          "paused": false,
-          "search_text": ""
-        }
-      },
-      {
-        "custom_name": "Port",
-        "port_settings": {
-          "port": "",
-          "baudrate": "115200",
-          "bytesize": "8",
-          "parity": "N",
-          "stopbits": "1",
-          "flow_control": "None",
+          "flow": "None",
           "dtr": true,
           "rts": true
         },
@@ -104,6 +66,78 @@
   },
   "command_list": {
     "commands": [
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      }
+    ],
+    "control_state": {
+      "delay": "1000",
+      "max_runs": 0
+    }
+  },
+  "cmd_list": {
+    "commands": [
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      },
       {
         "enabled": true,
         "prefix": true,

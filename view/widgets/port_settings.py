@@ -3,6 +3,7 @@ from PyQt5.QtWidgets import (
     QLabel, QGroupBox, QCheckBox, QGridLayout, QFormLayout, QSizePolicy
 )
 from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtGui import QIntValidator
 from view.language_manager import language_manager
 from typing import Optional, List, Dict, Any
 
@@ -26,6 +27,23 @@ class PortSettingsWidget(QGroupBox):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(language_manager.get_text("port_grp_settings"), parent)
+        self.flow_lbl = None
+        self.stopbits_lbl = None
+        self.parity_lbl = None
+        self.datasize_lbl = None
+        self.rts_check = None
+        self.dtr_check = None
+        self.flow_combo = None
+        self.stopbits_combo = None
+        self.parity_combo = None
+        self.datasize_combo = None
+        self.baud_lbl = None
+        self.port_lbl = None
+        self.connect_btn = None
+        self.baud_combo = None
+        self.baud_validator = None
+        self.scan_btn = None
+        self.port_combo = None
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
@@ -62,7 +80,6 @@ class PortSettingsWidget(QGroupBox):
         self.baud_combo.setCurrentText("115200")
         self.baud_combo.setEditable(True)
         # Baudrate 유효성 검사 (50 ~ 4000000)
-        from PyQt5.QtGui import QIntValidator
         self.baud_validator = QIntValidator(50, 4000000)
         self.baud_combo.setValidator(self.baud_validator)
 
@@ -73,13 +90,13 @@ class PortSettingsWidget(QGroupBox):
         self.connect_btn.clicked.connect(self.on_connect_clicked)
         self.connect_btn.setFixedWidth(60)
 
-        self.port_label = QLabel(language_manager.get_text("port_lbl_port"))
-        self.baud_label = QLabel(language_manager.get_text("port_lbl_baudrate"))
+        self.port_lbl = QLabel(language_manager.get_text("port_lbl_port"))
+        self.baud_lbl = QLabel(language_manager.get_text("port_lbl_baudrate"))
 
-        row1_layout.addWidget(self.port_label)
+        row1_layout.addWidget(self.port_lbl)
         row1_layout.addWidget(self.port_combo)
         row1_layout.addWidget(self.scan_btn)
-        row1_layout.addWidget(self.baud_label)
+        row1_layout.addWidget(self.baud_lbl)
         row1_layout.addWidget(self.baud_combo)
         row1_layout.addWidget(self.connect_btn)
 
@@ -90,11 +107,11 @@ class PortSettingsWidget(QGroupBox):
         row2_layout.setSpacing(5)
 
         # 데이터 비트
-        self.bytesize_combo = QComboBox()
-        self.bytesize_combo.addItems(["5", "6", "7", "8"])
-        self.bytesize_combo.setCurrentText("8")
-        self.bytesize_combo.setToolTip(language_manager.get_text("port_combo_data_tooltip"))
-        self.bytesize_combo.setFixedWidth(40)
+        self.datasize_combo = QComboBox()
+        self.datasize_combo.addItems(["5", "6", "7", "8"])
+        self.datasize_combo.setCurrentText("8")
+        self.datasize_combo.setToolTip(language_manager.get_text("port_combo_datasize_tooltip"))
+        self.datasize_combo.setFixedWidth(40)
 
         # 패리티 비트
         self.parity_combo = QComboBox()
@@ -105,7 +122,7 @@ class PortSettingsWidget(QGroupBox):
         # 정지 비트
         self.stopbits_combo = QComboBox()
         self.stopbits_combo.addItems(["1", "1.5", "2"])
-        self.stopbits_combo.setToolTip(language_manager.get_text("port_combo_stop_tooltip"))
+        self.stopbits_combo.setToolTip(language_manager.get_text("port_combo_stopbits_tooltip"))
         self.stopbits_combo.setFixedWidth(45)
 
         # 흐름 제어
@@ -120,18 +137,18 @@ class PortSettingsWidget(QGroupBox):
         self.rts_check = QCheckBox("RTS")
         self.rts_check.setChecked(True)
 
-        self.data_label = QLabel(language_manager.get_text("port_lbl_data"))
-        self.parity_label = QLabel(language_manager.get_text("port_lbl_parity"))
-        self.stop_label = QLabel(language_manager.get_text("port_lbl_stop"))
-        self.flow_label = QLabel(language_manager.get_text("port_lbl_flow"))
+        self.datasize_lbl = QLabel(language_manager.get_text("port_lbl_datasize"))
+        self.parity_lbl = QLabel(language_manager.get_text("port_lbl_parity"))
+        self.stopbits_lbl = QLabel(language_manager.get_text("port_lbl_stop"))
+        self.flow_lbl = QLabel(language_manager.get_text("port_lbl_flow"))
 
-        row2_layout.addWidget(self.data_label)
-        row2_layout.addWidget(self.bytesize_combo)
-        row2_layout.addWidget(self.parity_label)
+        row2_layout.addWidget(self.datasize_lbl)
+        row2_layout.addWidget(self.datasize_combo)
+        row2_layout.addWidget(self.parity_lbl)
         row2_layout.addWidget(self.parity_combo)
-        row2_layout.addWidget(self.stop_label)
+        row2_layout.addWidget(self.stopbits_lbl)
         row2_layout.addWidget(self.stopbits_combo)
-        row2_layout.addWidget(self.flow_label)
+        row2_layout.addWidget(self.flow_lbl)
         row2_layout.addWidget(self.flow_combo)
         row2_layout.addWidget(self.dtr_check)
         row2_layout.addWidget(self.rts_check)
@@ -159,18 +176,18 @@ class PortSettingsWidget(QGroupBox):
             self.connect_btn.setText(language_manager.get_text("port_btn_connect"))
         self.connect_btn.setToolTip(language_manager.get_text("port_btn_connect_tooltip"))
 
-        self.port_label.setText(language_manager.get_text("port_lbl_port"))
-        self.baud_label.setText(language_manager.get_text("port_lbl_baudrate"))
+        self.port_lbl.setText(language_manager.get_text("port_lbl_port"))
+        self.baud_lbl.setText(language_manager.get_text("port_lbl_baudrate"))
 
-        self.bytesize_combo.setToolTip(language_manager.get_text("port_combo_data_tooltip"))
+        self.datasize_combo.setToolTip(language_manager.get_text("port_combo_datasize_tooltip"))
         self.parity_combo.setToolTip(language_manager.get_text("port_combo_parity_tooltip"))
-        self.stopbits_combo.setToolTip(language_manager.get_text("port_combo_stop_tooltip"))
+        self.stopbits_combo.setToolTip(language_manager.get_text("port_combo_stopbits_tooltip"))
         self.flow_combo.setToolTip(language_manager.get_text("port_combo_flow_tooltip"))
 
-        self.data_label.setText(language_manager.get_text("port_lbl_data"))
-        self.parity_label.setText(language_manager.get_text("port_lbl_parity"))
-        self.stop_label.setText(language_manager.get_text("port_lbl_stop"))
-        self.flow_label.setText(language_manager.get_text("port_lbl_flow"))
+        self.datasize_lbl.setText(language_manager.get_text("port_lbl_datasize"))
+        self.parity_lbl.setText(language_manager.get_text("port_lbl_parity"))
+        self.stopbits_lbl.setText(language_manager.get_text("port_lbl_stop"))
+        self.flow_lbl.setText(language_manager.get_text("port_lbl_flow"))
 
     def on_connect_clicked(self) -> None:
         """연결 버튼 클릭 핸들러입니다."""
@@ -179,10 +196,10 @@ class PortSettingsWidget(QGroupBox):
             config: Dict[str, Any] = {
                 "port": self.port_combo.currentText(),
                 "baudrate": int(self.baud_combo.currentText()),
-                "bytesize": int(self.bytesize_combo.currentText()),
+                "datasize": int(self.datasize_combo.currentText()),
                 "parity": self.parity_combo.currentText(),
                 "stopbits": float(self.stopbits_combo.currentText()),
-                "flow_control": self.flow_combo.currentText(),
+                "flow": self.flow_combo.currentText(),
                 "dtr": self.dtr_check.isChecked(),
                 "rts": self.rts_check.isChecked()
             }
@@ -220,7 +237,7 @@ class PortSettingsWidget(QGroupBox):
         self.connect_btn.setText(language_manager.get_text("port_btn_disconnect") if connected else language_manager.get_text("port_btn_connect"))
         self.port_combo.setEnabled(not connected)
         self.baud_combo.setEnabled(not connected)
-        self.bytesize_combo.setEnabled(not connected)
+        self.datasize_combo.setEnabled(not connected)
         self.parity_combo.setEnabled(not connected)
         self.stopbits_combo.setEnabled(not connected)
         self.flow_combo.setEnabled(not connected)
@@ -238,10 +255,10 @@ class PortSettingsWidget(QGroupBox):
         state = {
             "port": self.port_combo.currentText(),
             "baudrate": self.baud_combo.currentText(),
-            "bytesize": self.bytesize_combo.currentText(),
+            "datasize": self.datasize_combo.currentText(),
             "parity": self.parity_combo.currentText(),
             "stopbits": self.stopbits_combo.currentText(),
-            "flow_control": self.flow_combo.currentText(),
+            "flow": self.flow_combo.currentText(),
             "dtr": self.dtr_check.isChecked(),
             "rts": self.rts_check.isChecked()
         }
@@ -265,10 +282,10 @@ class PortSettingsWidget(QGroupBox):
             self.port_combo.setCurrentText(port)
 
         self.baud_combo.setCurrentText(str(state.get("baudrate", "115200")))
-        self.bytesize_combo.setCurrentText(str(state.get("bytesize", "8")))
+        self.datasize_combo.setCurrentText(str(state.get("datasize", "8")))
         self.parity_combo.setCurrentText(state.get("parity", "N"))
         self.stopbits_combo.setCurrentText(str(state.get("stopbits", "1")))
-        self.flow_combo.setCurrentText(state.get("flow_control", "None"))
+        self.flow_combo.setCurrentText(state.get("flow", "None"))
         self.dtr_check.setChecked(state.get("dtr", True))
         self.rts_check.setChecked(state.get("rts", True))
 

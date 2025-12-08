@@ -24,12 +24,12 @@ def test_manual_control_translation(app, qtbot):
     # Switch to English
     language_manager.set_language('en')
     assert widget.send_btn.text() == "Send"
-    assert widget.hex_mode_check.text() == "Hex"
+    assert widget.hex_chk.text() == "Hex"
 
     # Switch to Korean
     language_manager.set_language('ko')
     assert widget.send_btn.text() == "전송"
-    assert widget.hex_mode_check.text() == "Hex"
+    assert widget.hex_chk.text() == "Hex"
 
 def test_command_list_translation(app, qtbot):
     widget = CommandListWidget()
@@ -37,10 +37,10 @@ def test_command_list_translation(app, qtbot):
 
     language_manager.set_language('en')
     # Check tooltips for buttons as they have no text
-    assert widget.add_btn.toolTip() == "Add new command"
+    assert widget.add_cmd_btn.toolTip() == "Add new command"
 
     language_manager.set_language('ko')
-    assert widget.add_btn.toolTip() == "새 명령 추가"
+    assert widget.add_cmd_btn.toolTip() == "새 명령 추가"
 
 def test_received_area_translation(app, qtbot):
     widget = ReceivedArea()

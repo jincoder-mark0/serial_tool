@@ -41,7 +41,7 @@ class PortTabWidget(QTabWidget):
         if obj == self.tabBar() and event.type() == event.MouseButtonDblClick:
             # 더블클릭된 탭 인덱스 찾기
             index = self.tabBar().tabAt(event.pos())
-            if index >= 0 and index < self.count() - 1:  # 플러스 탭 제외
+            if 0 <= index < self.count() - 1:  # 플러스 탭 제외
                 self.edit_tab_name(index)
                 return True
         return super().eventFilter(obj, event)

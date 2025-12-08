@@ -75,12 +75,12 @@ QPushButton:disabled {
     border-color: #303030;
 }
 
-QPushButton#add_btn { qproperty-icon: url(resources/icons/add_white.svg); }
-QPushButton#del_btn { qproperty-icon: url(resources/icons/delete_white.svg); }
-QPushButton#up_btn { qproperty-icon: url(resources/icons/up_white.svg); }
-QPushButton#down_btn { qproperty-icon: url(resources/icons/down_white.svg); }
-QPushButton#find_prev_btn { qproperty-icon: url(resources/icons/find_prev_white.svg); }
-QPushButton#find_next_btn { qproperty-icon: url(resources/icons/find_next_white.svg); }
+QPushButton#add_cmd_btn { qproperty-icon: url(resources/icons/add_white.svg); }
+QPushButton#del_cmd_btn { qproperty-icon: url(resources/icons/delete_white.svg); }
+QPushButton#up_cmd_btn { qproperty-icon: url(resources/icons/up_white.svg); }
+QPushButton#down_cmd_btn { qproperty-icon: url(resources/icons/down_white.svg); }
+QPushButton#search_prev_btn { qproperty-icon: url(resources/icons/find_prev_white.svg); }
+QPushButton#search_next_btn { qproperty-icon: url(resources/icons/find_next_white.svg); }
 
 /* QLineEdit, QTextEdit */
 QLineEdit, QTextEdit, QPlainTextEdit {

@@ -19,6 +19,9 @@ class RightSection(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
+        self.packet_inspector = None
+        self.command_list_panel = None
+        self.tabs = None
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결

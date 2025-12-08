@@ -16,7 +16,7 @@ class CommandControlWidget(QWidget):
     run_single_requested = pyqtSignal()
     stop_requested = pyqtSignal()
     start_auto_requested = pyqtSignal(int, int) # delay_ms, max_runs
-    stop_auto_requested = pyqtSignal()
+    repeat_stop_requested = pyqtSignal()
 
     save_script_requested = pyqtSignal()
     load_script_requested = pyqtSignal()
@@ -29,6 +29,18 @@ class CommandControlWidget(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
+        self.auto_run_count_lbl = None
+        self.repeat_stop_btn = None
+        self.repeat_start_btn = None
+        self.repeat_spin = None
+        self.repeat_max_lbl = None
+        self.repeat_delay = None
+        self.interval_lbl = None
+        self.stop_run_btn = None
+        self.run_once_btn = None
+        self.execution_grp = None
+        self.load_script_btn = None
+        self.save_script_btn = None
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
@@ -52,77 +64,70 @@ class CommandControlWidget(QWidget):
         self.load_script_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_load_script_tooltip"))
         self.load_script_btn.clicked.connect(self.load_script_requested.emit)
 
-        # 접두사 / 접미사 입력 (Prefix / Suffix Inputs)
-        # 접두사 / 접미사 입력 (Prefix / Suffix Inputs) - Removed
-        # self.prefix_label = QLabel(language_manager.get_text("cmd_ctrl_lbl_prefix"))
-        # self.suffix_label = QLabel(language_manager.get_text("cmd_ctrl_lbl_suffix"))
-
-        # top_layout.addWidget(self.prefix_label)
-        # top_layout.addWidget(self.prefix_input)
-        # top_layout.addWidget(self.suffix_label)
-        # top_layout.addWidget(self.suffix_input)
         top_layout.addStretch()
         top_layout.addWidget(self.save_script_btn)
         top_layout.addWidget(self.load_script_btn)
 
         # 2. 자동 실행 설정 그룹 (Auto Run Settings Group)
-        self.auto_group = QGroupBox(language_manager.get_text("cmd_ctrl_grp_execution"))
-        auto_layout = QGridLayout()
-        auto_layout.setContentsMargins(2, 2, 2, 2)
-        auto_layout.setSpacing(5)
+        self.execution_grp = QGroupBox(language_manager.get_text("cmd_ctrl_grp_execution"))
+        execution_layout = QGridLayout()
+        execution_layout.setContentsMargins(2, 2, 2, 2)
+        execution_layout.setSpacing(5)
 
         # Row 0: 단일 실행 및 정지
-        self.run_btn = QPushButton(language_manager.get_text("cmd_ctrl_btn_run_once"))
-        self.run_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_run_once_tooltip"))
-        self.run_btn.clicked.connect(self.run_single_requested.emit)
+        self.run_once_btn = QPushButton(language_manager.get_text("cmd_ctrl_btn_run_once"))
+        self.run_once_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_run_once_tooltip"))
+        self.run_once_btn.clicked.connect(self.run_single_requested.emit)
 
-        self.stop_btn = QPushButton(language_manager.get_text("cmd_ctrl_btn_stop_run"))
-        self.stop_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_stop_run_tooltip"))
-        self.stop_btn.clicked.connect(self.stop_requested.emit)
-        self.stop_btn.setEnabled(False)
-        self.stop_btn.setProperty("class", "danger") # 빨간색 스타일
+        self.stop_run_btn = QPushButton(language_manager.get_text("cmd_ctrl_btn_stop_run"))
+        self.stop_run_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_stop_run_tooltip"))
+        self.stop_run_btn.clicked.connect(self.stop_requested.emit)
+        self.stop_run_btn.setEnabled(False)
+        self.stop_run_btn.setProperty("class", "danger") # 빨간색 스타일
 
-        auto_layout.addWidget(self.run_btn, 0, 0, 1, 2)
-        auto_layout.addWidget(self.stop_btn, 0, 2, 1, 2)
+        execution_layout.addWidget(self.run_once_btn, 0, 0, 1, 2)
+        execution_layout.addWidget(self.stop_run_btn, 0, 2, 1, 2)
 
         # Row 1: 자동 실행 설정
-        self.delay_label = QLabel(language_manager.get_text("cmd_ctrl_lbl_interval"))
-        auto_layout.addWidget(self.delay_label, 1, 0)
-        self.global_delay_input = QLineEdit("1000")
-        self.global_delay_input.setFixedWidth(50)
-        self.global_delay_input.setAlignment(Qt.AlignRight)
-        auto_layout.addWidget(self.global_delay_input, 1, 1)
+        self.interval_lbl = QLabel(language_manager.get_text("cmd_ctrl_lbl_interval"))
+        execution_layout.addWidget(self.interval_lbl, 1, 0)
 
-        self.max_runs_label = QLabel(language_manager.get_text("cmd_ctrl_lbl_repeat"))
-        auto_layout.addWidget(self.max_runs_label, 1, 2)
-        self.auto_run_max_spin = QSpinBox()
-        self.auto_run_max_spin.setRange(0, 9999)
-        self.auto_run_max_spin.setValue(0)
-        self.auto_run_max_spin.setToolTip(language_manager.get_text("cmd_ctrl_input_repeat_tooltip"))
-        auto_layout.addWidget(self.auto_run_max_spin, 1, 3)
+        self.repeat_delay = QLineEdit("1000")
+        self.repeat_delay.setFixedWidth(50)
+        self.repeat_delay.setAlignment(Qt.AlignRight)
+        execution_layout.addWidget(self.repeat_delay, 1, 1)
+
+        self.repeat_max_lbl = QLabel(language_manager.get_text("cmd_ctrl_lbl_repeat_max"))
+        execution_layout.addWidget(self.repeat_max_lbl, 1, 2)
+
+        self.repeat_spin = QSpinBox()
+        self.repeat_spin.setRange(0, 9999)
+        self.repeat_spin.setValue(0)
+        self.repeat_spin.setToolTip(language_manager.get_text("cmd_ctrl_spin_repeat_tooltip"))
+        execution_layout.addWidget(self.repeat_spin, 1, 3)
 
         # Row 2: 자동 실행 제어
-        self.auto_run_btn = QPushButton(language_manager.get_text("cmd_ctrl_btn_start_auto"))
-        self.auto_run_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_start_auto_tooltip"))
-        self.auto_run_btn.setProperty("class", "accent") # 초록색 스타일
-        self.auto_run_btn.clicked.connect(self.on_start_auto)
+        self.repeat_start_btn = QPushButton(language_manager.get_text("cmd_ctrl_btn_repeat_start"))
+        self.repeat_start_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_repeat_start_tooltip"))
+        self.repeat_start_btn.setProperty("class", "accent") # 초록색 스타일
+        self.repeat_start_btn.clicked.connect(self.on_repeat_start)
 
-        self.stop_auto_btn = QPushButton(language_manager.get_text("cmd_ctrl_btn_stop_auto"))
-        self.stop_auto_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_stop_auto_tooltip"))
-        self.stop_auto_btn.clicked.connect(self.stop_auto_requested.emit)
-        self.stop_auto_btn.setEnabled(False)
+        self.repeat_stop_btn = QPushButton(language_manager.get_text("cmd_ctrl_btn_repeat_stop"))
+        self.repeat_stop_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_repeat_stop_tooltip"))
+        self.repeat_stop_btn.clicked.connect(self.repeat_stop_requested.emit)
+        self.repeat_stop_btn.setEnabled(False)
 
-        self.auto_run_count_label = QLabel("0 / ∞")
-        self.auto_run_count_label.setAlignment(Qt.AlignCenter)
+        self.auto_run_count_lbl = QLabel("0 / ∞")
+        self.auto_run_count_lbl.setAlignment(Qt.AlignCenter)
 
-        auto_layout.addWidget(self.auto_run_btn, 2, 0, 1, 2)
-        auto_layout.addWidget(self.stop_auto_btn, 2, 2)
-        auto_layout.addWidget(self.auto_run_count_label, 2, 3)
+        execution_layout.addWidget(self.repeat_start_btn, 2, 0, 1, 2)
+        execution_layout.addWidget(self.repeat_stop_btn, 2, 2)
+        execution_layout.addWidget(self.auto_run_count_lbl, 2, 3)
 
-        self.auto_group.setLayout(auto_layout)
+        self.execution_grp.setLayout(execution_layout)
 
         layout.addLayout(top_layout)
-        layout.addWidget(self.auto_group)
+        layout.addWidget(self.execution_grp)
 
         self.setLayout(layout)
 
@@ -137,34 +142,28 @@ class CommandControlWidget(QWidget):
         self.load_script_btn.setText(language_manager.get_text("cmd_ctrl_btn_load_script"))
         self.load_script_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_load_script_tooltip"))
 
-        # self.prefix_input.setToolTip(language_manager.get_text("cmd_ctrl_input_prefix_tooltip"))
-        # self.suffix_input.setToolTip(language_manager.get_text("cmd_ctrl_input_suffix_tooltip"))
+        self.execution_grp.setTitle(language_manager.get_text("cmd_ctrl_grp_execution"))
 
-        # self.prefix_label.setText(language_manager.get_text("cmd_ctrl_lbl_prefix"))
-        # self.suffix_label.setText(language_manager.get_text("cmd_ctrl_lbl_suffix"))
+        self.run_once_btn.setText(language_manager.get_text("cmd_ctrl_btn_run_once"))
+        self.run_once_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_run_once_tooltip"))
 
-        self.auto_group.setTitle(language_manager.get_text("cmd_ctrl_grp_execution"))
+        self.stop_run_btn.setText(language_manager.get_text("cmd_ctrl_btn_stop_run"))
+        self.stop_run_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_stop_run_tooltip"))
 
-        self.run_btn.setText(language_manager.get_text("cmd_ctrl_btn_run_once"))
-        self.run_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_run_once_tooltip"))
+        self.interval_lbl.setText(language_manager.get_text("cmd_ctrl_lbl_interval"))
+        self.repeat_max_lbl.setText(language_manager.get_text("cmd_ctrl_lbl_repeat_max"))
+        self.repeat_spin.setToolTip(language_manager.get_text("cmd_ctrl_spin_repeat_tooltip"))
 
-        self.stop_btn.setText(language_manager.get_text("cmd_ctrl_btn_stop_run"))
-        self.stop_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_stop_run_tooltip"))
+        self.repeat_start_btn.setText(language_manager.get_text("cmd_ctrl_btn_repeat_start"))
+        self.repeat_stop_btn.setText(language_manager.get_text("cmd_ctrl_btn_repeat_stop"))
 
-        self.delay_label.setText(language_manager.get_text("cmd_ctrl_lbl_interval"))
-        self.max_runs_label.setText(language_manager.get_text("cmd_ctrl_lbl_repeat"))
-        self.auto_run_max_spin.setToolTip(language_manager.get_text("cmd_ctrl_input_repeat_tooltip"))
-
-        self.auto_run_btn.setText(language_manager.get_text("cmd_ctrl_btn_start_auto"))
-        self.stop_auto_btn.setText(language_manager.get_text("cmd_ctrl_btn_stop_auto"))
-
-    def on_start_auto(self) -> None:
+    def on_repeat_start(self) -> None:
         """자동 실행 시작 버튼 핸들러"""
         try:
-            delay = int(self.global_delay_input.text())
+            delay = int(self.repeat_delay.text())
         except ValueError:
             delay = 1000
-        max_runs = self.auto_run_max_spin.value()
+        max_runs = self.repeat_spin.value()
         self.start_auto_requested.emit(delay, max_runs)
 
     def set_running_state(self, running: bool, is_auto: bool = False) -> None:
@@ -176,16 +175,16 @@ class CommandControlWidget(QWidget):
             is_auto (bool): 자동 실행 모드 여부.
         """
         if running:
-            self.run_btn.setEnabled(False)
-            self.auto_run_btn.setEnabled(False)
-            self.stop_btn.setEnabled(True)
+            self.run_once_btn.setEnabled(False)
+            self.repeat_start_btn.setEnabled(False)
+            self.stop_run_btn.setEnabled(True)
             if is_auto:
-                self.stop_auto_btn.setEnabled(True)
+                self.repeat_stop_btn.setEnabled(True)
         else:
-            self.run_btn.setEnabled(True)
-            self.auto_run_btn.setEnabled(True)
-            self.stop_btn.setEnabled(False)
-            self.stop_auto_btn.setEnabled(False)
+            self.run_once_btn.setEnabled(True)
+            self.repeat_start_btn.setEnabled(True)
+            self.stop_run_btn.setEnabled(False)
+            self.repeat_stop_btn.setEnabled(False)
 
     def update_auto_count(self, current: int, total: int) -> None:
         """
@@ -196,7 +195,7 @@ class CommandControlWidget(QWidget):
             total (int): 전체 실행 횟수 (0이면 무한).
         """
         total_str = "∞" if total == 0 else str(total)
-        self.auto_run_count_label.setText(f"{current} / {total_str}")
+        self.auto_run_count_lbl.setText(f"{current} / {total_str}")
 
     def set_controls_enabled(self, enabled: bool) -> None:
         """
@@ -205,8 +204,8 @@ class CommandControlWidget(QWidget):
         Args:
             enabled (bool): 활성화 여부.
         """
-        self.run_btn.setEnabled(enabled)
-        self.auto_run_btn.setEnabled(enabled)
+        self.run_once_btn.setEnabled(enabled)
+        self.repeat_start_btn.setEnabled(enabled)
         # Stop 버튼들은 실행 상태에 따라 별도 관리되므로 여기서는 건드리지 않음
 
     def save_state(self) -> dict:
@@ -217,8 +216,8 @@ class CommandControlWidget(QWidget):
             dict: 위젯 상태 데이터.
         """
         state = {
-            "delay": self.global_delay_input.text(),
-            "max_runs": self.auto_run_max_spin.value()
+            "delay": self.repeat_delay.text(),
+            "max_runs": self.repeat_spin.value()
         }
         return state
 
@@ -232,8 +231,6 @@ class CommandControlWidget(QWidget):
         if not state:
             return
 
-        # self.prefix_input.setText(state.get("prefix", ""))
-        # self.suffix_input.setText(state.get("suffix", ""))
-        self.global_delay_input.setText(state.get("delay", "1000"))
-        self.auto_run_max_spin.setValue(state.get("max_runs", 0))
+        self.repeat_delay.setText(state.get("delay", "1000"))
+        self.repeat_spin.setValue(state.get("max_runs", 0))
 

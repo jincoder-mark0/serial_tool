@@ -12,6 +12,8 @@
 6. **포트 탭 이름 수정 기능**: 커스텀 이름 지정
 7. **순환 import 문제 해결**: TYPE_CHECKING 활용
 8. **탭 삭제 시 새 탭 생성 버그 수정**: 시그널 차단 및 최소 탭 유지
+9. **언어 확장성 개선**: 하드코딩된 언어 비교 제거
+10. **UI 아이콘 수정**: 버튼 objectName 불일치 해결
 
 ---
 
@@ -56,11 +58,12 @@
 **문제**: 행을 이동할 때 `_set_send_button`을 호출하여 새 버튼을 생성하면서, 버튼의 활성화 상태가 초기값(비활성화)으로 리셋되는 버그
 
 **해결**:
+
 ```python
 def _move_row(self, source_row: int, dest_row: int) -> None:
     # 0. 이동 전 버튼 상태 저장
     is_enabled = False
-    index = self.model.index(source_row, 6)
+    index = self.cmd_table_model.index(source_row, 6)
     widget = self.cmd_table.indexWidget(index)
     if widget:
         btn = widget.findChild(QPushButton)
@@ -68,14 +71,14 @@ def _move_row(self, source_row: int, dest_row: int) -> None:
             is_enabled = btn.isEnabled()
 
     # 1-2. 행 이동
-    items = self.model.takeRow(source_row)
-    self.model.insertRow(dest_row, items)
+    items = self.cmd_table_model.takeRow(source_row)
+    self.cmd_table_model.insertRow(dest_row, items)
 
     # 3. 위젯(버튼) 복구
     self._set_send_button(dest_row)
 
     # 4. 버튼 상태 복원
-    new_index = self.model.index(dest_row, 6)
+    new_index = self.cmd_table_model.index(dest_row, 6)
     new_widget = self.cmd_table.indexWidget(new_index)
     if new_widget:
         new_btn = new_widget.findChild(QPushButton)
@@ -269,6 +272,79 @@ def close_port_tab(self, index: int) -> None:
 - 최소 1개의 포트 탭 유지 로직 추가
 
 
+### 9. 언어 확장성 개선
+
+**파일**: `view/language_manager.py`
+
+**문제**: 언어별로 하드코딩된 비교 방식 (`"en"`, `"ko"`)은 새 언어가 추가될 때마다 코드를 수정해야 하는 확장성 문제
+
+**개선 사항**:
+
+```python
+def get_text(self, key: str, lang_code: Optional[str] = None) -> str:
+    """지정된 언어(또는 현재 언어)에 맞는 텍스트를 반환합니다."""
+    target_lang = lang_code if lang_code else self.current_language
+    # ...
+
+def get_supported_languages(self) -> list:
+    """지원되는 모든 언어 코드 목록을 반환합니다."""
+    return list(self.resources.keys())
+
+def text_matches_key(self, text: str, key: str) -> bool:
+    """주어진 텍스트가 특정 키의 어떤 언어 번역과 일치하는지 확인합니다."""
+    for lang_code in self.get_supported_languages():
+        if text == self.get_text(key, lang_code):
+            return True
+    return False
+```
+
+**적용 파일**:
+- `view/widgets/manual_control.py` (L170-171)
+- `view/widgets/main_status_bar.py` (L31-32)
+- `view/widgets/file_progress.py` (L70-71, L77-78)
+
+**변경 전**:
+```python
+if self.file_path_lbl.text() == language_manager.get_text("key", "en") or \
+   self.file_path_lbl.text() == language_manager.get_text("key", "ko"):
+```
+
+**변경 후**:
+```python
+if language_manager.text_matches_key(self.file_path_lbl.text(), "key"):
+```
+
+### 10. UI 아이콘 표시 문제 수정
+
+**파일**: `resources/themes/dark_theme.qss`, `resources/themes/light_theme.qss`
+
+**문제**: 버튼의 objectName과 QSS 선택자가 일치하지 않아 아이콘이 표시되지 않음
+
+**불일치 목록**:
+| 코드 objectName | QSS 선택자 (이전) | QSS 선택자 (수정) |
+|----------------|------------------|------------------|
+| `add_cmd_btn` | `add_btn` | `add_cmd_btn` |
+| `del_cmd_btn` | `del_btn` | `del_cmd_btn` |
+| `up_cmd_btn` | `up_btn` | `up_cmd_btn` |
+| `down_cmd_btn` | `down_btn` | `down_cmd_btn` |
+| `search_prev_btn` | `find_prev_btn` | `search_prev_btn` |
+| `search_next_btn` | `find_next_btn` | `search_next_btn` |
+
+**수정 내용**:
+```css
+/* Dark Theme */
+QPushButton#add_cmd_btn { qproperty-icon: url(resources/icons/add_white.svg); }
+QPushButton#del_cmd_btn { qproperty-icon: url(resources/icons/delete_white.svg); }
+QPushButton#up_cmd_btn { qproperty-icon: url(resources/icons/up_white.svg); }
+QPushButton#down_cmd_btn { qproperty-icon: url(resources/icons/down_white.svg); }
+QPushButton#search_prev_btn { qproperty-icon: url(resources/icons/find_prev_white.svg); }
+QPushButton#search_next_btn { qproperty-icon: url(resources/icons/find_next_white.svg); }
+
+/* Light Theme */
+QPushButton#add_cmd_btn { qproperty-icon: url(resources/icons/add_black.svg); }
+/* ... (동일한 패턴) */
+```
+
 ---
 
 ## 📝 수정된 파일 목록
@@ -284,14 +360,19 @@ def close_port_tab(self, index: int) -> None:
 - `view/panels/port_panel.py`
 - `view/sections/left_section.py`
 - `view/widgets/manual_control.py`
+- `view/widgets/main_status_bar.py`
+- `view/widgets/file_progress.py`
+- `view/language_manager.py`
 - `view/theme_manager.py`
+- `resources/themes/dark_theme.qss`
+- `resources/themes/light_theme.qss`
 - `core/settings_manager.py`
 - `view/dialogs/preferences_dialog.py`
 - `view/main_window.py`
 
 ### 문서
-- `doc/changelog.md`
-- `doc/session_summary_20251208.md` (신규)
+- `doc/CHANGELOG.md`
+- `doc/session_summary_20251208.md`
 
 ---
 
@@ -311,6 +392,8 @@ def close_port_tab(self, index: int) -> None:
 5. ✅ PortTabWidget과 PortPanel 간 순환 import 문제
 6. ✅ 탭 삭제 시 새 탭이 생성되는 버그
 7. ✅ 마지막 포트 탭 삭제 방지 로직 추가
+8. ✅ 언어별 하드코딩 문제 (확장성 개선)
+9. ✅ UI 버튼 아이콘 미표시 문제 (objectName 불일치)
 
 ---
 

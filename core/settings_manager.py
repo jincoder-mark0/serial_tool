@@ -178,7 +178,7 @@ class SettingsManager:
                 "default_config": {
                     "baudrate": 115200,
                     "parity": "N",
-                    "bytesize": 8,
+                    "datasize": 8,
                     "stopbits": 1
                 }
             }

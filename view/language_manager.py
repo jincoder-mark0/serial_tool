@@ -65,27 +65,54 @@ class LanguageManager(QObject):
             self.current_language = lang_code
             self.language_changed.emit(lang_code)
 
-    def get_text(self, key: str) -> str:
+    def get_text(self, key: str, lang_code: Optional[str] = None) -> str:
         """
-        현재 언어에 맞는 텍스트를 반환합니다.
+        지정된 언어(또는 현재 언어)에 맞는 텍스트를 반환합니다.
 
         Args:
             key (str): 텍스트 키.
+            lang_code (Optional[str]): 언어 코드. None이면 현재 언어 사용.
 
         Returns:
             str: 번역된 텍스트. 키가 없으면 키 자체를 반환.
         """
-        lang_dict = self.resources.get(self.current_language, {})
+        target_lang = lang_code if lang_code else self.current_language
+        lang_dict = self.resources.get(target_lang, {})
         text = lang_dict.get(key)
 
         if text is None:
-            # 현재 언어에 키가 없으면 기본 언어(영어)에서 시도
-            if self.current_language != 'en':
+            # 지정된 언어에 키가 없으면 기본 언어(영어)에서 시도
+            if target_lang != 'en':
                 fallback_dict = self.resources.get('en', {})
                 text = fallback_dict.get(key)
 
         # 여전히 없으면 키 자체를 반환
         return text if text is not None else key
+
+    def get_supported_languages(self) -> list:
+        """
+        지원되는 모든 언어 코드 목록을 반환합니다.
+
+        Returns:
+            list: 언어 코드 리스트 (예: ['en', 'ko']).
+        """
+        return list(self.resources.keys())
+
+    def text_matches_key(self, text: str, key: str) -> bool:
+        """
+        주어진 텍스트가 특정 키의 어떤 언어 번역과 일치하는지 확인합니다.
+
+        Args:
+            text (str): 확인할 텍스트.
+            key (str): 언어 키.
+
+        Returns:
+            bool: 일치하면 True, 아니면 False.
+        """
+        for lang_code in self.get_supported_languages():
+            if text == self.get_text(key, lang_code):
+                return True
+        return False
 
 # 전역 인스턴스
 language_manager = LanguageManager()

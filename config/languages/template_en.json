@@ -3,9 +3,8 @@
   // Main Window (main_window.py),
   // ============================================
   "main_title": "TODO: main_title",
-
   // ============================================
-  // Command Control Widget (widgets/command_control.py),
+  // Command Control Widget (widgets/cmd_ctrl.py),
   // ============================================
   "cmd_ctrl_btn_load_script": "TODO: cmd_ctrl_btn_load_script",
   "cmd_ctrl_btn_load_script_tooltip": "TODO: cmd_ctrl_btn_load_script_tooltip",
@@ -13,29 +12,28 @@
   "cmd_ctrl_btn_run_once_tooltip": "TODO: cmd_ctrl_btn_run_once_tooltip",
   "cmd_ctrl_btn_save_script": "TODO: cmd_ctrl_btn_save_script",
   "cmd_ctrl_btn_save_script_tooltip": "TODO: cmd_ctrl_btn_save_script_tooltip",
-  "cmd_ctrl_btn_start_auto": "TODO: cmd_ctrl_btn_start_auto",
-  "cmd_ctrl_btn_start_auto_tooltip": "TODO: cmd_ctrl_btn_start_auto_tooltip",
-  "cmd_ctrl_btn_stop_auto": "TODO: cmd_ctrl_btn_stop_auto",
-  "cmd_ctrl_btn_stop_auto_tooltip": "TODO: cmd_ctrl_btn_stop_auto_tooltip",
+  "cmd_ctrl_btn_repeat_start": "TODO: cmd_ctrl_btn_repeat_start",
+  "cmd_ctrl_btn_repeat_start_tooltip": "TODO: cmd_ctrl_btn_repeat_start_tooltip",
+  "cmd_ctrl_btn_repeat_stop": "TODO: cmd_ctrl_btn_repeat_stop",
+  "cmd_ctrl_btn_repeat_stop_tooltip": "TODO: cmd_ctrl_btn_repeat_stop_tooltip",
   "cmd_ctrl_btn_stop_run": "TODO: cmd_ctrl_btn_stop_run",
   "cmd_ctrl_btn_stop_run_tooltip": "TODO: cmd_ctrl_btn_stop_run_tooltip",
   "cmd_ctrl_grp_execution": "TODO: cmd_ctrl_grp_execution",
   "cmd_ctrl_input_prefix_tooltip": "TODO: cmd_ctrl_input_prefix_tooltip",
-  "cmd_ctrl_input_repeat_tooltip": "TODO: cmd_ctrl_input_repeat_tooltip",
+  "cmd_ctrl_spin_repeat_tooltip": "TODO: cmd_ctrl_spin_repeat_tooltip",
   "cmd_ctrl_input_suffix_tooltip": "TODO: cmd_ctrl_input_suffix_tooltip",
   "cmd_ctrl_lbl_interval": "TODO: cmd_ctrl_lbl_interval",
   "cmd_ctrl_lbl_prefix": "TODO: cmd_ctrl_lbl_prefix",
-  "cmd_ctrl_lbl_repeat": "TODO: cmd_ctrl_lbl_repeat",
+  "cmd_ctrl_lbl_repeat_max": "TODO: cmd_ctrl_lbl_repeat_max",
   "cmd_ctrl_lbl_suffix": "TODO: cmd_ctrl_lbl_suffix",
-
   // ============================================
-  // Command List Widget (widgets/command_list.py),
+  // Command List Widget (widgets/cmd_list.py),
   // ============================================
-  "cmd_list_btn_add_tooltip": "TODO: cmd_list_btn_add_tooltip",
-  "cmd_list_btn_delete_tooltip": "TODO: cmd_list_btn_delete_tooltip",
-  "cmd_list_btn_down_tooltip": "TODO: cmd_list_btn_down_tooltip",
+  "cmd_list_btn_add_cmd_tooltip": "TODO: cmd_list_btn_add_cmd_tooltip",
+  "cmd_list_btn_del_cmd_tooltip": "TODO: cmd_list_btn_del_cmd_tooltip",
+  "cmd_list_btn_down_cmd_tooltip": "TODO: cmd_list_btn_down_cmd_tooltip",
   "cmd_list_btn_send": "TODO: cmd_list_btn_send",
-  "cmd_list_btn_up_tooltip": "TODO: cmd_list_btn_up_tooltip",
+  "cmd_list_btn_up_cmd_tooltip": "TODO: cmd_list_btn_up_cmd_tooltip",
   "cmd_list_chk_select_all": "TODO: cmd_list_chk_select_all",
   "cmd_list_chk_select_all_tooltip": "TODO: cmd_list_chk_select_all_tooltip",
   "cmd_list_col_command": "TODO: cmd_list_col_command",
@@ -44,18 +42,16 @@
   "cmd_list_col_prefix": "TODO: cmd_list_col_prefix",
   "cmd_list_col_send": "TODO: cmd_list_col_send",
   "cmd_list_col_suffix": "TODO: cmd_list_col_suffix",
-  "cmd_list_grp_list": "TODO: cmd_list_grp_list",
-
+  "cmd_list_table_cmd": "TODO: cmd_list_table_cmd",
   // ============================================
   // File Progress Widget (widgets/file_progress.py),
   // ============================================
   "file_prog_btn_cancel": "TODO: file_prog_btn_cancel",
   "file_prog_lbl_eta_placeholder": "TODO: file_prog_lbl_eta_placeholder",
-  "file_prog_status_completed": "TODO: file_prog_status_completed",
-  "file_prog_status_failed": "TODO: file_prog_status_failed",
-  "file_prog_status_ready": "TODO: file_prog_status_ready",
-  "file_prog_status_sending": "TODO: file_prog_status_sending",
-
+  "file_prog_lbl_status_completed": "TODO: file_prog_lbl_status_completed",
+  "file_prog_lbl_status_failed": "TODO: file_prog_lbl_status_failed",
+  "file_prog_lbl_status_ready": "TODO: file_prog_lbl_status_ready",
+  "file_prog_lbl_status_sending": "TODO: file_prog_lbl_status_sending",
   // ============================================
   // Main Menu Bar Widget (widgets/main_menu_bar.py),
   // ============================================
@@ -68,7 +64,7 @@
   "main_menu_help": "TODO: main_menu_help",
   "main_menu_lang_en": "TODO: main_menu_lang_en",
   "main_menu_lang_ko": "TODO: main_menu_lang_ko",
-  "main_menu_language": "TODO: main_menu_language",
+  "main_menu_lang": "TODO: main_menu_lang",
   "main_menu_new_tab": "TODO: main_menu_new_tab",
   "main_menu_new_tab_tooltip": "TODO: main_menu_new_tab_tooltip",
   "main_menu_preferences": "TODO: main_menu_preferences",
@@ -77,12 +73,10 @@
   "main_menu_theme_light": "TODO: main_menu_theme_light",
   "main_menu_tools": "TODO: main_menu_tools",
   "main_menu_view": "TODO: main_menu_view",
-
   // ============================================
   // Main Status Bar Widget (widgets/main_status_bar.py),
   // ============================================
-  "main_status_ready": "TODO: main_status_ready",
-
+  "main_status_msg_ready": "TODO: main_status_msg_ready",
   // ============================================
   // Manual Control Widget (widgets/manual_control.py),
   // ============================================
@@ -111,15 +105,13 @@
   "manual_ctrl_grp_format": "TODO: manual_ctrl_grp_format",
   "manual_ctrl_grp_manual": "TODO: manual_ctrl_grp_manual",
   "manual_ctrl_input_cmd_placeholder": "TODO: manual_ctrl_input_cmd_placeholder",
-  "manual_ctrl_lbl_no_file": "TODO: manual_ctrl_lbl_no_file",
-
+  "manual_ctrl_lbl_file_path_no_file": "TODO: manual_ctrl_lbl_file_path_no_file",
   // ============================================
   // Packet Inspector Widget (widgets/packet_inspector.py),
   // ============================================
   "inspector_col_field": "TODO: inspector_col_field",
   "inspector_col_value": "TODO: inspector_col_value",
   "inspector_grp_title": "TODO: inspector_grp_title",
-
   // ============================================
   // Port Settings Widget (widgets/port_settings.py),
   // ============================================
@@ -129,27 +121,26 @@
   "port_btn_scan": "TODO: port_btn_scan",
   "port_btn_scan_tooltip": "TODO: port_btn_scan_tooltip",
   "port_combo_baud_tooltip": "TODO: port_combo_baud_tooltip",
-  "port_combo_data_tooltip": "TODO: port_combo_data_tooltip",
+  "port_combo_datasize_tooltip": "TODO: port_combo_datasize_tooltip",
   "port_combo_flow_tooltip": "TODO: port_combo_flow_tooltip",
   "port_combo_parity_tooltip": "TODO: port_combo_parity_tooltip",
   "port_combo_port_tooltip": "TODO: port_combo_port_tooltip",
-  "port_combo_stop_tooltip": "TODO: port_combo_stop_tooltip",
+  "port_combo_stopbits_tooltip": "TODO: port_combo_stopbits_tooltip",
   "port_combo_tooltip": "TODO: port_combo_tooltip",
   "port_grp_settings": "TODO: port_grp_settings",
   "port_lbl_baudrate": "TODO: port_lbl_baudrate",
-  "port_lbl_data": "TODO: port_lbl_data",
+  "port_lbl_datasize": "TODO: port_lbl_datasize",
   "port_lbl_flow": "TODO: port_lbl_flow",
   "port_lbl_parity": "TODO: port_lbl_parity",
   "port_lbl_port": "TODO: port_lbl_port",
   "port_lbl_stop": "TODO: port_lbl_stop",
-
   // ============================================
   // Received Area Widget (widgets/received_area.py),
   // ============================================
   "recv_btn_clear": "TODO: recv_btn_clear",
   "recv_btn_clear_tooltip": "TODO: recv_btn_clear_tooltip",
-  "recv_btn_next_tooltip": "TODO: recv_btn_next_tooltip",
-  "recv_btn_prev_tooltip": "TODO: recv_btn_prev_tooltip",
+  "recv_btn_search_next_tooltip": "TODO: recv_btn_search_next_tooltip",
+  "recv_btn_search_prev_tooltip": "TODO: recv_btn_search_prev_tooltip",
   "recv_btn_save": "TODO: recv_btn_save",
   "recv_btn_save_tooltip": "TODO: recv_btn_save_tooltip",
   "recv_chk_hex": "TODO: recv_chk_hex",
@@ -162,20 +153,17 @@
   "recv_input_search_tooltip": "TODO: recv_input_search_tooltip",
   "recv_lbl_log": "TODO: recv_lbl_log",
   "recv_txt_log_placeholder": "TODO: recv_txt_log_placeholder",
-
   // ============================================
   // Status Area Widget (widgets/status_area.py),
   // ============================================
   "status_lbl_log": "TODO: status_lbl_log",
   "status_txt_log_placeholder": "TODO: status_txt_log_placeholder",
   "status_txt_log_tooltip": "TODO: status_txt_log_tooltip",
-
   // ============================================
   // Command List Panel Panel (panels/command_list_panel.py),
   // ============================================
   "cmd_list_dialog_title_open": "TODO: cmd_list_dialog_title_open",
   "cmd_list_dialog_title_save": "TODO: cmd_list_dialog_title_save",
-
   // ============================================
   // About Dialog Dialog (dialogs/about_dialog.py),
   // ============================================
@@ -185,7 +173,6 @@
   "about_lbl_description": "TODO: about_lbl_description",
   "about_lbl_version": "TODO: about_lbl_version",
   "about_title": "TODO: about_title",
-
   // ============================================
   // Font Settings Dialog Dialog (dialogs/font_settings_dialog.py),
   // ============================================
@@ -199,7 +186,6 @@
   "font_lbl_preview": "TODO: font_lbl_preview",
   "font_lbl_size": "TODO: font_lbl_size",
   "font_title_settings": "TODO: font_title_settings",
-
   // ============================================
   // Preferences Dialog Dialog (dialogs/preferences_dialog.py),
   // ============================================
@@ -226,12 +212,10 @@
   "pref_tab_logging": "TODO: pref_tab_logging",
   "pref_tab_serial": "TODO: pref_tab_serial",
   "pref_title": "TODO: pref_title",
-
   // ============================================
   // Left Section Section (sections/left_section.py),
   // ============================================
   "left_tooltip_port_tab": "TODO: left_tooltip_port_tab",
-
   // ============================================
   // Right Section Section (sections/right_section.py),
   // ============================================

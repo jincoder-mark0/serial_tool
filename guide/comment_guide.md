@@ -222,7 +222,7 @@ tax = amount * 0.0020 if side == "SELL" else 0
 
 ```python
 # TODO: 향후 머신러닝 모델 연동 시 비동기 호출로 변경 필요
-prediction = self.model.predict(data)
+prediction = self.cmd_table_model.predict(data)
 
 # FIXME: 가끔 데이터 수신 지연으로 인해 IndexError 발생 가능성 있음 (예외 처리 보강 필요)
 last_price = data[-1]

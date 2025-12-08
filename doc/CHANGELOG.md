@@ -2,6 +2,39 @@
 
 ## [미배포] (Unreleased)
 
+### 언어 확장성 개선 및 아이콘 수정 (2025-12-08)
+
+#### 추가 사항 (Added)
+
+- **LanguageManager 확장성 개선**
+  - `get_text()` 메서드에 optional `lang_code` 파라미터 추가
+  - `get_supported_languages()` 메서드 추가: 지원되는 모든 언어 코드 목록 반환
+  - `text_matches_key()` 헬퍼 메서드 추가: 텍스트가 특정 키의 어떤 언어 번역과 일치하는지 확인
+  - 새 언어 추가 시 코드 수정 없이 자동 지원 가능
+
+#### 수정 사항 (Fixed)
+
+- **UI 아이콘 표시 문제**
+  - `dark_theme.qss`, `light_theme.qss`에서 아이콘 선택자 수정
+  - 버튼 objectName 불일치 해결: `add_btn` → `add_cmd_btn`, `del_btn` → `del_cmd_btn` 등
+  - Command List 및 검색 버튼 아이콘이 정상적으로 표시됨
+
+#### 변경 사항 (Changed)
+
+- **언어 비교 로직 개선**
+  - `manual_control.py`, `main_status_bar.py`, `file_progress.py`에서 하드코딩된 언어별 비교 제거
+  - `== language_manager.get_text("key", "en") or == language_manager.get_text("key", "ko")` 패턴을
+  - `language_manager.text_matches_key(text, "key")` 호출로 변경
+  - 일본어, 중국어 등 새 언어 추가 시 코드 수정 불필요
+
+#### 이점 (Benefits)
+
+- **확장성 향상**: 새 언어 추가 시 JSON 파일만 추가하면 자동 지원
+- **유지보수성 개선**: 언어별 하드코딩 제거로 코드 간소화
+- **UI 일관성**: 모든 아이콘 버튼이 테마에 맞게 정상 표시
+
+---
+
 ### UI/UX 개선 및 버그 수정 (2025-12-08)
 
 #### 추가 사항 (Added)

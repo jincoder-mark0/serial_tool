@@ -25,6 +25,13 @@ class CommandListWidget(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
+        self.cmd_table_model = None
+        self.cmd_table = None
+        self.down_cmd_btn = None
+        self.up_cmd_btn = None
+        self.del_cmd_btn = None
+        self.add_cmd_btn = None
+        self.select_all_chk = None
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
@@ -39,52 +46,52 @@ class CommandListWidget(QWidget):
         header_layout = QHBoxLayout()
 
         # 전체 선택 체크박스 (Tristate 지원)
-        self.select_all_check = QCheckBox(language_manager.get_text("cmd_list_chk_select_all"))
-        self.select_all_check.setToolTip(language_manager.get_text("cmd_list_chk_select_all_tooltip"))
-        self.select_all_check.setTristate(True)
-        self.select_all_check.stateChanged.connect(self.on_select_all_changed)
+        self.select_all_chk = QCheckBox(language_manager.get_text("cmd_list_chk_select_all"))
+        self.select_all_chk.setToolTip(language_manager.get_text("cmd_list_chk_select_all_tooltip"))
+        self.select_all_chk.setTristate(True)
+        self.select_all_chk.stateChanged.connect(self.on_select_all_changed)
 
-        self.add_btn = QPushButton()
-        self.add_btn.setObjectName("add_btn")
-        self.add_btn.setToolTip(language_manager.get_text("cmd_list_btn_add_tooltip"))
-        self.add_btn.setFixedSize(30, 30)
+        self.add_cmd_btn = QPushButton()
+        self.add_cmd_btn.setObjectName("add_cmd_btn")
+        self.add_cmd_btn.setToolTip(language_manager.get_text("cmd_list_btn_add_cmd_tooltip"))
+        self.add_cmd_btn.setFixedSize(30, 30)
 
-        self.del_btn = QPushButton()
-        self.del_btn.setObjectName("del_btn")
-        self.del_btn.setToolTip(language_manager.get_text("cmd_list_btn_delete_tooltip"))
-        self.del_btn.setFixedSize(30, 30)
+        self.del_cmd_btn = QPushButton()
+        self.del_cmd_btn.setObjectName("del_cmd_btn")
+        self.del_cmd_btn.setToolTip(language_manager.get_text("cmd_list_btn_del_cmd_tooltip"))
+        self.del_cmd_btn.setFixedSize(30, 30)
 
-        self.up_btn = QPushButton()
-        self.up_btn.setObjectName("up_btn")
-        self.up_btn.setToolTip(language_manager.get_text("cmd_list_btn_up_tooltip"))
-        self.up_btn.setFixedSize(30, 30)
+        self.up_cmd_btn = QPushButton()
+        self.up_cmd_btn.setObjectName("up_cmd_btn")
+        self.up_cmd_btn.setToolTip(language_manager.get_text("cmd_list_btn_up_cmd_tooltip"))
+        self.up_cmd_btn.setFixedSize(30, 30)
 
-        self.down_btn = QPushButton()
-        self.down_btn.setObjectName("down_btn")
-        self.down_btn.setToolTip(language_manager.get_text("cmd_list_btn_down_tooltip"))
-        self.down_btn.setFixedSize(30, 30)
+        self.down_cmd_btn = QPushButton()
+        self.down_cmd_btn.setObjectName("down_cmd_btn")
+        self.down_cmd_btn.setToolTip(language_manager.get_text("cmd_list_btn_down_cmd_tooltip"))
+        self.down_cmd_btn.setFixedSize(30, 30)
 
-        header_layout.addWidget(self.select_all_check)
+        header_layout.addWidget(self.select_all_chk)
         header_layout.addStretch()
-        header_layout.addWidget(self.add_btn)
-        header_layout.addWidget(self.del_btn)
-        header_layout.addWidget(self.up_btn)
-        header_layout.addWidget(self.down_btn)
+        header_layout.addWidget(self.add_cmd_btn)
+        header_layout.addWidget(self.del_cmd_btn)
+        header_layout.addWidget(self.up_cmd_btn)
+        header_layout.addWidget(self.down_cmd_btn)
 
         # 시그널 연결
-        self.add_btn.clicked.connect(self.add_empty_row)
-        self.del_btn.clicked.connect(self.delete_selected_rows)
-        self.up_btn.clicked.connect(self.move_row_up)
-        self.down_btn.clicked.connect(self.move_row_down)
+        self.add_cmd_btn.clicked.connect(self.add_cmd_row)
+        self.del_cmd_btn.clicked.connect(self.del_cmd_rows)
+        self.up_cmd_btn.clicked.connect(self.move_cmd_up)
+        self.down_cmd_btn.clicked.connect(self.move_cmd_down)
 
         # 테이블 뷰 (Table View)
         self.cmd_table = QTableView()
         self.cmd_table.setProperty("class", "fixed-font")  # 테이블에 고정폭 폰트 적용
-        self.model = QStandardItemModel()
+        self.cmd_table_model = QStandardItemModel()
         # 컬럼: 선택, 접두사, 명령어, 접미사, HEX, 지연시간, 전송버튼
         self.update_header_labels()
-        self.cmd_table.setModel(self.model)
-        self.cmd_table.setToolTip(language_manager.get_text("cmd_list_grp_list"))
+        self.cmd_table.setModel(self.cmd_table_model)
+        self.cmd_table.setToolTip(language_manager.get_text("cmd_list_table_cmd"))
 
         # 스크롤바 정책 - 항상 표시
         self.cmd_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
@@ -113,32 +120,32 @@ class CommandListWidget(QWidget):
         self.setLayout(layout)
 
         # 모델 시그널 연결
-        self.model.itemChanged.connect(self.on_item_changed)
-        self.model.rowsInserted.connect(lambda: self.command_list_changed.emit())
-        self.model.rowsRemoved.connect(lambda: self.command_list_changed.emit())
-        self.model.rowsMoved.connect(lambda: self.command_list_changed.emit())
+        self.cmd_table_model.itemChanged.connect(self.on_item_changed)
+        self.cmd_table_model.rowsInserted.connect(lambda: self.command_list_changed.emit())
+        self.cmd_table_model.rowsRemoved.connect(lambda: self.command_list_changed.emit())
+        self.cmd_table_model.rowsMoved.connect(lambda: self.command_list_changed.emit())
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.select_all_check.setText(language_manager.get_text("cmd_list_chk_select_all"))
-        self.select_all_check.setToolTip(language_manager.get_text("cmd_list_chk_select_all_tooltip"))
+        self.select_all_chk.setText(language_manager.get_text("cmd_list_chk_select_all"))
+        self.select_all_chk.setToolTip(language_manager.get_text("cmd_list_chk_select_all_tooltip"))
 
-        self.add_btn.setToolTip(language_manager.get_text("cmd_list_btn_add_tooltip"))
-        self.del_btn.setToolTip(language_manager.get_text("cmd_list_btn_delete_tooltip"))
-        self.up_btn.setToolTip(language_manager.get_text("cmd_list_btn_up_tooltip"))
-        self.down_btn.setToolTip(language_manager.get_text("cmd_list_btn_down_tooltip"))
+        self.add_cmd_btn.setToolTip(language_manager.get_text("cmd_list_btn_add_cmd_tooltip"))
+        self.del_cmd_btn.setToolTip(language_manager.get_text("cmd_list_btn_del_cmd_tooltip"))
+        self.up_cmd_btn.setToolTip(language_manager.get_text("cmd_list_btn_up_cmd_tooltip"))
+        self.down_cmd_btn.setToolTip(language_manager.get_text("cmd_list_btn_down_cmd_tooltip"))
 
-        self.cmd_table.setToolTip(language_manager.get_text("cmd_list_grp_list"))
+        self.cmd_table.setToolTip(language_manager.get_text("cmd_list_table_cmd"))
         self.update_header_labels()
 
         # Send 버튼 텍스트 업데이트 (모든 행)
-        for row in range(self.model.rowCount()):
-            index = self.model.index(row, 6)
+        for row in range(self.cmd_table_model.rowCount()):
+            index = self.cmd_table_model.index(row, 6)
             widget = self.cmd_table.indexWidget(index)
             if widget:
-                btn = widget.findChild(QPushButton)
-                if btn:
-                    btn.setText(language_manager.get_text("cmd_list_btn_send"))
+                btn_send = widget.findChild(QPushButton)
+                if btn_send:
+                    btn_send.setText(language_manager.get_text("cmd_list_btn_send"))
 
     def update_header_labels(self) -> None:
         """테이블 헤더 라벨을 업데이트합니다."""
@@ -151,7 +158,7 @@ class CommandListWidget(QWidget):
             language_manager.get_text("cmd_list_col_delay"),
             language_manager.get_text("cmd_list_col_send")
         ]
-        self.model.setHorizontalHeaderLabels(labels)
+        self.cmd_table_model.setHorizontalHeaderLabels(labels)
 
     def on_item_changed(self, item: QStandardItem) -> None:
         """
@@ -173,14 +180,14 @@ class CommandListWidget(QWidget):
             List[Dict[str, Any]]: 커맨드 데이터 리스트.
         """
         commands = []
-        for row in range(self.model.rowCount()):
+        for row in range(self.cmd_table_model.rowCount()):
             cmd_data = {
-                "enabled": self.model.item(row, 0).checkState() == Qt.Checked,
-                "prefix": self.model.item(row, 1).checkState() == Qt.Checked,
-                "command": self.model.item(row, 2).text(),
-                "suffix": self.model.item(row, 3).checkState() == Qt.Checked,
-                "hex_mode": self.model.item(row, 4).checkState() == Qt.Checked,
-                "delay": self.model.item(row, 5).text()
+                "enabled": self.cmd_table_model.item(row, 0).checkState() == Qt.Checked,
+                "prefix": self.cmd_table_model.item(row, 1).checkState() == Qt.Checked,
+                "command": self.cmd_table_model.item(row, 2).text(),
+                "suffix": self.cmd_table_model.item(row, 3).checkState() == Qt.Checked,
+                "hex_mode": self.cmd_table_model.item(row, 4).checkState() == Qt.Checked,
+                "delay": self.cmd_table_model.item(row, 5).text()
             }
             commands.append(cmd_data)
         return commands
@@ -192,7 +199,7 @@ class CommandListWidget(QWidget):
         Args:
             commands (List[Dict[str, Any]]): 커맨드 데이터 리스트.
         """
-        self.model.removeRows(0, self.model.rowCount())
+        self.cmd_table_model.removeRows(0, self.cmd_table_model.rowCount())
         for cmd in commands:
             self._append_row(
                 cmd.get("command", ""),
@@ -208,7 +215,7 @@ class CommandListWidget(QWidget):
         """테스트용 더미 데이터를 추가합니다."""
         self._append_row(cmd, True, hex_mode, suffix, delay)
 
-    def add_empty_row(self) -> None:
+    def add_cmd_row(self) -> None:
         """빈 행을 추가합니다."""
         self._append_row("", True, False, True, "100")
 
@@ -224,7 +231,7 @@ class CommandListWidget(QWidget):
             delay (str): 지연 시간.
             enabled (bool): 활성화 여부 (Select).
         """
-        row_idx = self.model.rowCount()
+        row_idx = self.cmd_table_model.rowCount()
 
         # 0: Select Checkbox
         item_select = QStandardItem()
@@ -260,7 +267,7 @@ class CommandListWidget(QWidget):
         item_send = QStandardItem("")
         item_send.setEditable(False)
 
-        self.model.appendRow([item_select, item_prefix, item_cmd, item_suffix, item_hex, item_delay, item_send])
+        self.cmd_table_model.appendRow([item_select, item_prefix, item_cmd, item_suffix, item_hex, item_delay, item_send])
 
         # Send 버튼 설정
         self._set_send_button(row_idx)
@@ -290,7 +297,7 @@ class CommandListWidget(QWidget):
 
         layout.addWidget(btn)
 
-        index = self.model.index(row, 6)
+        index = self.cmd_table_model.index(row, 6)
         self.cmd_table.setIndexWidget(index, widget)
 
     def _on_send_btn_clicked(self, btn: QPushButton) -> None:
@@ -316,8 +323,8 @@ class CommandListWidget(QWidget):
         Args:
             enabled (bool): 활성화 여부.
         """
-        for row in range(self.model.rowCount()):
-            index = self.model.index(row, 6)
+        for row in range(self.cmd_table_model.rowCount()):
+            index = self.cmd_table_model.index(row, 6)
             widget = self.cmd_table.indexWidget(index)
             if widget:
                 # widget은 컨테이너이므로 그 안의 버튼을 찾아야 함
@@ -325,14 +332,14 @@ class CommandListWidget(QWidget):
                 if btn:
                     btn.setEnabled(enabled)
 
-    def delete_selected_rows(self) -> None:
+    def del_cmd_rows(self) -> None:
         """선택된 행들을 삭제합니다."""
         rows = sorted(set(index.row() for index in self.cmd_table.selectionModel().selectedRows()), reverse=True)
         for row in rows:
-            self.model.removeRow(row)
+            self.cmd_table_model.removeRow(row)
         self.update_select_all_state()
 
-    def move_row_up(self) -> None:
+    def move_cmd_up(self) -> None:
         """선택된 행들을 위로 이동합니다."""
         rows = sorted(set(index.row() for index in self.cmd_table.selectionModel().selectedRows()))
         if not rows or rows[0] == 0:
@@ -346,10 +353,10 @@ class CommandListWidget(QWidget):
         for row in rows:
             self.cmd_table.selectRow(row - 1)
 
-    def move_row_down(self) -> None:
+    def move_cmd_down(self) -> None:
         """선택된 행들을 아래로 이동합니다."""
         rows = sorted(set(index.row() for index in self.cmd_table.selectionModel().selectedRows()), reverse=True)
-        if not rows or rows[0] == self.model.rowCount() - 1:
+        if not rows or rows[0] == self.cmd_table_model.rowCount() - 1:
             return
 
         # 아래에서부터 이동
@@ -370,7 +377,7 @@ class CommandListWidget(QWidget):
         """
         # 0. 이동 전 버튼 상태 저장
         is_enabled = False
-        index = self.model.index(source_row, 6)
+        index = self.cmd_table_model.index(source_row, 6)
         widget = self.cmd_table.indexWidget(index)
         if widget:
             btn = widget.findChild(QPushButton)
@@ -378,17 +385,17 @@ class CommandListWidget(QWidget):
                 is_enabled = btn.isEnabled()
 
         # 1. 데이터 가져오기
-        items = self.model.takeRow(source_row)
+        items = self.cmd_table_model.takeRow(source_row)
 
         # 2. 새 위치에 삽입
-        self.model.insertRow(dest_row, items)
+        self.cmd_table_model.insertRow(dest_row, items)
 
         # 3. 위젯(버튼) 복구
         # 이동 시 기존 위젯은 삭제되므로 새로 생성해야 함
         self._set_send_button(dest_row)
 
         # 4. 버튼 상태 복원
-        new_index = self.model.index(dest_row, 6)
+        new_index = self.cmd_table_model.index(dest_row, 6)
         new_widget = self.cmd_table.indexWidget(new_index)
         if new_widget:
             new_btn = new_widget.findChild(QPushButton)
@@ -403,8 +410,8 @@ class CommandListWidget(QWidget):
             List[int]: 선택된 행 인덱스 리스트.
         """
         indices: List[int] = []
-        for row in range(self.model.rowCount()):
-            item = self.model.item(row, 0)
+        for row in range(self.cmd_table_model.rowCount()):
+            item = self.cmd_table_model.item(row, 0)
             if item.checkState() == Qt.Checked:
                 indices.append(row)
         return indices
@@ -418,7 +425,7 @@ class CommandListWidget(QWidget):
         """
         if state == Qt.PartiallyChecked:
             # PartiallyChecked 상태에서 클릭하면 모두 선택으로 변경
-            self.select_all_check.setCheckState(Qt.Checked)
+            self.select_all_chk.setCheckState(Qt.Checked)
         elif state == Qt.Checked:
             self.set_all_checked(True)
         else:  # Qt.Unchecked
@@ -456,30 +463,30 @@ class CommandListWidget(QWidget):
             checked (bool): 체크 여부.
         """
         state = Qt.Checked if checked else Qt.Unchecked
-        for row in range(self.model.rowCount()):
-            item = self.model.item(row, 0)
+        for row in range(self.cmd_table_model.rowCount()):
+            item = self.cmd_table_model.item(row, 0)
             item.setCheckState(state)
         self.update_select_all_state()
 
     def update_select_all_state(self) -> None:
         """Select All 체크박스의 상태(전체/부분/없음)를 업데이트합니다."""
-        total = self.model.rowCount()
+        total = self.cmd_table_model.rowCount()
         if total == 0:
-            self.select_all_check.setCheckState(Qt.Unchecked)
+            self.select_all_chk.setCheckState(Qt.Unchecked)
             return
 
         checked_count = 0
         for row in range(total):
-            item = self.model.item(row, 0)
+            item = self.cmd_table_model.item(row, 0)
             if item and item.checkState() == Qt.Checked:
                 checked_count += 1
 
         # 재귀 호출 방지를 위해 시그널 차단
-        self.select_all_check.blockSignals(True)
+        self.select_all_chk.blockSignals(True)
         if checked_count == 0:
-            self.select_all_check.setCheckState(Qt.Unchecked)
+            self.select_all_chk.setCheckState(Qt.Unchecked)
         elif checked_count == total:
-            self.select_all_check.setCheckState(Qt.Checked)
+            self.select_all_chk.setCheckState(Qt.Checked)
         else:
-            self.select_all_check.setCheckState(Qt.PartiallyChecked)
-        self.select_all_check.blockSignals(False)
+            self.select_all_chk.setCheckState(Qt.PartiallyChecked)
+        self.select_all_chk.blockSignals(False)

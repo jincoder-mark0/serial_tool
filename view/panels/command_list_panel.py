@@ -25,6 +25,9 @@ class CommandListPanel(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
+        self.settings = None
+        self.cmd_ctrl = None
+        self.cmd_list = None
         self._loading = False
         self.init_ui()
 
@@ -34,31 +37,31 @@ class CommandListPanel(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(5)
 
-        self.command_list = CommandListWidget()
-        self.command_control = CommandControlWidget()
+        self.cmd_list = CommandListWidget()
+        self.cmd_ctrl = CommandControlWidget()
 
         # 설정 관리자 (Settings Manager)
         from core.settings_manager import SettingsManager
         self.settings = SettingsManager()
 
         # 시그널 연결
-        self.command_control.run_single_requested.connect(self.on_run_single_requested)
-        self.command_control.stop_requested.connect(self.stop_requested.emit)
-        self.command_control.start_auto_requested.connect(self.on_start_auto_requested)
-        self.command_control.stop_auto_requested.connect(self.stop_requested.emit) # Stop signal is same for now
+        self.cmd_ctrl.run_single_requested.connect(self.on_run_single_requested)
+        self.cmd_ctrl.stop_requested.connect(self.stop_requested.emit)
+        self.cmd_ctrl.start_auto_requested.connect(self.on_repeat_start_requested)
+        self.cmd_ctrl.repeat_stop_requested.connect(self.stop_requested.emit) # Stop signal is same for now
 
-        self.command_control.save_script_requested.connect(self.save_script_to_file)
-        self.command_control.load_script_requested.connect(self.load_script_from_file)
+        self.cmd_ctrl.save_script_requested.connect(self.save_script_to_file)
+        self.cmd_ctrl.load_script_requested.connect(self.load_script_from_file)
 
         # 데이터 변경 시 자동 저장
-        self.command_list.command_list_changed.connect(self.save_state)
+        self.cmd_list.command_list_changed.connect(self.save_state)
 
         # CommandControl의 입력 필드 변경 시에도 저장 (textChanged, valueChanged 등)
-        self.command_control.global_delay_input.textChanged.connect(self.save_state)
-        self.command_control.auto_run_max_spin.valueChanged.connect(self.save_state)
+        self.cmd_ctrl.repeat_delay.textChanged.connect(self.save_state)
+        self.cmd_ctrl.repeat_spin.valueChanged.connect(self.save_state)
 
-        layout.addWidget(self.command_list)
-        layout.addWidget(self.command_control)
+        layout.addWidget(self.cmd_list)
+        layout.addWidget(self.cmd_ctrl)
 
         self.setLayout(layout)
 
@@ -70,14 +73,14 @@ class CommandListPanel(QWidget):
         self._loading = True
         try:
             # 커맨드 리스트 로드
-            commands = self.settings.get("command_list.commands", [])
+            commands = self.settings.get("cmd_list.commands", [])
             if commands:
-                self.command_list.load_state(commands)
+                self.cmd_list.load_state(commands)
 
             # 컨트롤 설정 로드
-            control_state = self.settings.get("command_list.control_state", {})
+            control_state = self.settings.get("cmd_list.control_state", {})
             if control_state:
-                self.command_control.load_state(control_state)
+                self.cmd_ctrl.load_state(control_state)
         finally:
             self._loading = False
 
@@ -87,23 +90,23 @@ class CommandListPanel(QWidget):
             return
 
         # 커맨드 리스트 저장
-        commands = self.command_list.save_state()
-        self.settings.set("command_list.commands", commands)
+        commands = self.cmd_list.save_state()
+        self.settings.set("cmd_list.commands", commands)
 
         # 컨트롤 설정 저장
-        control_state = self.command_control.save_state()
-        self.settings.set("command_list.control_state", control_state)
+        control_state = self.cmd_ctrl.save_state()
+        self.settings.set("cmd_list.control_state", control_state)
 
         self.settings.save_settings()
 
     def on_run_single_requested(self) -> None:
         """Run(Single) 버튼 클릭 핸들러입니다."""
-        indices = self.command_list.get_selected_indices()
+        indices = self.cmd_list.get_selected_indices()
         if indices:
             self.run_requested.emit(indices)
-            self.command_control.set_running_state(True, is_auto=False)
+            self.cmd_ctrl.set_running_state(True, is_auto=False)
 
-    def on_start_auto_requested(self, delay: int, max_runs: int) -> None:
+    def on_repeat_start_requested(self, delay: int, max_runs: int) -> None:
         """
         Auto Run 버튼 클릭 핸들러입니다.
 
@@ -111,11 +114,11 @@ class CommandListPanel(QWidget):
             delay (int): 실행 간 지연 시간(ms).
             max_runs (int): 최대 실행 횟수.
         """
-        indices = self.command_list.get_selected_indices()
+        indices = self.cmd_list.get_selected_indices()
         if indices:
             # TODO: 자동 실행 파라미터를 시그널이나 별도 메서드로 전달해야 함
             self.run_requested.emit(indices)
-            self.command_control.set_running_state(True, is_auto=True)
+            self.cmd_ctrl.set_running_state(True, is_auto=True)
 
     def set_running_state(self, running: bool) -> None:
         """
@@ -126,7 +129,7 @@ class CommandListPanel(QWidget):
         """
         # TODO: UI를 올바르게 업데이트하려면 자동 실행 여부를 알아야 함
         # 현재는 단순히 비실행 상태로 초기화
-        self.command_control.set_running_state(running)
+        self.cmd_ctrl.set_running_state(running)
 
     def save_script_to_file(self) -> None:
         """현재 커맨드 리스트와 설정을 파일로 저장합니다."""
@@ -137,8 +140,8 @@ class CommandListPanel(QWidget):
             return
 
         data = {
-            "commands": self.command_list.save_state(),
-            "control_state": self.command_control.save_state()
+            "commands": self.cmd_list.save_state(),
+            "control_state": self.cmd_ctrl.save_state()
         }
 
         try:
@@ -160,10 +163,10 @@ class CommandListPanel(QWidget):
                 data = commentjson.load(f)
 
             if "commands" in data:
-                self.command_list.load_state(data["commands"])
+                self.cmd_list.load_state(data["commands"])
 
             if "control_state" in data:
-                self.command_control.load_state(data["control_state"])
+                self.cmd_ctrl.load_state(data["control_state"])
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load script: {str(e)}")

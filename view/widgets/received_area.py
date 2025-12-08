@@ -20,6 +20,13 @@ class ReceivedAreaWidget(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
+        self.search_prev_btn = None
+        self.search_input = None
+        self.save_btn = None
+        self.pause_check = None
+        self.timestamp_check = None
+        self.hex_check = None
+        self.clear_btn = None
         self.hex_mode: bool = False
         self.paused: bool = False
         self.batch_buffer: list[str] = []
@@ -75,25 +82,25 @@ class ReceivedAreaWidget(QWidget):
         self.search_input.returnPressed.connect(self.find_next)
         self.search_input.setMaximumWidth(200)
 
-        self.find_prev_btn = QPushButton()
-        self.find_prev_btn.setObjectName("find_prev_btn")
-        self.find_prev_btn.setToolTip(language_manager.get_text("recv_btn_prev_tooltip"))
-        self.find_prev_btn.setFixedWidth(30)
-        self.find_prev_btn.clicked.connect(self.find_prev)
+        self.search_prev_btn = QPushButton()
+        self.search_prev_btn.setObjectName("search_prev_btn")
+        self.search_prev_btn.setToolTip(language_manager.get_text("recv_btn_search_prev_tooltip"))
+        self.search_prev_btn.setFixedWidth(30)
+        self.search_prev_btn.clicked.connect(self.find_prev)
 
-        self.find_next_btn = QPushButton()
-        self.find_next_btn.setObjectName("find_next_btn")
-        self.find_next_btn.setToolTip(language_manager.get_text("recv_btn_next_tooltip"))
-        self.find_next_btn.setFixedWidth(30)
-        self.find_next_btn.clicked.connect(self.find_next)
+        self.search_next_btn = QPushButton()
+        self.search_next_btn.setObjectName("search_next_btn")
+        self.search_next_btn.setToolTip(language_manager.get_text("recv_btn_search_next_tooltip"))
+        self.search_next_btn.setFixedWidth(30)
+        self.search_next_btn.clicked.connect(self.find_next)
 
-        self.rx_log_label = QLabel(language_manager.get_text("recv_lbl_log"))
+        self.rx_log_lbl = QLabel(language_manager.get_text("recv_lbl_log"))
 
-        toolbar.addWidget(self.rx_log_label)
+        toolbar.addWidget(self.rx_log_lbl)
         toolbar.addStretch()
         toolbar.addWidget(self.search_input)
-        toolbar.addWidget(self.find_prev_btn)
-        toolbar.addWidget(self.find_next_btn)
+        toolbar.addWidget(self.search_prev_btn)
+        toolbar.addWidget(self.search_next_btn)
         toolbar.addWidget(self.hex_check)
         toolbar.addWidget(self.timestamp_check)
         toolbar.addWidget(self.pause_check)
@@ -101,14 +108,14 @@ class ReceivedAreaWidget(QWidget):
         toolbar.addWidget(self.save_btn)
 
         # 로그 표시 영역 (Log Display Area)
-        self.text_edit = QTextEdit()
-        self.text_edit.setReadOnly(True)
-        self.text_edit.setPlaceholderText(language_manager.get_text("recv_txt_log_placeholder"))
-        self.text_edit.setToolTip(language_manager.get_text("recv_lbl_log"))
-        self.text_edit.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
+        self.log_txt = QTextEdit()
+        self.log_txt.setReadOnly(True)
+        self.log_txt.setPlaceholderText(language_manager.get_text("recv_txt_log_placeholder"))
+        self.log_txt.setToolTip(language_manager.get_text("recv_lbl_log"))
+        self.log_txt.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
 
         layout.addLayout(toolbar)
-        layout.addWidget(self.text_edit)
+        layout.addWidget(self.log_txt)
         self.setLayout(layout)
 
     def retranslate_ui(self) -> None:
@@ -131,13 +138,13 @@ class ReceivedAreaWidget(QWidget):
         self.search_input.setPlaceholderText(language_manager.get_text("recv_input_search_placeholder"))
         self.search_input.setToolTip(language_manager.get_text("recv_input_search_tooltip"))
 
-        self.find_prev_btn.setToolTip(language_manager.get_text("recv_btn_prev_tooltip"))
-        self.find_next_btn.setToolTip(language_manager.get_text("recv_btn_next_tooltip"))
+        self.search_prev_btn.setToolTip(language_manager.get_text("recv_btn_search_prev_tooltip"))
+        self.search_next_btn.setToolTip(language_manager.get_text("recv_btn_search_next_tooltip"))
 
-        self.rx_log_label.setText(language_manager.get_text("recv_lbl_log"))
+        self.rx_log_lbl.setText(language_manager.get_text("recv_lbl_log"))
 
-        self.text_edit.setToolTip(language_manager.get_text("recv_lbl_log"))
-        self.text_edit.setPlaceholderText(language_manager.get_text("recv_txt_log_placeholder"))
+        self.log_txt.setToolTip(language_manager.get_text("recv_lbl_log"))
+        self.log_txt.setPlaceholderText(language_manager.get_text("recv_txt_log_placeholder"))
 
     def find_next(self) -> None:
         """다음 검색 결과를 찾습니다."""
@@ -158,11 +165,11 @@ class ReceivedAreaWidget(QWidget):
         except re.error:
             pass # 정규식 오류 시 일반 텍스트로 취급
 
-        found = self.text_edit.find(text, options)
+        found = self.log_txt.find(text, options)
         if not found:
             # 처음부터 다시 검색 (Wrap around)
-            self.text_edit.moveCursor(QTextCursor.Start)
-            self.text_edit.find(text, options)
+            self.log_txt.moveCursor(QTextCursor.Start)
+            self.log_txt.find(text, options)
 
     def find_prev(self) -> None:
         """이전 검색 결과를 찾습니다."""
@@ -171,11 +178,11 @@ class ReceivedAreaWidget(QWidget):
             return
 
         options = QTextDocument.FindBackward
-        found = self.text_edit.find(text, options)
+        found = self.log_txt.find(text, options)
         if not found:
             # 끝에서부터 다시 검색 (Wrap around)
-            self.text_edit.moveCursor(QTextCursor.End)
-            self.text_edit.find(text, options)
+            self.log_txt.moveCursor(QTextCursor.End)
+            self.log_txt.find(text, options)
 
     def append_data(self, data: bytes) -> None:
         """
@@ -213,12 +220,12 @@ class ReceivedAreaWidget(QWidget):
             return
 
         text = "".join(self.batch_buffer)
-        self.text_edit.moveCursor(QTextCursor.End)
-        self.text_edit.insertHtml(text)  # 색상 지원을 위해 insertHtml 사용
+        self.log_txt.moveCursor(QTextCursor.End)
+        self.log_txt.insertHtml(text)  # 색상 지원을 위해 insertHtml 사용
         self.batch_buffer.clear()
 
         # 자동 스크롤 (Auto Scroll)
-        sb = self.text_edit.verticalScrollBar()
+        sb = self.log_txt.verticalScrollBar()
         if sb:
             sb.setValue(sb.maximum())
 
@@ -227,7 +234,7 @@ class ReceivedAreaWidget(QWidget):
 
     def clear_log(self) -> None:
         """로그 뷰와 버퍼를 초기화합니다."""
-        self.text_edit.clear()
+        self.log_txt.clear()
         self.batch_buffer.clear()
 
     def toggle_hex_mode(self, state: int) -> None:
@@ -262,10 +269,10 @@ class ReceivedAreaWidget(QWidget):
         로그 라인 수가 최대치를 초과하면 상위 20%를 제거합니다.
         (Implementation_Specification.md 섹션 18.3.2 기준)
         """
-        document = self.text_edit.document()
+        document = self.log_txt.document()
         if document.blockCount() > self.max_lines:
             # 사용자가 스크롤 중인지 확인
-            sb = self.text_edit.verticalScrollBar()
+            sb = self.log_txt.verticalScrollBar()
             if sb:
                 at_bottom = sb.value() >= (sb.maximum() - 10)
 

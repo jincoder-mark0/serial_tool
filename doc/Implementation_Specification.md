@@ -4325,7 +4325,7 @@ def test_port_open_workflow(qtbot, vsp_echo_server):
     qtbot.mouseClick(app.connect_btn, Qt.LeftButton)
 
     # 2. 상태 확인
-    assert app.status_label.text() == "Connected"
+    assert app.status_lbl.text() == "Connected"
 
     # 3. Tx 입력 → Send
     app.tx_input.setText("AT")

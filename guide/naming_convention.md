@@ -224,7 +224,82 @@ python tools/manage_lang_keys.py
 
 ---
 
-## 5. 요약
+## 5. UI 위젯 변수명 (Widget Variable Names)
+
+PyQt5 위젯 변수명은 `[용도]_[약어]` 형식을 사용합니다.
+
+### 5.1 표준 약어 규칙
+
+| UI 요소 | 약어 | 예시 |
+|---------|------|------|
+| Button | `_btn` | `send_btn`, `clear_btn`, `connect_btn` |
+| Label | `_lbl` | `status_lbl`, `port_lbl`, `title_lbl` |
+| CheckBox | `_chk` | `hex_chk`, `prefix_chk`, `suffix_chk` |
+| ComboBox | `_combo` | `port_combo`, `baud_combo` |
+| GroupBox | `_grp` | `option_grp`, `file_grp` |
+| SpinBox | `_spin` | `font_size_spin`, `repeat_spin` |
+| LineEdit | `_input` | `cmd_input`, `search_input` |
+| TextEdit | `_txt` | `log_txt`, `preview_txt` |
+| TableView | `_table` | `cmd_table` |
+| ProgressBar | `_bar` | `progress_bar` |
+
+### 5.2 복합 위젯 (전체 이름 사용)
+
+다음은 약어가 아닌 전체 이름을 사용합니다:
+- `menu_bar` (QMenuBar)
+- `status_bar` (QStatusBar)
+- `progress_bar` (QProgressBar)
+
+### 5.3 잘못된 예시
+
+```python
+# ❌ 잘못된 예시
+self.reset_button = QPushButton()  # → reset_btn
+self.title_label = QLabel()        # → title_lbl
+self.option_group = QGroupBox()    # → option_grp
+self.log_edit = QTextEdit()        # → log_txt
+
+# ✅ 올바른 예시
+self.reset_btn = QPushButton()
+self.title_lbl = QLabel()
+self.option_grp = QGroupBox()
+self.log_txt = QTextEdit()
+```
+
+---
+
+## 6. 시그널 및 핸들러 (Signals & Handlers)
+
+### 6.1 시그널 네이밍
+
+| 패턴 | 용도 | 예시 |
+|------|------|------|
+| `[대상]_changed` | 값/상태 변경 | `theme_changed`, `language_changed` |
+| `[동작]_requested` | 사용자 요청 | `send_command_requested`, `exit_requested` |
+| `[대상]_[동사]ed` | 완료 알림 | `data_received`, `port_opened` |
+
+### 6.2 이벤트 핸들러 네이밍
+
+| 패턴 | 용도 | 예시 |
+|------|------|------|
+| `on_[위젯]_[동작]` | GUI 이벤트 | `on_send_btn_clicked` |
+| `_on_[대상]_[동작]` | 내부 핸들러 | `_on_port_changed` |
+
+---
+
+## 7. 클래스 접미사 (Class Suffixes)
+
+| 타입 | 접미사 | 예시 |
+|------|--------|------|
+| 독립 위젯 | `Widget` | `PortSettingsWidget`, `ManualControlWidget` |
+| 복합 패널 | `Panel` | `PortPanel`, `CommandListPanel` |
+| 다이얼로그 | `Dialog` | `PreferencesDialog`, `AboutDialog` |
+| 레이아웃 영역 | `Section` | `LeftSection`, `RightSection` |
+| 관리 클래스 | `Manager` | `SettingsManager`, `LanguageManager` |
+
+---
+
+## 8. 요약
 
 | 항목 | 규칙 | 예시 |
 |------|------|------|
@@ -234,5 +309,7 @@ python tools/manage_lang_keys.py
 | 상수 | UPPER_CASE | `DEFAULT_BAUDRATE` |
 | 비공개 멤버 | _prefix | `_internal_method()` |
 | 언어 키 | [context]_[type]_[name] | `port_btn_connect` |
+| UI 위젯 변수 | [용도]_[약어] | `send_btn`, `status_lbl` |
 
 **핵심 원칙**: 명확하고, 일관되며, 검색 가능한 이름을 사용하세요!
+

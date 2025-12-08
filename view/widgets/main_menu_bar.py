@@ -1,5 +1,7 @@
 from PyQt5.QtWidgets import QMenuBar, QAction, QMenu
 from PyQt5.QtCore import pyqtSignal
+from pygments.lexers.sql import language_re
+
 from view.language_manager import language_manager
 
 class MainMenuBar(QMenuBar):
@@ -44,31 +46,31 @@ class MainMenuBar(QMenuBar):
         # 테마 서브메뉴
         theme_menu = view_menu.addMenu(language_manager.get_text("main_menu_theme"))
 
-        dark_action = QAction(language_manager.get_text("main_menu_theme_dark"), self)
-        dark_action.triggered.connect(lambda: self.theme_changed.emit("dark"))
-        theme_menu.addAction(dark_action)
+        theme_dark_action = QAction(language_manager.get_text("main_menu_theme_dark"), self)
+        theme_dark_action.triggered.connect(lambda: self.theme_changed.emit("dark"))
+        theme_menu.addAction(theme_dark_action)
 
-        light_action = QAction(language_manager.get_text("main_menu_theme_light"), self)
-        light_action.triggered.connect(lambda: self.theme_changed.emit("light"))
-        theme_menu.addAction(light_action)
+        theme_light_action = QAction(language_manager.get_text("main_menu_theme_light"), self)
+        theme_light_action.triggered.connect(lambda: self.theme_changed.emit("light"))
+        theme_menu.addAction(theme_light_action)
 
         # 폰트 설정 액션
-        font_settings_action = QAction(language_manager.get_text("main_menu_font"), self)
-        font_settings_action.setShortcut("Ctrl+Shift+F")
-        font_settings_action.setToolTip(language_manager.get_text("main_menu_font_tooltip"))
-        font_settings_action.triggered.connect(self.font_settings_requested.emit)
-        view_menu.addAction(font_settings_action)
+        font_action = QAction(language_manager.get_text("main_menu_font"), self)
+        font_action.setShortcut("Ctrl+Shift+F")
+        font_action.setToolTip(language_manager.get_text("main_menu_font_tooltip"))
+        font_action.triggered.connect(self.font_settings_requested.emit)
+        view_menu.addAction(font_action)
 
         # 언어 서브메뉴 (Language Submenu)
-        language_menu = view_menu.addMenu(language_manager.get_text("main_menu_language"))
+        lang_menu = view_menu.addMenu(language_manager.get_text("main_menu_lang"))
 
-        en_action = QAction(language_manager.get_text("main_menu_lang_en"), self)
-        en_action.triggered.connect(lambda: self.language_changed.emit("en"))
-        language_menu.addAction(en_action)
+        lang_en_action = QAction(language_manager.get_text("main_menu_lang_en"), self)
+        lang_en_action.triggered.connect(lambda: self.language_changed.emit("en"))
+        lang_menu.addAction(lang_en_action)
 
-        ko_action = QAction(language_manager.get_text("main_menu_lang_ko"), self)
-        ko_action.triggered.connect(lambda: self.language_changed.emit("ko"))
-        language_menu.addAction(ko_action)
+        lang_ko_action = QAction(language_manager.get_text("main_menu_lang_ko"), self)
+        lang_ko_action.triggered.connect(lambda: self.language_changed.emit("ko"))
+        lang_menu.addAction(lang_ko_action)
 
         # Preferences 액션
         preferences_action = QAction(language_manager.get_text("main_menu_preferences"), self)
