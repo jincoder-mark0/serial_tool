@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QSplitter
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 from typing import Optional
 
 from view.widgets.port_settings import PortSettingsWidget
@@ -12,6 +12,9 @@ class PortPanel(QWidget):
     포트 설정(PortSettings), 수신 로그(ReceivedArea), 상태 로그(StatusArea) 영역을 포함합니다.
     """
 
+    # 시그널 정의
+    tab_title_changed = pyqtSignal(str)  # 탭 제목 변경 시그널
+
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
         PortPanel을 초기화합니다.
@@ -20,7 +23,11 @@ class PortPanel(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
+        self.custom_name = "Port"  # 커스텀 이름 (기본값)
         self.init_ui()
+
+        # 포트 변경 시 탭 제목 업데이트
+        self.port_settings.port_combo.currentTextChanged.connect(self._on_port_changed)
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
@@ -45,6 +52,55 @@ class PortPanel(QWidget):
 
         self.setLayout(layout)
 
+    def _on_port_changed(self, port_name: str) -> None:
+        """포트 변경 시 탭 제목을 업데이트합니다."""
+        self.update_tab_title()
+
+    def set_custom_name(self, name: str) -> None:
+        """
+        커스텀 이름을 설정합니다.
+
+        Args:
+            name (str): 커스텀 이름.
+        """
+        self.custom_name = name
+        self.update_tab_title()
+
+    def get_custom_name(self) -> str:
+        """
+        커스텀 이름을 반환합니다.
+
+        Returns:
+            str: 커스텀 이름.
+        """
+        return self.custom_name
+
+    def get_port_name(self) -> str:
+        """
+        현재 선택된 포트 이름을 반환합니다.
+
+        Returns:
+            str: 포트 이름.
+        """
+        return self.port_settings.port_combo.currentText()
+
+    def get_tab_title(self) -> str:
+        """
+        탭 제목을 생성합니다 ("[커스텀명]:포트명" 형식).
+
+        Returns:
+            str: 탭 제목.
+        """
+        port_name = self.get_port_name()
+        if port_name:
+            return f"{self.custom_name}:{port_name}"
+        else:
+            return self.custom_name
+
+    def update_tab_title(self) -> None:
+        """탭 제목 변경 시그널을 발생시킵니다."""
+        self.tab_title_changed.emit(self.get_tab_title())
+
     def save_state(self) -> dict:
         """
         패널 상태를 저장합니다.
@@ -53,6 +109,7 @@ class PortPanel(QWidget):
             dict: 패널 상태 데이터.
         """
         return {
+            "custom_name": self.custom_name,
             "port_settings": self.port_settings.save_state(),
             "received_area": self.received_area.save_state()
         }
@@ -66,5 +123,8 @@ class PortPanel(QWidget):
         """
         if not state:
             return
+        self.custom_name = state.get("custom_name", "Port")
         self.port_settings.load_state(state.get("port_settings", {}))
         self.received_area.load_state(state.get("received_area", {}))
+        self.update_tab_title()
+

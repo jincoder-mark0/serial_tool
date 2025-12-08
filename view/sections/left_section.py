@@ -1,10 +1,11 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget, QTabBar
+from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtCore import Qt
 from typing import Optional
 from view.language_manager import language_manager
 
 from view.panels.port_panel import PortPanel
 from view.panels.manual_control_panel import ManualControlPanel
+from view.widgets.port_tab_widget import PortTabWidget
 from core.settings_manager import SettingsManager
 
 class LeftSection(QWidget):
@@ -32,12 +33,9 @@ class LeftSection(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(5)
 
-        # 포트 탭 (Port Tabs)
-        self.port_tabs = QTabWidget()
-        self.port_tabs.setTabsClosable(True)
-        self.port_tabs.tabCloseRequested.connect(self.close_port_tab)
-        self.port_tabs.currentChanged.connect(self.on_tab_changed)
-        self.port_tabs.setToolTip(language_manager.get_text("left_tooltip_port_tab"))
+        # 포트 탭 (Port Tabs) - PortTabWidget 사용
+        self.port_tabs = PortTabWidget()
+        self.port_tabs.tab_added.connect(self._on_tab_added)
 
         # 수동 제어 패널 (현재 포트에 대한 전역 제어)
         self.manual_control = ManualControlPanel()
@@ -47,57 +45,21 @@ class LeftSection(QWidget):
 
         self.setLayout(layout)
 
-        # 탭 초기화
-        # self.add_new_port_tab() # MainWindow에서 load_state 호출 시 처리됨
-        self.add_plus_tab()
-
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.port_tabs.setToolTip(language_manager.get_text("left_tooltip_port_tab"))
+        # PortTabWidget 내부에서 처리됨
+        pass
 
     def add_new_port_tab(self) -> None:
-        """새로운 포트 탭을 추가합니다."""
-        panel = PortPanel()
-        count = self.port_tabs.count()
-        index = count - 1 if count > 0 else 0
+        """새로운 포트 탭을 추가합니다. (외부 호출용 래퍼)"""
+        self.port_tabs.add_new_port_tab()
 
-        if count > 0 and self.port_tabs.tabText(count - 1) == "+":
-             index = self.port_tabs.insertTab(count - 1, panel, "-")
-        else:
-             index = self.port_tabs.addTab(panel, "-")
-
+    def _on_tab_added(self, panel: PortPanel) -> None:
+        """새 탭이 추가되었을 때 호출되는 핸들러"""
         # 포트 설정의 연결 상태 변경 시그널을 수동 제어 위젯에 연결
         panel.port_settings.connection_state_changed.connect(
             self._on_port_connection_changed
         )
-
-        self.port_tabs.setCurrentIndex(index)
-
-    def add_plus_tab(self) -> None:
-        """탭 추가를 위한 '+' 탭을 생성합니다."""
-        self.port_tabs.addTab(QWidget(), "+")
-        self.disable_close_button_for_plus_tab()
-
-    def disable_close_button_for_plus_tab(self) -> None:
-        """'+' 탭의 닫기 버튼을 비활성화/제거합니다."""
-        count = self.port_tabs.count()
-        if count > 0 and self.port_tabs.tabText(count - 1) == "+":
-            self.port_tabs.tabBar().setTabButton(count - 1, QTabBar.RightSide, None)
-            self.port_tabs.tabBar().setTabButton(count - 1, QTabBar.LeftSide, None)
-
-    def on_tab_changed(self, index: int) -> None:
-        """
-        탭 변경 시 처리 핸들러입니다.
-
-        Args:
-            index (int): 변경된 탭의 인덱스.
-        """
-        if index == -1: return
-
-        if self.port_tabs.tabText(index) == "+":
-            self.add_new_port_tab()
-
-
 
     def save_state(self) -> list:
         """
@@ -115,7 +77,8 @@ class LeftSection(QWidget):
         states = []
         count = self.port_tabs.count()
         for i in range(count):
-            if self.port_tabs.tabText(i) == "+":
+            # 마지막 탭(+) 제외
+            if i == count - 1:
                 continue
             widget = self.port_tabs.widget(i)
             if isinstance(widget, PortPanel):
@@ -137,57 +100,26 @@ class LeftSection(QWidget):
         if manual_state:
             self.manual_control.load_state(manual_state)
 
-        # 시그널 차단 (탭 삭제/추가 시 on_tab_changed가 호출되어 불필요한 탭이 생성되는 것을 방지)
+        # 시그널 차단
         self.port_tabs.blockSignals(True)
         try:
             # 기존 탭 모두 제거 (플러스 탭 제외)
             # 역순으로 제거해야 인덱스 문제 없음, 단 플러스 탭은 유지
             count = self.port_tabs.count()
-            for i in range(count - 1, -1, -1):
-                if self.port_tabs.tabText(i) == "+":
-                    continue
+            for i in range(count - 2, -1, -1): # 마지막 탭(count-1)은 +탭이므로 제외
                 self.port_tabs.removeTab(i)
 
             # 저장된 상태가 없으면 기본 탭 하나 추가
             if not states:
-                self.add_new_port_tab()
+                self.port_tabs.add_new_port_tab()
                 return
 
             # 상태 복원
-            for i, state in enumerate(states):
-                self.add_new_port_tab()
-                # 방금 추가된 탭 가져오기 (플러스 탭 바로 앞)
-                current_count = self.port_tabs.count()
-                # 플러스 탭이 있으면 마지막은 플러스 탭이므로 그 앞의 탭
-                # 플러스 탭이 없으면(혹시라도) 마지막 탭
-                target_index = current_count - 2 if current_count > 1 else 0
-
-                widget = self.port_tabs.widget(target_index)
-                if isinstance(widget, PortPanel):
-                    widget.load_state(state)
+            for state in states:
+                panel = self.port_tabs.add_new_port_tab()
+                panel.load_state(state)
         finally:
             self.port_tabs.blockSignals(False)
-
-    def close_port_tab(self, index: int) -> None:
-        """
-        탭 닫기 요청 처리 핸들러입니다.
-
-        Args:
-            index (int): 닫을 탭의 인덱스.
-        """
-        if self.port_tabs.tabText(index) == "+":
-            return
-        self.port_tabs.removeTab(index)
-
-    def update_tab_title(self, index: int, title: str) -> None:
-        """
-        탭의 제목을 업데이트합니다.
-
-        Args:
-            index (int): 탭 인덱스.
-            title (str): 새로운 제목.
-        """
-        self.port_tabs.setTabText(index, title)
 
     def _on_port_connection_changed(self, connected: bool) -> None:
         """

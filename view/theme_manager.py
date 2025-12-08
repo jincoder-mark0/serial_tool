@@ -1,7 +1,7 @@
 import os
 import platform
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtGui import QFont
+from PyQt5.QtGui import QFont, QIcon
 from core.logger import logger
 
 class ThemeManager:
@@ -307,4 +307,34 @@ class ThemeManager:
         """
         font = QFont(font_family, font_size)
         app.setFont(font)
+
+    def get_icon(self, name: str) -> QIcon:
+        """
+        현재 테마에 맞는 아이콘을 반환합니다.
+        아이콘 파일명 규칙: {name}_{theme}.svg (예: add_dark.svg, add_light.svg)
+        다크 테마인 경우 밝은 아이콘(_dark.svg)을, 라이트 테마인 경우 어두운 아이콘(_light.svg)을 찾습니다.
+
+        Args:
+            name (str): 아이콘 이름 (예: "add").
+
+        Returns:
+            QIcon: 테마에 맞는 QIcon 객체.
+        """
+        # 테마에 따른 접미사 결정
+        # 다크 테마 -> 밝은 아이콘 필요 -> _dark 접미사 (또는 _white)
+        # 라이트 테마 -> 어두운 아이콘 필요 -> _light 접미사 (또는 _black)
+        # 여기서는 파일명 규칙을 {name}_{theme}.svg로 가정하고,
+        # theme 값은 현재 테마 이름("dark", "light")을 그대로 사용
+
+        icon_path = f"resources/icons/{name}_{self._current_theme}.svg"
+
+        if not os.path.exists(icon_path):
+            # 폴백: 테마 접미사 없이 시도
+            fallback_path = f"resources/icons/{name}.svg"
+            if os.path.exists(fallback_path):
+                return QIcon(fallback_path)
+            # 파일이 없으면 빈 아이콘 반환
+            return QIcon()
+
+        return QIcon(icon_path)
 

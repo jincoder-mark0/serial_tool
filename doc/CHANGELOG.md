@@ -2,6 +2,68 @@
 
 ## [미배포] (Unreleased)
 
+### UI/UX 개선 및 버그 수정 (2025-12-08)
+
+#### 추가 사항 (Added)
+
+- **SmartNumberEdit 위젯**
+  - `view/widgets/common/smart_number_edit.py` 신규 생성
+  - HEX 모드와 일반 텍스트 모드 지원
+  - HEX 모드 시 0-9, A-F, 공백만 입력 허용
+  - 자동 대문자 변환 기능
+  - `ManualControlWidget` 입력 필드에 적용
+
+- **PortTabWidget 위젯**
+  - `view/widgets/port_tab_widget.py` 신규 생성
+  - 포트 탭 관리 로직 캡슐화 (추가/삭제/플러스 탭)
+  - `LeftSection`에서 `QTabWidget` 대신 `PortTabWidget` 사용
+  - 코드 재사용성 및 유지보수성 향상
+
+- **테마별 SVG 아이콘 지원**
+  - `ThemeManager.get_icon()` 메서드 추가
+  - 테마에 따라 `resources/icons/{name}_{theme}.svg` 로드
+  - `add_dark.svg`, `add_light.svg` 아이콘 생성
+  - 플러스 탭에 테마별 아이콘 적용
+
+- **포트 탭 이름 수정 기능**
+  - 탭 이름 형식: `[커스텀명]:포트명`
+  - 탭 더블클릭 시 커스텀 이름 수정 다이얼로그 표시
+  - 포트 변경 시 자동으로 탭 제목 업데이트
+  - 커스텀 이름 저장/복원 기능
+  - `PortPanel`에 `tab_title_changed` 시그널 추가
+
+#### 수정 사항 (Fixed)
+
+- **CommandListWidget Send 버튼 상태 버그**
+  - 행 이동 시 Send 버튼 활성화 상태가 초기화되는 문제 수정
+  - `_move_row` 메서드에서 이동 전 버튼 상태 저장 후 복원
+
+- **포트 탭 닫기 버튼 문제**
+  - `insertTab` 사용 시 닫기 버튼이 사라지는 버그 수정
+  - 플러스 탭 제거 → 새 탭 추가 → 플러스 탭 재추가 방식으로 변경
+  - 모든 탭의 닫기 버튼이 정상적으로 표시됨
+
+#### 변경 사항 (Changed)
+
+- **설정 키 일관성 확보**
+  - `SettingsManager`, `PreferencesDialog`, `MainWindow`에서 `menu_theme`, `menu_language` 키 통일
+  - `settings.json`의 `global.theme`, `global.language`와 내부 키 간 명확한 매핑 확립
+
+- **LeftSection 리팩토링**
+  - `PortTabWidget` 사용으로 탭 관리 코드 간소화
+  - `add_new_port_tab`, `close_port_tab`, `on_tab_changed` 등 메서드 제거 (캡슐화)
+
+#### 이점 (Benefits)
+
+- **사용자 경험 향상**: HEX 모드 입력 제한으로 오류 방지, 탭 이름 수정으로 사용자 정의 가능
+- **코드 품질 개선**: 위젯 캡슐화로 재사용성 및 유지보수성 향상
+- **테마 일관성**: 모든 UI 요소에 테마가 올바르게 적용됨
+- **안정성 향상**: 버튼 상태 및 탭 닫기 버그 수정으로 사용자 경험 개선
+
+---
+
+### 문서화 및 가이드 개선 (2025-12-05)
+
 ### 문서화 및 가이드 개선 (2025-12-05)
 
 #### 추가 사항 (Added)

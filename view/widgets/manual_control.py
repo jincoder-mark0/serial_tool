@@ -5,6 +5,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Optional
 from view.language_manager import language_manager
+from view.widgets.common.smart_number_edit import SmartNumberEdit
 
 class ManualControlWidget(QWidget):
     """
@@ -50,6 +51,7 @@ class ManualControlWidget(QWidget):
 
         self.hex_mode_check = QCheckBox(language_manager.get_text("manual_ctrl_chk_hex"))
         self.hex_mode_check.setToolTip(language_manager.get_text("manual_ctrl_chk_hex_tooltip"))
+        self.hex_mode_check.stateChanged.connect(self.on_hex_mode_changed)
 
         # 접두사/접미사 체크박스
         self.prefix_check = QCheckBox(language_manager.get_text("manual_ctrl_chk_prefix"))
@@ -86,7 +88,7 @@ class ManualControlWidget(QWidget):
         send_layout.setContentsMargins(2, 2, 2, 2)
         send_layout.setSpacing(5)
 
-        self.input_field = QLineEdit() # QTextEdit -> QLineEdit 변경
+        self.input_field = SmartNumberEdit() # SmartNumberEdit 사용
         self.input_field.setPlaceholderText(language_manager.get_text("manual_ctrl_input_cmd_placeholder"))
         self.input_field.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
         self.input_field.returnPressed.connect(self.on_send_clicked) # Enter 키 지원
@@ -156,6 +158,11 @@ class ManualControlWidget(QWidget):
 
         self.select_file_btn.setText(language_manager.get_text("manual_ctrl_btn_select_file"))
         self.send_file_btn.setText(language_manager.get_text("manual_ctrl_btn_send_file"))
+
+    def on_hex_mode_changed(self, state: int) -> None:
+        """HEX 모드 변경 시 SmartNumberEdit 모드 설정"""
+        is_hex = (state == Qt.Checked)
+        self.input_field.set_hex_mode(is_hex)
 
     def on_send_clicked(self) -> None:
         """전송 버튼 클릭 시 호출됩니다."""

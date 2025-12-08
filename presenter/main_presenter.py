@@ -59,7 +59,7 @@ class MainPresenter(QObject):
             use_suffix: 접미사 사용 여부
         """
         if not self.port_controller.is_open:
-            print("Port not open")
+            logger.warning("Port not open")
             return
 
         from core.settings_manager import SettingsManager
@@ -86,7 +86,7 @@ class MainPresenter(QObject):
                 data = bytes.fromhex(final_text.replace(' ', ''))
             except ValueError:
                 # 유효하지 않은 16진수 문자열인 경우 처리 (예: 오류 로깅, 사용자에게 알림)
-                print("Invalid hex string for sending.") # TODO: logger.error로 변경
+                logger.error("Invalid hex string for sending.")
                 return # 전송 중단
         else:
             data = final_text.encode('utf-8')

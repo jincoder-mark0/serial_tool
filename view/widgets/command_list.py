@@ -368,6 +368,15 @@ class CommandListWidget(QWidget):
             source_row (int): 원본 행 인덱스.
             dest_row (int): 대상 행 인덱스.
         """
+        # 0. 이동 전 버튼 상태 저장
+        is_enabled = False
+        index = self.model.index(source_row, 6)
+        widget = self.cmd_table.indexWidget(index)
+        if widget:
+            btn = widget.findChild(QPushButton)
+            if btn:
+                is_enabled = btn.isEnabled()
+
         # 1. 데이터 가져오기
         items = self.model.takeRow(source_row)
 
@@ -378,8 +387,13 @@ class CommandListWidget(QWidget):
         # 이동 시 기존 위젯은 삭제되므로 새로 생성해야 함
         self._set_send_button(dest_row)
 
-        # 참고: 현재 활성화 상태에 맞춰 버튼 상태 업데이트가 필요할 수 있음
-        # 현재는 기본값(False)로 생성되므로, 외부에서 상태 관리가 필요함.
+        # 4. 버튼 상태 복원
+        new_index = self.model.index(dest_row, 6)
+        new_widget = self.cmd_table.indexWidget(new_index)
+        if new_widget:
+            new_btn = new_widget.findChild(QPushButton)
+            if new_btn:
+                new_btn.setEnabled(is_enabled)
 
     def get_selected_indices(self) -> List[int]:
         """
