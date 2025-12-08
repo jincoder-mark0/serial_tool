@@ -15,9 +15,47 @@
 9. **언어 확장성 개선**: 하드코딩된 언어 비교 제거
 10. **UI 아이콘 수정**: 버튼 objectName 불일치 해결
 
+10. **UI 아이콘 수정**: 버튼 objectName 불일치 해결
+11. **UI/시그널/메서드 네이밍 리팩토링**: 구체적이고 일관된 이름으로 변경
+
 ---
 
 ## ✨ 주요 변경 사항
+
+### 11. UI 요소 및 시그널/메서드 네이밍 리팩토링
+
+**파일**: `manual_control.py`, `received_area.py`, `tx_panel.py`, `command_control.py`, `main_presenter.py` 등
+
+**목적**: 모호한 변수명(`send_btn` 등)을 구체적인 이름(`send_manual_cmd_btn` 등)으로 변경하여 코드 가독성과 유지보수성을 향상시킴.
+
+**주요 변경 내용**:
+- **UI 위젯**:
+  - `send_btn` → `send_manual_cmd_btn` (Manual Control)
+  - `send_btn` → `send_text_data_btn` (Tx Panel)
+  - `clear_btn` → `clear_rx_log_btn` (Received Area)
+  - `run_once_btn` → `cmd_run_once_btn` (Command Control)
+- **시그널**:
+  - `send_command_requested` → `manual_cmd_send_requested`
+  - `run_single_requested` → `cmd_run_single_requested`
+- **메서드**:
+  - `on_send_clicked` → `on_send_manual_cmd_clicked`
+  - `find_next` → `on_rx_search_next_clicked`
+
+**문서 업데이트**:
+- `guide/naming_convention.md`: 시그널 및 핸들러 네이밍 규칙 예시 추가
+
+### 12. PreferencesDialog 리팩토링
+
+**파일**: `view/dialogs/preferences_dialog.py`
+
+**목적**: 설정 로드 시 하드코딩된 값이나 불필요한 의존성을 제거하고 `SettingsManager`를 직접 활용.
+
+**변경 내용**:
+- `load_settings` 메서드 수정:
+  - `SettingsManager` 인스턴스 직접 생성 및 사용
+  - `current_settings` 딕셔너리 의존성 제거
+  - `global.theme`, `serial.default_baudrate` 등 올바른 키 경로 사용
+  - 언어 코드(`ko`/`en`)와 UI 텍스트(`Korean`/`English`) 간 변환 로직 내장
 
 ### 1. SmartNumberEdit 위젯 생성
 

@@ -45,20 +45,21 @@ class CommandListPanel(QWidget):
         self.settings = SettingsManager()
 
         # 시그널 연결
-        self.cmd_ctrl.run_single_requested.connect(self.on_run_single_requested)
-        self.cmd_ctrl.stop_requested.connect(self.stop_requested.emit)
-        self.cmd_ctrl.start_auto_requested.connect(self.on_repeat_start_requested)
-        self.cmd_ctrl.repeat_stop_requested.connect(self.stop_requested.emit) # Stop signal is same for now
+        # 시그널 연결
+        self.cmd_ctrl.cmd_run_single_requested.connect(self.on_run_single_requested)
+        self.cmd_ctrl.cmd_stop_requested.connect(self.stop_requested.emit)
+        self.cmd_ctrl.cmd_auto_start_requested.connect(self.on_repeat_start_requested)
+        self.cmd_ctrl.cmd_repeat_stop_requested.connect(self.stop_requested.emit) # Stop signal is same for now
 
-        self.cmd_ctrl.save_script_requested.connect(self.save_script_to_file)
-        self.cmd_ctrl.load_script_requested.connect(self.load_script_from_file)
+        self.cmd_ctrl.script_save_requested.connect(self.save_script_to_file)
+        self.cmd_ctrl.script_load_requested.connect(self.load_script_from_file)
 
         # 데이터 변경 시 자동 저장
         self.cmd_list.command_list_changed.connect(self.save_state)
 
         # CommandControl의 입력 필드 변경 시에도 저장 (textChanged, valueChanged 등)
-        self.cmd_ctrl.repeat_delay.textChanged.connect(self.save_state)
-        self.cmd_ctrl.repeat_spin.valueChanged.connect(self.save_state)
+        self.cmd_ctrl.repeat_delay_input.textChanged.connect(self.save_state)
+        self.cmd_ctrl.repeat_count_spin.valueChanged.connect(self.save_state)
 
         layout.addWidget(self.cmd_list)
         layout.addWidget(self.cmd_ctrl)

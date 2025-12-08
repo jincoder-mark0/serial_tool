@@ -14,11 +14,12 @@ class ManualControlWidget(QWidget):
     """
 
     # 시그널 정의
-    send_command_requested = pyqtSignal(str, bool, bool, bool) # text, hex_mode, use_prefix, use_suffix
-    send_file_requested = pyqtSignal(str) # filepath
-    file_selected = pyqtSignal(str) # filepath
-    save_log_requested = pyqtSignal(str) # filepath
-    clear_info_requested = pyqtSignal()
+    # 시그널 정의
+    manual_cmd_send_requested = pyqtSignal(str, bool, bool, bool) # text, hex_mode, use_prefix, use_suffix
+    transfer_file_send_requested = pyqtSignal(str) # filepath
+    transfer_file_selected = pyqtSignal(str) # filepath
+    manual_log_save_requested = pyqtSignal(str) # filepath
+    manual_options_clear_requested = pyqtSignal()
 
     # 접두사/접미사 상수 (CommandControl과 동일)
     PREFIX_KEY = "prefix"
@@ -32,21 +33,21 @@ class ManualControlWidget(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
-        self.send_file_btn = None
-        self.select_file_btn = None
-        self.file_path_lbl = None
-        self.file_grp = None
-        self.send_btn = None
-        self.cmd_input = None
-        self.send_grp = None
-        self.save_log_btn = None
-        self.clear_btn = None
+        self.send_transfer_file_btn = None
+        self.select_transfer_file_btn = None
+        self.transfer_file_path_lbl = None
+        self.file_transfer_grp = None
+        self.send_manual_cmd_btn = None
+        self.manual_cmd_input = None
+        self.manual_send_grp = None
+        self.save_manual_log_btn = None
+        self.clear_manual_options_btn = None
         self.dtr_chk = None
         self.rts_chk = None
         self.suffix_chk = None
         self.prefix_chk = None
         self.hex_chk = None
-        self.option_grp = None
+        self.manual_options_grp = None
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
@@ -59,7 +60,7 @@ class ManualControlWidget(QWidget):
         layout.setSpacing(2) # 간격 최소화
 
         # 1. 제어 옵션 그룹 (Control Options Group)
-        self.option_grp = QGroupBox(language_manager.get_text("manual_ctrl_grp_control"))
+        self.manual_options_grp = QGroupBox(language_manager.get_text("manual_ctrl_grp_control"))
         option_layout = QGridLayout()
         option_layout.setContentsMargins(2, 2, 2, 2) # 내부 여백 최소화
         option_layout.setSpacing(5)
@@ -78,13 +79,13 @@ class ManualControlWidget(QWidget):
         self.dtr_chk = QCheckBox(language_manager.get_text("manual_ctrl_chk_dtr"))
         self.dtr_chk.setToolTip(language_manager.get_text("manual_ctrl_chk_dtr_tooltip"))
 
-        self.clear_btn = QPushButton(language_manager.get_text("manual_ctrl_btn_clear"))
-        self.clear_btn.setToolTip(language_manager.get_text("manual_ctrl_btn_clear_tooltip"))
-        self.clear_btn.clicked.connect(self.clear_info_requested.emit)
+        self.clear_manual_options_btn = QPushButton(language_manager.get_text("manual_ctrl_btn_clear"))
+        self.clear_manual_options_btn.setToolTip(language_manager.get_text("manual_ctrl_btn_clear_tooltip"))
+        self.clear_manual_options_btn.clicked.connect(self.manual_options_clear_requested.emit)
 
-        self.save_log_btn = QPushButton(language_manager.get_text("manual_ctrl_btn_save_log"))
-        self.save_log_btn.setToolTip(language_manager.get_text("manual_ctrl_btn_save_log_tooltip"))
-        self.save_log_btn.clicked.connect(self.on_save_log_clicked)
+        self.save_manual_log_btn = QPushButton(language_manager.get_text("manual_ctrl_btn_save_log"))
+        self.save_manual_log_btn.setToolTip(language_manager.get_text("manual_ctrl_btn_save_log_tooltip"))
+        self.save_manual_log_btn.clicked.connect(self.on_save_manual_log_clicked)
 
         option_layout.addWidget(self.hex_chk, 0, 0)
         option_layout.addWidget(self.prefix_chk, 0, 1)
@@ -92,57 +93,57 @@ class ManualControlWidget(QWidget):
         option_layout.addWidget(self.rts_chk, 0, 3)
         option_layout.addWidget(self.dtr_chk, 0, 4)
 
-        option_layout.addWidget(self.clear_btn, 2, 0, 1, 2)
-        option_layout.addWidget(self.save_log_btn, 2, 2, 1, 2)
+        option_layout.addWidget(self.clear_manual_options_btn, 2, 0, 1, 2)
+        option_layout.addWidget(self.save_manual_log_btn, 2, 2, 1, 2)
 
-        self.option_grp.setLayout(option_layout)
+        self.manual_options_grp.setLayout(option_layout)
 
         # 3. 수동 전송 영역 (Manual Send Area)
-        self.send_grp = QGroupBox(language_manager.get_text("manual_ctrl_grp_manual"))
+        self.manual_send_grp = QGroupBox(language_manager.get_text("manual_ctrl_grp_manual"))
         send_layout = QHBoxLayout()
         send_layout.setContentsMargins(2, 2, 2, 2)
         send_layout.setSpacing(5)
 
-        self.cmd_input = SmartNumberEdit() # SmartNumberEdit 사용
-        self.cmd_input.setPlaceholderText(language_manager.get_text("manual_ctrl_input_cmd_placeholder"))
-        self.cmd_input.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
-        self.cmd_input.returnPressed.connect(self.on_send_clicked) # Enter 키 지원
+        self.manual_cmd_input = SmartNumberEdit() # SmartNumberEdit 사용
+        self.manual_cmd_input.setPlaceholderText(language_manager.get_text("manual_ctrl_input_cmd_placeholder"))
+        self.manual_cmd_input.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
+        self.manual_cmd_input.returnPressed.connect(self.on_send_manual_cmd_clicked) # Enter 키 지원
 
-        self.send_btn = QPushButton(language_manager.get_text("manual_ctrl_btn_send"))
-        self.send_btn.setCursor(Qt.PointingHandCursor)
+        self.send_manual_cmd_btn = QPushButton(language_manager.get_text("manual_ctrl_btn_send"))
+        self.send_manual_cmd_btn.setCursor(Qt.PointingHandCursor)
         # 스타일은 QSS에서 처리 권장 (강조색)
-        self.send_btn.setProperty("class", "accent")
-        self.send_btn.clicked.connect(self.on_send_clicked)
+        self.send_manual_cmd_btn.setProperty("class", "accent")
+        self.send_manual_cmd_btn.clicked.connect(self.on_send_manual_cmd_clicked)
 
-        send_layout.addWidget(self.cmd_input, 1)
-        send_layout.addWidget(self.send_btn)
+        send_layout.addWidget(self.manual_cmd_input, 1)
+        send_layout.addWidget(self.send_manual_cmd_btn)
 
-        self.send_grp.setLayout(send_layout)
+        self.manual_send_grp.setLayout(send_layout)
 
         # 3. 파일 전송 영역 (File Transfer Area)
-        self.file_grp = QGroupBox(language_manager.get_text("manual_ctrl_grp_file"))
+        self.file_transfer_grp = QGroupBox(language_manager.get_text("manual_ctrl_grp_file"))
         file_layout = QHBoxLayout()
         file_layout.setContentsMargins(2, 2, 2, 2)
         file_layout.setSpacing(5)
 
-        self.file_path_lbl = QLabel(language_manager.get_text("manual_ctrl_lbl_file_path_no_file"))
-        self.file_path_lbl.setStyleSheet("color: gray; border: 1px solid #555; padding: 2px; border-radius: 2px;")
+        self.transfer_file_path_lbl = QLabel(language_manager.get_text("manual_ctrl_lbl_file_path_no_file"))
+        self.transfer_file_path_lbl.setStyleSheet("color: gray; border: 1px solid #555; padding: 2px; border-radius: 2px;")
 
-        self.select_file_btn = QPushButton(language_manager.get_text("manual_ctrl_btn_select_file"))
-        self.select_file_btn.clicked.connect(self.on_select_file_clicked)
+        self.select_transfer_file_btn = QPushButton(language_manager.get_text("manual_ctrl_btn_select_file"))
+        self.select_transfer_file_btn.clicked.connect(self.on_select_transfer_file_clicked)
 
-        self.send_file_btn = QPushButton(language_manager.get_text("manual_ctrl_btn_send_file"))
-        self.send_file_btn.clicked.connect(self.on_send_file_clicked)
+        self.send_transfer_file_btn = QPushButton(language_manager.get_text("manual_ctrl_btn_send_file"))
+        self.send_transfer_file_btn.clicked.connect(self.on_send_transfer_file_clicked)
 
-        file_layout.addWidget(self.file_path_lbl, 1)
-        file_layout.addWidget(self.select_file_btn)
-        file_layout.addWidget(self.send_file_btn)
+        file_layout.addWidget(self.transfer_file_path_lbl, 1)
+        file_layout.addWidget(self.select_transfer_file_btn)
+        file_layout.addWidget(self.send_transfer_file_btn)
 
-        self.file_grp.setLayout(file_layout)
+        self.file_transfer_grp.setLayout(file_layout)
 
-        layout.addWidget(self.option_grp)
-        layout.addWidget(self.send_grp)
-        layout.addWidget(self.file_grp)
+        layout.addWidget(self.manual_options_grp)
+        layout.addWidget(self.manual_send_grp)
+        layout.addWidget(self.file_transfer_grp)
         layout.addStretch() # 하단 여백 추가
 
         self.setLayout(layout)
@@ -152,66 +153,66 @@ class ManualControlWidget(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.option_grp.setTitle(language_manager.get_text("manual_ctrl_grp_control"))
+        self.manual_options_grp.setTitle(language_manager.get_text("manual_ctrl_grp_control"))
         self.hex_chk.setText(language_manager.get_text("manual_ctrl_chk_hex"))
         self.prefix_chk.setText(language_manager.get_text("manual_ctrl_chk_prefix"))
         self.suffix_chk.setText(language_manager.get_text("manual_ctrl_chk_suffix"))
         self.rts_chk.setText(language_manager.get_text("manual_ctrl_chk_rts"))
         self.dtr_chk.setText(language_manager.get_text("manual_ctrl_chk_dtr"))
-        self.clear_btn.setText(language_manager.get_text("manual_ctrl_btn_clear"))
-        self.save_log_btn.setText(language_manager.get_text("manual_ctrl_btn_save_log"))
+        self.clear_manual_options_btn.setText(language_manager.get_text("manual_ctrl_btn_clear"))
+        self.save_manual_log_btn.setText(language_manager.get_text("manual_ctrl_btn_save_log"))
 
-        self.send_grp.setTitle(language_manager.get_text("manual_ctrl_grp_manual"))
-        self.send_btn.setText(language_manager.get_text("manual_ctrl_btn_send"))
-        self.cmd_input.setPlaceholderText(language_manager.get_text("manual_ctrl_input_cmd_placeholder"))
+        self.manual_send_grp.setTitle(language_manager.get_text("manual_ctrl_grp_manual"))
+        self.send_manual_cmd_btn.setText(language_manager.get_text("manual_ctrl_btn_send"))
+        self.manual_cmd_input.setPlaceholderText(language_manager.get_text("manual_ctrl_input_cmd_placeholder"))
 
-        self.file_grp.setTitle(language_manager.get_text("manual_ctrl_grp_file"))
+        self.file_transfer_grp.setTitle(language_manager.get_text("manual_ctrl_grp_file"))
         # 파일이 선택되지 않은 상태인지 확인
-        if language_manager.text_matches_key(self.file_path_lbl.text(), "manual_ctrl_lbl_file_path_no_file"):
-            self.file_path_lbl.setText(language_manager.get_text("manual_ctrl_lbl_file_path_no_file"))
+        if language_manager.text_matches_key(self.transfer_file_path_lbl.text(), "manual_ctrl_lbl_file_path_no_file"):
+            self.transfer_file_path_lbl.setText(language_manager.get_text("manual_ctrl_lbl_file_path_no_file"))
 
-        self.select_file_btn.setText(language_manager.get_text("manual_ctrl_btn_select_file"))
-        self.send_file_btn.setText(language_manager.get_text("manual_ctrl_btn_send_file"))
+        self.select_transfer_file_btn.setText(language_manager.get_text("manual_ctrl_btn_select_file"))
+        self.send_transfer_file_btn.setText(language_manager.get_text("manual_ctrl_btn_send_file"))
 
     def on_hex_mode_changed(self, state: int) -> None:
         """HEX 모드 변경 시 SmartNumberEdit 모드 설정"""
         is_hex_mode = (state == Qt.Checked)
-        self.cmd_input.set_hex_mode(is_hex_mode)
+        self.manual_cmd_input.set_hex_mode(is_hex_mode)
 
-    def on_send_clicked(self) -> None:
+    def on_send_manual_cmd_clicked(self) -> None:
         """전송 버튼 클릭 시 호출됩니다."""
-        text = self.cmd_input.text()
+        text = self.manual_cmd_input.text()
         if text:
             # View는 원본 입력과 체크박스 상태만 전달
             # prefix/suffix 처리는 Presenter에서 수행
-            self.send_command_requested.emit(
+            self.manual_cmd_send_requested.emit(
                 text,
                 self.hex_chk.isChecked(),
                 self.prefix_chk.isChecked(),
                 self.suffix_chk.isChecked()
             )
             # 입력 후 지우지 않음 (히스토리 기능이 없으므로 유지하는 편이 나음)
-            # self.cmd_input.clear()
+            # self.manual_cmd_input.clear()
 
-    def on_select_file_clicked(self) -> None:
+    def on_select_transfer_file_clicked(self) -> None:
         """파일 선택 버튼 클릭 시 호출됩니다."""
         path, _ = QFileDialog.getOpenFileName(self, language_manager.get_text("manual_ctrl_dialog_select_file"))
         if path:
-            self.file_path_lbl.setText(path)
-            self.file_selected.emit(path)
+            self.transfer_file_path_lbl.setText(path)
+            self.transfer_file_selected.emit(path)
 
-    def on_send_file_clicked(self) -> None:
+    def on_send_transfer_file_clicked(self) -> None:
         """파일 전송 버튼 클릭 시 호출됩니다."""
-        path = self.file_path_lbl.text()
+        path = self.transfer_file_path_lbl.text()
         if path and path != language_manager.get_text("manual_ctrl_lbl_file_path_no_file"):
-            self.send_file_requested.emit(path)
+            self.transfer_file_send_requested.emit(path)
 
-    def on_save_log_clicked(self) -> None:
+    def on_save_manual_log_clicked(self) -> None:
         """로그 저장 버튼 클릭 시 호출됩니다."""
         filter_str = f"{language_manager.get_text('manual_ctrl_dialog_file_filter_txt')} (*.txt);;{language_manager.get_text('manual_ctrl_dialog_file_filter_all')} (*)"
         path, _ = QFileDialog.getSaveFileName(self, language_manager.get_text("manual_ctrl_dialog_save_log_title"), "", filter_str)
         if path:
-            self.save_log_requested.emit(path)
+            self.manual_log_save_requested.emit(path)
 
     def set_controls_enabled(self, enabled: bool) -> None:
         """
@@ -220,14 +221,14 @@ class ManualControlWidget(QWidget):
         Args:
             enabled (bool): 활성화 여부.
         """
-        self.send_btn.setEnabled(enabled)
-        self.send_file_btn.setEnabled(enabled)
+        self.send_manual_cmd_btn.setEnabled(enabled)
+        self.send_transfer_file_btn.setEnabled(enabled)
         self.rts_chk.setEnabled(enabled)
         self.dtr_chk.setEnabled(enabled)
 
-        self.clear_btn.setEnabled(True)
-        self.save_log_btn.setEnabled(True)
-        self.select_file_btn.setEnabled(True)
+        self.clear_manual_options_btn.setEnabled(True)
+        self.save_manual_log_btn.setEnabled(True)
+        self.select_transfer_file_btn.setEnabled(True)
 
     def save_state(self) -> dict:
         """
@@ -237,7 +238,7 @@ class ManualControlWidget(QWidget):
             dict: 위젯 상태.
         """
         state = {
-            "input_text": self.cmd_input.text(),
+            "input_text": self.manual_cmd_input.text(),
             "hex_mode": self.hex_chk.isChecked(),
             "use_prefix": self.prefix_chk.isChecked(),
             "use_suffix": self.suffix_chk.isChecked(),
@@ -261,4 +262,4 @@ class ManualControlWidget(QWidget):
         self.suffix_chk.setChecked(state.get("use_suffix", False))
         self.rts_chk.setChecked(state.get("rts", False))
         self.dtr_chk.setChecked(state.get("dtr", False))
-        self.cmd_input.setText(state.get("input_text", ""))
+        self.manual_cmd_input.setText(state.get("input_text", ""))

@@ -7,6 +7,7 @@ from PyQt5.QtCore import Qt, pyqtSignal
 from typing import Dict, Any, Optional
 import os
 from view.language_manager import language_manager
+from core.settings_manager import SettingsManager
 
 class PreferencesDialog(QDialog):
     """
@@ -20,6 +21,7 @@ class PreferencesDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(language_manager.get_text("pref_title"))
         self.resize(500, 400)
+        self.settings = SettingsManager()
         self.current_settings = current_settings or {}
         self.init_ui()
         self.load_settings()
@@ -179,21 +181,26 @@ class PreferencesDialog(QDialog):
     def load_settings(self) -> None:
         """현재 설정을 UI에 반영합니다."""
         # General
-        self.theme_combo.setCurrentText(self.current_settings.get("menu_theme", "Dark").capitalize())
-        self.language_combo.setCurrentText(self.current_settings.get("menu_language", "English"))
-        self.font_size_spin.setValue(self.current_settings.get("font_size", 10))
+        theme = self.settings.get("global.theme", "Dark").capitalize()
+        self.theme_combo.setCurrentText(theme)
+
+        lang_code = self.settings.get("global.language", "en")
+        lang_text = "Korean" if lang_code == "ko" else "English"
+        self.language_combo.setCurrentText(lang_text)
+
+        self.font_size_spin.setValue(self.settings.get("ui.font_size", 10))
 
         # Serial
-        self.default_baud_combo.setCurrentText(str(self.current_settings.get("default_baudrate", 115200)))
-        self.scan_interval_spin.setValue(self.current_settings.get("scan_interval", 5000))
+        self.default_baud_combo.setCurrentText(str(self.settings.get("serial.default_baudrate", 115200)))
+        self.scan_interval_spin.setValue(self.settings.get("serial.scan_interval", 5000))
 
         # Command
-        self.prefix_combo.setCurrentText(self.current_settings.get("command_prefix", ""))
-        self.suffix_combo.setCurrentText(self.current_settings.get("command_suffix", "\\r\\n"))
+        self.prefix_combo.setCurrentText(self.settings.get("command.prefix", ""))
+        self.suffix_combo.setCurrentText(self.settings.get("command.suffix", "\\r\\n"))
 
         # Logging
-        self.log_path_edit.setText(self.current_settings.get("log_path", os.getcwd()))
-        self.max_lines_spin.setValue(self.current_settings.get("max_log_lines", 2000))
+        self.log_path_edit.setText(self.settings.get("logging.path", os.getcwd()))
+        self.max_lines_spin.setValue(self.settings.get("ui.log_max_lines", 2000))
 
     def apply_settings(self) -> None:
         """변경된 설정을 수집하여 시그널을 발생시킵니다."""

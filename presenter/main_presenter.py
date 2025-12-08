@@ -2,6 +2,7 @@ from PyQt5.QtCore import QObject
 from view.main_window import MainWindow
 from model.port_controller import PortController
 from .port_presenter import PortPresenter
+from core.settings_manager import SettingsManager
 
 class MainPresenter(QObject):
     """
@@ -28,8 +29,8 @@ class MainPresenter(QObject):
         self.port_controller.data_received.connect(self.on_data_received)
 
         # 수동 전송 시그널 연결
-        self.view.left_section.manual_control.manual_control_widget.send_command_requested.connect(
-            self.on_send_command_requested
+        self.view.left_section.manual_control.manual_control_widget.manual_cmd_send_requested.connect(
+            self.on_manual_cmd_send_requested
         )
 
     def on_data_received(self, data: bytes) -> None:
@@ -47,7 +48,7 @@ class MainPresenter(QObject):
             if hasattr(widget, 'received_area'):
                 widget.received_area.append_data(data)
 
-    def on_send_command_requested(self, text: str, hex_mode: bool, use_prefix: bool, use_suffix: bool) -> None:
+    def on_manual_cmd_send_requested(self, text: str, hex_mode: bool, use_prefix: bool, use_suffix: bool) -> None:
         """
         수동 명령 전송 요청을 처리합니다.
         prefix/suffix 설정을 적용하고 최종 데이터를 전송합니다.
@@ -62,7 +63,6 @@ class MainPresenter(QObject):
             logger.warning("Port not open")
             return
 
-        from core.settings_manager import SettingsManager
         settings = SettingsManager()
 
         final_text = text
@@ -86,7 +86,9 @@ class MainPresenter(QObject):
                 data = bytes.fromhex(final_text.replace(' ', ''))
             except ValueError:
                 # 유효하지 않은 16진수 문자열인 경우 처리 (예: 오류 로깅, 사용자에게 알림)
-                logger.error("Invalid hex string for sending.")
+                logger.error(f"Invalid hex string for sending:{final_text}")
+
+                # TODO: 사용자에게 UI 피드백 제공 (예: 상태바 메시지)
                 return # 전송 중단
         else:
             data = final_text.encode('utf-8')
