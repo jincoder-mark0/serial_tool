@@ -30,8 +30,8 @@ class SerialWorker(QThread):
         self._mutex = QMutex()
 
         # 설정 (Settings)
-        self.data_bits = serial.EIGHTBITS
-        self.stop_bits = serial.STOPBITS_ONE
+        self.datasize = serial.EIGHTBITS
+        self.stopbits = serial.STOPBITS_ONE
         self.parity = serial.PARITY_NONE
         self.flow = False # RTS/CTS
 
@@ -41,10 +41,10 @@ class SerialWorker(QThread):
             self.serial_port = serial.Serial(
                 port=self.port_name,
                 baudrate=self.baudrate,
-                datasize=self.data_bits,
+                datasize=self.datasize,
                 parity=self.parity,
-                stopbits=self.stop_bits,
-                timeout=0.1, # 비차단 읽기를 위한 짧은 타임아웃
+                stopbits=self.stopbits,
+                timeout=0.1,
                 xonxoff=False,
                 rtscts=self.flow,
                 dsrdtr=False

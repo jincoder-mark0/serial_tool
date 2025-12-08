@@ -3,21 +3,21 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt, pyqtSignal
 
-from view.sections.left_section import LeftSection
-from view.sections.right_section import RightSection
+from view.sections.main_left_section import MainLeftSection
+from view.sections.main_right_section import MainRightSection
 from view.theme_manager import ThemeManager
 from view.language_manager import language_manager
 from view.dialogs.font_settings_dialog import FontSettingsDialog
 from view.dialogs.about_dialog import AboutDialog
 from view.dialogs.preferences_dialog import PreferencesDialog
 from core.settings_manager import SettingsManager
-from view.widgets.main_menu_bar import MainMenuBar
-from view.widgets.main_status_bar import MainStatusBar
+from view.sections.main_menu_bar import MainMenuBar
+from view.sections.main_status_bar import MainStatusBar
 
 class MainWindow(QMainWindow):
     """
     애플리케이션의 메인 윈도우 클래스입니다.
-    LeftSection(포트/제어)과 RightSection(커맨드/인스펙터)을 포함하며,
+    MainLeftSection(포트/제어)과 MainRightSection(커맨드/인스펙터)을 포함하며,
     메뉴바, 상태바 및 전역 설정을 관리합니다.
     """
 
@@ -80,8 +80,8 @@ class MainWindow(QMainWindow):
         # 스플리터 구성 (좌: 포트/제어, 우: 커맨드/인스펙터)
         splitter = QSplitter(Qt.Horizontal)
 
-        self.left_section = LeftSection()
-        self.right_section = RightSection()
+        self.left_section = MainLeftSection()
+        self.right_section = MainRightSection()
 
         splitter.addWidget(self.left_section)
         splitter.addWidget(self.right_section)

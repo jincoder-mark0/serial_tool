@@ -5,7 +5,7 @@ from view.language_manager import language_manager
 from view.panels.command_list_panel import CommandListPanel
 from view.panels.packet_inspector_panel import PacketInspectorPanel
 
-class RightSection(QWidget):
+class MainRightSection(QWidget):
     """
     MainWindow의 우측 영역을 담당하는 패널 클래스입니다.
     Command List와 Packet Inspector를 탭으로 관리합니다.

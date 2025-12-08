@@ -1,14 +1,13 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
-from PyQt5.QtCore import Qt
 from typing import Optional
 from view.language_manager import language_manager
 
 from view.panels.port_panel import PortPanel
 from view.panels.manual_control_panel import ManualControlPanel
-from view.widgets.port_tab_widget import PortTabWidget
+from view.panels.port_tab_panel import PortTabPanel
 from core.settings_manager import SettingsManager
 
-class LeftSection(QWidget):
+class MainLeftSection(QWidget):
     """
     MainWindow의 좌측 영역을 담당하는 패널 클래스입니다.
     여러 포트 탭(PortTabs)과 전역 수동 제어(ManualControlWidget)를 포함합니다.
@@ -33,8 +32,8 @@ class LeftSection(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(5)
 
-        # 포트 탭 (Port Tabs) - PortTabWidget 사용
-        self.port_tabs = PortTabWidget()
+        # 포트 탭 (Port Tabs) - PortTabPanel 사용
+        self.port_tabs = PortTabPanel()
         self.port_tabs.tab_added.connect(self._on_tab_added)
 
         # 수동 제어 패널 (현재 포트에 대한 전역 제어)
@@ -47,7 +46,7 @@ class LeftSection(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        # PortTabWidget 내부에서 처리됨
+        # PortTabPanel 내부에서 처리됨
         pass
 
     def add_new_port_tab(self) -> None:
@@ -72,7 +71,7 @@ class LeftSection(QWidget):
         # ManualControl 상태 저장
         settings = SettingsManager()
         manual_state = self.manual_control.save_state()
-        settings.set("ports.manual_control", manual_state)
+        settings.set("manual_control", manual_state)
 
         states = []
         count = self.port_tabs.count()
@@ -96,7 +95,7 @@ class LeftSection(QWidget):
         """
         # ManualControl 상태 복원
         settings = SettingsManager()
-        manual_state = settings.get("ports.manual_control", {})
+        manual_state = settings.get("manual_control", {})
         if manual_state:
             self.manual_control.load_state(manual_state)
 

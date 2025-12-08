@@ -22,14 +22,6 @@
       "datasize": 8,
       "stopbits": 1
     },
-    "manual_control": {
-      "input_text": "",
-      "hex_mode": false,
-      "cmd_prefix": true,
-      "cmd_suffix": true,
-      "rts": false,
-      "dtr": false
-    },
     "tabs": [
       {
         "custom_name": "Port",
@@ -51,6 +43,14 @@
         }
       }
     ]
+  },
+  "manual_control": {
+    "input_text": "",
+    "hex_mode": false,
+    "cmd_prefix": true,
+    "cmd_suffix": true,
+    "rts": false,
+    "dtr": false
   },
   "cmd_list": {
     "commands": [

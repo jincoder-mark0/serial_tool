@@ -8,9 +8,9 @@ from view.theme_manager import ThemeManager
 if TYPE_CHECKING:
     from view.panels.port_panel import PortPanel
 
-class PortTabWidget(QTabWidget):
+class PortTabPanel(QTabWidget):
     """
-    포트 탭들을 관리하는 위젯입니다.
+    포트 탭들을 관리하는 패널입니다.
     탭 추가/삭제 및 '+' 탭 기능을 캡슐화합니다.
     """
 

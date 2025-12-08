@@ -83,10 +83,10 @@
   - 자동 대문자 변환 기능
   - `ManualControlWidget` 입력 필드에 적용
 
-- **PortTabWidget 위젯**
-  - `view/widgets/port_tab_widget.py` 신규 생성
+- **PortTabPanel 위젯**
+  - `view/panels/port_tab_panel.py` 신규 생성 (기존 `PortTabWidget` 리네임)
   - 포트 탭 관리 로직 캡슐화 (추가/삭제/플러스 탭)
-  - `LeftSection`에서 `QTabWidget` 대신 `PortTabWidget` 사용
+  - `LeftSection`에서 `QTabWidget` 대신 `PortTabPanel` 사용
   - 코드 재사용성 및 유지보수성 향상
 
 - **테마별 SVG 아이콘 지원**

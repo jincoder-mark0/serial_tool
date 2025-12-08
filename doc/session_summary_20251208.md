@@ -78,9 +78,9 @@
 - `ManualControlWidget`에서 `QLineEdit` 대신 `SmartNumberEdit` 사용
 - HEX 체크박스와 연동하여 자동 모드 전환
 
-### 2. PortTabWidget 위젯 생성
+### 2. PortTabPanel 위젯 생성
 
-**파일**: `view/widgets/port_tab_widget.py`
+**파일**: `view/panels/port_tab_panel.py`
 
 **목적**: 포트 탭 관리 로직을 캡슐화하여 코드 재사용성 및 유지보수성 향상
 
@@ -91,8 +91,8 @@
 - 탭 더블클릭 시 이름 수정
 
 **변경 사항**:
-- `LeftSection`에서 `QTabWidget` → `PortTabWidget` 사용
-- 탭 관리 메서드들을 `PortTabWidget`으로 이동
+- `LeftSection`에서 `QTabWidget` → `PortTabPanel` 사용
+- 탭 관리 메서드들을 `PortTabPanel`로 이동
 
 ### 3. CommandListWidget Send 버튼 상태 버그 수정
 

@@ -213,11 +213,11 @@
   "pref_tab_serial": "TODO: pref_tab_serial",
   "pref_title": "TODO: pref_title",
   // ============================================
-  // Left Section Section (sections/left_section.py),
+  // Left Section Section (sections/main_left_section.py),
   // ============================================
   "left_tooltip_port_tab": "TODO: left_tooltip_port_tab",
   // ============================================
-  // Right Section Section (sections/right_section.py),
+  // Right Section Section (sections/main_right_section.py),
   // ============================================
   "right_cmd_list_panel_tooltip": "TODO: right_cmd_list_panel_tooltip",
   "right_packet_inspector_tooltip": "TODO: right_packet_inspector_tooltip",

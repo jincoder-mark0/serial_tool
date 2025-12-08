@@ -191,18 +191,18 @@ class PreferencesDialog(QDialog):
             self.language_combo.setCurrentIndex(index)
 
         self.font_size_spin.setValue(self.settings.get("ui.font_size", 10))
+        self.max_lines_spin.setValue(self.settings.get("ui.log_max_lines", 2000))
 
         # Serial
-        self.default_baud_combo.setCurrentText(str(self.settings.get("serial.baudrate", 115200)))
-        self.scan_interval_spin.setValue(self.settings.get("serial.scan_interval", 5000))
+        self.default_baud_combo.setCurrentText(str(self.settings.get("ports.default_config.baudrate", 115200)))
+        self.scan_interval_spin.setValue(self.settings.get("ports.default_config.scan_interval", 5000))
 
         # Command
-        self.prefix_combo.setCurrentText(self.settings.get("command.prefix", ""))
-        self.suffix_combo.setCurrentText(self.settings.get("command.suffix", "\\r\\n"))
+        self.prefix_combo.setCurrentText(self.settings.get("manual_control.cmd_prefix", ""))
+        self.suffix_combo.setCurrentText(self.settings.get("manual_control.cmd_suffix", "\\r\\n"))
 
         # Logging
         self.log_path_edit.setText(self.settings.get("logging.path", os.getcwd()))
-        self.max_lines_spin.setValue(self.settings.get("ui.log_max_lines", 2000))
 
     def apply_settings(self) -> None:
         """변경된 설정을 수집하여 시그널을 발생시킵니다."""
