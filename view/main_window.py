@@ -158,7 +158,7 @@ class MainWindow(QMainWindow):
             'max_log_lines': 'ui.log_max_lines',
 
             # Serial settings
-            'default_baudrate': 'serial.default_baudrate',
+            'baudrate': 'serial.baudrate',
             'scan_interval': 'serial.scan_interval',
 
             # Command settings

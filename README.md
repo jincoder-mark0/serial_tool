@@ -190,7 +190,7 @@ serial_tool2/
 **논리적 그룹 기반** (`config/settings.json`):
 ```json
 {
-  "serial": { "default_baudrate": 115200, ... },
+  "serial": { "baudrate": 115200, ... },
   "command": { "prefix": "AT", "suffix": "\r\n" },
   "logging": { "log_path": "logs/", ... },
   "ui": { "theme": "dark", "font": {...} }

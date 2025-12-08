@@ -191,7 +191,7 @@ class PreferencesDialog(QDialog):
         self.font_size_spin.setValue(self.settings.get("ui.font_size", 10))
 
         # Serial
-        self.default_baud_combo.setCurrentText(str(self.settings.get("serial.default_baudrate", 115200)))
+        self.default_baud_combo.setCurrentText(str(self.settings.get("serial.baudrate", 115200)))
         self.scan_interval_spin.setValue(self.settings.get("serial.scan_interval", 5000))
 
         # Command
@@ -208,7 +208,7 @@ class PreferencesDialog(QDialog):
             "theme": self.theme_combo.currentText().lower(),
             "language": self.language_combo.currentText(),
             "font_size": self.font_size_spin.value(),
-            "default_baudrate": int(self.default_baud_combo.currentText()),
+            "baudrate": int(self.default_baud_combo.currentText()),
             "scan_interval": self.scan_interval_spin.value(),
             "command_prefix": self.prefix_combo.currentText(),
             "command_suffix": self.suffix_combo.currentText(),
