@@ -158,12 +158,12 @@ class MainWindow(QMainWindow):
             'max_log_lines': 'ui.log_max_lines',
 
             # Serial settings
-            'baudrate': 'serial.baudrate',
+            'baudrate': 'ports.default_config.baudrate',
             'scan_interval': 'serial.scan_interval',
 
             # Command settings
-            'cmd_prefix': 'command.prefix',
-            'cmd_suffix': 'command.suffix',
+            'use_prefix': 'manual_control.use_prefix',
+            'use_suffix': 'manual_control.use_suffix',
 
             # Logging settings
             'log_path': 'logging.path',

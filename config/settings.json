@@ -25,8 +25,8 @@
     "manual_control": {
       "input_text": "",
       "hex_mode": false,
-      "use_prefix": false,
-      "use_suffix": false,
+      "use_prefix": true,
+      "use_suffix": true,
       "rts": false,
       "dtr": false
     },
