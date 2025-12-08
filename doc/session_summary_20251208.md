@@ -49,14 +49,18 @@
 
 **파일**: `view/dialogs/preferences_dialog.py`
 
-**목적**: 설정 로드 시 하드코딩된 값이나 불필요한 의존성을 제거하고 `SettingsManager`를 직접 활용.
+**목적**: 설정 로드/저장 로직을 개선하고 MVP 아키텍처를 엄격히 준수하도록 리팩토링.
 
 **변경 내용**:
-- `load_settings` 메서드 수정:
-  - `SettingsManager` 인스턴스 직접 생성 및 사용
-  - `current_settings` 딕셔너리 의존성 제거
-  - `global.theme`, `serial.default_baudrate` 등 올바른 키 경로 사용
-  - 언어 코드(`ko`/`en`)와 UI 텍스트(`Korean`/`English`) 간 변환 로직 내장
+- **View (`PreferencesDialog`)**:
+  - `load_settings`: `SettingsManager` 직접 사용
+  - `apply_settings`: `.lower()`, `int()` 등 데이터 변환 로직 제거, 원본 데이터 시그널 전송
+- **View (`MainWindow`)**:
+  - `preferences_save_requested` 시그널 추가
+  - 다이얼로그 시그널을 Presenter로 전달 (`apply_preferences` 메서드 제거)
+- **Presenter (`MainPresenter`)**:
+  - `on_preferences_save_requested` 핸들러 구현
+  - 데이터 검증, 변환, `SettingsManager` 업데이트, UI 갱신 로직 통합
 
 ### 1. SmartNumberEdit 위젯 생성
 

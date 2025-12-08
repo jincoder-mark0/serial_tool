@@ -72,8 +72,8 @@ class PreferencesDialog(QDialog):
         self.theme_combo.addItems(["Dark", "Light", "System"])
 
         self.language_combo = QComboBox()
-        self.language_combo.addItems("English", "en")
-        self.language_combo.addItems("Korean", "ko")
+        self.language_combo.addItem("English", "en")
+        self.language_combo.addItem("Korean", "ko")
 
         self.font_size_spin = QSpinBox()
         self.font_size_spin.setRange(8, 24)
@@ -207,10 +207,10 @@ class PreferencesDialog(QDialog):
     def apply_settings(self) -> None:
         """변경된 설정을 수집하여 시그널을 발생시킵니다."""
         new_settings = {
-            "theme": self.theme_combo.currentText().lower(),
+            "theme": self.theme_combo.currentText(),
             "language": self.language_combo.currentData(),
             "font_size": self.font_size_spin.value(),
-            "baudrate": int(self.default_baud_combo.currentText()),
+            "baudrate": self.default_baud_combo.currentText(),
             "scan_interval": self.scan_interval_spin.value(),
             "cmd_prefix": self.prefix_combo.currentText(),
             "cmd_suffix": self.suffix_combo.currentText(),

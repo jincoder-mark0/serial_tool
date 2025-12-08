@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QSplitter, QApplication
 )
-from PyQt5.QtCore import Qt
+from PyQt5.QtCore import Qt, pyqtSignal
 
 from view.sections.left_section import LeftSection
 from view.sections.right_section import RightSection
@@ -20,6 +20,8 @@ class MainWindow(QMainWindow):
     LeftSection(포트/제어)과 RightSection(커맨드/인스펙터)을 포함하며,
     메뉴바, 상태바 및 전역 설정을 관리합니다.
     """
+
+    preferences_save_requested = pyqtSignal(dict)
 
     def __init__(self) -> None:
         """MainWindow를 초기화하고 UI 및 설정을 로드합니다."""
@@ -139,50 +141,10 @@ class MainWindow(QMainWindow):
         """Preferences 다이얼로그를 엽니다."""
         current_settings = self.settings.get_all_settings()
         dialog = PreferencesDialog(self, current_settings)
-        dialog.settings_changed.connect(self.apply_preferences)
+        dialog.settings_changed.connect(self.preferences_save_requested.emit)
         dialog.exec_()
 
-    def apply_preferences(self, new_settings: dict) -> None:
-        """
-        Preferences 다이얼로그에서 변경된 설정을 적용합니다.
 
-        Args:
-            new_settings (dict): 변경된 설정 딕셔너리.
-        """
-        # 설정을 논리적 그룹별로 저장
-        settings_map = {
-            # UI/Theme settings
-            'menu_theme': 'global.theme',
-            'menu_language': 'global.language',
-            'font_size': 'ui.font_size',
-            'max_log_lines': 'ui.log_max_lines',
-
-            # Serial settings
-            'baudrate': 'ports.default_config.baudrate',
-            'scan_interval': 'serial.scan_interval',
-
-            # Command settings
-            'use_prefix': 'manual_control.use_prefix',
-            'use_suffix': 'manual_control.use_suffix',
-
-            # Logging settings
-            'log_path': 'logging.path',
-        }
-
-        for key, value in new_settings.items():
-            setting_path = settings_map.get(key, f'global.{key}')  # Fallback to global
-            self.settings.set(setting_path, value)
-
-        # 테마 변경
-        if 'menu_theme' in new_settings:
-            self.switch_theme(new_settings['menu_theme'])
-
-        # 언어 변경
-        if 'menu_language' in new_settings:
-            lang_code = 'ko' if new_settings['menu_language'] == 'Korean' else 'en'
-            language_manager.set_language(lang_code)
-
-        self.global_status_bar.show_message("Settings updated", 2000)
 
     def open_about_dialog(self) -> None:
         """About 다이얼로그를 엽니다."""

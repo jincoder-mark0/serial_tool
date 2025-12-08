@@ -60,15 +60,17 @@
 
 #### 변경 사항 (Changed)
 
-- **PreferencesDialog 설정 로드 방식 개선**
-  - `load_settings` 메서드에서 `SettingsManager`를 직접 사용하여 설정값 로드
-  - 하드코딩된 기본값 및 외부에서 전달받던 `current_settings` 의존성 제거
-  - `global.theme`, `ui.font_size` 등 정확한 설정 키 경로 적용
+- **PreferencesDialog MVP 패턴 적용 및 리팩토링**
+  - `load_settings`: `SettingsManager` 직접 사용하여 의존성 제거
+  - `apply_settings`: 데이터 변환 로직(lower(), int() 등)을 View에서 제거하고 원본 데이터 전송
+  - `MainWindow`에 `preferences_save_requested` 시그널 추가하여 이벤트 전달
+  - `MainPresenter`에 `on_preferences_save_requested` 핸들러 구현하여 비즈니스 로직 처리
 
 #### 이점 (Benefits)
 
-- **데이터 일관성**: `SettingsManager`를 단일 진실 공급원(SSOT)으로 사용하여 데이터 불일치 방지
-- **유지보수성**: 설정 로드 로직이 중앙화된 관리자를 따르도록 개선
+- **아키텍처 준수**: View는 UI 로직만 담당하고, 데이터 검증 및 변환은 Presenter가 담당하여 MVP 패턴 강화
+- **데이터 일관성**: `SettingsManager`를 단일 진실 공급원(SSOT)으로 사용
+- **유지보수성**: 설정 로드/저장 로직이 명확하게 분리됨
 
 ### UI/UX 개선 및 버그 수정 (2025-12-08)
 

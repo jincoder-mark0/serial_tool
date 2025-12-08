@@ -15,7 +15,7 @@ class ManualControlWidget(QWidget):
 
     # 시그널 정의
     # 시그널 정의
-    manual_cmd_send_requested = pyqtSignal(str, bool, bool, bool) # text, hex_mode, use_prefix, use_suffix
+    manual_cmd_send_requested = pyqtSignal(str, bool, bool, bool) # text, hex_mode, cmd_prefix, cmd_suffix
     transfer_file_send_requested = pyqtSignal(str) # filepath
     transfer_file_selected = pyqtSignal(str) # filepath
     manual_log_save_requested = pyqtSignal(str) # filepath
@@ -240,8 +240,8 @@ class ManualControlWidget(QWidget):
         state = {
             "input_text": self.manual_cmd_input.text(),
             "hex_mode": self.hex_chk.isChecked(),
-            "use_prefix": self.prefix_chk.isChecked(),
-            "use_suffix": self.suffix_chk.isChecked(),
+            "cmd_prefix": self.prefix_chk.isChecked(),
+            "cmd_suffix": self.suffix_chk.isChecked(),
             "rts": self.rts_chk.isChecked(),
             "dtr": self.dtr_chk.isChecked(),
         }
@@ -258,8 +258,8 @@ class ManualControlWidget(QWidget):
             return
 
         self.hex_chk.setChecked(state.get("hex_mode", False))
-        self.prefix_chk.setChecked(state.get("use_prefix", False))
-        self.suffix_chk.setChecked(state.get("use_suffix", False))
+        self.prefix_chk.setChecked(state.get("cmd_prefix", False))
+        self.suffix_chk.setChecked(state.get("cmd_suffix", False))
         self.rts_chk.setChecked(state.get("rts", False))
         self.dtr_chk.setChecked(state.get("dtr", False))
         self.manual_cmd_input.setText(state.get("input_text", ""))
