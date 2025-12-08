@@ -20,7 +20,7 @@ class RightSection(QWidget):
         """
         super().__init__(parent)
         self.packet_inspector = None
-        self.command_list_panel = None
+        self.cmd_list_panel = None
         self.tabs = None
         self.init_ui()
 
@@ -34,13 +34,13 @@ class RightSection(QWidget):
 
         self.tabs = QTabWidget()
 
-        self.command_list_panel = CommandListPanel()
-        self.command_list_panel.setToolTip(language_manager.get_text("right_tooltip_cmd_list"))
+        self.cmd_list_panel = CommandListPanel()
+        self.cmd_list_panel.setToolTip(language_manager.get_text("right_tooltip_cmd_list"))
 
         self.packet_inspector = PacketInspectorPanel()
         self.packet_inspector.setToolTip(language_manager.get_text("right_tooltip_inspector"))
 
-        self.tabs.addTab(self.command_list_panel, language_manager.get_text("right_tab_cmd_list"))
+        self.tabs.addTab(self.cmd_list_panel, language_manager.get_text("right_tab_cmd_list"))
         self.tabs.addTab(self.packet_inspector, language_manager.get_text("right_tab_inspector"))
 
         layout.addWidget(self.tabs)
@@ -48,7 +48,7 @@ class RightSection(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.command_list_panel.setToolTip(language_manager.get_text("right_command_list_panel_tooltip"))
+        self.cmd_list_panel.setToolTip(language_manager.get_text("right_cmd_list_panel_tooltip"))
         self.packet_inspector.setToolTip(language_manager.get_text("right_packet_inspector_tooltip"))
 
         self.tabs.setTabText(0, language_manager.get_text("right_tab_cmd_list"))
@@ -56,5 +56,5 @@ class RightSection(QWidget):
 
     def save_state(self) -> None:
         """패널 상태를 저장합니다."""
-        self.command_list_panel.save_state()
+        self.cmd_list_panel.save_state()
         # PacketInspector 상태 저장도 필요하다면 여기에 추가

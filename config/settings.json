@@ -61,6 +61,14 @@
         "suffix": true,
         "hex_mode": false,
         "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
       }
     ],
     "control_state": {

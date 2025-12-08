@@ -160,7 +160,7 @@
   "status_txt_log_placeholder": "TODO: status_txt_log_placeholder",
   "status_txt_log_tooltip": "TODO: status_txt_log_tooltip",
   // ============================================
-  // Command List Panel Panel (panels/command_list_panel.py),
+  // Command List Panel Panel (panels/cmd_list_panel.py),
   // ============================================
   "cmd_list_dialog_title_open": "TODO: cmd_list_dialog_title_open",
   "cmd_list_dialog_title_save": "TODO: cmd_list_dialog_title_save",
@@ -194,7 +194,7 @@
   "pref_btn_cancel": "TODO: pref_btn_cancel",
   "pref_btn_ok": "TODO: pref_btn_ok",
   "pref_dialog_title_select_dir": "TODO: pref_dialog_title_select_dir",
-  "pref_grp_command_format": "TODO: pref_grp_command_format",
+  "pref_grp_cmd_format": "TODO: pref_grp_cmd_format",
   "pref_grp_default": "TODO: pref_grp_default",
   "pref_grp_logging": "TODO: pref_grp_logging",
   "pref_grp_ui": "TODO: pref_grp_ui",
@@ -219,7 +219,7 @@
   // ============================================
   // Right Section Section (sections/right_section.py),
   // ============================================
-  "right_command_list_panel_tooltip": "TODO: right_command_list_panel_tooltip",
+  "right_cmd_list_panel_tooltip": "TODO: right_cmd_list_panel_tooltip",
   "right_packet_inspector_tooltip": "TODO: right_packet_inspector_tooltip",
   "right_tab_cmd_list": "TODO: right_tab_cmd_list",
   "right_tab_inspector": "TODO: right_tab_inspector",

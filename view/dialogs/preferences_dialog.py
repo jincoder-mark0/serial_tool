@@ -34,7 +34,7 @@ class PreferencesDialog(QDialog):
         self.tabs = QTabWidget()
         self.tabs.addTab(self.create_general_tab(), language_manager.get_text("pref_tab_general"))
         self.tabs.addTab(self.create_serial_tab(), language_manager.get_text("pref_tab_serial"))
-        self.tabs.addTab(self.create_command_tab(), language_manager.get_text("pref_tab_command")) # New Tab
+        self.tabs.addTab(self.create_cmd_tab(), language_manager.get_text("pref_tab_command")) # New Tab
         self.tabs.addTab(self.create_logging_tab(), language_manager.get_text("pref_tab_logging"))
 
         layout.addWidget(self.tabs)
@@ -115,13 +115,13 @@ class PreferencesDialog(QDialog):
         widget.setLayout(layout)
         return widget
 
-    def create_command_tab(self) -> QWidget:
+    def create_cmd_tab(self) -> QWidget:
         """Command 설정 탭을 생성합니다."""
         widget = QWidget()
         layout = QVBoxLayout()
 
         # Prefix/Suffix 그룹
-        format_group = QGroupBox(language_manager.get_text("pref_grp_command_format"))
+        format_group = QGroupBox(language_manager.get_text("pref_grp_cmd_format"))
         format_layout = QFormLayout()
 
         self.prefix_combo = QComboBox()
@@ -210,8 +210,8 @@ class PreferencesDialog(QDialog):
             "font_size": self.font_size_spin.value(),
             "baudrate": int(self.default_baud_combo.currentText()),
             "scan_interval": self.scan_interval_spin.value(),
-            "command_prefix": self.prefix_combo.currentText(),
-            "command_suffix": self.suffix_combo.currentText(),
+            "cmd_prefix": self.prefix_combo.currentText(),
+            "cmd_suffix": self.suffix_combo.currentText(),
             "log_path": self.log_path_edit.text(),
             "max_log_lines": self.max_lines_spin.value()
         }

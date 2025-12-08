@@ -55,7 +55,7 @@ class CommandListPanel(QWidget):
         self.cmd_ctrl.script_load_requested.connect(self.load_script_from_file)
 
         # 데이터 변경 시 자동 저장
-        self.cmd_list.command_list_changed.connect(self.save_state)
+        self.cmd_list.cmd_list_changed.connect(self.save_state)
 
         # CommandControl의 입력 필드 변경 시에도 저장 (textChanged, valueChanged 등)
         self.cmd_ctrl.repeat_delay_input.textChanged.connect(self.save_state)

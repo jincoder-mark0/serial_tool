@@ -62,7 +62,7 @@ class ViewTestWindow(QMainWindow):
         tabs.addTab(self.create_manual_control_test(), "ManualControl Test")
 
         # Test 3: CommandList (커맨드 리스트 테스트)
-        tabs.addTab(self.create_command_list_test(), "CommandList Test")
+        tabs.addTab(self.create_cmd_list_test(), "CommandList Test")
 
         # Test 4: StatusArea (상태 로그 테스트)
         tabs.addTab(self.create_status_area_test(), "StatusArea Test")
@@ -160,7 +160,7 @@ class ViewTestWindow(QMainWindow):
         layout.addWidget(self.manual_output)
 
         # 시그널 연결
-        self.manual_control.send_command_requested.connect(
+        self.manual_control.send_cmd_requested.connect(
             lambda text, hex_mode, enter: self.manual_output.append(
                 f"Send: {text} (hex={hex_mode}, enter={enter})"
             )
@@ -192,7 +192,7 @@ class ViewTestWindow(QMainWindow):
 
         return widget
 
-    def create_command_list_test(self) -> QWidget:
+    def create_cmd_list_test(self) -> QWidget:
         """
         CommandList 테스트 위젯을 생성합니다.
 
@@ -203,8 +203,8 @@ class ViewTestWindow(QMainWindow):
         layout = QVBoxLayout(widget)
 
         # CommandList 인스턴스
-        self.command_list = CommandListWidget()
-        layout.addWidget(self.command_list)
+        self.cmd_list = CommandListWidget()
+        layout.addWidget(self.cmd_list)
 
         # 정보 레이블
 
@@ -214,10 +214,10 @@ class ViewTestWindow(QMainWindow):
         # Persistence Test Buttons
         btn_layout = QHBoxLayout()
         btn_save = QPushButton("Save to Console")
-        btn_save.clicked.connect(lambda: print(self.command_list.get_command_list()))
+        btn_save.clicked.connect(lambda: print(self.cmd_list.get_cmd_list()))
 
         btn_load = QPushButton("Load Dummy Data")
-        btn_load.clicked.connect(lambda: self.command_list.set_command_list([
+        btn_load.clicked.connect(lambda: self.cmd_list.set_cmd_list([
             {"command": "LOADED_CMD_1", "delay": "200", "enabled": True},
             {"command": "LOADED_CMD_2", "delay": "500", "enabled": False}
         ]))

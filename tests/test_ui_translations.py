@@ -31,7 +31,7 @@ def test_manual_control_translation(app, qtbot):
     assert widget.send_btn.text() == "전송"
     assert widget.hex_chk.text() == "Hex"
 
-def test_command_list_translation(app, qtbot):
+def test_cmd_list_translation(app, qtbot):
     widget = CommandListWidget()
     qtbot.addWidget(widget)
 

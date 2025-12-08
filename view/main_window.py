@@ -162,8 +162,8 @@ class MainWindow(QMainWindow):
             'scan_interval': 'serial.scan_interval',
 
             # Command settings
-            'command_prefix': 'command.prefix',
-            'command_suffix': 'command.suffix',
+            'cmd_prefix': 'command.prefix',
+            'cmd_suffix': 'command.suffix',
 
             # Logging settings
             'log_path': 'logging.path',

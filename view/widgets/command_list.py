@@ -15,7 +15,7 @@ class CommandListWidget(QWidget):
 
     # 시그널 정의
     send_row_requested = pyqtSignal(int) # row_index
-    command_list_changed = pyqtSignal()  # 데이터 변경 시그널
+    cmd_list_changed = pyqtSignal()  # 데이터 변경 시그널
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -121,9 +121,9 @@ class CommandListWidget(QWidget):
 
         # 모델 시그널 연결
         self.cmd_table_model.itemChanged.connect(self.on_item_changed)
-        self.cmd_table_model.rowsInserted.connect(lambda: self.command_list_changed.emit())
-        self.cmd_table_model.rowsRemoved.connect(lambda: self.command_list_changed.emit())
-        self.cmd_table_model.rowsMoved.connect(lambda: self.command_list_changed.emit())
+        self.cmd_table_model.rowsInserted.connect(lambda: self.cmd_list_changed.emit())
+        self.cmd_table_model.rowsRemoved.connect(lambda: self.cmd_list_changed.emit())
+        self.cmd_table_model.rowsMoved.connect(lambda: self.cmd_list_changed.emit())
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
@@ -170,9 +170,9 @@ class CommandListWidget(QWidget):
 
         # 데이터 변경 시그널 발생 (Select 컬럼 제외)
         if item.column() != 0:
-            self.command_list_changed.emit()
+            self.cmd_list_changed.emit()
 
-    def get_command_list(self) -> List[Dict[str, Any]]:
+    def get_cmd_list(self) -> List[Dict[str, Any]]:
         """
         현재 커맨드 리스트 데이터를 반환합니다.
 
@@ -192,7 +192,7 @@ class CommandListWidget(QWidget):
             commands.append(cmd_data)
         return commands
 
-    def set_command_list(self, commands: List[Dict[str, Any]]) -> None:
+    def set_cmd_list(self, commands: List[Dict[str, Any]]) -> None:
         """
         커맨드 리스트 데이터를 설정합니다.
 
@@ -438,7 +438,7 @@ class CommandListWidget(QWidget):
         Returns:
             list: 명령어 목록 데이터.
         """
-        commands = self.get_command_list()
+        commands = self.get_cmd_list()
         return commands
 
     def load_state(self, state: list) -> None:
@@ -451,7 +451,7 @@ class CommandListWidget(QWidget):
         if not state:
             return
 
-        self.set_command_list(state)
+        self.set_cmd_list(state)
 
 
 
