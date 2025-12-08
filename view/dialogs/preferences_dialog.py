@@ -205,8 +205,8 @@ class PreferencesDialog(QDialog):
     def apply_settings(self) -> None:
         """변경된 설정을 수집하여 시그널을 발생시킵니다."""
         new_settings = {
-            "menu_theme": self.theme_combo.currentText().lower(),
-            "menu_language": self.language_combo.currentText(),
+            "theme": self.theme_combo.currentText().lower(),
+            "language": self.language_combo.currentText(),
             "font_size": self.font_size_spin.value(),
             "default_baudrate": int(self.default_baud_combo.currentText()),
             "scan_interval": self.scan_interval_spin.value(),

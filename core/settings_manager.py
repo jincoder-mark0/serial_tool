@@ -164,8 +164,8 @@ class SettingsManager:
         return {
             "version": "1.0",
             "global": {
-                "menu_theme": "dark",
-                "menu_language": "ko"
+                "theme": "dark",
+                "language": "ko"
             },
             "ui": {
                 "log_max_lines": 2000,
