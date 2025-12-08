@@ -10,6 +10,8 @@
 4. **테마별 아이콘 지원**: SVG 아이콘 로딩
 5. **포트 탭 닫기 버튼 수정**: 탭 삭제 문제 해결
 6. **포트 탭 이름 수정 기능**: 커스텀 이름 지정
+7. **순환 import 문제 해결**: TYPE_CHECKING 활용
+8. **탭 삭제 시 새 탭 생성 버그 수정**: 시그널 차단 및 최소 탭 유지
 
 ---
 
@@ -201,6 +203,72 @@ def edit_tab_name(self, index: int) -> None:
         widget.set_custom_name(new_name)
 ```
 
+### 7. 순환 import 문제 해결
+
+**파일**: `view/widgets/port_tab_widget.py`
+
+**문제**: `PortTabWidget`이 `PortPanel`을 import하고, `PortPanel`이 다시 다른 모듈을 import하면서 순환 import 발생
+
+**해결 방법**:
+```python
+from typing import TYPE_CHECKING
+
+if TYPE_CHECKING:
+    from view.panels.port_panel import PortPanel
+
+class PortTabWidget(QTabWidget):
+    tab_added = pyqtSignal(object)  # PortPanel 대신 object 사용
+
+    def add_new_port_tab(self) -> "PortPanel":
+        from view.panels.port_panel import PortPanel  # 런타임 import
+        panel = PortPanel()
+        # ...
+```
+
+**핵심**:
+- `TYPE_CHECKING`을 사용하여 타입 힌트만 import
+- 실제 런타임에는 필요한 곳에서만 import
+- 시그널은 `object` 타입 사용
+
+### 8. 탭 삭제 시 새 탭 생성 버그 수정
+
+**파일**: `view/widgets/port_tab_widget.py`
+
+**문제**:
+- 플러스 탭 바로 왼쪽 탭을 삭제하면 `on_tab_changed` 시그널이 발생
+- 현재 탭 인덱스가 플러스 탭 인덱스와 같아져 새 탭이 생성됨
+
+**해결 방법**:
+```python
+def close_port_tab(self, index: int) -> None:
+    """탭 닫기 요청 처리"""
+    # 마지막 탭(+)은 닫을 수 없음
+    if index == self.count() - 1:
+        return
+
+    # 최소 1개의 포트 탭은 유지 (플러스 탭 제외)
+    if self.count() <= 2:
+        return
+
+    # 시그널 차단하여 탭 삭제 시 on_tab_changed가 호출되지 않도록 함
+    self.blockSignals(True)
+    try:
+        self.removeTab(index)
+
+        # 삭제 후 적절한 탭으로 포커스 이동
+        if self.count() > 1:
+            new_index = max(0, index - 1)
+            self.setCurrentIndex(new_index)
+    finally:
+        self.blockSignals(False)
+```
+
+**개선 사항**:
+- 시그널 차단으로 `on_tab_changed` 호출 방지
+- 삭제 후 플러스 탭이 아닌 일반 탭으로 포커스 이동
+- 최소 1개의 포트 탭 유지 로직 추가
+
+
 ---
 
 ## 📝 수정된 파일 목록
@@ -240,6 +308,9 @@ def edit_tab_name(self, index: int) -> None:
 2. ✅ 포트 탭 추가 시 닫기 버튼이 사라지는 버그
 3. ✅ 설정 키 불일치 (`menu_theme` vs `theme`)
 4. ✅ ThemeManager에서 QIcon import 누락
+5. ✅ PortTabWidget과 PortPanel 간 순환 import 문제
+6. ✅ 탭 삭제 시 새 탭이 생성되는 버그
+7. ✅ 마지막 포트 탭 삭제 방지 로직 추가
 
 ---
 

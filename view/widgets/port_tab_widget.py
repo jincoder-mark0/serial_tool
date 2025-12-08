@@ -1,10 +1,12 @@
 from PyQt5.QtWidgets import QTabWidget, QWidget, QTabBar, QInputDialog
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QIcon
-from typing import Optional
-from view.panels.port_panel import PortPanel
+from typing import Optional, TYPE_CHECKING
 from view.language_manager import language_manager
 from view.theme_manager import ThemeManager
+
+if TYPE_CHECKING:
+    from view.panels.port_panel import PortPanel
 
 class PortTabWidget(QTabWidget):
     """
@@ -13,7 +15,7 @@ class PortTabWidget(QTabWidget):
     """
 
     # 시그널 정의
-    tab_added = pyqtSignal(PortPanel) # 새 탭이 추가되었을 때 (패널 전달)
+    tab_added = pyqtSignal(object)  # 새 탭이 추가되었을 때 (패널 전달)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
@@ -46,6 +48,8 @@ class PortTabWidget(QTabWidget):
 
     def edit_tab_name(self, index: int) -> None:
         """탭 이름을 수정합니다."""
+        from view.panels.port_panel import PortPanel
+
         widget = self.widget(index)
         if not isinstance(widget, PortPanel):
             return
@@ -95,7 +99,26 @@ class PortTabWidget(QTabWidget):
         # 마지막 탭(+)은 닫을 수 없음
         if index == self.count() - 1:
             return
-        self.removeTab(index)
+
+        # 최소 1개의 포트 탭은 유지 (플러스 탭 제외)
+        # count가 2이면 [포트탭1개, +탭] 이므로 삭제 불가
+        if self.count() <= 2:
+            return
+
+        # 시그널 차단하여 탭 삭제 시 on_tab_changed가 호출되지 않도록 함
+        self.blockSignals(True)
+        try:
+            self.removeTab(index)
+
+            # 삭제 후 적절한 탭으로 포커스 이동
+            # 플러스 탭이 아닌 탭으로 이동
+            if self.count() > 1:  # 플러스 탭 외에 다른 탭이 있으면
+                # 삭제된 탭의 이전 탭으로 이동 (또는 0번 탭)
+                new_index = max(0, index - 1)
+                self.setCurrentIndex(new_index)
+            # else: 플러스 탭만 남은 경우는 그대로 둠
+        finally:
+            self.blockSignals(False)
 
     def on_tab_changed(self, index: int) -> None:
         """탭 변경 시 처리"""
@@ -105,8 +128,10 @@ class PortTabWidget(QTabWidget):
         if index == self.count() - 1:
             self.add_new_port_tab()
 
-    def add_new_port_tab(self) -> PortPanel:
+    def add_new_port_tab(self) -> "PortPanel":
         """새로운 포트 탭을 추가하고 패널을 반환합니다."""
+        from view.panels.port_panel import PortPanel
+
         # 시그널 차단 (탭 조작 중 불필요한 이벤트 방지)
         self.blockSignals(True)
         try:
@@ -140,7 +165,7 @@ class PortTabWidget(QTabWidget):
         self.tab_added.emit(panel)
         return panel
 
-    def _on_panel_title_changed(self, panel: PortPanel, title: str) -> None:
+    def _on_panel_title_changed(self, panel: "PortPanel", title: str) -> None:
         """패널의 탭 제목이 변경되었을 때 호출됩니다."""
         index = self.indexOf(panel)
         if index >= 0:
