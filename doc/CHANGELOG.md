@@ -35,6 +35,39 @@
 
 ---
 
+### UI 요소 및 시그널/메서드 네이밍 리팩토링 (2025-12-08)
+
+#### 변경 사항 (Changed)
+
+- **UI 요소 이름 구체화**
+  - `send_btn` → `send_manual_cmd_btn`, `clear_btn` → `clear_manual_options_btn` 등
+  - `manual_control.py`, `received_area.py`, `tx_panel.py`, `command_control.py` 전체 적용
+  - 모호한 변수명을 제거하고 컨텍스트와 기능을 명확히 함
+
+- **시그널 및 메서드 네이밍 표준화**
+  - 시그널: `[context]_[action]_requested` 패턴 적용 (예: `manual_cmd_send_requested`)
+  - 핸들러: `on_[widget]_[event]` 패턴 적용 (예: `on_send_manual_cmd_clicked`)
+  - `guide/naming_convention.md` 업데이트
+
+#### 이점 (Benefits)
+
+- **가독성 향상**: 코드만 보고도 어떤 UI 요소가 어떤 동작을 하는지 즉시 파악 가능
+- **유지보수성 개선**: 명확한 네이밍으로 버그 발생 가능성 감소 및 협업 효율 증대
+
+### 설정 다이얼로그 리팩토링 (2025-12-08)
+
+#### 변경 사항 (Changed)
+
+- **PreferencesDialog 설정 로드 방식 개선**
+  - `load_settings` 메서드에서 `SettingsManager`를 직접 사용하여 설정값 로드
+  - 하드코딩된 기본값 및 외부에서 전달받던 `current_settings` 의존성 제거
+  - `global.theme`, `ui.font_size` 등 정확한 설정 키 경로 적용
+
+#### 이점 (Benefits)
+
+- **데이터 일관성**: `SettingsManager`를 단일 진실 공급원(SSOT)으로 사용하여 데이터 불일치 방지
+- **유지보수성**: 설정 로드 로직이 중앙화된 관리자를 따르도록 개선
+
 ### UI/UX 개선 및 버그 수정 (2025-12-08)
 
 #### 추가 사항 (Added)

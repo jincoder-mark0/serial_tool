@@ -275,15 +275,22 @@ self.log_txt = QTextEdit()
 | 패턴 | 용도 | 예시 |
 |------|------|------|
 | `[대상]_changed` | 값/상태 변경 | `theme_changed`, `language_changed` |
-| `[동작]_requested` | 사용자 요청 | `send_command_requested`, `exit_requested` |
+| `[동작]_requested` | 사용자 요청 | `manual_cmd_send_requested`, `exit_requested` |
 | `[대상]_[동사]ed` | 완료 알림 | `data_received`, `port_opened` |
+| `[대상]_selected` | 선택 이벤트 | `transfer_file_selected`, `item_selected` |
+| `[대상]_added` | 추가 이벤트 | `tab_added`, `row_added` |
+| `[대상]_removed` | 제거 이벤트 | `tab_removed`, `row_removed` |
 
 ### 6.2 이벤트 핸들러 네이밍
 
 | 패턴 | 용도 | 예시 |
 |------|------|------|
-| `on_[위젯]_[동작]` | GUI 이벤트 | `on_send_btn_clicked` |
+| `on_[위젯]_[동작]` | 위젯명이 불명확할 때 | `on_send_manual_cmd_clicked` |
+| `on_[동작]` | 위젯명이 명확할 때 | `on_send_clicked` (send_btn만 있는 경우) |
+| `on_[대상]_[동작]` | 상태 변경 핸들러 | `on_language_changed` |
 | `_on_[대상]_[동작]` | 내부 핸들러 | `_on_port_changed` |
+
+**참고**: 위젯명이 문맥상 명확한 경우 `_btn`, `_chk` 등의 접미사를 생략할 수 있습니다. 하지만 가급적 구체적인 이름을 권장합니다.
 
 ---
 

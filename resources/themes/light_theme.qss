@@ -79,8 +79,8 @@ QPushButton#add_cmd_btn { qproperty-icon: url(resources/icons/add_black.svg); }
 QPushButton#del_cmd_btn { qproperty-icon: url(resources/icons/delete_black.svg); }
 QPushButton#up_cmd_btn { qproperty-icon: url(resources/icons/up_black.svg); }
 QPushButton#down_cmd_btn { qproperty-icon: url(resources/icons/down_black.svg); }
-QPushButton#search_prev_btn { qproperty-icon: url(resources/icons/find_prev_black.svg); }
-QPushButton#search_next_btn { qproperty-icon: url(resources/icons/find_next_black.svg); }
+QPushButton#rx_search_prev_btn { qproperty-icon: url(resources/icons/find_prev_black.svg); }
+QPushButton#rx_search_next_btn { qproperty-icon: url(resources/icons/find_next_black.svg); }
 
 /* QLineEdit, QTextEdit */
 QLineEdit, QTextEdit, QPlainTextEdit {

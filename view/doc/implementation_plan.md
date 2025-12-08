@@ -14,13 +14,11 @@
 | 2 | 상태바 상세 정보 | ⭐ 쉬움 | `view/widgets/main_status_bar.py` | ✅ | ❌ 부분 |
 | 3 | Connect 버튼 색상 | ⭐ 쉬움 | `view/widgets/port_settings.py` | ✅ | ❌ 부분 |
 | 4 | 단축키 시스템 | ⭐⭐ 보통 | 여러 파일 | ✅ | ❌ 부분 |
-| 5 | 레이아웃 비율 | ⭐ 쉬움 | `view/sections/left_section.py` | ✅ | ❌ 수정 필요 |
-| 6 | 색상 코드 표준화 | ⭐ 쉬움 | `.qss` 파일들 | ✅ | ❌ 부분 |
-| 7 | 윈도우 크기 복원 | ⭐ 쉬움 | `view/main_window.py` | ✅ | ✅ 완료 |
-| 8 | Splitter 비율 복원 | ⭐ 쉬움 | `view/main_window.py` | ✅ | ❌ 누락 |
-| 9 | Tooltip 개선 | ⭐ 쉬움 | 모든 위젯 | ✅ | ❌ 부분 |
-| 10 | MainToolBar | ⭐⭐ 보통 | `view/widgets/main_toolbar.py` | ✅ | ❌ 누락 |
-| 11 | Packet Inspector 설정 | ⭐⭐ 보통 | `view/dialogs/preferences_dialog.py` | ✅ | ❌ 누락 |
+| 5 | 색상 코드 표준화 | ⭐ 쉬움 | `.qss` 파일들 | ✅ | ❌ 부분 |
+| 6 | Splitter 비율 복원 | ⭐ 쉬움 | `view/main_window.py` | ✅ | ❌ 누락 |
+| 7 | Tooltip 개선 | ⭐ 쉬움 | 모든 위젯 | ✅ | ❌ 부분 |
+| 8 | MainToolBar | ⭐⭐ 보통 | `view/widgets/main_toolbar.py` | ✅ | ❌ 누락 |
+| 9 | Packet Inspector 설정 | ⭐⭐ 보통 | `view/dialogs/preferences_dialog.py` | ✅ | ❌ 누락 |
 
 **View 전용 ✅**: 비즈니스 로직 없이 순수 UI만으로 구현 가능
 **View 전용 ❌**: Presenter/Model 로직 필요 (제외)
@@ -57,10 +55,6 @@
 - `update_uptime(seconds: int)` - 업타임 업데이트
 - `update_last_rx(timestamp: str)` - 마지막 수신 시각 업데이트
 - `format_bytes(bytes_count: int) -> str` - 바이트 단위 변환 헬퍼
-
-**통합**:
-- `view/panels/port_panel.py` (또는 `left_section.py`) 에 추가
-- 레이아웃 비율: 15% (항목 5 참조)
 
 **언어 지원**:
 - `language_manager` 연결
@@ -145,25 +139,7 @@
 
 ---
 
-### 5. 레이아웃 비율 조정 ⭐ 쉬움
-
-**포트 탭 내부 비율**:
-- PortSettingsWidget: **15%** (포트 설정)
-- ReceivedArea: **60%** (수신 로그)
-- StatusPanel: **15%** (통계 - 항목 1에서 추가)
-- Spacer: **10%** (하단 여백)
-
-**구현 위치**:
-- `view/panels/port_panel.py` 또는 `view/sections/left_section.py`
-
-**변경 사항**:
-- `layout.addWidget()` → `layout.addWidget(widget, stretch=비율)`
-- `layout.addSpacing(10)` 하단 여백 추가
-- StatusPanel 위젯 추가 필수
-
----
-
-### 6. 색상 코드 표준화 ⭐ 쉬움
+### 5. 색상 코드 표준화 ⭐ 쉬움
 
 **표준 색상 팔레트** (일관성 유지):
 
@@ -193,18 +169,7 @@
 
 ---
 
-### 7. 윈도우 크기 복원 ⭐ 쉬움 (완료)
-
-**현재 상태**: ✅ 이미 구현됨
-
-**기능**:
-- `closeEvent()`: 창 크기/위치 저장
-- `__init__()`: 저장된 크기/위치 복원
-- 설정 키: `ui.window_width`, `ui.window_height`, `ui.window_x`, `ui.window_y`
-
----
-
-### 8. Splitter 비율 복원 ⭐ 쉬움
+### 6. Splitter 비율 복원 ⭐ 쉬움
 
 **기능**: 사용자가 조절한 좌우 패널 분할 비율을 저장/복원
 
@@ -219,7 +184,7 @@
 
 ---
 
-### 9. Tooltip 개선 ⭐ 쉬움
+### 7. Tooltip 개선 ⭐ 쉬움
 
 **대상 위젯**: 모든 버튼과 주요 위젯
 
@@ -235,7 +200,7 @@
 
 ---
 
-### 10. MainToolBar 추가 (선택적) ⭐⭐ 보통
+### 8. MainToolBar 추가 (선택적) ⭐⭐ 보통
 
 **빠른 액션 버튼** (6개):
 - Open - 포트 열기
@@ -262,7 +227,7 @@
 
 ---
 
-### 11. Packet Inspector 설정 (Preferences) ⭐⭐ 보통
+### 9. Packet Inspector 설정 (Preferences) ⭐⭐ 보통
 
 **목적**: 패킷 파서 동작을 사용자가 설정할 수 있는 UI 제공
 
@@ -397,19 +362,18 @@
 
 ### ✅ 즉시 구현
 1. **StatusPanel 위젯** - 신규 파일
-2. **레이아웃 비율** - 한 줄 수정
-3. **Connect 버튼 색상** - 메서드 추가
-4. **Tooltip** - 모든 버튼
-5. **Splitter 복원** - closeEvent 수정
+2. **Connect 버튼 색상** - 메서드 추가
+3. **Tooltip** - 모든 버튼
+4. **Splitter 복원** - closeEvent 수정
 
 ### ✅ 하루 내 완료
-6. **상태바 상세 정보** - 위젯 6개 추가
-7. **색상 표준화** - QSS 수정
-8. **단축키 시스템** - 여러 파일 수정
+5. **상태바 상세 정보** - 위젯 6개 추가
+6. **색상 표준화** - QSS 수정
+7. **단축키 시스템** - 여러 파일 수정
 
 ### ⭐ 선택적
-9. **MainToolBar** - 신규 위젯
-10. **Packet Inspector 설정** - Preferences 탭 추가
+8. **MainToolBar** - 신규 위젯
+9. **Packet Inspector 설정** - Preferences 탭 추가
 
 ---
 
@@ -421,11 +385,10 @@ View 계층 완성 판단 기준:
 2. ✅ 하단 상태바에 6개 필드 보임
 3. ✅ Connect 버튼이 상태별로 색상 변경
 4. ✅ 주요 단축키(Ctrl+O, F5, Insert 등) 동작
-5. ✅ 레이아웃 비율 15:60:15:10 적용
-6. ✅ QSS 파일에 표준 색상 코드 적용
-7. ✅ 창 크기와 Splitter 비율 저장/복원
-8. ✅ 모든 버튼에 Tooltip
-9. ✅ (선택) Packet Inspector 설정 UI
+5. ✅ QSS 파일에 표준 색상 코드 적용
+6. ✅ 창 크기와 Splitter 비율 저장/복원
+7. ✅ 모든 버튼에 Tooltip
+8. ✅ (선택) Packet Inspector 설정 UI
 
 **데이터 연동은 다음 단계(Presenter 구현)에서!**
 
@@ -443,7 +406,7 @@ View 계층 완성 판단 기준:
 - `view/main_window.py` ← 단축키, Splitter 복원
 - `view/panels/command_list_panel.py` ← 단축키
 - `view/widgets/manual_control.py` ← 단축키, Tooltip
-- `view/sections/left_section.py` ← 레이아웃 비율, StatusPanel 추가
+- `view/sections/left_section.py` ← StatusPanel 추가
 - `view/dialogs/preferences_dialog.py` ← Packet Inspector 설정 탭 추가
 - `resources/themes/dark_theme.qss` ← 색상 표준화
 - `resources/themes/light_theme.qss` ← 색상 표준화
