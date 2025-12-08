@@ -72,7 +72,8 @@ class PreferencesDialog(QDialog):
         self.theme_combo.addItems(["Dark", "Light", "System"])
 
         self.language_combo = QComboBox()
-        self.language_combo.addItems(["English", "Korean"])
+        self.language_combo.addItems(["English", "en"])
+        self.language_combo.addItems(["Korean", "ko"])
 
         self.font_size_spin = QSpinBox()
         self.font_size_spin.setRange(8, 24)
@@ -185,8 +186,9 @@ class PreferencesDialog(QDialog):
         self.theme_combo.setCurrentText(theme)
 
         lang_code = self.settings.get("global.language", "en")
-        lang_text = "Korean" if lang_code == "ko" else "English"
-        self.language_combo.setCurrentText(lang_text)
+        index = self.language_combo.findData(lang_code)
+        if index != -1:
+            self.language_combo.setCurrentIndex(index)
 
         self.font_size_spin.setValue(self.settings.get("ui.font_size", 10))
 
@@ -206,7 +208,7 @@ class PreferencesDialog(QDialog):
         """변경된 설정을 수집하여 시그널을 발생시킵니다."""
         new_settings = {
             "theme": self.theme_combo.currentText().lower(),
-            "language": self.language_combo.currentText(),
+            "language": self.language_combo.currentData(),
             "font_size": self.font_size_spin.value(),
             "baudrate": int(self.default_baud_combo.currentText()),
             "scan_interval": self.scan_interval_spin.value(),
