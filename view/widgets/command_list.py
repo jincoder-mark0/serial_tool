@@ -216,8 +216,34 @@ class CommandListWidget(QWidget):
         self._append_row(cmd, True, hex_mode, suffix, delay)
 
     def add_cmd_row(self) -> None:
-        """빈 행을 추가합니다."""
-        self._append_row("", True, False, True, "100")
+        """빈 행을 추가합니다. 선택된 행이 있으면 복사, 없으면 마지막 행 복사."""
+        # 기본값
+        cmd = ""
+        prefix = True
+        hex_mode = False
+        suffix = True
+        delay = "100"
+        enabled = True
+
+        # 선택된 행 확인
+        selected_rows = self.cmd_table.selectionModel().selectedRows()
+        target_row = -1
+
+        if selected_rows:
+            target_row = selected_rows[-1].row()  # 마지막 선택된 행
+        elif self.cmd_table_model.rowCount() > 0:
+            target_row = self.cmd_table_model.rowCount() - 1  # 마지막 행
+
+        if target_row >= 0:
+            # 데이터 복사
+            enabled = self.cmd_table_model.item(target_row, 0).checkState() == Qt.Checked
+            prefix = self.cmd_table_model.item(target_row, 1).checkState() == Qt.Checked
+            cmd = self.cmd_table_model.item(target_row, 2).text()
+            suffix = self.cmd_table_model.item(target_row, 3).checkState() == Qt.Checked
+            hex_mode = self.cmd_table_model.item(target_row, 4).checkState() == Qt.Checked
+            delay = self.cmd_table_model.item(target_row, 5).text()
+
+        self._append_row(cmd, prefix, hex_mode, suffix, delay, enabled)
 
     def _append_row(self, cmd: str, prefix: bool, hex_mode: bool, suffix: bool, delay: str, enabled: bool = True) -> None:
         """

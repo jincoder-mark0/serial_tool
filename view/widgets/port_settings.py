@@ -233,8 +233,9 @@ class PortSettingsWidget(QGroupBox):
         Args:
             connected (bool): 연결 여부.
         """
-        self.connect_btn.setChecked(connected)
-        self.connect_btn.setText(language_manager.get_text("port_btn_disconnect") if connected else language_manager.get_text("port_btn_connect"))
+        state = "connected" if connected else "disconnected"
+        self.set_connection_state(state)
+
         self.port_combo.setEnabled(not connected)
         self.baud_combo.setEnabled(not connected)
         self.datasize_combo.setEnabled(not connected)
@@ -244,6 +245,31 @@ class PortSettingsWidget(QGroupBox):
 
         # 연결 상태 변경 시그널 발생
         self.connection_state_changed.emit(connected)
+
+    def set_connection_state(self, state: str) -> None:
+        """
+        연결 버튼의 상태(색상, 텍스트)를 변경합니다.
+
+        Args:
+            state (str): 'disconnected', 'connected', 'error'
+        """
+        self.connect_btn.setProperty("state", state)
+        self.connect_btn.style().unpolish(self.connect_btn)
+        self.connect_btn.style().polish(self.connect_btn)
+
+        if state == 'connected':
+            self.connect_btn.setText(language_manager.get_text("port_btn_disconnect"))
+            self.connect_btn.setChecked(True)
+        elif state == 'disconnected':
+            self.connect_btn.setText(language_manager.get_text("port_btn_connect"))
+            self.connect_btn.setChecked(False)
+        elif state == 'error':
+            self.connect_btn.setText("Reconnect") # TODO: Add lang key
+            self.connect_btn.setChecked(False)
+
+    def toggle_connection(self) -> None:
+        """연결 상태를 토글합니다 (버튼 클릭 효과)."""
+        self.connect_btn.click()
 
     def save_state(self) -> dict:
         """

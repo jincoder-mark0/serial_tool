@@ -53,6 +53,23 @@ class MainLeftSection(QWidget):
         """새로운 포트 탭을 추가합니다. (외부 호출용 래퍼)"""
         self.port_tabs.add_new_port_tab()
 
+    def open_current_port(self) -> None:
+        """현재 활성화된 탭의 포트를 엽니다."""
+        current_index = self.port_tabs.currentIndex()
+        current_widget = self.port_tabs.widget(current_index)
+        if isinstance(current_widget, PortPanel):
+            current_widget.toggle_connection()
+
+    def close_current_tab(self) -> None:
+        """현재 활성화된 탭을 닫습니다."""
+        current_index = self.port_tabs.currentIndex()
+        # 마지막 탭(플러스 탭)은 닫을 수 없음
+        if current_index == self.port_tabs.count() - 1:
+            return
+
+        if current_index >= 0:
+            self.port_tabs.removeTab(current_index)
+
     def _on_tab_added(self, panel: PortPanel) -> None:
         """새 탭이 추가되었을 때 호출되는 핸들러"""
         # 포트 설정의 연결 상태 변경 시그널을 수동 제어 위젯에 연결

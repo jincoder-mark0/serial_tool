@@ -388,32 +388,7 @@ View 계층 완성 판단 기준:
 5. ✅ QSS 파일에 표준 색상 코드 적용
 6. ✅ 창 크기와 Splitter 비율 저장/복원
 7. ✅ 모든 버튼에 Tooltip
-8. ✅ (선택) Packet Inspector 설정 UI
+8. ✅ Packet Inspector 설정 UI
 
 **데이터 연동은 다음 단계(Presenter 구현)에서!**
 
----
-
-## 📂 파일 변경 요약
-
-### 신규 파일
-- `view/widgets/status_panel.py` ← **필수**
-- `view/widgets/main_toolbar.py` ← 선택
-
-### 수정 파일
-- `view/widgets/main_status_bar.py` ← 6개 위젯 추가
-- `view/widgets/port_settings.py` ← `set_connection_state()` 메서드
-- `view/main_window.py` ← 단축키, Splitter 복원
-- `view/panels/command_list_panel.py` ← 단축키
-- `view/widgets/manual_control.py` ← 단축키, Tooltip
-- `view/sections/left_section.py` ← StatusPanel 추가
-- `view/dialogs/preferences_dialog.py` ← Packet Inspector 설정 탭 추가
-- `resources/themes/dark_theme.qss` ← 색상 표준화
-- `resources/themes/light_theme.qss` ← 색상 표준화
-
-### 언어 파일
-- `config/languages/en.json` ← status, parser 관련 키 추가
-- `config/languages/ko.json` ← status, parser 관련 키 추가
-
-### 설정 파일
-- `config/settings.json` ← parser 섹션 추가

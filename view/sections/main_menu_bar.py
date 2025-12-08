@@ -16,6 +16,10 @@ class MainMenuBar(QMenuBar):
     language_changed = pyqtSignal(str)
     preferences_requested = pyqtSignal()
     about_requested = pyqtSignal()
+    open_port_requested = pyqtSignal()
+    close_tab_requested = pyqtSignal()
+    save_log_requested = pyqtSignal()
+    toggle_right_panel_requested = pyqtSignal(bool)
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -34,6 +38,23 @@ class MainMenuBar(QMenuBar):
         new_tab_action.triggered.connect(self.new_tab_requested.emit)
         file_menu.addAction(new_tab_action)
 
+        open_port_action = QAction("Open Port", self) # TODO: Add lang key
+        open_port_action.setShortcut("Ctrl+O")
+        open_port_action.triggered.connect(self.open_port_requested.emit)
+        file_menu.addAction(open_port_action)
+
+        close_tab_action = QAction("Close Tab", self) # TODO: Add lang key
+        close_tab_action.setShortcut("Ctrl+W")
+        close_tab_action.triggered.connect(self.close_tab_requested.emit)
+        file_menu.addAction(close_tab_action)
+
+        save_log_action = QAction("Save Log", self) # TODO: Add lang key
+        save_log_action.setShortcut("Ctrl+Shift+S")
+        save_log_action.triggered.connect(self.save_log_requested.emit)
+        file_menu.addAction(save_log_action)
+
+        file_menu.addSeparator()
+
         exit_action = QAction(language_manager.get_text("main_menu_exit"), self)
         exit_action.setShortcut("Ctrl+Q")
         exit_action.setToolTip(language_manager.get_text("main_menu_exit_tooltip"))
@@ -42,6 +63,15 @@ class MainMenuBar(QMenuBar):
 
         # 보기 메뉴 (View Menu)
         view_menu = self.addMenu(language_manager.get_text("main_menu_view"))
+
+        # Right Panel Toggle
+        self.toggle_right_panel_action = QAction("Show Right Panel", self) # TODO: Add lang key
+        self.toggle_right_panel_action.setCheckable(True)
+        self.toggle_right_panel_action.setChecked(True) # Default, will be updated by MainWindow
+        self.toggle_right_panel_action.triggered.connect(self.toggle_right_panel_requested.emit)
+        view_menu.addAction(self.toggle_right_panel_action)
+
+        view_menu.addSeparator()
 
         # 테마 서브메뉴
         theme_menu = view_menu.addMenu(language_manager.get_text("main_menu_theme"))
@@ -86,6 +116,11 @@ class MainMenuBar(QMenuBar):
         about_action = QAction(language_manager.get_text("main_menu_about"), self)
         about_action.triggered.connect(self.about_requested.emit)
         help_menu.addAction(about_action)
+
+    def set_right_panel_checked(self, checked: bool) -> None:
+        """우측 패널 토글 액션의 체크 상태를 설정합니다."""
+        if hasattr(self, 'toggle_right_panel_action'):
+            self.toggle_right_panel_action.setChecked(checked)
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 메뉴 텍스트를 업데이트합니다."""

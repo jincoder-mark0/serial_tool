@@ -5,6 +5,7 @@ from typing import Optional
 from view.widgets.port_settings import PortSettingsWidget
 from view.widgets.received_area import ReceivedAreaWidget
 from view.widgets.status_area import StatusAreaWidget
+from view.widgets.status_panel import StatusPanel
 
 class PortPanel(QWidget):
     """
@@ -37,12 +38,16 @@ class PortPanel(QWidget):
 
         # 컴포넌트 생성
         self.port_settings = PortSettingsWidget()
+        self.status_panel = StatusPanel()
         self.received_area = ReceivedAreaWidget()
         self.status_area = StatusAreaWidget()
 
         # 레이아웃 구성
         # 상단: 설정 (Top: Settings)
         layout.addWidget(self.port_settings)
+
+        # 상태 패널 (Status Panel)
+        layout.addWidget(self.status_panel)
 
         # 중간: 로그 (Middle: Log)
         layout.addWidget(self.received_area, 1) # Stretch 1
@@ -51,6 +56,10 @@ class PortPanel(QWidget):
         layout.addWidget(self.status_area)
 
         self.setLayout(layout)
+
+    def toggle_connection(self) -> None:
+        """연결 상태를 토글합니다."""
+        self.port_settings.toggle_connection()
 
     def _on_port_changed(self, port_name: str) -> None:
         """포트 변경 시 탭 제목을 업데이트합니다."""

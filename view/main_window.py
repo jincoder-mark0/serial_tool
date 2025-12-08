@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QSplitter, QApplication
 )
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, QByteArray
 
 from view.sections.main_left_section import MainLeftSection
 from view.sections.main_right_section import MainRightSection
@@ -13,6 +13,8 @@ from view.dialogs.preferences_dialog import PreferencesDialog
 from core.settings_manager import SettingsManager
 from view.sections.main_menu_bar import MainMenuBar
 from view.sections.main_status_bar import MainStatusBar
+from view.widgets.main_toolbar import MainToolBar
+from view.panels.port_panel import PortPanel
 
 class MainWindow(QMainWindow):
     """
@@ -77,18 +79,33 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(5, 5, 5, 5)
         main_layout.setSpacing(5)
 
+        # 툴바 설정
+        self.main_toolbar = MainToolBar(self)
+        self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
+        self._connect_toolbar_signals()
+
         # 스플리터 구성 (좌: 포트/제어, 우: 커맨드/인스펙터)
-        splitter = QSplitter(Qt.Horizontal)
+        self.splitter = QSplitter(Qt.Horizontal)
 
         self.left_section = MainLeftSection()
         self.right_section = MainRightSection()
 
-        splitter.addWidget(self.left_section)
-        splitter.addWidget(self.right_section)
-        splitter.setStretchFactor(0, 1) # 좌측 패널 비율
-        splitter.setStretchFactor(1, 1) # 우측 패널 비율
+        self.splitter.addWidget(self.left_section)
+        self.splitter.addWidget(self.right_section)
 
-        main_layout.addWidget(splitter)
+        # 스플리터 상태 복원
+        splitter_state = self.settings.get('ui.splitter_state')
+        if splitter_state:
+            self.splitter.restoreState(QByteArray.fromBase64(splitter_state.encode()))
+        else:
+            self.splitter.setStretchFactor(0, 1) # 좌측 패널 비율
+            self.splitter.setStretchFactor(1, 1) # 우측 패널 비율
+
+        # 우측 패널 가시성 복원
+        right_panel_visible = self.settings.get('ui.right_panel_visible', True)
+        self.right_section.setVisible(right_panel_visible)
+
+        main_layout.addWidget(self.splitter)
 
         # 전역 상태바 설정 (위젯 사용)
         self.global_status_bar = MainStatusBar()
@@ -103,6 +120,33 @@ class MainWindow(QMainWindow):
         self.menu_bar.language_changed.connect(lambda lang: language_manager.set_language(lang))
         self.menu_bar.preferences_requested.connect(self.open_preferences_dialog)
         self.menu_bar.about_requested.connect(self.open_about_dialog)
+
+        # New signals
+        self.menu_bar.open_port_requested.connect(self.left_section.open_current_port)
+        self.menu_bar.close_tab_requested.connect(self.left_section.close_current_tab)
+        self.menu_bar.save_log_requested.connect(self.save_log)
+        self.menu_bar.toggle_right_panel_requested.connect(self.toggle_right_panel)
+
+    def save_log(self) -> None:
+        """로그 저장 기능을 수행합니다."""
+        if hasattr(self, 'left_section'):
+            self.left_section.manual_control.manual_control_widget.on_save_manual_log_clicked()
+
+    def _connect_toolbar_signals(self) -> None:
+        """툴바 시그널을 슬롯에 연결합니다."""
+        self.main_toolbar.open_requested.connect(self.left_section.open_current_port)
+        self.main_toolbar.close_requested.connect(self.left_section.open_current_port) # Toggle
+        self.main_toolbar.clear_requested.connect(self.clear_log)
+        self.main_toolbar.save_log_requested.connect(self.save_log)
+        self.main_toolbar.settings_requested.connect(self.open_preferences_dialog)
+
+    def clear_log(self) -> None:
+        """현재 활성화된 탭의 로그를 지웁니다."""
+        if hasattr(self, 'left_section'):
+             current_index = self.left_section.port_tabs.currentIndex()
+             current_widget = self.left_section.port_tabs.widget(current_index)
+             if isinstance(current_widget, PortPanel):
+                 current_widget.received_area.on_clear_rx_log_clicked()
 
     def switch_theme(self, theme_name: str) -> None:
         """
@@ -195,6 +239,10 @@ class MainWindow(QMainWindow):
         # 설정에 언어 저장
         self.settings.set('ui.language', lang_code)
 
+    def toggle_right_panel(self, visible: bool) -> None:
+        """우측 패널의 가시성을 토글합니다."""
+        self.right_section.setVisible(visible)
+
     def closeEvent(self, event) -> None:
         """
         윈도우 종료 이벤트를 처리합니다.
@@ -205,6 +253,12 @@ class MainWindow(QMainWindow):
         """
         # 윈도우 상태 저장
         self._save_window_state()
+
+        # 스플리터 상태 저장
+        self.settings.set('ui.splitter_state', self.splitter.saveState().toBase64().data().decode())
+
+        # 우측 패널 가시성 저장
+        self.settings.set('ui.right_panel_visible', self.right_section.isVisible())
 
         # 패널 상태 저장
         if hasattr(self, 'right_section'):
