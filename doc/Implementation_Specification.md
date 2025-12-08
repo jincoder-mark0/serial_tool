@@ -964,7 +964,7 @@ class MainPresenter:
         self.serial_tool = SerialManager()
         self.settings = SettingsManager()
         self.event_router = EventRouter()
-    
+
     # View → Presenter
     def handle_port_open(self, port_config: PortConfig):
         try:
@@ -972,7 +972,7 @@ class MainPresenter:
             self.event_router.notify_port_opened(controller)
         except SerialException as e:
             self.event_router.notify_error(f"Port open failed: {e}")
-    
+
     # Domain → Presenter
     def on_rx_data(self, port_id: str, data: bytes):
         parsed = self.packet_parser.parse(data)
@@ -1001,7 +1001,7 @@ class MainPresenter:
 class EventBus:
     def subscribe(self, event_type: str, callback: Callable):
         self._handlers[event_type].append(callback)
-    
+
     def publish(self, event_type: str, payload: Any):
         for cb in self._handlers[event_type]:
             QTimer.singleShot(0, lambda: cb(payload))  # UI 스레드 안전
@@ -1066,20 +1066,20 @@ PortController
 class SerialWorker(QThread):
     signal_rx_data = pyqtSignal(bytes)
     signal_port_error = pyqtSignal(str)
-    
+
     def run(self):
         while self.running:
             # TX 처리 (비차단)
             if not self.tx_queue.empty():
                 chunk = self.tx_queue.pop()
                 self.serial.write(chunk)
-            
+
             # RX 처리 (비차단)
             data = self.serial.read(1024) or b''
             if data:
                 self.rx_buffer.write(data)
                 self.signal_rx_data.emit(data)
-            
+
             QThread.msleep(1)  # 1ms 루프
 ```
 
@@ -1376,7 +1376,7 @@ class PortStats:
     "ui": {
       "type": "object",
       "properties": {
-        "theme": {"enum": ["dark", "light"]},
+        "menu_theme": {"enum": ["dark", "light"]},
         "timestamp_enabled": {"type": "boolean"},
         "log_max_lines": {"type": "integer", "default": 2000},
         "hex_mode_default": {"type": "boolean"}
@@ -1458,11 +1458,11 @@ class RingBuffer:
         self.read_pos = 0
         self.used_bytes = 0
         self.overflow_count = 0
-    
+
     def write(self, data: bytes) -> bool:
         # 원형 버퍼 쓰기, 오버플로우 시 오래된 데이터 드롭
         # 반환: 성공(True)/오버플로우(False)
-    
+
     def read_chunk(self, max_size: int = 2048) -> bytes:
         # 최대 max_size만큼 읽기
         pass
@@ -1476,7 +1476,7 @@ class ThreadSafeQueue:
     def __init__(self, max_size: int = 128):
         self.queue = deque(maxlen=max_size)
         self.lock = threading.Lock()
-    
+
     def push(self, data: bytes) -> bool:
         with self.lock:
             if len(self.queue) >= self.maxlen:
@@ -1491,7 +1491,7 @@ class ThreadSafeQueue:
 #### 8.5.1 포트 열기 시퀀스
 
 ```
-PortConfig(port="COM3", baudrate=115200) → SerialManager.open_port() 
+PortConfig(port="COM3", baudrate=115200) → SerialManager.open_port()
 → PortController(config) → PortStats 초기화 → signal_port_opened(PortController)
 ```
 
@@ -1572,12 +1572,12 @@ class SerialWorker(QThread):
     # Rx/Tx 데이터
     signal_rx_data = pyqtSignal(str, bytes)           # (port_id, raw_bytes)
     signal_tx_complete = pyqtSignal(str, int)         # (port_id, bytes_sent)
-    
+
     # 상태 변화
     signal_port_opened = pyqtSignal(str, PortConfig)  # (port_id, config)
     signal_port_closed = pyqtSignal(str)              # (port_id)
     signal_port_error = pyqtSignal(str, str)          # (port_id, error_msg)
-    
+
     # 통계
     signal_stats_updated = pyqtSignal(PortStats)
 ```
@@ -1650,7 +1650,7 @@ class PortController:
     def close(self) -> None:
     def send_data(self, data: bytes) -> bool:          # 큐 포화 시 False
     def change_config(self, new_config: PortConfig) -> bool:  # 즉시 적용 가능 여부
-    
+
     # 내부 상태 조회 (읽기 전용)
     @property
     def is_open(self) -> bool:
@@ -1734,7 +1734,7 @@ MainWindow.centralWidget() → QSplitter(Qt.Horizontal, sizes=[50,50])
 │   └── TxPanel (25%, minimumHeight=175px)
 └── ③.2 RightPanel (CommandListPanel 50%, minWidth=800px)
     └── QVBoxLayout(TableView70% + RowControls10% + RunControls20%)
-    
+
 QSplitter.setStretchFactor(0,1), QSplitter.setStretchFactor(1,1)
 QSplitter.setCollapsible(0,false), QSplitter.setCollapsible(1,false)
 QSplitter.saveState()/restoreState() 세션 지속성 지원
@@ -1864,7 +1864,7 @@ QWidget(objectName="CommandListPanel", minimumWidth=800px)
 RowControls: [➕Add][➖Del][⬆️↑⬇️↓][Template▼BG96/EG95]
 RunControls:
 ☑AT Delay:100ms ☑AT+CGDCONT Repeat:∞ ☑AT+CSQ Jump:→
-[▶Select All ☑] Run Times:[∞ ▼] Delay:[100ms ▼] 
+[▶Select All ☑] Run Times:[∞ ▼] Delay:[100ms ▼]
 [Run ⏵][Stop ⏹][Auto 🔄][Save Script 💾][Load .ini 📥]
 ```
 
@@ -1942,7 +1942,7 @@ QStyleHints::setUseFontForHighDpiScaling(true);
 class PortCombo(QComboBox):
     port_selected = pyqtSignal(str)      # 포트 변경
     scan_requested = pyqtSignal()        # 수동 스캔
-    
+
     # 내부: PortScanner와 실시간 연동
     # "COM1", "COM2", "Scanning...", "-- No ports --"
 ```
@@ -2008,7 +2008,7 @@ class PortCombo(QComboBox):
 ```python
 class FileProgressWidget(QWidget):
     cancel_requested = pyqtSignal()
-    
+
     # 원형 프로그레스 링 + 속도/ETA 표시
     # 0% → 녹색, 100% → 완료, Error → 빨강
 ```
@@ -2040,7 +2040,7 @@ class FileProgressWidget(QWidget):
 
 ```
 AT OK → 녹색 #4CAF50
-AT ERROR → 빨강 #F44336  
+AT ERROR → 빨강 #F44336
 +URC: → 노랑 #FFEB3B
 Prompt (>) → 청록 #00BCD4
 Timestamp → 회색 #9E9E9E
@@ -2157,7 +2157,7 @@ class PortScanner:
         """OS별 포트 열거 - serial.tools.list_ports 사용"""
         ports = serial.tools.list_ports.comports()
         return [p.device for p in ports if self.is_serial_port(p)]
-    
+
     def is_serial_port(self, port_info) -> bool:
         # USB-UART, 블루투스 제외 등 필터링
         return 'usb' in port_info.usb_info or 'tty' in port_info.device
@@ -2191,7 +2191,7 @@ class SerialWorker(QThread):
     signal_rx_data = pyqtSignal(str, bytes)
     signal_tx_complete = pyqtSignal(str, int)
     signal_port_error = pyqtSignal(str, str)
-    
+
     def run(self):
         while self.running:
             self._process_tx_queue()
@@ -2200,7 +2200,7 @@ class SerialWorker(QThread):
                 self.rx_buffer.write(rx_data)
                 self.signal_rx_data.emit(self.port_id, rx_data)
             QThread.msleep(1)  # 1ms CPU 부하 최소화
-    
+
     def _non_blocking_read(self) -> bytes:
         """timeout=0ms 비차단 read"""
         try:
@@ -2285,7 +2285,7 @@ class SerialManager:
     def __init__(self):
         self.registry = PortRegistry()
         self.max_ports = 16
-    
+
     def open_port(self, config: PortConfig) -> PortController:
         if len(self.registry.active_ports) >= self.max_ports:
             raise TooManyPortsError()
@@ -2397,7 +2397,7 @@ class ThreadSafeTxQueue:
         self.queue = deque(maxlen=max_chunks)
         self.lock = threading.RLock()
         self.pending_bytes = 0
-    
+
     def push(self, data: bytes) -> bool:  # 큐 포화 시 False 반환
         with self.lock:
             if len(self.queue) >= self.maxlen:
@@ -2448,7 +2448,7 @@ class AutoTxScheduler(QObject):
         self.timer = QTimer()
         self.timer.timeout.connect(lambda: self.send_command(command))
         self.timer.start(interval_ms)
-    
+
     def send_command(self, command: str):
         data = self.format_command(command)
         if self.port_controller.send_data(data):
@@ -2473,7 +2473,7 @@ class AutoTxScheduler(QObject):
 ```
 def calculate_optimal_chunk_size(bandwidth_bps: int) -> int:
     if bandwidth_bps < 9600:    return 128
-    elif bandwidth_bps < 115200: return 512  
+    elif bandwidth_bps < 115200: return 512
     else:                       return 2048
 ```
 
@@ -2487,12 +2487,12 @@ class BatchRenderer:
         self.timer = QTimer()
         self.timer.timeout.connect(self.flush)
         self.timer.start(batch_interval_ms)
-    
+
     def append(self, line: str):
         self.buffer.append(line)
         if len(self.buffer) > 20:  # 최대 20줄 배치
             self.flush()
-    
+
     def flush(self):
         if self.buffer:
             RxLogView.append_html("".join(self.buffer))
@@ -2572,7 +2572,7 @@ class PacketParser:
             "raw": RawParser()
         }
         self.active_parser = self.parsers.get(parser_type, self.parsers["auto"])
-    
+
     def parse(self, data: bytes, port_id: str) -> List[RxPacket]:
         """bytes → List[RxPacket] 변환"""
         return self.active_parser.process(data, port_id)
@@ -2599,7 +2599,7 @@ class PacketParser:
 │ Type: AT_OK | Len: 45 bytes  │
 │ ┌─────────────────────────┐ │
 │ │ AT+CGDCONT=1,"IP",...   │ │ ← Raw
-│ │ 41 54 2B 43 47 44...    │ │ ← HEX  
+│ │ 41 54 2B 43 47 44...    │ │ ← HEX
 │ └─────────────────────────┘ │
 │ Fields:                     │
 │ - Command: AT+CGDCONT=1     │
@@ -2627,7 +2627,7 @@ class DelimiterParser:
     def __init__(self, delimiters: List[bytes] = [b'\xFF', b'\r\n']):
         self.delimiters = delimiters
         self.buffer = bytearray()
-    
+
     def process(self, data: bytes, port_id: str) -> List[RxPacket]:
         self.buffer.extend(data)
         packets = []
@@ -2694,7 +2694,7 @@ class ExpectMatcher:
             if self._regex_match(rx_packet.decoded_text, pattern):
                 return True
         return False
-    
+
     def _regex_match(self, text: str, pattern: str) -> bool:
         # "OK" → r"OK(\r\n|$)"
         # "*.*" → 정규식 직접 지원
@@ -2815,7 +2815,7 @@ class CommandEntry:
     with_enter: bool              # CR/LF 자동 추가
     delay_ms: int                 # 다음 Step 대기 (0~60000)
     repeat_count: int             # 반복 횟수 (-1=무한, 0=1회)
-    expect: List[str]             # ["OK", "ERROR", ".*CGDCONT.*"] 
+    expect: List[str]             # ["OK", "ERROR", ".*CGDCONT.*"]
     timeout_ms: int               # Expect 대기 (1000~30000)
     jump_to: Optional[int]        # 조건 만족 시 점프 Step (-1=끝)
     enabled: bool                 # 전체 활성화/비활성화
@@ -2872,17 +2872,17 @@ async def execute_step(self, step: CommandEntry) -> CLStepResult:
     # 1. 명령 전송
     cmd_bytes = self.format_command(step.command, step.hex_mode, step.with_enter)
     success = self.port_controller.send_data(cmd_bytes)
-    
+
     # 2. Expect 대기
     response, matched = await self.wait_for_expect(step.expect, step.timeout_ms)
-    
+
     # 3. 분기 처리
     if matched and step.jump_to is not None:
         return CLStepResult(step.index, "JUMP", step.jump_to)
     elif step.repeat_count > 1:
         step.repeat_count -= 1
         return CLStepResult(step.index, "REPEAT")
-    
+
     # 4. 다음 Step 또는 종료
     return CLStepResult(step.index, "COMPLETE", response)
 ```
@@ -3021,27 +3021,27 @@ Step,Command,Expect,Actual,Duration,Status
 class FileTransferEngine(QRunnable):  # QThreadPool 사용
     signal_progress = pyqtSignal(TransferProgress)
     signal_completed = pyqtSignal(bool, str)
-    
+
     def __init__(self, port_controller: PortController, filepath: str):
         self.port = port_controller
         self.filepath = filepath
         self.chunk_size = self._calculate_chunk_size()
         self.cancelled = False
-    
+
     def run(self):
         with open(self.filepath, 'rb') as f:
             total_size = os.path.getsize(self.filepath)
             sent_bytes = 0
-            
+
             while not self.cancelled:
                 chunk = f.read(self.chunk_size)
                 if not chunk:
                     break
-                
+
                 if not self.port.send_data(chunk):
                     self.signal_completed.emit(False, "TX Queue Full")
                     return
-                
+
                 sent_bytes += len(chunk)
                 self.signal_progress.emit(TransferProgress(
                     total_bytes=total_size, sent_bytes=sent_bytes
@@ -3076,7 +3076,7 @@ class RxCaptureWriter(QObject):
     def start_capture(self, filepath: str, filter_pattern: Optional[str] = None):
         self.file = open(filepath, 'wb')
         self.filter_re = re.compile(filter_pattern) if filter_pattern else None
-    
+
     def on_rx_data(self, rx_packet: RxPacket):
         if self.filter_re and not self.filter_re.search(rx_packet.decoded_text):
             return  # 필터링
@@ -3276,8 +3276,8 @@ md5sum firmware.bin          # 체크섬
 {
   "version": "1.0",
   "global": {
-    "theme": "dark",
-    "language": "ko",
+    "menu_theme": "dark",
+    "menu_language": "ko",
     "auto_update_check": true,
     "log_level": "INFO",
     "port_scan_interval": 5000
@@ -3758,15 +3758,15 @@ class PluginBase(ABC):
     @abstractmethod
     def name(self) -> str:
         """플러그인 이름 (UI 표시용)"""
-    
+
     @abstractmethod
     def version(self) -> str:
         """버전 "1.0.0" 형식"""
-    
+
     @abstractmethod
     def register(self, bus: EventBus, context: AppContext) -> None:
         """EventBus 등록 필수"""
-    
+
     @abstractmethod
     def unregister(self) -> None:
         """종료 시 구독 해제"""
@@ -3778,7 +3778,7 @@ class PluginBase(ABC):
 ```python
 class AppContext:
     serial_tool: SerialManager
-    settings: SettingsManager  
+    settings: SettingsManager
     main_presenter: MainPresenter
     port_registry: PortRegistry
 ```
@@ -3824,7 +3824,7 @@ class AppContext:
 class ModbusParserPlugin(PluginBase):
     def register(self, bus: EventBus, context: AppContext):
         bus.subscribe("RX_DATA_RAW", self.parse_modbus)
-    
+
     def parse_modbus(self, packet: RxPacket):
         if packet.raw_bytes.startswith(b'\x00\x01'):
             parsed = self._decode_modbus(packet.raw_bytes)
@@ -4049,7 +4049,7 @@ exe = EXE(
 ```
 dist/
 ├── SerialTool.exe             (Windows, ~120MB)
-├── SerialTool                 (Linux AppImage, ~100MB) 
+├── SerialTool                 (Linux AppImage, ~100MB)
 ├── SerialTool.app             (macOS, ~150MB)
 ├── resources/                 (아이콘, QSS)
 ├── plugins/                   (샘플 플러그인)
@@ -4251,7 +4251,7 @@ class TestRingBuffer:
         buf.write(b"1234567890")  # 꽉 참
         buf.write(b"X")           # 오버플로우
         assert buf.read_chunk(10) == b"234567890X"
-    
+
     def test_used_ratio(self):
         buf = RingBuffer(100)
         buf.write(b"A" * 75)
@@ -4278,13 +4278,13 @@ def test_at_parser():
 @pytest.mark.integration
 def test_port_open_send_receive(vsp_echo_server):
     tx_port, rx_port = vsp_echo_server
-    
+
     controller = PortController(PortConfig(port_name=tx_port, baudrate=9600))
     controller.open()
-    
+
     controller.send_data(b"HELLO")
     received = controller.read_with_timeout(1000)
-    
+
     assert received == b"HELLO"
     controller.close()
 ```
@@ -4300,9 +4300,9 @@ def test_multi_port_concurrency(port_count):
         ctrl = PortController(PortConfig(f"COM{10+i}"))
         ctrl.open()
         controllers.append(ctrl)
-    
+
     # 동시 Tx/Rx
-    threads = [threading.Thread(target=test_port_stress, args=(ctrl,)) 
+    threads = [threading.Thread(target=test_port_stress, args=(ctrl,))
                for ctrl in controllers]
     for t in threads: t.start()
     for t in threads: t.join()
@@ -4319,18 +4319,18 @@ def test_port_open_workflow(qtbot, vsp_echo_server):
     tx_port, _ = vsp_echo_server
     app = MainWindow()
     qtbot.addWidget(app)
-    
+
     # 1. 포트 선택
     app.port_combo.setCurrentText(tx_port)
     qtbot.mouseClick(app.connect_btn, Qt.LeftButton)
-    
+
     # 2. 상태 확인
-    assert app.status_label.text() == "Connected"
-    
+    assert app.status_lbl.text() == "Connected"
+
     # 3. Tx 입력 → Send
     app.tx_input.setText("AT")
     qtbot.keyClick(app.tx_input, Qt.Key_Return)
-    
+
     # 4. Rx 로그 확인
     assert "AT" in app.rx_log_view.toPlainText()
 ```
@@ -4342,7 +4342,7 @@ def test_port_open_workflow(qtbot, vsp_echo_server):
 def test_cl_execution(qtbot, vsp_echo_server):
     app.load_cl_profile("test_at_commands.json")
     qtbot.mouseClick(app.cl_run_btn, Qt.LeftButton)
-    
+
     qtbot.wait(5000)  # 5초 대기
     assert app.cl_status.text() == "Completed: 100%"
 ```
@@ -4365,7 +4365,7 @@ def test_rx_performance(benchmark):
 
 ```python
 def test_log_render_10k_lines(benchmark):
-    benchmark(app.rx_log_view.append_batch, 
+    benchmark(app.rx_log_view.append_batch,
               ["[14:32:15] TEST"] * 10_000)
     # 목표: <500ms
 ```
@@ -4418,7 +4418,7 @@ jobs:
 
 ```
 Unit <90% → 빌드 실패
-Integration 실패 → 빌드 실패  
+Integration 실패 → 빌드 실패
 E2E >5개 실패 → 릴리스 블록
 ```
 
@@ -4443,10 +4443,10 @@ class MockSerial:
     def __init__(self, responses: List[bytes]):
         self.responses = deque(responses)
         self.written = []
-    
-    def read(self, size): 
+
+    def read(self, size):
         return self.responses.popleft() if self.responses else b""
-    
+
     def write(self, data):
         self.written.append(data)
 ```
@@ -4476,7 +4476,7 @@ class MockSerial:
 #### 22.2.1 RingBuffer 성능 튜닝
 
 ```
-Before: list.append() + list.pop(0) → O(n) 
+Before: list.append() + list.pop(0) → O(n)
 After:  bytearray + 포인터 연산 → O(1)
 ```
 
@@ -4523,7 +4523,7 @@ class OptimizedLogView(QTextEdit):
         self.batch_timer = QTimer()
         self.batch_timer.setSingleShot(True)
         self.batch_timer.timeout.connect(self._flush_batch)
-    
+
     def append_line(self, html: str):
         self.batch_buffer.append(html)
         if len(self.batch_buffer) >= 20:
@@ -4560,7 +4560,7 @@ class LockFreeQueue:
     def __init__(self):
         self._queue = deque()
         self._size = 0  # atomic counter
-    
+
     def push(self, item):
         self._queue.append(item)
         self._size += 1  # CAS 연산 대체
@@ -4576,7 +4576,7 @@ class PacketPool:
     def __init__(self, capacity=1000):
         self.pool = [RxPacket() for _ in range(capacity)]
         self.available = deque(range(capacity))
-    
+
     def acquire(self) -> RxPacket:
         idx = self.available.popleft()
         return self.pool[idx]
@@ -4756,7 +4756,7 @@ Deploy: PyInstaller Single EXE (85MB, Zero Install)
 ```
 📦 SerialTool-v1.0.0 (2025-11-30 릴리스)
 ├── Windows-x64.exe     (85MB)  [다운로드]
-├── Ubuntu-x64.AppImage (78MB)  [다운로드]  
+├── Ubuntu-x64.AppImage (78MB)  [다운로드]
 ├── macOS-x64.dmg       (92MB)  [다운로드]
 ├── Source Code         (GitHub)
 └── SHA256 Checksums
@@ -4823,7 +4823,7 @@ Team Collaboration: 실시간 세션 공유, Replay
 
 ```
 📅 2025-10-01: 요구사항 정의 (섹션 1-8)
-📅 2025-11-15: MVP 완성 (섹션 9-16) 
+📅 2025-11-15: MVP 완성 (섹션 9-16)
 📅 2025-11-25: 테스트/최적화 (섹션 17-22)
 📅 2025-11-30: **v1.0 릴리스** (섹션 23)
 ⏱️ 총 개발기간: 8주 (Full-time)

@@ -16,7 +16,7 @@ class SerialWorker(QThread):
     def __init__(self, port_name: str, baudrate: int, parent: Optional[QObject] = None) -> None:
         """
         SerialWorker를 초기화합니다.
-        
+
         Args:
             port_name (str): 포트 이름.
             baudrate (int): 통신 속도.
@@ -28,12 +28,12 @@ class SerialWorker(QThread):
         self.serial_port: Optional[serial.Serial] = None
         self._is_running = False
         self._mutex = QMutex()
-        
+
         # 설정 (Settings)
         self.data_bits = serial.EIGHTBITS
         self.stop_bits = serial.STOPBITS_ONE
         self.parity = serial.PARITY_NONE
-        self.flow_control = False # RTS/CTS
+        self.flow = False # RTS/CTS
 
     def run(self) -> None:
         """스레드 실행 루프입니다."""
@@ -41,19 +41,19 @@ class SerialWorker(QThread):
             self.serial_port = serial.Serial(
                 port=self.port_name,
                 baudrate=self.baudrate,
-                bytesize=self.data_bits,
+                datasize=self.data_bits,
                 parity=self.parity,
                 stopbits=self.stop_bits,
                 timeout=0.1, # 비차단 읽기를 위한 짧은 타임아웃
                 xonxoff=False,
-                rtscts=self.flow_control,
+                rtscts=self.flow,
                 dsrdtr=False
             )
-            
+
             if self.serial_port.is_open:
                 self._is_running = True
                 self.port_opened.emit(self.port_name)
-                
+
                 while self._is_running:
                     try:
                         if self.serial_port.in_waiting > 0:
@@ -62,11 +62,11 @@ class SerialWorker(QThread):
                                 self.data_received.emit(data)
                         else:
                             # CPU 점유율 방지를 위한 짧은 대기
-                            self.msleep(10) 
+                            self.msleep(10)
                     except Exception as e:
                         self.error_occurred.emit(f"Read Error: {str(e)}")
                         break
-                        
+
         except serial.SerialException as e:
             self.error_occurred.emit(f"Open Error: {str(e)}")
         finally:
@@ -91,10 +91,10 @@ class SerialWorker(QThread):
     def write_data(self, data: bytes) -> bool:
         """
         데이터를 전송합니다 (스레드 안전).
-        
+
         Args:
             data (bytes): 전송할 데이터.
-            
+
         Returns:
             bool: 성공 시 True, 실패 시 False.
         """
@@ -106,21 +106,21 @@ class SerialWorker(QThread):
                 except Exception as e:
                     self.error_occurred.emit(f"Write Error: {str(e)}")
         return False
-        
+
     def set_dtr(self, state: bool) -> None:
         """
         DTR 신호를 설정합니다.
-        
+
         Args:
             state (bool): 상태 값.
         """
         if self.serial_port and self.serial_port.is_open:
             self.serial_port.dtr = state
-            
+
     def set_rts(self, state: bool) -> None:
         """
         RTS 신호를 설정합니다.
-        
+
         Args:
             state (bool): 상태 값.
         """
