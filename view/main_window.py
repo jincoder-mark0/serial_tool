@@ -34,7 +34,7 @@ class MainWindow(QMainWindow):
         self.theme_manager = ThemeManager()
 
         # 언어 관리자 초기화 및 설정에서 언어 로드
-        lang = self.settings.get('global.language', 'en')
+        lang = self.settings.get('ui.language', 'en')
         language_manager.set_language(lang)
         language_manager.language_changed.connect(self.on_language_changed)
 
@@ -49,7 +49,7 @@ class MainWindow(QMainWindow):
         self._connect_menu_signals()
 
         # 설정에서 테마 적용
-        theme = self.settings.get('global.theme', 'dark')
+        theme = self.settings.get('ui.theme', 'dark')
         self.switch_theme(theme)
 
         # 설정에서 폰트 복원
@@ -115,7 +115,7 @@ class MainWindow(QMainWindow):
 
         # 테마 설정을 저장
         if hasattr(self, 'settings'):
-            self.settings.set('global.theme', theme_name)
+            self.settings.set('ui.theme', theme_name)
 
         if theme_name == "dark":
             self.global_status_bar.show_message("Theme changed to Dark", 2000)
@@ -193,7 +193,7 @@ class MainWindow(QMainWindow):
         self.menu_bar.retranslate_ui()
 
         # 설정에 언어 저장
-        self.settings.set('global.language', lang_code)
+        self.settings.set('ui.language', lang_code)
 
     def closeEvent(self, event) -> None:
         """

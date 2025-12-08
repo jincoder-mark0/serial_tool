@@ -1,11 +1,9 @@
 {
   "version": "1.0",
-  "global": {
-    "theme": "dark",
-    "language": "ko"
-  },
   "ui": {
-    "log_max_lines": 2000,
+    "theme": "dark",
+    "language": "en",
+    "rx_max_lines": 2000,
     "proportional_font_family": "Segoe UI",
     "proportional_font_size": 9,
     "fixed_font_family": "Consolas",
@@ -20,9 +18,29 @@
       "baudrate": 115200,
       "parity": "N",
       "datasize": 8,
-      "stopbits": 1
+      "stopbits": 1,
+      "scan_interval": 5000
     },
     "tabs": [
+      {
+        "custom_name": "Port",
+        "port_settings": {
+          "port": "COM1",
+          "baudrate": "115200",
+          "datasize": "8",
+          "parity": "N",
+          "stopbits": "1",
+          "flow": "None",
+          "dtr": true,
+          "rts": true
+        },
+        "received_area": {
+          "hex_mode": false,
+          "timestamp": false,
+          "paused": false,
+          "search_text": ""
+        }
+      },
       {
         "custom_name": "Port",
         "port_settings": {
@@ -69,11 +87,30 @@
         "suffix": true,
         "hex_mode": false,
         "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": true,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
       }
     ],
     "control_state": {
       "delay": "1000",
       "max_runs": 0
     }
+  },
+  "logging": {
+    "path": "E:\\_Python\\serial_tool2"
   }
 }

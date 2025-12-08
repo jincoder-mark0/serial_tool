@@ -41,7 +41,7 @@ class ViewTestWindow(QMainWindow):
         self.init_ui()
 
         # 테마 적용 (Apply theme)
-        theme = self.settings.get('global.theme', 'dark')
+        theme = self.settings.get('ui.theme', 'dark')
         self.theme_manager = ThemeManager()
         self.theme_manager.apply_theme(QApplication.instance(), theme)
 

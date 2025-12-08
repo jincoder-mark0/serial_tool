@@ -109,7 +109,7 @@ class SettingsManager:
         점(.) 표기법을 사용하여 설정값을 가져옵니다.
 
         Args:
-            key_path (str): 설정 키 경로 (예: 'ui.font_size').
+            key_path (str): 설정 키 경로 (예: 'ui.proportional_font_size').
             default (Any, optional): 키가 없을 경우 반환할 기본값. 기본값은 None.
 
         Returns:
@@ -132,7 +132,7 @@ class SettingsManager:
         중간 경로의 키가 없으면 자동으로 생성합니다.
 
         Args:
-            key_path (str): 설정 키 경로 (예: 'ui.font_size').
+            key_path (str): 설정 키 경로 (예: 'ui.proportional_font_size').
             value (Any): 저장할 값.
         """
         keys = key_path.split('.')
@@ -168,7 +168,7 @@ class SettingsManager:
                 "language": "ko"
             },
             "ui": {
-                "log_max_lines": 2000,
+                "rx_max_lines": 2000,
                 "proportional_font_family": "Segoe UI",
                 "proportional_font_size": 9,
                 "fixed_font_family": "Consolas",

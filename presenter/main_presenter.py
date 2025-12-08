@@ -112,12 +112,12 @@ class MainPresenter(QObject):
 
         # 설정 키 매핑
         settings_map = {
-            'theme': 'global.theme',
-            'language': 'global.language',
-            'font_size': 'ui.font_size',
-            'max_log_lines': 'ui.log_max_lines',
+            'theme': 'ui.theme',
+            'language': 'ui.language',
+            'proportional_font_size': 'ui.proportional_font_size',
+            'max_log_lines': 'ui.rx_max_lines',
             'baudrate': 'ports.default_config.baudrate',
-            'scan_interval': 'serial.scan_interval',
+            'scan_interval': 'ports.default_config.scan_interval',
             'cmd_prefix': 'manual_control.cmd_prefix',
             'cmd_suffix': 'manual_control.cmd_suffix',
             'log_path': 'logging.path',

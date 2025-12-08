@@ -75,13 +75,13 @@ class PreferencesDialog(QDialog):
         self.language_combo.addItem("English", "en")
         self.language_combo.addItem("Korean", "ko")
 
-        self.font_size_spin = QSpinBox()
-        self.font_size_spin.setRange(8, 24)
-        self.font_size_spin.setValue(10)
+        self.proportional_font_size_spin = QSpinBox()
+        self.proportional_font_size_spin.setRange(8, 24)
+        self.proportional_font_size_spin.setValue(10)
 
         ui_layout.addRow(language_manager.get_text("pref_lbl_theme"), self.theme_combo)
         ui_layout.addRow(language_manager.get_text("pref_lbl_language"), self.language_combo)
-        ui_layout.addRow(language_manager.get_text("pref_lbl_font_size"), self.font_size_spin)
+        ui_layout.addRow(language_manager.get_text("pref_lbl_font_size"), self.proportional_font_size_spin)
         ui_group.setLayout(ui_layout)
 
         layout.addWidget(ui_group)
@@ -182,24 +182,31 @@ class PreferencesDialog(QDialog):
     def load_settings(self) -> None:
         """현재 설정을 UI에 반영합니다."""
         # General
-        theme = self.settings.get("global.theme", "Dark").capitalize()
+        theme = self.settings.get("ui.theme", "Dark").capitalize()
         self.theme_combo.setCurrentText(theme)
 
-        lang_code = self.settings.get("global.language", "en")
+        lang_code = self.settings.get("ui.language", "en")
         index = self.language_combo.findData(lang_code)
         if index != -1:
             self.language_combo.setCurrentIndex(index)
 
-        self.font_size_spin.setValue(self.settings.get("ui.font_size", 10))
-        self.max_lines_spin.setValue(self.settings.get("ui.log_max_lines", 2000))
+        self.proportional_font_size_spin.setValue(self.settings.get("ui.proportional_font_size", 10))
+        self.max_lines_spin.setValue(self.settings.get("ui.rx_max_lines", 2000))
 
         # Serial
         self.default_baud_combo.setCurrentText(str(self.settings.get("ports.default_config.baudrate", 115200)))
         self.scan_interval_spin.setValue(self.settings.get("ports.default_config.scan_interval", 5000))
 
         # Command
-        self.prefix_combo.setCurrentText(self.settings.get("manual_control.cmd_prefix", ""))
-        self.suffix_combo.setCurrentText(self.settings.get("manual_control.cmd_suffix", "\\r\\n"))
+        # lang_code = self.settings.get("ui.language", "en")
+        # index = self.prefix_combo.findData(lang_code)
+        # if index != -1:
+        #     self.prefix_combo.setCurrentIndex(index)
+
+        # lang_code = self.settings.get("ui.language", "en")
+        # index = self.suffix_combo.findData(lang_code)
+        # if index != -1:
+        #     self.suffix_combo.setCurrentIndex(index)
 
         # Logging
         self.log_path_edit.setText(self.settings.get("logging.path", os.getcwd()))
@@ -209,7 +216,7 @@ class PreferencesDialog(QDialog):
         new_settings = {
             "theme": self.theme_combo.currentText(),
             "language": self.language_combo.currentData(),
-            "font_size": self.font_size_spin.value(),
+            "proportional_font_size": self.proportional_font_size_spin.value(),
             "baudrate": self.default_baud_combo.currentText(),
             "scan_interval": self.scan_interval_spin.value(),
             "cmd_prefix": self.prefix_combo.currentText(),
