@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QMenuBar, QAction
 from PyQt5.QtCore import pyqtSignal
 from pygments.lexers.sql import language_re
 
-from view.lang_manager import lang_manager
+from view.tools.lang_manager import lang_manager
 
 class MainMenuBar(QMenuBar):
     """
@@ -23,6 +23,9 @@ class MainMenuBar(QMenuBar):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        # Theme action references for checkable state
+        self.theme_dark_action = None
+        self.theme_light_action = None
         self.init_menu()
 
     def init_menu(self) -> None:
@@ -38,17 +41,17 @@ class MainMenuBar(QMenuBar):
         new_tab_action.triggered.connect(self.new_tab_requested.emit)
         file_menu.addAction(new_tab_action)
 
-        open_port_action = QAction("Open", self) # TODO: Add lang key
+        open_port_action = QAction(lang_manager.get_text("main_menu_open_port"), self)
         open_port_action.setShortcut("Ctrl+O")
         open_port_action.triggered.connect(self.open_port_requested.emit)
         file_menu.addAction(open_port_action)
 
-        close_tab_action = QAction("Close", self) # TODO: Add lang key
+        close_tab_action = QAction(lang_manager.get_text("main_menu_close_tab"), self)
         close_tab_action.setShortcut("Ctrl+W")
         close_tab_action.triggered.connect(self.close_tab_requested.emit)
         file_menu.addAction(close_tab_action)
 
-        save_log_action = QAction("Save Log", self) # TODO: Add lang key
+        save_log_action = QAction(lang_manager.get_text("main_menu_save_log"), self)
         save_log_action.setShortcut("Ctrl+Shift+S")
         save_log_action.triggered.connect(self.save_log_requested.emit)
         file_menu.addAction(save_log_action)
@@ -65,7 +68,7 @@ class MainMenuBar(QMenuBar):
         view_menu = self.addMenu(lang_manager.get_text("main_menu_view"))
 
         # Right Panel Toggle
-        self.toggle_right_panel_action = QAction("Show Right Panel", self) # TODO: Add lang key
+        self.toggle_right_panel_action = QAction(lang_manager.get_text("main_menu_toggle_right_panel"), self)
         self.toggle_right_panel_action.setCheckable(True)
         self.toggle_right_panel_action.setChecked(True) # Default, will be updated by MainWindow
         self.toggle_right_panel_action.triggered.connect(self.toggle_right_panel_requested.emit)
@@ -76,13 +79,15 @@ class MainMenuBar(QMenuBar):
         # 테마 서브메뉴
         theme_menu = view_menu.addMenu(lang_manager.get_text("main_menu_theme"))
 
-        theme_dark_action = QAction(lang_manager.get_text("main_menu_theme_dark"), self)
-        theme_dark_action.triggered.connect(lambda: self.theme_changed.emit("dark"))
-        theme_menu.addAction(theme_dark_action)
+        self.theme_dark_action = QAction(lang_manager.get_text("main_menu_theme_dark"), self)
+        self.theme_dark_action.setCheckable(True)
+        self.theme_dark_action.triggered.connect(lambda: self.theme_changed.emit("dark"))
+        theme_menu.addAction(self.theme_dark_action)
 
-        theme_light_action = QAction(lang_manager.get_text("main_menu_theme_light"), self)
-        theme_light_action.triggered.connect(lambda: self.theme_changed.emit("light"))
-        theme_menu.addAction(theme_light_action)
+        self.theme_light_action = QAction(lang_manager.get_text("main_menu_theme_light"), self)
+        self.theme_light_action.setCheckable(True)
+        self.theme_light_action.triggered.connect(lambda: self.theme_changed.emit("light"))
+        theme_menu.addAction(self.theme_light_action)
 
         # 폰트 설정 액션
         font_action = QAction(lang_manager.get_text("main_menu_font"), self)
@@ -122,6 +127,18 @@ class MainMenuBar(QMenuBar):
         if hasattr(self, 'toggle_right_panel_action'):
             self.toggle_right_panel_action.setChecked(checked)
 
+    def set_current_theme(self, theme_name: str) -> None:
+        """
+        현재 테마를 설정하고 메뉴에 체크 표시를 업데이트합니다.
+
+        Args:
+            theme_name (str): 테마 이름 ("dark" 또는 "light")
+        """
+        if self.theme_dark_action and self.theme_light_action:
+            self.theme_dark_action.setChecked(theme_name.lower() == "dark")
+            self.theme_light_action.setChecked(theme_name.lower() == "light")
+
     def retranslate_ui(self) -> None:
         """언어 변경 시 메뉴 텍스트를 업데이트합니다."""
         self.init_menu()
+

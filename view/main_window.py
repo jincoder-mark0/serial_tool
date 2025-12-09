@@ -5,8 +5,8 @@ from PyQt5.QtCore import Qt, pyqtSignal, QByteArray
 
 from view.sections.main_left_section import MainLeftSection
 from view.sections.main_right_section import MainRightSection
-from view.theme_manager import ThemeManager
-from view.lang_manager import lang_manager
+from view.tools.theme_manager import ThemeManager
+from view.tools.lang_manager import lang_manager
 from view.dialogs.font_settings_dialog import FontSettingsDialog
 from view.dialogs.about_dialog import AboutDialog
 from view.dialogs.preferences_dialog import PreferencesDialog
@@ -43,6 +43,9 @@ class MainWindow(QMainWindow):
         self.setWindowTitle(f"{lang_manager.get_text('main_title')} v1.0")
         self.resize(1400, 900)
 
+        # 우측 패널 숨김 전 왼쪽 패널 너비 저장용
+        self._saved_left_width = None
+
         self.init_ui()
 
         # 메뉴바 초기화 (위젯 사용)
@@ -50,17 +53,19 @@ class MainWindow(QMainWindow):
         self.setMenuBar(self.menu_bar)
         self._connect_menu_signals()
 
-        # 설정에서 테마 적용
-        theme = self.settings.get('settings.theme', 'dark')
-        self.switch_theme(theme)
+        # 폰트 설정 복원 -> QApplication 폰트 적용 -> 테마 적용 순서 유지
 
-        # 설정에서 폰트 복원
+        # 1. 설정에서 폰트 복원
         settings_dict = self.settings.get_all_settings()
         self.theme_manager.restore_fonts_from_settings(settings_dict)
 
-        # 애플리케이션에 가변폭 폰트 적용
+        # 2. 애플리케이션에 가변폭 폰트 적용 (QApplication의 기본 폰트 설정)
         prop_font = self.theme_manager.get_proportional_font()
         QApplication.instance().setFont(prop_font)
+
+        # 3. 설정에서 테마 적용 (폰트 스타일을 포함한 QSS 적용)
+        theme = self.settings.get('settings.theme', 'dark')
+        self.switch_theme(theme)
 
         # 저장된 윈도우 상태(크기, 위치) 로드
         self._load_window_state()
@@ -163,6 +168,10 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'settings'):
             self.settings.set('settings.theme', theme_name)
 
+        # 메뉴바의 테마 체크 표시 업데이트
+        if hasattr(self, 'menu_bar'):
+            self.menu_bar.set_current_theme(theme_name)
+
         if theme_name == "dark":
             self.global_status_bar.show_message("Theme changed to Dark", 2000)
         else:
@@ -254,7 +263,12 @@ class MainWindow(QMainWindow):
         if visible:
             # 보이기: 윈도우 폭 증가
             target_right_width = 400 # 기본값
-            left_width = self.left_section.width()
+
+            # 저장된 왼쪽 패널 너비가 있으면 사용, 없으면 현재 너비 사용
+            if self._saved_left_width is not None:
+                left_width = self._saved_left_width
+            else:
+                left_width = self.left_section.width()
 
             self.resize(current_width + target_right_width + handle_width, self.height())
             self.right_section.setVisible(True)
@@ -262,8 +276,14 @@ class MainWindow(QMainWindow):
             # 스플리터 크기 설정: 왼쪽 패널 크기 유지, 오른쪽 패널 크기 설정
             self.splitter.setSizes([left_width, target_right_width])
 
+            # 복원 후 저장된 값 초기화
+            self._saved_left_width = None
+
         else:
             # 숨기기: 윈도우 폭 감소
+            # 현재 왼쪽 패널 너비를 저장
+            self._saved_left_width = self.left_section.width()
+
             right_width = self.right_section.width()
             self.right_section.setVisible(False)
             self.resize(current_width - right_width - handle_width, self.height())

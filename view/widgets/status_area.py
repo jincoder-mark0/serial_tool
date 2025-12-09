@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTextEdit, QLabel
 from typing import Optional
 import datetime
-from view.lang_manager import lang_manager
+from view.tools.lang_manager import lang_manager
 
 class StatusAreaWidget(QWidget):
     """

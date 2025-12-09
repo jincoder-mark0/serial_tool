@@ -3,7 +3,7 @@ import os
 import pytest
 from PyQt5.QtWidgets import QApplication
 
-from view.lang_manager import lang_manager
+from view.tools.lang_manager import lang_manager
 from view.widgets.manual_control import ManualControlWidget
 from view.widgets.macro_list import MacroListWidget
 from view.widgets.received_area import ReceivedAreaWidget

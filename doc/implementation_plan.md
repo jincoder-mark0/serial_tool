@@ -375,8 +375,31 @@ class MacroEntry:
 #### [완료] MVP 패턴 준수
 - View 계층에서 Model 직접 접근 제거
 - Signal 기반 통신 (View → Presenter)
-- `PreferencesDialog`: SettingsManager 제거, Presenter를 통한 설정 전달
 - 명확한 책임 분리: View는 UI만, Presenter는 로직 처리
+
+#### [ ] Packet Inspector 설정 UI 구현
+- **위치**: `view/dialogs/preferences_dialog.py` 내부에 새로운 탭으로 구현
+- **필수 요소**:
+    - 파서 타입 선택 (AT Command, Delimiter, Fixed Length)
+    - Delimiter 문자열 입력 필드
+    - Fixed Length 숫자 입력 필드
+    - AT Color Rules 설정 체크박스 및 색상 규칙 편집 버튼
+    - Inspector Options (버퍼 크기 설정, 실시간 추적 활성화)
+- **Task**: `PreferencesDialog`의 `create_parser_tab` 메서드 구현
+
+#### [ ] Port Connect 버튼 QSS 보완
+- **위치**: `resources/themes/*.qss`
+- **필수 요소**:
+    - `QPushButton[state="error"]` 속성에 대한 스타일 정의 (배경색, 글꼴 색상 등)
+    - 포트 연결 실패 시 사용자에게 명확한 시각적 피드백 제공 (예: 배경색을 빨간색 계열로 변경)
+- **Task**: 다크/라이트 테마 QSS 파일에 `error` 상태 스타일 추가
+
+#### [ ] Main Status Bar 동적 업데이트 통합
+- **위치**: `view/sections/main_status_bar.py`
+- **필수 요소**:
+    - RX/TX 속도, 버퍼 사용량, 현재 시간, 전역 에러 카운트 표시를 위한 View 통합 로직 구현
+- **Task**: `MainPresenter`와 `PortPresenter`에서 발행하는 EventBus 데이터를 받아와 상태바 위젯을 갱신하는 슬롯 메서드 구현
+
 
 ---
 
@@ -600,7 +623,8 @@ jobs:
 
 ## 구현 순서 (Implementation Order)
 
-### Phase 1 & 2: Project Setup & UI (✅ Completed)
+### Phase 1 & 2: Project Setup & UI (In Progress)
+**View 보완**: Packet Inspector 설정 UI 및 Port 버튼 QSS 통합
 
 ### Phase 3: Core Utilities (In Progress)
 1. `core/utils.py`: RingBuffer, ThreadSafeQueue
@@ -683,15 +707,18 @@ jobs:
 - 🔄 **Model 계층**: SerialWorker, PortController 구현 필요
 
 ### 다음 단계 (우선순위)
-1. **Core 유틸리티 완성** (Phase 3)
+1. **View 보완** 
+   - Packet Inspector
+   - UI 및 Port 버튼 'Error' QSS 구현
+2. **Core 유틸리티 완성** (Phase 3)
    - RingBuffer 구현 및 테스트
    - ThreadSafeQueue 구현 및 테스트
    - EventBus 구현 및 테스트
-2. **Model 계층 구현** (Phase 4)
+3. **Model 계층 구현** (Phase 4)
    - SerialWorker 구현
    - PortController 구현
    - Virtual Serial Port 테스트
-3. **Presenter 연동** (Phase 3)
+4. **Presenter 연동** (Phase 3)
    - PortPresenter 구현
    - View ↔ Model 연결
    - 실제 포트 송수신 확인
@@ -745,5 +772,4 @@ jobs:
 ---
 
 **문서 버전**: v1.0
-**최종 업데이트**: 2025-12-04
-**작성자**: AI Assistant (Antigravity)
+**최종 업데이트**: 2025-12-09

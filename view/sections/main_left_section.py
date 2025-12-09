@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from typing import Optional
-from view.lang_manager import lang_manager
+from view.tools.lang_manager import lang_manager
 
 from view.panels.port_panel import PortPanel
 from view.panels.manual_control_panel import ManualControlPanel

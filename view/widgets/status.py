@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget, QGroupBox, QGridLayout, QLabel
-from view.lang_manager import lang_manager
+from view.tools.lang_manager import lang_manager
 
 class StatusWidget(QWidget):
     def __init__(self, parent=None):

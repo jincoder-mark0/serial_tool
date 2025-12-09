@@ -57,8 +57,16 @@
     - [x] 코드 스타일 가이드 업데이트 (명명 규칙)
     - [x] Preferences Dialog 접근성 수정
     - [x] Preferences Dialog 로직 구현
+    - [x] Command → Macro 네이밍 리팩토링
+    - [x] MVP 패턴 준수 강화 (PreferencesDialog)
+    - [x] 언어 키 완성 (MainToolBar, MainMenuBar)
+    - [x] TODO 주석 정리 (Note로 변경)
+    - [x] 테마 메뉴 체크 표시 추가
+    - [x] 우측 패널 토글 개선 (왼쪽 패널 크기 유지)
+    - [x] QSS warning 클래스 추가
 
-## Phase 3: Core 유틸리티 (진행 중)
+
+## Phase 3: Core 유틸리티 (계획됨)
 - [ ] `RingBuffer` 구현
     - [ ] `core/utils.py` 생성
     - [ ] 원형 버퍼 로직 구현
@@ -74,6 +82,8 @@
     - [ ] `core/logger.py` 생성
     - [ ] `RotatingFileHandler` 구현 (10MB 제한)
     - [ ] 성능 로거 구현 (CSV 내보내기)
+- [ ] `SettingsManager` 구현 (싱글톤)
+- [ ] `PortState` Enum 정의 및 PortSettingsWidget에 적용
 
 ## Phase 4: Model 계층 (계획됨)
 - [ ] `SerialWorker` 구현
@@ -97,7 +107,7 @@
 - [ ] CI/CD 설정
 
 ## Phase 6: 자동화 및 고급 기능 (계획됨)
-- [ ] `CLRunner` 구현 (커맨드 리스트 엔진)
+- [ ] `MacroRunner` 구현 (커맨드 리스트 엔진)
     - [ ] 상태 머신 (Idle/Running/Paused)
     - [ ] 단계 실행 (Send -> Expect -> Delay)
     - [ ] Auto Run 스케줄러 (Interval/Loops)

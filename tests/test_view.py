@@ -5,7 +5,7 @@ View 컴포넌트 테스트 애플리케이션
 import sys
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget
 from PyQt5.QtCore import QTimer
-from PyQt5.QtWidgets import QPushButton, QHBoxLayout, QLabel, QTextEdit
+from PyQt5.QtWidgets import QLabel, QTextEdit
 from PyQt5.QtWidgets import QPushButton, QHBoxLayout
 
 import os
@@ -15,8 +15,8 @@ from view.widgets.manual_control import ManualControlWidget
 from view.widgets.macro_list import MacroListWidget
 from view.widgets.status_area import StatusAreaWidget
 from view.panels.port_panel import PortPanel
-from view.theme_manager import ThemeManager
-from view.lang_manager import lang_manager
+from view.tools.theme_manager import ThemeManager
+from view.tools.lang_manager import lang_manager
 from view.dialogs.preferences_dialog import PreferencesDialog
 from view.dialogs.about_dialog import AboutDialog
 from view.widgets.file_progress import FileProgressWidget

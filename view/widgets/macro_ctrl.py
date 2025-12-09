@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Optional
-from view.lang_manager import lang_manager
+from view.tools.lang_manager import lang_manager
 
 class MacroCtrlWidget(QWidget):
     """
@@ -33,7 +33,7 @@ class MacroCtrlWidget(QWidget):
         self.cmd_repeat_start_btn = None
         self.repeat_count_spin = None
         self.repeat_max_lbl = None
-        self.repeat_delay_input = None
+        self.repeat_delay_line_edit = None
         self.interval_lbl = None
         self.execution_settings_grp = None
         self.script_load_btn = None
@@ -75,10 +75,10 @@ class MacroCtrlWidget(QWidget):
         self.interval_lbl = QLabel(lang_manager.get_text("macro_ctrl_lbl_interval"))
         execution_layout.addWidget(self.interval_lbl, 0, 0)
 
-        self.repeat_delay_input = QLineEdit("1000")
-        self.repeat_delay_input.setFixedWidth(50)
-        self.repeat_delay_input.setAlignment(Qt.AlignRight)
-        execution_layout.addWidget(self.repeat_delay_input, 1, 1)
+        self.repeat_delay_line_edit = QLineEdit("1000")
+        self.repeat_delay_line_edit.setFixedWidth(50)
+        self.repeat_delay_line_edit.setAlignment(Qt.AlignRight)
+        execution_layout.addWidget(self.repeat_delay_line_edit, 1, 1)
 
         self.repeat_max_lbl = QLabel(lang_manager.get_text("macro_ctrl_lbl_repeat_max"))
         execution_layout.addWidget(self.repeat_max_lbl, 0, 2)
@@ -144,7 +144,7 @@ class MacroCtrlWidget(QWidget):
     def on_cmd_repeat_start_clicked(self) -> None:
         """자동 실행 시작 버튼 핸들러"""
         try:
-            delay = int(self.repeat_delay_input.text())
+            delay = int(self.repeat_delay_line_edit.text())
         except ValueError:
             delay = 1000
         max_runs = self.repeat_count_spin.value()
@@ -211,7 +211,7 @@ class MacroCtrlWidget(QWidget):
             dict: 위젯 상태 데이터.
         """
         state = {
-            "delay": self.repeat_delay_input.text(),
+            "delay": self.repeat_delay_line_edit.text(),
             "max_runs": self.repeat_count_spin.value()
         }
         return state
@@ -226,6 +226,6 @@ class MacroCtrlWidget(QWidget):
         if not state:
             return
 
-        self.repeat_delay_input.setText(state.get("delay", "1000"))
+        self.repeat_delay_line_edit.setText(state.get("delay", "1000"))
         self.repeat_count_spin.setValue(state.get("max_runs", 0))
 

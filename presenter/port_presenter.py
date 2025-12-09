@@ -3,6 +3,7 @@ import serial.tools.list_ports
 
 from view.sections.main_left_section import MainLeftSection
 from model.port_controller import PortController
+from core.settings_manager import SettingsManager
 
 class PortPresenter(QObject):
     """
@@ -25,6 +26,12 @@ class PortPresenter(QObject):
         self.update_current_port_panel()
 
         self.port_controller = port_controller
+
+        # 설정에서 max_lines 읽어서 적용
+        settings = SettingsManager()
+        max_lines = settings.get('settings.rx_max_lines', 2000)
+        if self.current_port_panel and hasattr(self.current_port_panel, 'received_area'):
+            self.current_port_panel.received_area.set_max_lines(max_lines)
 
         # 초기 포트 스캔
         self.scan_ports()
@@ -118,7 +125,7 @@ class PortPresenter(QObject):
         Args:
             message (str): 에러 메시지.
         """
-        # TODO: 상태바에 에러 표시
+        # Note: 향후 MainWindow의 status_bar를 통해 에러 메시지 표시 예정
         print(f"Port Error: {message}")
         # 열기/닫기 중 에러 발생 시 UI 동기화 보장
         if not self.port_controller.is_open and self.current_port_panel:

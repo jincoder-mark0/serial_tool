@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QStatusBar, QLabel, QProgressBar
 from PyQt5.QtCore import Qt
-from view.lang_manager import lang_manager
+from view.tools.lang_manager import lang_manager
 
 class MainStatusBar(QStatusBar):
     """

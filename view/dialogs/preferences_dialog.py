@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import pyqtSignal
 from typing import Dict, Any, Optional
 import os
-from view.lang_manager import lang_manager
+from view.tools.lang_manager import lang_manager
 
 class PreferencesDialog(QDialog):
     """

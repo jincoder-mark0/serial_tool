@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtGui import QFont
 import platform
-from view.lang_manager import lang_manager
+from view.tools.lang_manager import lang_manager
 
 class FontSettingsDialog(QDialog):
     """

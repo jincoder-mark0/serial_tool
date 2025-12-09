@@ -3,8 +3,8 @@ from PyQt5.QtCore import QTimer, Qt
 from PyQt5.QtGui import QTextCursor, QTextDocument
 from typing import Optional
 import datetime
-from view.color_rules import ColorRulesManager
-from view.lang_manager import lang_manager
+from view.tools.color_rules import ColorRulesManager
+from view.tools.lang_manager import lang_manager
 
 class ReceivedAreaWidget(QWidget):
     """
@@ -31,6 +31,7 @@ class ReceivedAreaWidget(QWidget):
         self.paused: bool = False
         self.batch_buffer: list[str] = []
         self.max_lines: int = 2000
+        self.trim_chunk_size: int = 5   # 20%
         self.timestamp_enabled: bool = False
 
         # 색상 규칙 관리자
@@ -161,7 +162,8 @@ class ReceivedAreaWidget(QWidget):
             re.compile(text)
             # Qt의 FindRegularExpression 플래그 사용 (PyQt5 버전에 따라 다를 수 있음)
             # 여기서는 간단히 일반 텍스트 검색으로 구현하고 추후 확장
-            # TODO: 정규식 검색 완벽 지원을 위해 QRegularExpression 사용 필요
+            # Note: 향후 QRegularExpression을 사용한 정규식 검색 지원 예정
+            # 현재는 일반 텍스트 검색만 지원
         except re.error:
             pass # 정규식 오류 시 일반 텍스트로 취급
 
@@ -266,8 +268,7 @@ class ReceivedAreaWidget(QWidget):
 
     def _trim_if_needed(self) -> None:
         """
-        로그 라인 수가 최대치를 초과하면 상위 20%를 제거합니다.
-        (Implementation_Specification.md 섹션 18.3.2 기준)
+        로그 라인 수가 최대치를 초과하면 상위 trim_chunk_size 비율로 선택 및 삭제합니다.
         """
         document = self.log_txt.document()
         if document.blockCount() > self.max_lines:
@@ -279,10 +280,21 @@ class ReceivedAreaWidget(QWidget):
                 if at_bottom:  # 자동 스크롤 모드일 때만 trim 수행
                     cursor = QTextCursor(document)
                     cursor.movePosition(QTextCursor.Start)
-                    # 상위 20% (400줄) 선택 및 삭제
-                    for _ in range(400):
+                    # 상위 trim_chunk_size 비율로 선택 및 삭제
+                    for _ in range(int(self.max_lines / self.trim_chunk_size)):
                         cursor.movePosition(QTextCursor.Down, QTextCursor.KeepAnchor)
                     cursor.removeSelectedText()
+
+    def set_max_lines(self, max_lines: int) -> None:
+        """
+        최대 로그 라인 수를 설정합니다.
+
+        Args:
+            max_lines (int): 최대 라인 수 (기본값: 2000)
+        """
+        if max_lines > 0:
+            self.max_lines = max_lines
+
     def save_state(self) -> dict:
         """
         현재 위젯 상태를 딕셔너리로 반환합니다.
@@ -313,3 +325,4 @@ class ReceivedAreaWidget(QWidget):
         self.rx_timestamp_chk.setChecked(state.get("timestamp", False))
         self.rx_pause_chk.setChecked(state.get("paused", False))
         self.rx_search_input.setText(state.get("search_text", ""))
+

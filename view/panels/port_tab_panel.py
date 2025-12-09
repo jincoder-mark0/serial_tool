@@ -1,9 +1,9 @@
 from PyQt5.QtWidgets import QTabWidget, QWidget, QTabBar, QInputDialog
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIcon
-from typing import Optional, TYPE_CHECKING
-from view.lang_manager import lang_manager
-from view.theme_manager import ThemeManager
+from typing import Optional
+from view.tools.lang_manager import lang_manager
+from view.tools.theme_manager import ThemeManager
 from view.panels.port_panel import PortPanel
 
 class PortTabPanel(QTabWidget):

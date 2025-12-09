@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QToolBar, QAction
 from PyQt5.QtCore import Qt, pyqtSignal
-from view.lang_manager import lang_manager
+from view.tools.lang_manager import lang_manager
 
 class MainToolBar(QToolBar):
     open_requested = pyqtSignal()
@@ -25,33 +25,34 @@ class MainToolBar(QToolBar):
         self.clear()
 
         # Open
-        self.open_action = QAction("Open", self) # TODO: Add lang key
+        self.open_action = QAction(lang_manager.get_text("toolbar_open"), self)
         self.open_action.triggered.connect(self.open_requested.emit)
         self.addAction(self.open_action)
 
         # Close
-        self.close_action = QAction("Close", self) # TODO: Add lang key
+        self.close_action = QAction(lang_manager.get_text("toolbar_close"), self)
         self.close_action.triggered.connect(self.close_requested.emit)
         self.addAction(self.close_action)
 
         # Clear
-        self.clear_action = QAction("Clear", self) # TODO: Add lang key
+        self.clear_action = QAction(lang_manager.get_text("toolbar_clear"), self)
         self.clear_action.triggered.connect(self.clear_requested.emit)
         self.addAction(self.clear_action)
 
         # Save Log
-        self.save_log_action = QAction("Save Log", self) # TODO: Add lang key
+        self.save_log_action = QAction(lang_manager.get_text("toolbar_save_log"), self)
         self.save_log_action.triggered.connect(self.save_log_requested.emit)
         self.addAction(self.save_log_action)
 
         # Settings
-        self.settings_action = QAction("Settings", self) # TODO: Add lang key
+        self.settings_action = QAction(lang_manager.get_text("toolbar_settings"), self)
         self.settings_action.triggered.connect(self.settings_requested.emit)
         self.addAction(self.settings_action)
 
     def retranslate_ui(self):
-        self.open_action.setText("Open")
-        self.close_action.setText("Close")
-        self.clear_action.setText("Clear")
-        self.save_log_action.setText("Save Log")
-        self.settings_action.setText("Settings")
+        self.open_action.setText(lang_manager.get_text("toolbar_open"))
+        self.close_action.setText(lang_manager.get_text("toolbar_close"))
+        self.clear_action.setText(lang_manager.get_text("toolbar_clear"))
+        self.save_log_action.setText(lang_manager.get_text("toolbar_save_log"))
+        self.settings_action.setText(lang_manager.get_text("toolbar_settings"))
+

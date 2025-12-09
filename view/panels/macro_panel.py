@@ -5,7 +5,7 @@ from typing import Optional
 
 from view.widgets.macro_list import MacroListWidget
 from view.widgets.macro_ctrl import MacroCtrlWidget
-from view.lang_manager import lang_manager
+from view.tools.lang_manager import lang_manager
 
 from core.settings_manager import SettingsManager
 
@@ -55,7 +55,7 @@ class MacroPanel(QWidget):
         self.macro_list.macro_list_changed.connect(self.save_state)
 
         # CommandControl의 입력 필드 변경 시에도 저장 (textChanged, valueChanged 등)
-        self.marco_ctrl.repeat_delay_input.textChanged.connect(self.save_state)
+        self.marco_ctrl.repeat_delay_line_edit.textChanged.connect(self.save_state)
         self.marco_ctrl.repeat_count_spin.valueChanged.connect(self.save_state)
 
         layout.addWidget(self.macro_list)
@@ -107,7 +107,8 @@ class MacroPanel(QWidget):
         """
         indices = self.macro_list.get_selected_indices()
         if indices:
-            # TODO: 자동 실행 파라미터를 시그널이나 별도 메서드로 전달해야 함
+            # Note: delay와 max_runs 파라미터는 현재 시그널에 포함되지 않음
+            # Presenter에서 MacroCtrlWidget의 상태를 직접 읽어서 사용해야 함
             self.repeat_start_requested.emit(indices)
             self.marco_ctrl.set_running_state(True, is_auto=True)
 
@@ -124,8 +125,8 @@ class MacroPanel(QWidget):
         Args:
             running (bool): 실행 중 여부.
         """
-        # TODO: UI를 올바르게 업데이트하려면 자동 실행 여부를 알아야 함
-        # 현재는 단순히 비실행 상태로 초기화
+        # Note: 현재는 단순히 running 상태만 전달
+        # 향후 is_repeat 파라미터를 추가하여 Repeat/Pause 버튼 상태를 구분할 수 있음
         self.marco_ctrl.set_running_state(running)
 
     def save_script_to_file(self) -> None:

@@ -3,7 +3,7 @@ from view.main_window import MainWindow
 from model.port_controller import PortController
 from .port_presenter import PortPresenter
 from core.settings_manager import SettingsManager
-from view.lang_manager import lang_manager
+from view.tools.lang_manager import lang_manager
 from core.logger import logger
 
 class MainPresenter(QObject):
@@ -93,7 +93,7 @@ class MainPresenter(QObject):
                 # 유효하지 않은 16진수 문자열인 경우 처리 (예: 오류 로깅, 사용자에게 알림)
                 logger.error(f"Invalid hex string for sending:{final_text}")
 
-                # TODO: 사용자에게 UI 피드백 제공 (예: 상태바 메시지)
+                # Note: 향후 MainWindow의 status_bar를 통해 에러 메시지 표시 예정
                 return # 전송 중단
         else:
             data = final_text.encode('utf-8')
@@ -147,6 +147,20 @@ class MainPresenter(QObject):
         if 'language' in new_settings:
             lang_manager.set_language(new_settings['language'])
 
+        # max_log_lines 설정 변경 시 모든 ReceivedAreaWidget에 적용
+        if 'max_log_lines' in new_settings:
+            max_lines = new_settings['max_log_lines']
+            try:
+                max_lines_int = int(max_lines)
+                # 모든 포트 패널의 ReceivedAreaWidget에 적용
+                for i in range(self.view.left_section.port_tabs.count()):
+                    widget = self.view.left_section.port_tabs.widget(i)
+                    if hasattr(widget, 'received_area'):
+                        widget.received_area.set_max_lines(max_lines_int)
+            except (ValueError, TypeError):
+                logger.warning(f"Invalid max_log_lines value: {max_lines}")
+
         # 상태 메시지 표시
         if hasattr(self.view, 'global_status_bar'):
             self.view.global_status_bar.show_message("Settings updated", 2000)
+

@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Optional
-from view.lang_manager import lang_manager
+from view.tools.lang_manager import lang_manager
 from view.pyqt_customs.smart_number_edit import QSmartLineEdit
 
 class ManualControlWidget(QWidget):

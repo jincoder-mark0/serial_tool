@@ -4,8 +4,9 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIntValidator
-from view.lang_manager import lang_manager
+from view.tools.lang_manager import lang_manager
 from typing import Optional, List, Dict, Any
+from core.port_state import PortState
 
 class PortSettingsWidget(QGroupBox):
     """
@@ -90,6 +91,8 @@ class PortSettingsWidget(QGroupBox):
         self.connect_btn.clicked.connect(self.on_connect_clicked)
         self.connect_btn.setFixedWidth(60)
 
+        self.set_connection_state(PortState.DISCONNECTED)
+
         self.port_lbl = QLabel(lang_manager.get_text("port_lbl_port"))
         self.baud_lbl = QLabel(lang_manager.get_text("port_lbl_baudrate"))
 
@@ -169,11 +172,10 @@ class PortSettingsWidget(QGroupBox):
 
         self.baud_combo.setToolTip(lang_manager.get_text("port_combo_baud_tooltip"))
 
-        # 연결 버튼 텍스트는 상태에 따라 다르므로 현재 상태 확인 필요
-        if self.connect_btn.isChecked():
-            self.connect_btn.setText(lang_manager.get_text("port_btn_disconnect"))
-        else:
-            self.connect_btn.setText(lang_manager.get_text("port_btn_connect"))
+        # 연결 버튼 텍스트는 상태에 따라 Enum 기반으로 업데이트
+        current_state = PortState(self.connect_btn.property("state"))
+        self.set_connection_state(current_state)
+
         self.connect_btn.setToolTip(lang_manager.get_text("port_btn_connect_tooltip"))
 
         self.port_lbl.setText(lang_manager.get_text("port_lbl_port"))
@@ -204,11 +206,12 @@ class PortSettingsWidget(QGroupBox):
                 "rts": self.rts_check.isChecked()
             }
             self.port_open_requested.emit(config)
+            # self.set_connection_state(PortState.CONNECTED)
             self.connect_btn.setText(lang_manager.get_text("port_btn_disconnect"))
         else:
             # 해제 요청 (Request Close)
             self.port_close_requested.emit()
-            self.connect_btn.setText(lang_manager.get_text("port_btn_connect"))
+            # self.set_connection_state(PortState.DISCONNECTED)
 
     def on_port_scan_clicked(self) -> None:
         """포트 스캔 버튼 클릭 핸들러입니다."""
@@ -236,7 +239,7 @@ class PortSettingsWidget(QGroupBox):
         Args:
             connected (bool): 연결 여부.
         """
-        state = "connected" if connected else "disconnected"
+        state = PortState.CONNECTED if connected else PortState.DISCONNECTED
         self.set_connection_state(state)
 
         self.port_combo.setEnabled(not connected)
@@ -249,24 +252,25 @@ class PortSettingsWidget(QGroupBox):
         # 연결 상태 변경 시그널 발생
         self.connection_state_changed.emit(connected)
 
-    def set_connection_state(self, state: str) -> None:
+    def set_connection_state(self, state: PortState) -> None:
         """
         연결 버튼의 상태(색상, 텍스트)를 변경합니다.
 
         Args:
-            state (str): 'disconnected', 'connected', 'error'
+            state (PortState): 포트 상태 Enum.
         """
-        self.connect_btn.setProperty("state", state)
+        # Enum 값을 QProperty로 설정하여 QSS가 처리하도록 함
+        self.connect_btn.setProperty("state", state.value)
         self.connect_btn.style().unpolish(self.connect_btn)
         self.connect_btn.style().polish(self.connect_btn)
 
-        if state == 'connected':
+        if state == PortState.CONNECTED:
             self.connect_btn.setText(lang_manager.get_text("port_btn_disconnect"))
             self.connect_btn.setChecked(True)
-        elif state == 'disconnected':
+        elif state == PortState.DISCONNECTED:
             self.connect_btn.setText(lang_manager.get_text("port_btn_connect"))
             self.connect_btn.setChecked(False)
-        elif state == 'error':
+        elif state == PortState.ERROR:
             self.connect_btn.setText(lang_manager.get_text("port_btn_reconnect"))
             self.connect_btn.setChecked(False)
 
@@ -276,7 +280,9 @@ class PortSettingsWidget(QGroupBox):
 
     def is_connected(self) -> bool:
         """현재 연결 상태를 반환합니다."""
-        return self.connect_btn.isChecked()
+        # QProperty를 통해 현재 상태 확인
+        current_state = self.connect_btn.property("state")
+        return current_state == PortState.CONNECTED.value
 
     def save_state(self) -> dict:
         """

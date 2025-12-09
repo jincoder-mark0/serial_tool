@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtCore import Qt, pyqtSignal
 from typing import Optional, List, Dict, Any
-from view.lang_manager import lang_manager
+from view.tools.lang_manager import lang_manager
 
 class MacroListWidget(QWidget):
     """
@@ -318,29 +318,13 @@ class MacroListWidget(QWidget):
         # 초기 상태는 비활성화 (포트 연결 전)
         btn.setEnabled(False)
 
-        # 버튼 클릭 시 해당 버튼의 위치를 찾아 시그널 발생
-        btn.clicked.connect(lambda: self._on_send_btn_clicked(btn))
+        # 버튼 클릭 시 행 인덱스를 Lambda로 캡처하여 시그널에 직접 연결
+        btn.clicked.connect(lambda _, row_index=row: self.send_row_requested.emit(row_index))
 
         layout.addWidget(btn)
 
         index = self.cmd_table_model.index(row, 6)
         self.cmd_table.setIndexWidget(index, widget)
-
-    def _on_send_btn_clicked(self, btn: QPushButton) -> None:
-        """
-        Send 버튼 클릭 핸들러입니다.
-        버튼의 위치를 기반으로 행 인덱스를 찾아 시그널을 발생시킵니다.
-
-        Args:
-            btn (QPushButton): 클릭된 버튼 객체.
-        """
-        # 버튼의 부모 위젯(컨테이너)을 통해 위치 확인
-        # btn -> layout -> widget -> table_view
-        # viewport mapFromGlobal을 사용하는 것이 가장 정확함
-        pos = self.cmd_table.viewport().mapFromGlobal(btn.mapToGlobal(btn.rect().center()))
-        index = self.cmd_table.indexAt(pos)
-        if index.isValid():
-            self.send_row_requested.emit(index.row())
 
     def set_send_enabled(self, enabled: bool) -> None:
         """
@@ -376,8 +360,7 @@ class MacroListWidget(QWidget):
             self._move_row(row, row - 1)
 
         # 선택 상태 복구
-        for row in rows:
-            self.cmd_table.selectRow(row - 1)
+        self._restore_selection([row - 1 for row in rows])
 
     def move_cmd_down(self) -> None:
         """선택된 행들을 아래로 이동합니다."""
@@ -390,8 +373,14 @@ class MacroListWidget(QWidget):
             self._move_row(row, row + 1)
 
         # 선택 상태 복구
+        self._restore_selection([row + 1 for row in rows])
+        
+    def _restore_selection(self, rows: List[int]) -> None:
+        """주어진 행 인덱스 리스트를 선택 상태로 복원합니다."""
+        self.cmd_table.clearSelection()
         for row in rows:
-            self.cmd_table.selectRow(row + 1)
+            self.cmd_table.selectRow(row)
+
 
     def _move_row(self, source_row: int, dest_row: int) -> None:
         """

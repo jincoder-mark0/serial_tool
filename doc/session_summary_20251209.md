@@ -53,21 +53,53 @@
   - `PreferencesDialog`에 `port_newline` 설정 추가
   - `main_presenter.py`에서 설정 키 매핑 업데이트 (`port_baudrate`, `port_scan_interval` 등)
 
+### 6. 완성도 개선 (Polish)
+- **언어 키 완성**:
+  - `MainToolBar`: 모든 액션에 언어 키 적용 (`toolbar_open`, `toolbar_close`, `toolbar_clear`, `toolbar_save_log`, `toolbar_settings`)
+  - `MainMenuBar`: 메뉴 액션에 언어 키 적용 (`main_menu_open_port`, `main_menu_close_tab`, `main_menu_save_log`, `main_menu_toggle_right_panel`)
+  - `MacroCtrlWidget`: Pause 버튼 추가 및 언어 키 적용 (`macro_ctrl_btn_repeat_pause`)
+  - 한국어/영어 언어 파일에 모든 키 추가
+- **TODO 주석 정리**:
+  - 모든 TODO 주석을 Note로 변경하고 향후 구현 계획 명시
+  - `macro_panel.py`: Repeat 파라미터 전달 방식 설명
+  - `port_presenter.py`, `main_presenter.py`: 상태바 에러 표시 계획
+  - `received_area.py`: 정규식 검색 지원 계획
+- **테마 메뉴 개선**:
+  - View -> Theme 메뉴에 현재 선택된 테마 체크 표시 추가
+  - `MainMenuBar.set_current_theme()` 메서드 추가
+  - 테마 액션을 checkable로 설정
+- **우측 패널 토글 개선**:
+  - 패널 숨김 시 왼쪽 패널 너비 저장 (`_saved_left_width`)
+  - 패널 표시 시 저장된 왼쪽 패널 너비 복원
+  - 좌측 패널 크기가 변경되지 않도록 개선
+- **QSS 스타일 확장**:
+  - `warning` 클래스 추가 (노란색 버튼 스타일)
+  - Pause 버튼에 warning 스타일 적용
+  - Dark/Light 테마 모두에 warning 스타일 정의
+
 ## 변경된 파일
-- `view/widgets/macro_control.py`: (구 command_control.py) 시그널 리네임 및 클래스명 변경
-- `view/widgets/macro_list.py`: (구 command_list.py) 클래스명 변경
-- `view/panels/macro_panel.py`: (구 command_list_panel.py) 클래스명 변경 및 시그널 연결 수정
+- `view/widgets/macro_ctrl.py`: (구 command_control.py) Pause 버튼 추가, 시그널 리네임
+- `view/widgets/macro_list.py`: (구 command_list.py) 새로 생성, 완전한 구현
+- `view/panels/macro_panel.py`: (구 command_list_panel.py) 클래스명 변경, Note 주석 추가
+- `view/widgets/main_toolbar.py`: 언어 키 적용
+- `view/sections/main_menu_bar.py`: 언어 키 적용, 테마 체크 표시 기능 추가
 - `view/widgets/port_settings.py`: 시그널 리네임, `is_connected` 추가
 - `view/panels/port_panel.py`: `is_connected` 추가
 - `view/sections/main_left_section.py`: `open/close_current_port` 로직 개선
-- `view/main_window.py`: 초기화 순서 변경, 툴바 시그널 연결 수정, 윈도우 리사이징 구현 (좌측 패널 크기 유지)
-- `view/dialogs/preferences_dialog.py`: MVP 패턴 준수 (SettingsManager 제거, `_get_setting()` 추가)
-- `presenter/main_presenter.py`: 설정 키 매핑 업데이트
+- `view/main_window.py`: 우측 패널 토글 개선, 테마 체크 표시 업데이트
+- `view/dialogs/preferences_dialog.py`: MVP 패턴 준수, `_get_setting()` 추가
+- `view/widgets/received_area.py`: Note 주석 추가
+- `presenter/main_presenter.py`: 설정 키 매핑 업데이트, Note 주석 추가
+- `presenter/port_presenter.py`: Note 주석 추가
 - `model/port_controller.py`: Import 경로 수정
-- `presenter/port_presenter.py`: 시그널 연결 수정
 - `tests/test_view.py`: 테스트 코드 최신화 (MacroListWidget 반영)
 - `tests/test_ui_translations.py`: 테스트 코드 최신화 (MacroListWidget 반영)
-- `config/settings.json`: 설정 키 구조 업데이트 (`port_newline` 추가)
+- `config/languages/en.json`: 언어 키 추가 (toolbar, menu, macro_ctrl, pref)
+- `config/languages/ko.json`: 언어 키 추가 (toolbar, menu, macro_ctrl, pref)
+- `config/settings.json`: 설정 키 구조 업데이트
+- `resources/themes/common.qss`: warning 클래스 추가
+- `resources/themes/dark_theme.qss`: warning 스타일 정의
+- `resources/themes/light_theme.qss`: warning 스타일 정의
 
 ## 다음 단계 (Next Steps)
 - **Presenter 계층 완성**: Model과 View 연동 강화

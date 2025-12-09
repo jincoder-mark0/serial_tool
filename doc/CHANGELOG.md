@@ -53,6 +53,35 @@
   - `_get_setting()` 헬퍼 메서드 추가: 중첩된 설정 키 안전 접근
   - View 계층이 Model 계층에 직접 접근하지 않도록 개선
 
+#### 완성도 개선 (Polish)
+
+- **언어 키 완성**
+  - `MainToolBar`: 모든 액션에 언어 키 적용 (`toolbar_open`, `toolbar_close` 등)
+  - `MainMenuBar`: 메뉴 액션에 언어 키 적용 (`main_menu_open_port`, `main_menu_close_tab` 등)
+  - `MacroCtrlWidget`: Pause 버튼 언어 키 추가 (`macro_ctrl_btn_repeat_pause`)
+  - `PreferencesDialog`: Newline 설정 언어 키 추가 (`pref_lbl_newline`)
+
+- **TODO 주석 정리**
+  - 모든 TODO 주석을 Note로 변경하고 향후 구현 계획 명시
+  - `macro_panel.py`: Repeat 파라미터 전달 방식 설명 추가
+  - `port_presenter.py`, `main_presenter.py`: 상태바 에러 표시 계획 명시
+  - `received_area.py`: 정규식 검색 지원 계획 명시
+
+- **테마 메뉴 개선**
+  - View -> Theme 메뉴에 현재 선택된 테마 체크 표시 추가
+  - `MainMenuBar.set_current_theme()` 메서드 추가
+  - 테마 전환 시 자동으로 체크 표시 업데이트
+
+- **우측 패널 토글 개선**
+  - 패널 숨김 시 왼쪽 패널 너비 저장
+  - 패널 표시 시 저장된 왼쪽 패널 너비 복원
+  - `_saved_left_width` 인스턴스 변수 추가
+
+- **QSS 스타일 확장**
+  - `warning` 클래스 추가 (노란색 버튼 스타일)
+  - Pause 버튼에 warning 스타일 적용
+
+
 ---
 
 ### 언어 확장성 개선 및 아이콘 수정 (2025-12-08)

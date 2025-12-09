@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QProgressBar, QLabel, QPushButton
 from PyQt5.QtCore import pyqtSignal
 from typing import Optional
-from view.lang_manager import lang_manager
+from view.tools.lang_manager import lang_manager
 
 class FileProgressWidget(QWidget):
     """
