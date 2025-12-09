@@ -175,7 +175,7 @@ QToolBar QToolButton {
 }
 
 /* Custom Classes Fonts */
-QPushButton[class="accent"], QPushButton[class="danger"] {
+QPushButton[class="accent"], QPushButton[class="danger"], QPushButton[class="warning"] {
     font-weight: bold;
 }
 

@@ -16,11 +16,11 @@
     "port_scan_interval": 5000
   },
   "ui": {
-    "window_width": 977,
-    "window_height": 900,
+    "window_width": 907,
+    "window_height": 899,
     "window_x": 414,
-    "window_y": 77,
-    "splitter_state": "AAAA/wAAAAEAAAACAAADxwAAAZAB/////wEAAAABAA=="
+    "window_y": 78,
+    "splitter_state": "AAAA/wAAAAEAAAACAAADgQAAAZAB/////wEAAAABAA=="
   },
   "ports": {
     "default_config": {
@@ -88,10 +88,34 @@
       },
       {
         "enabled": true,
+        "prefix": false,
+        "command": "ss",
+        "suffix": true,
+        "hex_mode": true,
+        "delay": "100"
+      },
+      {
+        "enabled": true,
         "prefix": true,
         "command": "",
         "suffix": true,
         "hex_mode": false,
+        "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": false,
+        "command": "",
+        "suffix": true,
+        "hex_mode": false,
+        "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": false,
+        "command": "",
+        "suffix": true,
+        "hex_mode": true,
         "delay": "100"
       }
     ],

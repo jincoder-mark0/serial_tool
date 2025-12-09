@@ -9,7 +9,7 @@ from view.lang_manager import lang_manager
 
 class MacroListWidget(QWidget):
     """
-    명령어 목록(Command List)을 관리하는 위젯 클래스입니다.
+    명령어 목록(Macro List)을 관리하는 위젯 클래스입니다.
     명령어의 추가, 삭제, 순서 변경 및 선택 기능을 제공합니다.
     """
 
@@ -216,7 +216,7 @@ class MacroListWidget(QWidget):
         self._append_row(cmd, True, hex_mode, suffix, delay)
 
     def add_cmd_row(self) -> None:
-        """빈 행을 추가합니다. 선택된 행이 있으면 복사, 없으면 마지막 행 복사."""
+        """빈 행을 추가합니다. 선택된 행이 있으면 옵션 복사, 없으면 마지막 행 옵션 복사."""
         # 기본값
         cmd = ""
         prefix = True
@@ -235,10 +235,10 @@ class MacroListWidget(QWidget):
             target_row = self.cmd_table_model.rowCount() - 1  # 마지막 행
 
         if target_row >= 0:
-            # 데이터 복사
+            # 옵션 복사
             enabled = self.cmd_table_model.item(target_row, 0).checkState() == Qt.Checked
             prefix = self.cmd_table_model.item(target_row, 1).checkState() == Qt.Checked
-            cmd = self.cmd_table_model.item(target_row, 2).text()
+            cmd = ""
             suffix = self.cmd_table_model.item(target_row, 3).checkState() == Qt.Checked
             hex_mode = self.cmd_table_model.item(target_row, 4).checkState() == Qt.Checked
             delay = self.cmd_table_model.item(target_row, 5).text()

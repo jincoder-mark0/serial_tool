@@ -29,7 +29,7 @@
     "macro_list_col_prefix": "Prefix",
     "macro_list_col_send": "Send",
     "macro_list_col_suffix": "Suffix",
-    "macro_list_table_cmd": "Command List",
+    "macro_list_table_cmd": "Macro List",
     "file_prog_btn_cancel": "Cancel",
     "file_prog_lbl_eta_placeholder": "ETA: --:--",
     "file_prog_lbl_status_completed": "Completed",
@@ -165,10 +165,10 @@
     "pref_tab_serial": "Serial",
     "pref_title": "Preferences",
     "left_tooltip_port_tab": "Port configuration",
-    "right_macro_panel_tooltip": "Manage command list",
+    "right_macro_panel_tooltip": "Manage macro list",
     "right_packet_inspector_tooltip": "Inspect packet structure",
-    "right_tab_macro_list": "Command List",
+    "right_tab_macro_list": "Macro List",
     "right_tab_inspector": "Inspector",
-    "right_tooltip_macro_list": "Command list panel",
+    "right_tooltip_macro_list": "Macro list panel",
     "right_tooltip_inspector": "Packet inspector panel"
 }

@@ -46,7 +46,7 @@ class MacroPanel(QWidget):
 
         # 시그널 연결
         self.marco_ctrl.cmd_repeat_start_requested.connect(self.on_repeat_start_requested)
-        self.marco_ctrl.cmd_repeat_repeat_stop_requested.connect(self.on_repeat_repeat_stop_requested) # Stop signal is same for now
+        self.marco_ctrl.cmd_repeat_stop_requested.connect(self.on_repeat_stop_requested) # Stop signal is same for now
 
         self.marco_ctrl.script_save_requested.connect(self.save_script_to_file)
         self.marco_ctrl.script_load_requested.connect(self.load_script_from_file)
@@ -111,7 +111,7 @@ class MacroPanel(QWidget):
             self.repeat_start_requested.emit(indices)
             self.marco_ctrl.set_running_state(True, is_auto=True)
 
-    def on_repeat_repeat_stop_requested(self) -> None:
+    def on_repeat_stop_requested(self) -> None:
         """
         Repeat Stop 버튼 클릭 핸들러입니다.
         """

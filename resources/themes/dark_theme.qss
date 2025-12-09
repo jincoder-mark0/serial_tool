@@ -263,3 +263,24 @@ QPushButton[class="danger"]:disabled {
     border-color: #602525;
     color: #804040;
 }
+
+QPushButton[class="warning"] {
+    background-color: #FFC107;
+    border-color: #FFD740;
+    color: #ffffff;
+}
+
+QPushButton[class="warning"]:hover {
+    background-color: #FFD740;
+    border-color: #FFD740;
+}
+
+QPushButton[class="warning"]:pressed {
+    background-color: #B71C1C;
+}
+
+QPushButton[class="warning"]:disabled {
+    background-color: #4a1b1b;
+    border-color: #602525;
+    color: #804040;
+}

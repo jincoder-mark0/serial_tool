@@ -33,11 +33,25 @@
   - 관련 파일명 및 변수명 일괄 변경 (`command_list.py` → `macro_list.py` 등)
   - "Command" 용어의 모호성(시스템 명령 등) 해소 및 "Macro"로 명확화
 
+- **설정 키 구조 정리**
+  - `PreferencesDialog`에서 `port_baudrate`, `port_newline`, `port_scan_interval` 추가
+  - `main_presenter.py`에서 설정 키 매핑 업데이트
+  - 설정 로드/저장 로직 일관성 확보
+
 #### 추가 사항 (Added)
 
 - **동적 윈도우 리사이징**
   - 우측 패널(Right Panel) 토글 시 윈도우 크기가 자동으로 조정되는 기능 구현
   - 패널 숨김/표시 시 자연스러운 윈도우 크기 변화 제공
+  - 좌측 패널 크기 유지: 스플리터 크기 설정으로 좌측 패널이 변경되지 않도록 수정
+
+#### 아키텍처 개선 (Architecture)
+
+- **MVP 패턴 준수 강화**
+  - `PreferencesDialog`에서 `SettingsManager` 직접 접근 제거
+  - Presenter(`MainWindow`)를 통해 설정을 전달받아 사용하도록 변경
+  - `_get_setting()` 헬퍼 메서드 추가: 중첩된 설정 키 안전 접근
+  - View 계층이 Model 계층에 직접 접근하지 않도록 개선
 
 ---
 

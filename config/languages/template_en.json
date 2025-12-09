@@ -23,7 +23,7 @@
   "macro_ctrl_lbl_repeat_max": "TODO: macro_ctrl_lbl_repeat_max",
   "macro_ctrl_lbl_suffix": "TODO: macro_ctrl_lbl_suffix",
   // ============================================
-  // Command List Widget (widgets/macro_list.py),
+  // Macro List Widget (widgets/macro_list.py),
   // ============================================
   "macro_list_btn_add_cmd_tooltip": "TODO: macro_list_btn_add_cmd_tooltip",
   "macro_list_btn_del_cmd_tooltip": "TODO: macro_list_btn_del_cmd_tooltip",
@@ -156,7 +156,7 @@
   "status_txt_log_placeholder": "TODO: status_txt_log_placeholder",
   "status_txt_log_tooltip": "TODO: status_txt_log_tooltip",
   // ============================================
-  // Command List Panel Panel (panels/macro_panel.py),
+  // Macro Panel (panels/macro_panel.py),
   // ============================================
   "macro_list_dialog_title_open": "TODO: macro_list_dialog_title_open",
   "macro_list_dialog_title_save": "TODO: macro_list_dialog_title_save",

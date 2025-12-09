@@ -8,7 +8,7 @@ from view.panels.packet_inspector_panel import PacketInspectorPanel
 class MainRightSection(QWidget):
     """
     MainWindow의 우측 영역을 담당하는 패널 클래스입니다.
-    Command List와 Packet Inspector를 탭으로 관리합니다.
+    Macro List와 Packet Inspector를 탭으로 관리합니다.
     """
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:

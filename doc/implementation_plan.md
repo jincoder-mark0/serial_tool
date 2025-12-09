@@ -7,9 +7,10 @@
 ### 핵심 목표
 - **멀티포트 관리**: 최대 16개 포트 동시 오픈 및 독립 제어
 - **고속 데이터 처리**: 2MB/s 연속 스트림, 초당 10K 라인 로그 처리
-- **자동화 엔진**: Command List 기반 스크립트 실행, Auto Run 스케줄러
+- **자동화 엔진**: Macro List 기반 스크립트 실행, Repeat 스케줄러
 - **파일 송수신**: Chunk 기반 전송, 진행률 표시, 취소/재시도
 - **확장성**: EventBus 기반 플러그인 시스템
+- **MVP 패턴 준수**: View-Presenter-Model 계층 분리 및 Signal 기반 통신
 
 ---
 
@@ -48,33 +49,39 @@ serial_tool2/
 │   ├── port_controller.py  # 포트 라이프사이클 관리
 │   ├── serial_manager.py   # 멀티포트 레지스트리
 │   ├── packet_parser.py    # 패킷 파싱 (AT/Delimiter/Fixed/Hex)
-│   ├── command_entry.py    # Command DTO
-│   ├── cl_runner.py        # Command List 실행 엔진
+│   ├── macro_entry.py     # Macro DTO
+│   ├── macro_runner.py     # Macro List 실행 엔진
 │   └── file_transfer.py    # 파일 전송 엔진
 ├── view/                    # UI 계층
 │   ├── main_window.py      # 메인 윈도우 [완료]
 │   ├── theme_manager.py    # 테마 관리 [완료]
-│   ├── lang_manager.py # 언어 관리 [완료]
+│   ├── lang_manager.py     # 언어 관리 [완료]
+│   ├── color_rules.py      # 로그 색상 규칙 [완료]
 │   ├── sections/           # 섹션 (화면 분할) [완료]
-│   │   ├── left_section.py # 좌측 섹션 [완료]
-│   │   └── right_section.py# 우측 섹션 [완료]
+│   │   ├── main_left_section.py  # 좌측 섹션 [완료]
+│   │   ├── main_right_section.py # 우측 섹션 [완료]
+│   │   ├── main_menu_bar.py      # 메인 메뉴바 [완료]
+│   │   └── main_status_bar.py    # 메인 상태바 [완료]
 │   ├── panels/             # 패널 (기능 그룹) [완료]
 │   │   ├── port_panel.py   # 포트 패널 [완료]
-│   │   ├── command_list_panel.py # 커맨드 리스트 패널 [완료]
+│   │   ├── port_tab_panel.py # 포트 탭 패널 [완료]
+│   │   ├── macro_panel.py  # 매크로 패널 [완료]
 │   │   ├── manual_control_panel.py # 수동 제어 패널 [완료]
 │   │   ├── packet_inspector_panel.py # 패킷 인스펙터 패널 [완료]
-│   │   └── tx_panel.py     # 전송 패널 (수동+커맨드) [완료]
+│   │   └── tx_panel.py     # 전송 패널 [완료]
 │   ├── widgets/            # 위젯 (UI 요소) [완료]
-│       ├── port_settings.py       # 포트 설정 [완료]
-│       ├── received_area.py       # 로그 뷰 [완료]
-│       ├── manual_control.py      # 수동 제어 [완료]
-│       ├── command_list.py        # 커맨드 리스트 [완료]
-│       ├── command_control.py     # 커맨드 제어 [완료]
-│       ├── packet_inspector.py    # 패킷 인스펙터 [완료]
-│       ├── status_area.py         # 상태 표시 영역 [완료]
-│       ├── file_progress.py       # 파일 전송 진행 [완료]
-│       ├── main_menu_bar.py       # 메인 메뉴바 [완료]
-│       └── main_status_bar.py     # 메인 상태바 [완료]
+│   │   ├── port_settings.py       # 포트 설정 [완료]
+│   │   ├── received_area.py       # 로그 뷰 [완료]
+│   │   ├── manual_control.py      # 수동 제어 [완료]
+│   │   ├── macro_list.py          # 매크로 리스트 [완료]
+│   │   ├── macro_ctrl.py          # 매크로 제어 [완료]
+│   │   ├── main_toolbar.py        # 메인 툴바 [완료]
+│   │   ├── packet_inspector.py    # 패킷 인스펙터 [완료]
+│   │   ├── status.py              # 상태 위젯 [완료]
+│   │   ├── status_area.py         # 상태 표시 영역 [완료]
+│   │   └── file_progress.py       # 파일 전송 진행 [완료]
+│   ├── pyqt_customs/       # PyQt5 커스텀 위젯 [완료]
+│   │   └── smart_number_edit.py   # HEX 입력 필드 [완료]
 │   └── dialogs/            # 대화상자 [완료]
 │       ├── about_dialog.py        # 정보 대화상자 [완료]
 │       ├── font_settings_dialog.py# 폰트 설정 [완료]
@@ -82,7 +89,7 @@ serial_tool2/
 ├── presenter/               # Presenter 계층
 │   ├── main_presenter.py   # 중앙 제어
 │   ├── port_presenter.py   # 포트 제어
-│   ├── command_presenter.py # 커맨드 제어
+│   ├── macro_presenter.py  # 매크로 제어
 │   ├── file_presenter.py   # 파일 전송 제어
 │   └── event_router.py     # 이벤트 라우팅
 ├── plugins/                 # 확장 플러그인
@@ -128,7 +135,7 @@ serial_tool2/
 - Publish/Subscribe 패턴
 - 표준 이벤트 타입 정의
   - `PORT_OPENED`, `PORT_CLOSED`, `DATA_RECEIVED`, `DATA_SENT`
-  - `COMMAND_STARTED`, `COMMAND_COMPLETED`, `COMMAND_FAILED`
+  - `MACRO_STARTED`, `MACRO_COMPLETED`, `MACRO_FAILED`
   - `FILE_TRANSFER_STARTED`, `FILE_TRANSFER_PROGRESS`, `FILE_TRANSFER_COMPLETED`
 - 플러그인 연동 인터페이스
 - 이벤트 필터링 및 우선순위
@@ -184,7 +191,7 @@ serial_tool2/
 - 포트별 Worker 인스턴스 관리
 - 설정 변경 처리 (baudrate, parity 등)
 - 에러 복구 정책
-  - 자동 재연결 (선택)
+  - 자동 재연결 (설정)
   - 에러 로그 기록
 
 **멀티포트 격리**
@@ -201,16 +208,16 @@ serial_tool2/
 - 타임아웃 설정 (기본 5초)
 - 매칭 실패 시 재시도 정책
 
-#### [진행 필요] `model/command_entry.py`
-**CommandEntry DTO**
+#### [진행 필요] `model/macro_entry.py`
+**MacroEntry DTO**
 ```python
 @dataclass
-class CommandEntry:
+class MacroEntry:
     enabled: bool
     command: str
     is_hex: bool
-    prefix: str
-    suffix: str
+    prefix: bool
+    suffix: bool
     delay_ms: int
     expect: str = ""
     timeout_ms: int = 5000
@@ -220,12 +227,12 @@ class CommandEntry:
 - 스크립트 저장/로드
 - 검증 규칙 (필수 필드, 타입 체크)
 
-#### [진행 필요] `model/cl_runner.py`
-**Command List 실행 엔진 (CLRunner)**
+#### [진행 필요] `model/macro_runner.py`
+**Macro List 실행 엔진 (MacroRunner)**
 - **State Machine**: `Idle` → `Running` → `Paused` → `Stopped`
 - **Step Execution**: Send → Expect Match (Regex) → Delay → Next/Jump/Repeat
 - **Auto Run**: `AutoTxScheduler` (Global Interval + Loop Count)
-- **Signals**: `step_started`, `step_completed`, `cl_finished`
+- **Signals**: `step_started`, `step_completed`, `macro_finished`
 
 #### [진행 필요] `model/file_transfer.py`
 **FileTransferEngine(QRunnable)**
@@ -249,7 +256,7 @@ class CommandEntry:
 - 애플리케이션 초기화
   - SettingsManager 로드
   - EventBus 초기화
-  - 플러그인 로드 (선택)
+  - 플러그인 로드
 - View ↔ Model 연결
 - 종료 시퀀스
   - 모든 포트 닫기
@@ -268,15 +275,14 @@ class CommandEntry:
   - View → Model: TX 데이터 전달
   - Model → View: RX 데이터 표시
 
-#### [진행 필요] `presenter/command_presenter.py`
-**Command List 제어**
+#### [진행 필요] `presenter/macro_presenter.py`
+**Macro List 제어**
 - 스크립트 저장/로드
   - JSON 파일 I/O
-  - CommandEntry 직렬화/역직렬화
+  - MacroEntry 직렬화/역직렬화
 - Run/Stop/Pause 로직
-  - CLRunner 제어
+  - MacroRunner 제어
   - 실행 상태 UI 업데이트
-- Auto Run 스케줄링
   - QTimer 기반 주기 실행
   - 최대 실행 횟수 체크
 
@@ -318,29 +324,32 @@ class CommandEntry:
 
 ### 6. View 계층 (View Layer) - ✅ 완료
 
----
-
-### 5. View 계층 (View Layer) - ✅ 완료
-
 #### [완료] UI 구조
-- `MainWindow`: 메인 레이아웃, 메뉴, 툴바
-- `LeftSection`: 포트 탭 + 수동 제어 (화면 좌측)
-- `RightSection`: 커맨드 리스트 + 패킷 인스펙터 (화면 우측)
-- `Panels`: 기능 단위 그룹 (PortPanel, MacroListPanel 등)
+- `MainWindow`: 메인 레이아웃, 메뉴, 툴바, 스플리터 관리
+- `MainLeftSection`: 포트 탭 + 수동 제어 (화면 좌측)
+- `MainRightSection`: 매크로 리스트 + 패킷 인스펙터 (화면 우측)
+- `Panels`: 기능 단위 그룹 (PortPanel, MacroPanel, ManualControlPanel 등)
+- `Sections`: 화면 분할 (MainMenuBar, MainStatusBar 포함)
 
 #### [완료] 위젯
-- `PortSettingsWidget`: 컴팩트 2줄 레이아웃
-- `ReceivedArea`: 로그 뷰, 색상 규칙, 타임스탬프, Trim
-- `ManualControlWidget`: 수동 전송, 파일 선택
-- `MacroListWidget`: Prefix/Suffix, 3단계 체크박스
-- `MacroCtrlWidget`: 스크립트 저장/로드, Auto Run
+- `PortSettingsWidget`: 컴팩트 2줄 레이아웃, 연결 상태 관리
+- `ReceivedAreaWidget`: 로그 뷰, 색상 규칙, 타임스탬프, Trim, 검색
+- `ManualControlWidget`: 수동 전송, 파일 선택, Prefix/Suffix
+- `MacroListWidget`: Prefix/Suffix, 3단계 체크박스, 행별 Send 버튼
+- `MacroCtrlWidget`: 스크립트 저장/로드, Repeat 실행
 - `PacketInspectorWidget`: 패킷 상세 뷰
+- `StatusWidget`: RX/TX 통계, 에러 카운트, 업타임
+- `StatusAreaWidget`: 상태 로그 표시
+- `FileProgressWidget`: 파일 전송 진행률
+- `MainToolBar`: 빠른 액션 버튼 (Open, Close, Clear, Save, Settings)
+- `SmartNumberEdit`: HEX 모드 입력 필드 (자동 대문자 변환)
 
 #### [완료] 테마 시스템
 - `ThemeManager`: QSS 로딩 및 동적 전환
 - `common.qss`: 공통 스타일
 - `dark_theme.qss`, `light_theme.qss`: 개별 테마
 - SVG 아이콘 시스템 (테마별 색상 자동 변경)
+- 테마별 아이콘 로딩 (`get_icon()` 메서드)
 
 #### [완료] 듀얼 폰트 시스템
 **목적**: UI 가독성 향상을 위한 폰트 분리
@@ -352,32 +361,26 @@ class CommandEntry:
 - 특징: 자연스러운 텍스트 표시, UI 요소에 최적화
 
 **Fixed Font (고정폭 폰트)**
-- 적용 대상: TextEdit, LineEdit, CommandList의 Command 컬럼, 패킷 인스펙터
+- 적용 대상: TextEdit, LineEdit, MacroList의 Command 컬럼, 패킷 인스펙터
 - 기본 폰트: "Consolas" (Windows), "Monospace" (Linux)
 - 크기: 9pt (기본), 설정 가능
 - 특징: 정렬된 텍스트 표시, 코드/데이터 가독성 향상
 
-**구현 사항** (완료)
-- `ThemeManager`에 폰트 관리 기능 추가
-  - `set_proportional_font(family: str, size: int)`
-  - `set_fixed_font(family: str, size: int)`
-  - `get_proportional_font() -> QFont`
-  - `get_fixed_font() -> QFont`
-- 폰트 설정 대화상자 구현
-  - Proportional Font 선택 (프리뷰 포함)
-  - Fixed Font 선택 (프리뷰 포함)
-  - 크기 조절 (6pt ~ 16pt)
-  - 기본값 복원 버튼
-- QSS에 폰트 클래스 추가
-  - `.proportional-font`: 가변폭 폰트 적용
-  - `.fixed-font`: 고정폭 폰트 적용
-- 설정 저장/복원
-  - `settings.json`에 폰트 정보 저장
-  - 앱 재시작 시 폰트 복원
+#### [완료] 다국어 지원
+- `LanguageManager`: 한국어/영어 실시간 전환
+- CommentJSON 기반 번역 파일 (`config/languages/ko.json`, `en.json`)
+- `text_matches_key()` 헬퍼: 언어 확장성 개선
+- 모든 UI 컴포넌트 다국어 적용 완료
+
+#### [완료] MVP 패턴 준수
+- View 계층에서 Model 직접 접근 제거
+- Signal 기반 통신 (View → Presenter)
+- `PreferencesDialog`: SettingsManager 제거, Presenter를 통한 설정 전달
+- 명확한 책임 분리: View는 UI만, Presenter는 로직 처리
 
 ---
 
-### 6. 플러그인 시스템 (Plugin System) - 선택 기능
+### 7. 플러그인 시스템 (Plugin System)
 
 #### [진행 필요] `core/plugin_base.py`
 **PluginBase 인터페이스**
@@ -401,7 +404,7 @@ class PluginBase(ABC):
 **동적 로딩**
 - `plugins/` 디렉터리 스캔
 - 부팅 시 자동 로드
-- 핫 리로딩 지원 (선택)
+- 핫 리로딩 지원
 - 예외 격리 (플러그인 에러 시 앱 중단 방지)
 
 #### [진행 필요] `plugins/example_plugin/`
@@ -425,7 +428,7 @@ class PluginBase(ABC):
 
 **Model 모듈**
 - `test_packet_parser.py`: 각 파서 동작, Expect/Timeout
-- `test_cl_runner.py`: 순차 실행, 반복, 에러 처리
+- `test_macro_runner.py`: 순차 실행, 반복, 에러 처리
 - `test_file_transfer.py`: Chunk 전송, 취소, 재시도
 
 **목표 커버리지**: 70%+
@@ -439,14 +442,14 @@ class PluginBase(ABC):
 1. 포트 열기/닫기 시퀀스
 2. 데이터 송수신 루프백 (1Mbps, 10분)
 3. 멀티포트 동시성 (4개 포트)
-4. Command List 실행 (10개 명령, 5회 반복)
+4. Macro List 실행 (10개 명령, 5회 반복)
 5. 파일 전송 (10MB 파일, 115200bps)
 
 #### E2E 테스트 (pytest-qt)
 **UI 워크플로우**
 1. 앱 시작 → 포트 선택 → 열기
 2. 수동 명령 송신 → 로그 확인
-3. Command List 로드 → 실행 → 결과 확인
+3. Macro List 로드 → 실행 → 결과 확인
 4. 파일 전송 → 진행률 확인 → 완료
 5. 설정 변경 → 저장 → 재시작 → 복원 확인
 
@@ -476,7 +479,7 @@ class PluginBase(ABC):
 
 #### 기능 검증
 - [ ] 실제 장비 연결 후 데이터 송수신
-- [ ] Command List 자동 실행 (AT 명령)
+- [ ] Macro List 자동 실행 (AT 명령)
 - [ ] 파일 전송 (펌웨어 다운로드)
 - [ ] 설정 저장/복원
 - [ ] 로그 내보내기
@@ -615,11 +618,11 @@ jobs:
 ### Phase 5: Presenter Layer (Planned)
 1. `presenter/port_presenter.py`: Port Control Logic
 2. `presenter/main_presenter.py`: App Lifecycle
-3. `presenter/command_presenter.py`: CL Logic
+3. `presenter/macro_presenter.py`: Macro Logic
 4. `presenter/file_presenter.py`: File Transfer Logic
 
 ### Phase 6: Automation & File I/O (Planned)
-1. `model/cl_runner.py`: CL Engine, Auto Run
+1. `model/macro_runner.py`: Macro Engine, Auto Run
 2. `model/file_transfer.py`: FileTransferEngine, RxCaptureWriter
 3. `model/auto_tx.py`: AutoTxScheduler
 4. **Performance Optimization**: BatchRenderer, RingBuffer Tuning
@@ -667,8 +670,8 @@ jobs:
     - [x] PortSettingsWidget 다국어 적용
     - [x] StatusArea 다국어 적용
     - [x] FontSettingsDialog 다국어 적용
-- [x] Command List Persistence (자동 저장)
-- [x] **Refactoring & Stabilization (2025-12-04)**
+- [x] Macro List Persistence (자동 저장)
+- [x] Refactoring & Stabilization
     - [x] UI Architecture Refactoring (Sections/Panels/Widgets)
     - [x] Language Key Standardization (`[context]_[type]_[name]`)
     - [x] Code Style Guide Update
@@ -721,10 +724,10 @@ jobs:
 ### 기능적 성공 기준
 - [ ] 16개 포트 동시 오픈 및 독립 제어
 - [ ] 2MB/s 연속 스트림 안정 처리
-- [ ] Command List 자동 실행 (반복, 지연, Expect)
+- [ ] Macro List 자동 실행 (반복, 지연, Expect)
 - [ ] 파일 전송 (10MB+, 진행률 표시)
 - [ ] 설정 저장/복원 (포트, UI, 명령 리스트)
-- [ ] 플러그인 로드 및 실행 (선택)
+- [ ] 플러그인 로드 및 실행
 
 ### 비기능적 성공 기준
 - [ ] UI 반응성: 60fps 스크롤, Freeze 0

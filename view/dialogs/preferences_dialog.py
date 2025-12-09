@@ -7,12 +7,13 @@ from PyQt5.QtCore import pyqtSignal
 from typing import Dict, Any, Optional
 import os
 from view.lang_manager import lang_manager
-from core.settings_manager import SettingsManager
 
 class PreferencesDialog(QDialog):
     """
     애플리케이션 설정을 관리하는 대화상자입니다.
     General, Serial, Logging 탭으로 구성됩니다.
+    MVP 패턴을 준수하여 SettingsManager에 직접 접근하지 않고
+    부모로부터 전달받은 설정만 사용합니다.
     """
 
     settings_changed = pyqtSignal(dict)  # 변경된 설정 딕셔너리 전송
@@ -21,7 +22,6 @@ class PreferencesDialog(QDialog):
         super().__init__(parent)
         self.setWindowTitle(lang_manager.get_text("pref_title"))
         self.resize(500, 400)
-        self.settings = SettingsManager()
         self.current_settings = current_settings or {}
         self.init_ui()
         self.load_settings()
@@ -184,31 +184,53 @@ class PreferencesDialog(QDialog):
         if directory:
             self.log_path_edit.setText(directory)
 
+    def _get_setting(self, key: str, default: Any = None) -> Any:
+        """
+        중첩된 설정 키에 안전하게 접근합니다.
+
+        Args:
+            key (str): 점(.)으로 구분된 설정 키 (예: "settings.theme")
+            default (Any): 키가 없을 때 반환할 기본값
+
+        Returns:
+            Any: 설정 값 또는 기본값
+        """
+        keys = key.split('.')
+        value = self.current_settings
+
+        for k in keys:
+            if isinstance(value, dict) and k in value:
+                value = value[k]
+            else:
+                return default
+
+        return value
+
     def load_settings(self) -> None:
         """현재 설정을 UI에 반영합니다."""
         # General
-        theme = self.settings.get("settings.theme", "Dark").capitalize()
+        theme = self._get_setting("settings.theme", "Dark").capitalize()
         self.theme_combo.setCurrentText(theme)
 
-        lang_code = self.settings.get("settings.language", "en")
+        lang_code = self._get_setting("settings.language", "en")
         index = self.language_combo.findData(lang_code)
         if index != -1:
             self.language_combo.setCurrentIndex(index)
 
-        self.proportional_font_size_spin.setValue(self.settings.get("settings.proportional_font_size", 10))
-        self.max_lines_spin.setValue(self.settings.get("settings.rx_max_lines", 2000))
+        self.proportional_font_size_spin.setValue(self._get_setting("settings.proportional_font_size", 10))
+        self.max_lines_spin.setValue(self._get_setting("settings.rx_max_lines", 2000))
 
         # Serial
-        self.port_baud_combo.setCurrentText(str(self.settings.get("settings.port_baudrate", 115200)))
-        self.port_newline_combo.setCurrentText(str(self.settings.get("settings.port_newline", "\n")))
-        self.port_scan_interval_spin.setValue(self.settings.get("settings.port_scan_interval", 5000))
+        self.port_baud_combo.setCurrentText(str(self._get_setting("settings.port_baudrate", 115200)))
+        self.port_newline_combo.setCurrentText(str(self._get_setting("settings.port_newline", "\n")))
+        self.port_scan_interval_spin.setValue(self._get_setting("settings.port_scan_interval", 5000))
 
         # Command
-        self.prefix_combo.setCurrentText(self.settings.get("settings.cmd_prefix", ""))
-        self.suffix_combo.setCurrentText(self.settings.get("settings.cmd_suffix", ""))
+        self.prefix_combo.setCurrentText(self._get_setting("settings.cmd_prefix", ""))
+        self.suffix_combo.setCurrentText(self._get_setting("settings.cmd_suffix", ""))
 
         # Logging
-        self.log_path_edit.setText(self.settings.get("logging.path", os.getcwd()))
+        self.log_path_edit.setText(self._get_setting("logging.path", os.getcwd()))
 
     def apply_settings(self) -> None:
         """변경된 설정을 수집하여 시그널을 발생시킵니다."""

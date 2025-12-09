@@ -107,9 +107,9 @@ def test_right_panel_translation(app, qtbot):
     qtbot.addWidget(widget)
 
     lang_manager.set_language('en')
-    assert widget.tabs.tabText(0) == "Command List"
+    assert widget.tabs.tabText(0) == "Macro List"
     assert widget.tabs.tabText(1) == "Inspector"
 
     lang_manager.set_language('ko')
-    assert widget.tabs.tabText(0) == "명령 리스트"
+    assert widget.tabs.tabText(0) == "매크로 리스트"
     assert widget.tabs.tabText(1) == "인스펙터"

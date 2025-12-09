@@ -14,7 +14,8 @@ class MacroCtrlWidget(QWidget):
 
     # 시그널 정의
     cmd_repeat_start_requested = pyqtSignal(int, int) # delay_ms, max_runs
-    cmd_repeat_repeat_stop_requested = pyqtSignal()
+    cmd_repeat_stop_requested = pyqtSignal()
+    cmd_repeat_pause_requested = pyqtSignal()
 
     script_save_requested = pyqtSignal()
     script_load_requested = pyqtSignal()
@@ -100,6 +101,12 @@ class MacroCtrlWidget(QWidget):
         self.cmd_repeat_stop_btn.setProperty("class", "danger") # 빨간색 스타일
         self.cmd_repeat_stop_btn.clicked.connect(self.on_cmd_repeat_stop_clicked)
 
+        self.cmd_repeat_pause_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_repeat_pause"))
+        self.cmd_repeat_pause_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_repeat_pause_tooltip"))
+        self.cmd_repeat_pause_btn.setEnabled(False)
+        self.cmd_repeat_pause_btn.setProperty("class", "warning") # 노란색 스타일
+        self.cmd_repeat_pause_btn.clicked.connect(self.on_cmd_repeat_pause_clicked)
+
         self.cmd_repeat_count_lbl = QLabel("0 / ∞")
         self.cmd_repeat_count_lbl.setAlignment(Qt.AlignCenter)
 
@@ -145,7 +152,11 @@ class MacroCtrlWidget(QWidget):
 
     def on_cmd_repeat_stop_clicked(self) -> None:
         """자동 실행 정지 버튼 핸들러"""
-        self.cmd_repeat_repeat_stop_requested.emit()
+        self.cmd_repeat_stop_requested.emit()
+
+    def on_cmd_repeat_pause_clicked(self) -> None:
+        """자동 실행 정지 버튼 핸들러"""
+        self.cmd_repeat_pause_requested.emit()
 
     def on_script_save_requested(self) -> None:
         """스크립트 저장 버튼 핸들러"""
