@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QTextEdit, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QCheckBox, QLabel, QLineEdit
-from PyQt5.QtCore import pyqtSignal, QTimer, Qt
-from PyQt5.QtGui import QFont, QTextCursor, QTextDocument
+from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtGui import QTextCursor, QTextDocument
 from typing import Optional
 import datetime
 from view.color_rules import ColorRulesManager

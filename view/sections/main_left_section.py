@@ -21,6 +21,7 @@ class MainLeftSection(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
+        self.port_tabs = None
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
@@ -54,11 +55,20 @@ class MainLeftSection(QWidget):
         self.port_tabs.add_new_port_tab()
 
     def open_current_port(self) -> None:
-        """현재 활성화된 탭의 포트를 엽니다."""
+        """현재 활성화된 탭의 포트를 엽니다 (이미 열려있으면 무시)."""
         current_index = self.port_tabs.currentIndex()
         current_widget = self.port_tabs.widget(current_index)
         if isinstance(current_widget, PortPanel):
-            current_widget.toggle_connection()
+            if not current_widget.is_connected():
+                current_widget.toggle_connection()
+
+    def close_current_port(self) -> None:
+        """현재 활성화된 탭의 포트를 닫습니다 (이미 닫혀있으면 무시)."""
+        current_index = self.port_tabs.currentIndex()
+        current_widget = self.port_tabs.widget(current_index)
+        if isinstance(current_widget, PortPanel):
+            if current_widget.is_connected():
+                current_widget.toggle_connection()
 
     def close_current_tab(self) -> None:
         """현재 활성화된 탭을 닫습니다."""

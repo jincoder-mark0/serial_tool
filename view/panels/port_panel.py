@@ -1,11 +1,11 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QSplitter
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtWidgets import QWidget, QVBoxLayout
+from PyQt5.QtCore import pyqtSignal
 from typing import Optional
 
 from view.widgets.port_settings import PortSettingsWidget
 from view.widgets.received_area import ReceivedAreaWidget
 from view.widgets.status_area import StatusAreaWidget
-from view.widgets.status_panel import StatusPanel
+from view.widgets.status import StatusWidget
 
 class PortPanel(QWidget):
     """
@@ -24,6 +24,10 @@ class PortPanel(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
+        self.status_area = None
+        self.received_area = None
+        self.status_panel = None
+        self.port_settings = None
         self.custom_name = "Port"  # 커스텀 이름 (기본값)
         self.init_ui()
 
@@ -38,7 +42,7 @@ class PortPanel(QWidget):
 
         # 컴포넌트 생성
         self.port_settings = PortSettingsWidget()
-        self.status_panel = StatusPanel()
+        self.status_panel = StatusWidget()
         self.received_area = ReceivedAreaWidget()
         self.status_area = StatusAreaWidget()
 
@@ -60,6 +64,10 @@ class PortPanel(QWidget):
     def toggle_connection(self) -> None:
         """연결 상태를 토글합니다."""
         self.port_settings.toggle_connection()
+
+    def is_connected(self) -> bool:
+        """현재 연결 상태를 반환합니다."""
+        return self.port_settings.is_connected()
 
     def _on_port_changed(self, port_name: str) -> None:
         """포트 변경 시 탭 제목을 업데이트합니다."""

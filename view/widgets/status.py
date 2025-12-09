@@ -1,10 +1,15 @@
 from PyQt5.QtWidgets import QWidget, QGroupBox, QGridLayout, QLabel
-from PyQt5.QtCore import Qt
 from view.language_manager import language_manager
 
-class StatusPanel(QWidget):
+class StatusWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.last_rx_label = None
+        self.uptime_label = None
+        self.errors_label = None
+        self.tx_label = None
+        self.rx_label = None
+        self.group_box = None
         self.init_ui()
         language_manager.language_changed.connect(self.retranslate_ui)
 
@@ -51,7 +56,8 @@ class StatusPanel(QWidget):
     def update_last_rx(self, timestamp: str):
         self.last_rx_label.setText(f"Last RX: [{timestamp}]")
 
-    def format_bytes(self, size: int) -> str:
+    @staticmethod
+    def format_bytes(size: int) -> str:
         power = 2**10
         n = 0
         power_labels = {0 : 'B', 1: 'KB', 2: 'MB', 3: 'GB', 4: 'TB'}

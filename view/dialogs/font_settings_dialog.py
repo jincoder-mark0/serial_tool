@@ -2,7 +2,6 @@ from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel,
     QPushButton, QFontComboBox, QSpinBox, QTextEdit, QDialogButtonBox
 )
-from PyQt5.QtCore import Qt
 from PyQt5.QtGui import QFont
 import platform
 from view.language_manager import language_manager

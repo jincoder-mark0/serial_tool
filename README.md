@@ -7,15 +7,17 @@
 ### 핵심 기능
 * **멀티 포트 지원**: 탭 인터페이스로 여러 시리얼 포트 동시 제어
 * **수동 제어**:
-  - HEX/ASCII 모드 전환
-  - CR/LF 자동 추가 옵션
-  - Prefix/Suffix 체크박스 (MVP 패턴 적용)
+  - HEX/ASCII 모드
+  - Prefix/Suffix
   - Flow Control (RTS/DTR)
   - 파일 전송 기능
+  - 파일 전송 기능
+  - 로그 저장 및 화면 클리어
 * **커맨드 리스트 자동화**:
+  - 여러 명령어를 리스트로 관리
   - 순차 명령 실행
   - Auto Run 및 Delay 설정
-  - JSON 스크립트 저장/불러오기
+  - 스크립트 저장 및 불러오기 (JSON 형식)
 * **실시간 모니터링**:
   - Tx/Rx 바이트 카운트
   - 색상 규칙 기반 로그 강조 (OK=녹색, ERROR=빨강)
@@ -104,13 +106,18 @@ serial_tool2/
 │   ├── color_rules.py      # 로그 색상 규칙
 │   │
 │   ├── sections/           # 섹션 (대 분할)
-│   │   ├── left_section.py
-│   │   └── right_section.py
+│   │   ├── main_left_section.py
+│   │   ├── main_right_section.py
+│   │   ├── main_menu_bar.py
+│   │   └── main_status_bar.py
 │   │
 │   ├── panels/             # 패널 (중 단위)
 │   │   ├── port_panel.py
+│   │   ├── port_tab_panel.py
 │   │   ├── command_list_panel.py
-│   │   └── manual_control_panel.py
+│   │   ├── manual_control_panel.py
+│   │   ├── packet_inspector_panel.py
+│   │   └── tx_panel.py
 │   │
 │   ├── widgets/            # 위젯 (소 단위)
 │   │   ├── port_settings.py
@@ -118,9 +125,11 @@ serial_tool2/
 │   │   ├── manual_control.py
 │   │   ├── command_list.py
 │   │   ├── command_control.py
-│   │   ├── main_menu_bar.py
-│   │   ├── main_status_bar.py
-│   │   └── file_progress.py
+│   │   ├── main_toolbar.py
+│   │   ├── file_progress.py
+│   │   ├── packet_inspector.py
+│   │   ├── status.py
+│   │   └── status_area.py
 │   │
 │   ├── dialogs/            # 대화상자
 │   │   ├── font_settings_dialog.py
@@ -272,6 +281,7 @@ serial_tool2/
 | 주석 가이드 | 주석/Docstring 작성법 | `guide/comment_guide.md` |
 | Git 가이드 | 커밋/PR/이슈 규칙 | `guide/git_guide.md` |
 | 변경 이력 | 세션별 변경 사항 | `doc/changelog.md` |
+| 세션 요약 | 2025-12-09 작업 요약 | `doc/session_summary_20251209.md` |
 
 ### 코드 스타일
 

@@ -11,6 +11,11 @@ class MainToolBar(QToolBar):
 
     def __init__(self, parent=None):
         super().__init__(parent)
+        self.settings_action = None
+        self.save_log_action = None
+        self.clear_action = None
+        self.close_action = None
+        self.open_action = None
         self.setMovable(False)
         self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
         self.init_ui()

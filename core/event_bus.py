@@ -1,5 +1,5 @@
 from PyQt5.QtCore import QObject, pyqtSignal
-from typing import Any, Dict, List, Callable
+from typing import Any, Callable
 import logging
 
 class EventBus(QObject):

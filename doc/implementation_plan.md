@@ -684,7 +684,7 @@ jobs:
    - RingBuffer 구현 및 테스트
    - ThreadSafeQueue 구현 및 테스트
    - EventBus 구현 및 테스트
-3. **Model 계층 구현** (Phase 4)
+2. **Model 계층 구현** (Phase 4)
    - SerialWorker 구현
    - PortController 구현
    - Virtual Serial Port 테스트

@@ -1,8 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QFileDialog, QMessageBox
 from PyQt5.QtCore import pyqtSignal
 import commentjson
-import os
-from typing import Optional, List
+from typing import Optional
 
 from view.widgets.command_list import CommandListWidget
 from view.widgets.command_control import CommandControlWidget
@@ -45,10 +44,9 @@ class CommandListPanel(QWidget):
         self.settings = SettingsManager()
 
         # 시그널 연결
-        # 시그널 연결
-        self.cmd_ctrl.cmd_run_single_requested.connect(self.on_run_single_requested)
-        self.cmd_ctrl.cmd_stop_requested.connect(self.stop_requested.emit)
-        self.cmd_ctrl.cmd_auto_start_requested.connect(self.on_repeat_start_requested)
+        self.cmd_ctrl.cmd_run_once_requested.connect(self.on_run_once_requested)
+        self.cmd_ctrl.cmd_stop_run_requested.connect(self.stop_requested.emit)
+        self.cmd_ctrl.cmd_repeat_start_requested.connect(self.on_repeat_start_requested)
         self.cmd_ctrl.cmd_repeat_stop_requested.connect(self.stop_requested.emit) # Stop signal is same for now
 
         self.cmd_ctrl.script_save_requested.connect(self.save_script_to_file)
@@ -100,7 +98,7 @@ class CommandListPanel(QWidget):
 
         self.settings.save_settings()
 
-    def on_run_single_requested(self) -> None:
+    def on_run_once_requested(self) -> None:
         """Run(Single) 버튼 클릭 핸들러입니다."""
         indices = self.cmd_list.get_selected_indices()
         if indices:

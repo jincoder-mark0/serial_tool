@@ -8,10 +8,12 @@
     "proportional_font_size": 9,
     "fixed_font_family": "Consolas",
     "fixed_font_size": 9,
-    "window_width": 1400,
+    "window_width": 1302,
     "window_height": 900,
     "window_x": 259,
-    "window_y": 44
+    "window_y": 44,
+    "splitter_state": "AAAA/wAAAAEAAAACAAADrgAAAbsB/////wEAAAABAA==",
+    "right_panel_visible": true
   },
   "ports": {
     "default_config": {

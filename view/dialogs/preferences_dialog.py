@@ -1,9 +1,9 @@
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
-    QLabel, QComboBox, QSpinBox, QCheckBox, QPushButton,
-    QFileDialog, QGroupBox, QFormLayout, QMessageBox
+    QLabel, QComboBox, QSpinBox, QPushButton,
+    QFileDialog, QGroupBox, QFormLayout
 )
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import pyqtSignal
 from typing import Dict, Any, Optional
 import os
 from view.language_manager import language_manager

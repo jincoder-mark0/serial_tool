@@ -3,8 +3,8 @@ View 컴포넌트 테스트 애플리케이션
 개별 위젯들을 독립적으로 테스트할 수 있습니다.
 """
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget, QPushButton, QLabel, QHBoxLayout
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget
+from PyQt5.QtCore import QTimer
 
 import os
 
@@ -13,16 +13,16 @@ current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
 
-from view.widgets.received_area import ReceivedArea
+from view.widgets.received_area import ReceivedAreaWidget
 from view.widgets.manual_control import ManualControlWidget
 from view.widgets.command_list import CommandListWidget
-from view.widgets.status_area import StatusArea
+from view.widgets.status_area import StatusAreaWidget
 from view.panels.port_panel import PortPanel
 from view.theme_manager import ThemeManager
 from view.language_manager import language_manager
 from view.dialogs.preferences_dialog import PreferencesDialog
 from view.dialogs.about_dialog import AboutDialog
-from view.widgets.file_progress_widget import FileProgressWidget
+from view.widgets.file_progress import FileProgressWidget
 from core.settings_manager import SettingsManager
 from PyQt5.QtWidgets import QPushButton, QHBoxLayout, QLabel, QTextEdit
 
@@ -97,7 +97,7 @@ class ViewTestWindow(QMainWindow):
         layout = QVBoxLayout(widget)
 
         # ReceivedArea 인스턴스
-        self.received_area = ReceivedArea()
+        self.received_area = ReceivedAreaWidget()
         layout.addWidget(self.received_area)
 
         # 테스트 버튼 (Test buttons)
@@ -121,7 +121,7 @@ class ViewTestWindow(QMainWindow):
         button_layout.addWidget(btn_many)
 
         btn_clear = QPushButton("Clear")
-        btn_clear.clicked.connect(self.received_area.clear_log)
+        btn_clear.clicked.connect(self.received_area.on_clear_rx_log_clicked)
         button_layout.addWidget(btn_clear)
 
         layout.addLayout(button_layout)
@@ -160,16 +160,16 @@ class ViewTestWindow(QMainWindow):
         layout.addWidget(self.manual_output)
 
         # 시그널 연결
-        self.manual_control.send_cmd_requested.connect(
-            lambda text, hex_mode, enter: self.manual_output.append(
-                f"Send: {text} (hex={hex_mode}, enter={enter})"
+        self.manual_control.manual_cmd_send_requested.connect(
+            lambda text, hex_mode, prefix, suffix: self.manual_output.append(
+                f"Send: {text} (hex={hex_mode}, prefix={prefix}, suffix={suffix})"
             )
         )
-        self.manual_control.file_selected.connect(
+        self.manual_control.transfer_file_selected.connect(
             lambda path: self.manual_output.append(f"File selected: {path}")
         )
-        self.manual_control.send_file_requested.connect(
-            lambda: self.manual_output.append("Send file requested")
+        self.manual_control.transfer_file_send_requested.connect(
+            lambda path: self.manual_output.append(f"Send file requested: {path}")
         )
 
         # 정보 레이블
@@ -241,7 +241,7 @@ class ViewTestWindow(QMainWindow):
         layout = QVBoxLayout(widget)
 
         # StatusArea 인스턴스
-        self.status_area = StatusArea()
+        self.status_area = StatusAreaWidget()
         layout.addWidget(self.status_area)
 
         # 테스트 버튼

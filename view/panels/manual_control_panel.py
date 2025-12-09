@@ -10,6 +10,7 @@ class ManualControlPanel(QWidget):
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
+        self.manual_control_widget = None
         self.init_ui()
 
     def init_ui(self) -> None:

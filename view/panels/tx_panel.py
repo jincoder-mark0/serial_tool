@@ -1,8 +1,10 @@
+from typing import Optional
+
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton,
     QCheckBox, QLabel, QComboBox
 )
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import pyqtSignal
 
 class TxPanel(QWidget):
     """
@@ -19,6 +21,11 @@ class TxPanel(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
+        self.tx_history_combo = None
+        self.send_text_data_btn = None
+        self.tx_lf_chk = None
+        self.tx_cr_chk = None
+        self.tx_hex_chk = None
         self.init_ui()
 
     def init_ui(self) -> None:

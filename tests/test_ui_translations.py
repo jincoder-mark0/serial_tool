@@ -1,14 +1,22 @@
+import sys
+import os
 import pytest
 from PyQt5.QtWidgets import QApplication
+
+# 부모 디렉토리를 경로에 추가하여 모듈 import 가능하게 함
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.insert(0, parent_dir)
+
 from view.language_manager import language_manager
 from view.widgets.manual_control import ManualControlWidget
 from view.widgets.command_list import CommandListWidget
-from view.widgets.received_area import ReceivedArea
-from view.widgets.packet_inspector import PacketInspector
-from view.widgets.file_progress_widget import FileProgressWidget
-from view.widgets.status_area import StatusArea
-from view.panels.left_panel import LeftPanel
-from view.panels.right_panel import RightPanel
+from view.widgets.received_area import ReceivedAreaWidget
+from view.widgets.packet_inspector import PacketInspectorWidget
+from view.widgets.file_progress import FileProgressWidget
+from view.widgets.status_area import StatusAreaWidget
+from view.sections.main_left_section import MainLeftSection
+from view.sections.main_right_section import MainRightSection
 
 @pytest.fixture(scope="session")
 def app():
@@ -23,12 +31,12 @@ def test_manual_control_translation(app, qtbot):
 
     # Switch to English
     language_manager.set_language('en')
-    assert widget.send_btn.text() == "Send"
+    assert widget.send_manual_cmd_btn.text() == "Send"
     assert widget.hex_chk.text() == "Hex"
 
     # Switch to Korean
     language_manager.set_language('ko')
-    assert widget.send_btn.text() == "전송"
+    assert widget.send_manual_cmd_btn.text() == "전송"
     assert widget.hex_chk.text() == "Hex"
 
 def test_cmd_list_translation(app, qtbot):
@@ -43,17 +51,17 @@ def test_cmd_list_translation(app, qtbot):
     assert widget.add_cmd_btn.toolTip() == "새 명령 추가"
 
 def test_received_area_translation(app, qtbot):
-    widget = ReceivedArea()
+    widget = ReceivedAreaWidget()
     qtbot.addWidget(widget)
 
     language_manager.set_language('en')
-    assert widget.clear_btn.text() == "Clear"
+    assert widget.clear_rx_log_btn.text() == "Clear"
 
     language_manager.set_language('ko')
-    assert widget.clear_btn.text() == "지우기"
+    assert widget.clear_rx_log_btn.text() == "지우기"
 
 def test_packet_inspector_translation(app, qtbot):
-    widget = PacketInspector()
+    widget = PacketInspectorWidget()
     qtbot.addWidget(widget)
 
     language_manager.set_language('en')
@@ -75,17 +83,17 @@ def test_file_progress_translation(app, qtbot):
     assert widget.cancel_btn.text() == "취소"
 
 def test_status_area_translation(app, qtbot):
-    widget = StatusArea()
+    widget = StatusAreaWidget()
     qtbot.addWidget(widget)
 
     language_manager.set_language('en')
-    assert widget.label.text() == "Status Log"
+    assert widget.log_lbl.text() == "Status Log"
 
     language_manager.set_language('ko')
-    assert widget.label.text() == "상태 로그"
+    assert widget.log_lbl.text() == "상태 로그"
 
 def test_left_panel_translation(app, qtbot):
-    widget = LeftPanel()
+    widget = MainLeftSection()
     qtbot.addWidget(widget)
 
     language_manager.set_language('en')
@@ -95,7 +103,7 @@ def test_left_panel_translation(app, qtbot):
     assert widget.port_tabs.toolTip() == "포트 탭"
 
 def test_right_panel_translation(app, qtbot):
-    widget = RightPanel()
+    widget = MainRightSection()
     qtbot.addWidget(widget)
 
     language_manager.set_language('en')

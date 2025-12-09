@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QTabWidget, QWidget, QTabBar, QInputDialog
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIcon
 from typing import Optional, TYPE_CHECKING
 from view.language_manager import language_manager

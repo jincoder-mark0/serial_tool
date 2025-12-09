@@ -1,11 +1,11 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QCheckBox,
-    QLineEdit, QLabel, QFileDialog, QGroupBox, QGridLayout
+    QLabel, QFileDialog, QGroupBox, QGridLayout
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Optional
 from view.language_manager import language_manager
-from view.widgets.common.smart_number_edit import SmartNumberEdit
+from view.common.smart_number_edit import QSmartLineEdit
 
 class ManualControlWidget(QWidget):
     """
@@ -13,7 +13,6 @@ class ManualControlWidget(QWidget):
     (구 OperationArea)
     """
 
-    # 시그널 정의
     # 시그널 정의
     manual_cmd_send_requested = pyqtSignal(str, bool, bool, bool) # text, hex_mode, cmd_prefix, cmd_suffix
     transfer_file_send_requested = pyqtSignal(str) # filepath
@@ -104,7 +103,7 @@ class ManualControlWidget(QWidget):
         send_layout.setContentsMargins(2, 2, 2, 2)
         send_layout.setSpacing(5)
 
-        self.manual_cmd_input = SmartNumberEdit() # SmartNumberEdit 사용
+        self.manual_cmd_input = QSmartLineEdit() # QSmartLineEdit 사용
         self.manual_cmd_input.setPlaceholderText(language_manager.get_text("manual_ctrl_input_cmd_placeholder"))
         self.manual_cmd_input.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
         self.manual_cmd_input.returnPressed.connect(self.on_send_manual_cmd_clicked) # Enter 키 지원
@@ -175,7 +174,7 @@ class ManualControlWidget(QWidget):
         self.send_transfer_file_btn.setText(language_manager.get_text("manual_ctrl_btn_send_file"))
 
     def on_hex_mode_changed(self, state: int) -> None:
-        """HEX 모드 변경 시 SmartNumberEdit 모드 설정"""
+        """HEX 모드 변경 시 QSmartLineEdit 모드 설정"""
         is_hex_mode = (state == Qt.Checked)
         self.manual_cmd_input.set_hex_mode(is_hex_mode)
 

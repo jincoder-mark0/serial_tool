@@ -15,6 +15,8 @@ class PacketInspectorWidget(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
+        self.tree = None
+        self.title_lbl = None
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결

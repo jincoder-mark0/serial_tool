@@ -7,7 +7,7 @@ try:
 except ImportError:
     import json
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 import os
 
 class SettingsManager:
@@ -37,7 +37,8 @@ class SettingsManager:
         self.load_settings()
         self._initialized = True
 
-    def _get_config_path(self) -> Path:
+    @staticmethod
+    def _get_config_path() -> Path:
         """
         기본 설정 파일의 경로를 반환합니다.
 
@@ -154,7 +155,8 @@ class SettingsManager:
         """
         return self.settings
 
-    def _get_fallback_settings(self) -> Dict[str, Any]:
+    @staticmethod
+    def _get_fallback_settings() -> Dict[str, Any]:
         """
         기본 설정 파일 로드 실패 시 사용할 최소 설정을 반환합니다.
 

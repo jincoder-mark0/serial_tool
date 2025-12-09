@@ -15,7 +15,7 @@ except ImportError:
     import json
 from pathlib import Path
 from collections import defaultdict
-from typing import Dict, Set, List
+from typing import Dict, Set
 
 # view 폴더의 모든 .py 파일에서 get_text 호출을 찾고 모듈별로 그룹화
 def extract_keys_by_module() -> Dict[str, Set[str]]:
@@ -88,11 +88,11 @@ def generate_template(keys_by_module: Dict[str, Set[str]], output_file: str, lan
     # 모듈을 알파벳순으로 정렬하되, 중요한 순서를 우선
     priority_order = ['main_window', 'widgets', 'panels', 'dialogs']
 
-    def get_sort_key(module_path):
+    def get_sort_key(path):
         for idx, priority in enumerate(priority_order):
-            if module_path.startswith(priority):
-                return (idx, module_path)
-        return (len(priority_order), module_path)
+            if path.startswith(priority):
+                return idx, path
+        return len(priority_order), path
 
     sorted_modules = sorted(keys_by_module.keys(), key=get_sort_key)
 

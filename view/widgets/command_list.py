@@ -1,9 +1,9 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableView, QPushButton,
-    QHeaderView, QLabel, QCheckBox
+    QHeaderView, QCheckBox
 )
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
-from PyQt5.QtCore import Qt, pyqtSignal, QModelIndex
+from PyQt5.QtCore import Qt, pyqtSignal
 from typing import Optional, List, Dict, Any
 from view.language_manager import language_manager
 

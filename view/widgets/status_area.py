@@ -1,6 +1,4 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTextEdit, QLabel
-from PyQt5.QtCore import Qt
-from PyQt5.QtGui import QFont
 from typing import Optional
 import datetime
 from view.language_manager import language_manager
@@ -30,8 +28,8 @@ class StatusAreaWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
 
-        self.label = QLabel(language_manager.get_text("status_lbl_log"))
-        # label.setStyleSheet("font-weight: bold; font-size: 10px;")
+        self.log_lbl = QLabel(language_manager.get_text("status_lbl_log"))
+        # log_lbl.setStyleSheet("font-weight: bold; font-size: 10px;")
 
         self.log_txt = QTextEdit()
         self.log_txt.setReadOnly(True)
@@ -40,13 +38,13 @@ class StatusAreaWidget(QWidget):
         self.log_txt.setPlaceholderText(language_manager.get_text("status_txt_log_placeholder"))
         self.log_txt.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
 
-        layout.addWidget(self.label)
+        layout.addWidget(self.log_lbl)
         layout.addWidget(self.log_txt)
         self.setLayout(layout)
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.label.setText(language_manager.get_text("status_lbl_log"))
+        self.log_lbl.setText(language_manager.get_text("status_lbl_log"))
         self.log_txt.setToolTip(language_manager.get_text("status_txt_log_tooltip"))
         self.log_txt.setPlaceholderText(language_manager.get_text("status_txt_log_placeholder"))
 

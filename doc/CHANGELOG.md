@@ -2,6 +2,38 @@
 
 ## [미배포] (Unreleased)
 
+### 버그 수정 및 UI/UX 개선 (2025-12-09)
+
+#### 수정 사항 (Fixed)
+
+- **초기화 및 Import 오류 수정**
+  - `MainWindow` 초기화 시 `AttributeError` (left_section 미생성 상태에서 시그널 연결) 수정
+  - `PortController`에서 `SerialWorker` import 경로 오류 (`ModuleNotFoundError`) 수정
+  - 애플리케이션 실행 안정성 확보
+
+- **툴바 동작 로직 개선**
+  - 'Close' 버튼이 토글 방식으로 동작하여 닫힌 포트를 여는 문제 수정
+  - `close_current_port` 메서드 추가 및 `is_connected` 상태 확인 로직 도입
+  - 명시적인 닫기 동작 보장
+
+#### 변경 사항 (Changed)
+
+- **시그널 네이밍 일관성 강화**
+  - `CommandControlWidget`: `cmd_run_single` → `cmd_run_once`, `cmd_auto_start` → `cmd_repeat_start` 등
+  - `PortSettingsWidget`: `scan_requested` → `port_scan_requested`
+  - 버튼 텍스트 및 기능과 일치하도록 시그널 이름 직관화
+
+- **테스트 코드 최신화**
+  - `test_view.py`, `test_ui_translations.py`를 최신 위젯 클래스명(`ReceivedAreaWidget` 등) 및 시그널로 업데이트
+
+#### 추가 사항 (Added)
+
+- **동적 윈도우 리사이징**
+  - 우측 패널(Right Panel) 토글 시 윈도우 크기가 자동으로 조정되는 기능 구현
+  - 패널 숨김/표시 시 자연스러운 윈도우 크기 변화 제공
+
+---
+
 ### 언어 확장성 개선 및 아이콘 수정 (2025-12-08)
 
 #### 추가 사항 (Added)
@@ -31,8 +63,6 @@
 
 - **확장성 향상**: 새 언어 추가 시 JSON 파일만 추가하면 자동 지원
 - **유지보수성 개선**: 언어별 하드코딩 제거로 코드 간소화
-- **UI 일관성**: 모든 아이콘 버튼이 테마에 맞게 정상 표시
-
 - **UI 일관성**: 모든 아이콘 버튼이 테마에 맞게 정상 표시
 
 ---

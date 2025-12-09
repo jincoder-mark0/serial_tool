@@ -49,27 +49,7 @@ class ColorRulesManager:
             # 설정 디렉토리 생성 및 기본 규칙 저장
             self.config_path.parent.mkdir(parents=True, exist_ok=True)
             self.save_to_json(str(self.config_path))
-    
-    def _get_config_path(self) -> 'Path':
-        """
-        색상 규칙 설정 파일의 경로를 반환합니다.
-        
-        Returns:
-            Path: config/color_rules.json 파일의 Path 객체.
-        """
-        from pathlib import Path
-        import os
-        
-        # 애플리케이션 루트 디렉토리 확인
-        if hasattr(os, '_MEIPASS'):
-            # PyInstaller 번들 환경
-            base_path = Path(os._MEIPASS)
-        else:
-            # 개발 모드 환경
-            base_path = Path(__file__).parent.parent
-        
-        return base_path / 'config' / 'color_rules.json'
-        
+
     def apply_rules(self, text: str) -> str:
         """
         텍스트에 모든 활성화된 색상 규칙을 적용합니다.
@@ -85,34 +65,7 @@ class ColorRulesManager:
             if rule.enabled:
                 result = self._apply_single_rule(result, rule)
         return result
-    
-    def _apply_single_rule(self, text: str, rule: ColorRule) -> str:
-        """
-        단일 색상 규칙을 텍스트에 적용합니다.
-        
-        Args:
-            text (str): 원본 텍스트.
-            rule (ColorRule): 적용할 색상 규칙 객체.
-            
-        Returns:
-            str: 규칙이 적용된 텍스트.
-        """
-        if rule.is_regex:
-            try:
-                return re.sub(
-                    rule.pattern,
-                    rf'<span style="color:{rule.color};">\g<0></span>',
-                    text
-                )
-            except re.error:
-                return text
-        else:
-            # 단순 문자열 치환
-            return text.replace(
-                rule.pattern,
-                f'<span style="color:{rule.color};">{rule.pattern}</span>'
-            )
-    
+
     def add_custom_rule(self, name: str, pattern: str, color: str, is_regex: bool = True) -> None:
         """
         사용자 정의 색상 규칙을 추가합니다.
@@ -202,3 +155,52 @@ class ColorRulesManager:
             # 파일이 없거나 잘못된 경우 기본 규칙 사용
             print(f"색상 규칙 로드 실패 ({filepath}): {e}")
             self.rules = self.DEFAULT_RULES.copy()
+
+    @staticmethod
+    def _get_config_path() -> 'Path':
+        """
+        색상 규칙 설정 파일의 경로를 반환합니다.
+
+        Returns:
+            Path: config/color_rules.json 파일의 Path 객체.
+        """
+        from pathlib import Path
+        import os
+
+        # 애플리케이션 루트 디렉토리 확인
+        if hasattr(os, '_MEIPASS'):
+            # PyInstaller 번들 환경
+            base_path = Path(os._MEIPASS)
+        else:
+            # 개발 모드 환경
+            base_path = Path(__file__).parent.parent
+
+        return base_path / 'config' / 'color_rules.json'
+
+    @staticmethod
+    def _apply_single_rule(text: str, rule: ColorRule) -> str:
+        """
+        단일 색상 규칙을 텍스트에 적용합니다.
+
+        Args:
+            text (str): 원본 텍스트.
+            rule (ColorRule): 적용할 색상 규칙 객체.
+
+        Returns:
+            str: 규칙이 적용된 텍스트.
+        """
+        if rule.is_regex:
+            try:
+                return re.sub(
+                    rule.pattern,
+                    rf'<span style="color:{rule.color};">\g<0></span>',
+                    text
+                )
+            except re.error:
+                return text
+        else:
+            # 단순 문자열 치환
+            return text.replace(
+                rule.pattern,
+                f'<span style="color:{rule.color};">{rule.pattern}</span>'
+            )

@@ -1,8 +1,8 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton,
-    QLabel, QGroupBox, QCheckBox, QGridLayout, QFormLayout, QSizePolicy
+    QLabel, QGroupBox, QCheckBox
 )
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIntValidator
 from view.language_manager import language_manager
 from typing import Optional, List, Dict, Any
@@ -16,7 +16,7 @@ class PortSettingsWidget(QGroupBox):
     # 시그널 정의
     port_open_requested = pyqtSignal(dict)  # config dict
     port_close_requested = pyqtSignal()
-    scan_requested = pyqtSignal()
+    port_scan_requested = pyqtSignal()
     connection_state_changed = pyqtSignal(bool)  # connected state
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
@@ -67,7 +67,7 @@ class PortSettingsWidget(QGroupBox):
         self.scan_btn = QPushButton(language_manager.get_text("port_btn_scan"))
         self.scan_btn.setFixedWidth(50)
         self.scan_btn.setToolTip(language_manager.get_text("port_btn_scan_tooltip"))
-        self.scan_btn.clicked.connect(self.scan_requested.emit)
+        self.scan_btn.clicked.connect(self.port_scan_requested.emit)
 
         # 보드레이트 선택 콤보박스
         self.baud_combo = QComboBox()
@@ -270,6 +270,10 @@ class PortSettingsWidget(QGroupBox):
     def toggle_connection(self) -> None:
         """연결 상태를 토글합니다 (버튼 클릭 효과)."""
         self.connect_btn.click()
+
+    def is_connected(self) -> bool:
+        """현재 연결 상태를 반환합니다."""
+        return self.connect_btn.isChecked()
 
     def save_state(self) -> dict:
         """

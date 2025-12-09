@@ -82,7 +82,6 @@ class MainWindow(QMainWindow):
         # 툴바 설정
         self.main_toolbar = MainToolBar(self)
         self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
-        self._connect_toolbar_signals()
 
         # 스플리터 구성 (좌: 포트/제어, 우: 커맨드/인스펙터)
         self.splitter = QSplitter(Qt.Horizontal)
@@ -92,6 +91,9 @@ class MainWindow(QMainWindow):
 
         self.splitter.addWidget(self.left_section)
         self.splitter.addWidget(self.right_section)
+
+        # 툴바 시그널 연결 (left_section 초기화 후)
+        self._connect_toolbar_signals()
 
         # 스플리터 상태 복원
         splitter_state = self.settings.get('ui.splitter_state')
@@ -135,7 +137,7 @@ class MainWindow(QMainWindow):
     def _connect_toolbar_signals(self) -> None:
         """툴바 시그널을 슬롯에 연결합니다."""
         self.main_toolbar.open_requested.connect(self.left_section.open_current_port)
-        self.main_toolbar.close_requested.connect(self.left_section.open_current_port) # Toggle
+        self.main_toolbar.close_requested.connect(self.left_section.close_current_port)
         self.main_toolbar.clear_requested.connect(self.clear_log)
         self.main_toolbar.save_log_requested.connect(self.save_log)
         self.main_toolbar.settings_requested.connect(self.open_preferences_dialog)
@@ -240,8 +242,38 @@ class MainWindow(QMainWindow):
         self.settings.set('ui.language', lang_code)
 
     def toggle_right_panel(self, visible: bool) -> None:
-        """우측 패널의 가시성을 토글합니다."""
-        self.right_section.setVisible(visible)
+        """우측 패널의 가시성을 토글하고 윈도우 크기를 조정합니다."""
+        if visible == self.right_section.isVisible():
+            return
+
+        current_width = self.width()
+        right_width = self.right_section.width()
+
+        # 스플리터 핸들 크기 고려 (기본값 약 5px)
+        handle_width = self.splitter.handleWidth()
+
+        if visible:
+            # 보이기: 윈도우 폭 증가 (이전 폭 + 우측 패널 폭 + 핸들)
+            # 저장된 우측 패널 폭이 있다면 그것을 사용하면 좋겠지만,
+            # 여기서는 단순화를 위해 기본값이나 이전 상태를 추정해야 함.
+            # 하지만 right_section이 숨겨져 있을 때 width()는 0일 수 있음.
+            # 따라서 적절한 기본값(예: 400)이나 비율을 사용해야 할 수도 있음.
+
+            # 팁: 숨겨진 상태에서 width()는 0이므로, 고정된 값이나 비율로 복원
+            target_right_width = 400 # 기본값
+
+            # 만약 이전에 숨기기 전의 너비를 알 수 있다면 좋음.
+            # 여기서는 단순하게 처리
+            self.resize(current_width + target_right_width + handle_width, self.height())
+            self.right_section.setVisible(True)
+
+            # 스플리터 비율 조정 (우측 패널이 보이도록)
+            # self.splitter.setSizes([self.left_section.width(), target_right_width])
+
+        else:
+            # 숨기기: 윈도우 폭 감소
+            self.right_section.setVisible(False)
+            self.resize(current_width - right_width - handle_width, self.height())
 
     def closeEvent(self, event) -> None:
         """

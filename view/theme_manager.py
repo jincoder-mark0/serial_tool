@@ -82,7 +82,8 @@ class ThemeManager:
 
         return qss_content
 
-    def _get_fallback_stylesheet(self, theme_name: str) -> str:
+    @staticmethod
+    def _get_fallback_stylesheet(theme_name: str) -> str:
         """
         테마 파일이 없을 경우 사용할 최소한의 스타일시트를 반환합니다.
 
@@ -214,7 +215,7 @@ class ThemeManager:
         Returns:
             tuple[str, int]: (폰트 패밀리, 폰트 크기) 튜플.
         """
-        return (self._proportional_font.family(), self._proportional_font.pointSize())
+        return self._proportional_font.family(), self._proportional_font.pointSize()
 
     # 고정폭(Fixed) 폰트 메서드
     def set_fixed_font(self, family: str, size: int):
@@ -247,7 +248,7 @@ class ThemeManager:
         Returns:
             tuple[str, int]: (폰트 패밀리, 폰트 크기) 튜플.
         """
-        return (self._fixed_font.family(), self._fixed_font.pointSize())
+        return self._fixed_font.family(), self._fixed_font.pointSize()
 
     # 설정에서 폰트 복원
     def restore_fonts_from_settings(self, settings: dict):

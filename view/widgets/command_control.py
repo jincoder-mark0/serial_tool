@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import (
-    QWidget, QHBoxLayout, QVBoxLayout, QPushButton, QCheckBox,
+    QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
     QLabel, QLineEdit, QSpinBox, QGroupBox, QGridLayout
 )
 from PyQt5.QtCore import pyqtSignal, Qt
@@ -14,9 +14,9 @@ class CommandControlWidget(QWidget):
 
     # 시그널 정의
     # 시그널 정의
-    cmd_run_single_requested = pyqtSignal()
-    cmd_stop_requested = pyqtSignal()
-    cmd_auto_start_requested = pyqtSignal(int, int) # delay_ms, max_runs
+    cmd_run_once_requested = pyqtSignal()
+    cmd_stop_run_requested = pyqtSignal()
+    cmd_repeat_start_requested = pyqtSignal(int, int) # delay_ms, max_runs
     cmd_repeat_stop_requested = pyqtSignal()
 
     script_save_requested = pyqtSignal()
@@ -78,11 +78,11 @@ class CommandControlWidget(QWidget):
         # Row 0: 단일 실행 및 정지
         self.cmd_run_once_btn = QPushButton(language_manager.get_text("cmd_ctrl_btn_run_once"))
         self.cmd_run_once_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_run_once_tooltip"))
-        self.cmd_run_once_btn.clicked.connect(self.cmd_run_single_requested.emit)
+        self.cmd_run_once_btn.clicked.connect(self.cmd_run_once_requested.emit)
 
         self.cmd_stop_run_btn = QPushButton(language_manager.get_text("cmd_ctrl_btn_stop_run"))
         self.cmd_stop_run_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_stop_run_tooltip"))
-        self.cmd_stop_run_btn.clicked.connect(self.cmd_stop_requested.emit)
+        self.cmd_stop_run_btn.clicked.connect(self.cmd_stop_run_requested.emit)
         self.cmd_stop_run_btn.setEnabled(False)
         self.cmd_stop_run_btn.setProperty("class", "danger") # 빨간색 스타일
 
@@ -165,7 +165,7 @@ class CommandControlWidget(QWidget):
         except ValueError:
             delay = 1000
         max_runs = self.repeat_count_spin.value()
-        self.cmd_auto_start_requested.emit(delay, max_runs)
+        self.cmd_repeat_start_requested.emit(delay, max_runs)
 
     def set_running_state(self, running: bool, is_auto: bool = False) -> None:
         """

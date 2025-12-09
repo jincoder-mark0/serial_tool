@@ -1,8 +1,8 @@
 from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtGui import QRegExpValidator
-from PyQt5.QtCore import QRegExp, Qt
+from PyQt5.QtCore import QRegExp
 
-class SmartNumberEdit(QLineEdit):
+class QSmartLineEdit(QLineEdit):
     """
     HEX 모드와 일반 텍스트 모드를 지원하는 스마트 라인 에디트입니다.
     HEX 모드일 때는 0-9, A-F, 공백만 입력을 허용하고 자동으로 대문자로 변환합니다.

@@ -11,6 +11,7 @@ class PacketInspectorPanel(QWidget):
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
+        self.packet_inspector_widget = None
         self.init_ui()
 
         # 언어 변경 시 툴팁 업데이트 등을 위해 연결

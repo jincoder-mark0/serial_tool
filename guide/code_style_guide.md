@@ -65,7 +65,7 @@ def get_available_ports() -> List[str]:
 
 ## 5. 명명 규칙 (Naming Conventions)
 
-자세한 명명 규칙은 [**Naming Convention Guide**](../docs/naming_convention.md)를 참조하세요.
+자세한 명명 규칙은 [**Naming Convention Guide**](../guide/naming_convention.md)를 참조하세요.
 
 ### 5.1 기본 규칙 요약
 - **클래스**: `PascalCase` (예: `SerialManager`, `MainWindow`)

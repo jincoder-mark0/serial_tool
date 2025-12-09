@@ -1,6 +1,5 @@
 from PyQt5.QtCore import QObject
 import serial.tools.list_ports
-from typing import Optional
 
 from view.sections.main_left_section import MainLeftSection
 from model.port_controller import PortController
@@ -32,7 +31,7 @@ class PortPresenter(QObject):
 
         # View 시그널 연결 (현재 포트 패널의 설정 위젯에서)
         if self.current_port_panel:
-            self.current_port_panel.port_settings.scan_requested.connect(self.scan_ports)
+            self.current_port_panel.port_settings.port_scan_requested.connect(self.scan_ports)
             # 참고: connect_btn은 자체 핸들러가 있지만, 여기서 직접 연결하여 오버라이드합니다.
             # 기존 핸들러 연결 해제
             try:
