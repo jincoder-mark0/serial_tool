@@ -280,7 +280,37 @@ QPushButton[class="warning"]:pressed {
 }
 
 QPushButton[class="warning"]:disabled {
-    background-color: #4a1b1b;
-    border-color: #602525;
-    color: #804040;
+    background-color: #FFE082;
+    border-color: #FFD54F;
+    color: #FFF8E1;
 }
+
+/* Port Connection State Styles */
+QPushButton[state="connected"] {
+    background-color: #4CAF50;
+    border-color: #388E3C;
+    color: #ffffff;
+}
+
+QPushButton[state="connected"]:hover {
+    background-color: #66BB6A;
+    border-color: #2E7D32;
+}
+
+QPushButton[state="disconnected"] {
+    background-color: #e0e0e0;
+    border-color: #c0c0c0;
+    color: #333333;
+}
+
+QPushButton[state="error"] {
+    background-color: #F44336;
+    border-color: #D32F2F;
+    color: #ffffff;
+}
+
+QPushButton[state="error"]:hover {
+    background-color: #EF5350;
+    border-color: #C62828;
+}
+

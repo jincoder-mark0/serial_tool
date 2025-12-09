@@ -1,9 +1,10 @@
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
     QLabel, QComboBox, QSpinBox, QPushButton,
-    QFileDialog, QGroupBox, QFormLayout
+    QFileDialog, QGroupBox, QFormLayout, QRadioButton,
+    QButtonGroup, QListWidget, QCheckBox, QLineEdit
 )
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Dict, Any, Optional
 import os
 from view.tools.lang_manager import lang_manager
@@ -34,7 +35,8 @@ class PreferencesDialog(QDialog):
         self.tabs = QTabWidget()
         self.tabs.addTab(self.create_general_tab(), lang_manager.get_text("pref_tab_general"))
         self.tabs.addTab(self.create_serial_tab(), lang_manager.get_text("pref_tab_serial"))
-        self.tabs.addTab(self.create_cmd_tab(), lang_manager.get_text("pref_tab_command")) # New Tab
+        self.tabs.addTab(self.create_cmd_tab(), lang_manager.get_text("pref_tab_command"))
+        self.tabs.addTab(self.create_parser_tab(), lang_manager.get_text("pref_tab_parser"))
         self.tabs.addTab(self.create_logging_tab(), lang_manager.get_text("pref_tab_logging"))
 
         layout.addWidget(self.tabs)
@@ -177,6 +179,110 @@ class PreferencesDialog(QDialog):
         layout.addStretch()
         widget.setLayout(layout)
         return widget
+
+    def create_parser_tab(self) -> QWidget:
+        """Parser 설정 탭을 생성합니다."""
+        widget = QWidget()
+        layout = QVBoxLayout()
+
+        # Parser Type 그룹
+        parser_type_group = QGroupBox(lang_manager.get_text("pref_grp_parser_type"))
+        parser_type_layout = QVBoxLayout()
+
+        self.parser_type_button_group = QButtonGroup(self)
+        self.parser_type_auto = QRadioButton(lang_manager.get_text("pref_parser_type_auto"))
+        self.parser_type_at = QRadioButton(lang_manager.get_text("pref_parser_type_at"))
+        self.parser_type_delimiter = QRadioButton(lang_manager.get_text("pref_parser_type_delimiter"))
+        self.parser_type_fixed = QRadioButton(lang_manager.get_text("pref_parser_type_fixed"))
+        self.parser_type_raw = QRadioButton(lang_manager.get_text("pref_parser_type_raw"))
+
+        self.parser_type_button_group.addButton(self.parser_type_auto, 0)
+        self.parser_type_button_group.addButton(self.parser_type_at, 1)
+        self.parser_type_button_group.addButton(self.parser_type_delimiter, 2)
+        self.parser_type_button_group.addButton(self.parser_type_fixed, 3)
+        self.parser_type_button_group.addButton(self.parser_type_raw, 4)
+        self.parser_type_auto.setChecked(True)
+
+        parser_type_layout.addWidget(self.parser_type_auto)
+        parser_type_layout.addWidget(self.parser_type_at)
+        parser_type_layout.addWidget(self.parser_type_delimiter)
+        parser_type_layout.addWidget(self.parser_type_fixed)
+        parser_type_layout.addWidget(self.parser_type_raw)
+        parser_type_group.setLayout(parser_type_layout)
+
+        # Delimiter 설정 그룹
+        delimiter_group = QGroupBox(lang_manager.get_text("pref_grp_delimiter"))
+        delimiter_layout = QVBoxLayout()
+
+        self.delimiter_list = QListWidget()
+        self.delimiter_list.addItems(["\\r\\n", "0xFF", "0x7E"])
+
+        delimiter_btn_layout = QHBoxLayout()
+        self.delimiter_input = QLineEdit()
+        self.delimiter_input.setPlaceholderText("0x00 or \\r\\n")
+        self.add_delimiter_btn = QPushButton(lang_manager.get_text("pref_btn_add_delimiter"))
+        self.del_delimiter_btn = QPushButton(lang_manager.get_text("pref_btn_del_delimiter"))
+        self.add_delimiter_btn.clicked.connect(self._on_add_delimiter)
+        self.del_delimiter_btn.clicked.connect(self._on_del_delimiter)
+
+        delimiter_btn_layout.addWidget(self.delimiter_input)
+        delimiter_btn_layout.addWidget(self.add_delimiter_btn)
+        delimiter_btn_layout.addWidget(self.del_delimiter_btn)
+
+        delimiter_layout.addWidget(self.delimiter_list)
+        delimiter_layout.addLayout(delimiter_btn_layout)
+        delimiter_group.setLayout(delimiter_layout)
+
+        # Fixed Length 설정 그룹
+        fixed_length_group = QGroupBox(lang_manager.get_text("pref_grp_fixed_length"))
+        fixed_length_layout = QFormLayout()
+
+        self.packet_length_spin = QSpinBox()
+        self.packet_length_spin.setRange(1, 4096)
+        self.packet_length_spin.setValue(64)
+
+        fixed_length_layout.addRow(lang_manager.get_text("pref_lbl_packet_length"), self.packet_length_spin)
+        fixed_length_group.setLayout(fixed_length_layout)
+
+        # Inspector Options 그룹
+        inspector_group = QGroupBox(lang_manager.get_text("pref_grp_inspector_options"))
+        inspector_layout = QFormLayout()
+
+        self.buffer_size_spin = QSpinBox()
+        self.buffer_size_spin.setRange(10, 1000)
+        self.buffer_size_spin.setValue(100)
+
+        self.realtime_tracking_chk = QCheckBox(lang_manager.get_text("pref_chk_realtime_tracking"))
+        self.realtime_tracking_chk.setChecked(True)
+
+        self.auto_scroll_chk = QCheckBox(lang_manager.get_text("pref_chk_auto_scroll"))
+        self.auto_scroll_chk.setChecked(True)
+
+        inspector_layout.addRow(lang_manager.get_text("pref_lbl_buffer_size"), self.buffer_size_spin)
+        inspector_layout.addRow("", self.realtime_tracking_chk)
+        inspector_layout.addRow("", self.auto_scroll_chk)
+        inspector_group.setLayout(inspector_layout)
+
+        layout.addWidget(parser_type_group)
+        layout.addWidget(delimiter_group)
+        layout.addWidget(fixed_length_group)
+        layout.addWidget(inspector_group)
+        layout.addStretch()
+        widget.setLayout(layout)
+        return widget
+
+    def _on_add_delimiter(self) -> None:
+        """구분자 추가 버튼 핸들러"""
+        text = self.delimiter_input.text().strip()
+        if text and self.delimiter_list.findItems(text, Qt.MatchExactly) == []:
+            self.delimiter_list.addItem(text)
+            self.delimiter_input.clear()
+
+    def _on_del_delimiter(self) -> None:
+        """구분자 삭제 버튼 핸들러"""
+        current_item = self.delimiter_list.currentItem()
+        if current_item:
+            self.delimiter_list.takeItem(self.delimiter_list.row(current_item))
 
     def browse_log_path(self) -> None:
         """로그 저장 경로 선택 다이얼로그를 엽니다."""
