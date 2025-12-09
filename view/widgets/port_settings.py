@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIntValidator
-from view.language_manager import language_manager
+from view.lang_manager import lang_manager
 from typing import Optional, List, Dict, Any
 
 class PortSettingsWidget(QGroupBox):
@@ -26,7 +26,7 @@ class PortSettingsWidget(QGroupBox):
         Args:
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
-        super().__init__(language_manager.get_text("port_grp_settings"), parent)
+        super().__init__(lang_manager.get_text("port_grp_settings"), parent)
         self.flow_lbl = None
         self.stopbits_lbl = None
         self.parity_lbl = None
@@ -47,7 +47,7 @@ class PortSettingsWidget(QGroupBox):
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
-        language_manager.language_changed.connect(self.retranslate_ui)
+        lang_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
@@ -62,17 +62,17 @@ class PortSettingsWidget(QGroupBox):
         # 포트 선택 콤보박스
         self.port_combo = QComboBox()
         self.port_combo.setMinimumWidth(80)
-        self.port_combo.setToolTip(language_manager.get_text("port_combo_port_tooltip"))
+        self.port_combo.setToolTip(lang_manager.get_text("port_combo_port_tooltip"))
 
-        self.scan_btn = QPushButton(language_manager.get_text("port_btn_scan"))
+        self.scan_btn = QPushButton(lang_manager.get_text("port_btn_scan"))
         self.scan_btn.setFixedWidth(50)
-        self.scan_btn.setToolTip(language_manager.get_text("port_btn_scan_tooltip"))
+        self.scan_btn.setToolTip(lang_manager.get_text("port_btn_scan_tooltip"))
         self.scan_btn.clicked.connect(self.port_scan_requested.emit)
 
         # 보드레이트 선택 콤보박스
         self.baud_combo = QComboBox()
         self.baud_combo.setMinimumWidth(80)
-        self.baud_combo.setToolTip(language_manager.get_text("port_combo_baud_tooltip"))
+        self.baud_combo.setToolTip(lang_manager.get_text("port_combo_baud_tooltip"))
         self.baud_combo.addItems([
             "9600", "19200", "38400", "57600", "115200",
             "230400", "460800", "921600", "1000000", "2000000", "4000000"
@@ -84,14 +84,14 @@ class PortSettingsWidget(QGroupBox):
         self.baud_combo.setValidator(self.baud_validator)
 
         # 연결 버튼
-        self.connect_btn = QPushButton(language_manager.get_text("port_btn_connect"))
+        self.connect_btn = QPushButton(lang_manager.get_text("port_btn_connect"))
         self.connect_btn.setCheckable(True)
-        self.connect_btn.setToolTip(language_manager.get_text("port_btn_connect_tooltip"))
+        self.connect_btn.setToolTip(lang_manager.get_text("port_btn_connect_tooltip"))
         self.connect_btn.clicked.connect(self.on_connect_clicked)
         self.connect_btn.setFixedWidth(60)
 
-        self.port_lbl = QLabel(language_manager.get_text("port_lbl_port"))
-        self.baud_lbl = QLabel(language_manager.get_text("port_lbl_baudrate"))
+        self.port_lbl = QLabel(lang_manager.get_text("port_lbl_port"))
+        self.baud_lbl = QLabel(lang_manager.get_text("port_lbl_baudrate"))
 
         row1_layout.addWidget(self.port_lbl)
         row1_layout.addWidget(self.port_combo)
@@ -110,25 +110,25 @@ class PortSettingsWidget(QGroupBox):
         self.datasize_combo = QComboBox()
         self.datasize_combo.addItems(["5", "6", "7", "8"])
         self.datasize_combo.setCurrentText("8")
-        self.datasize_combo.setToolTip(language_manager.get_text("port_combo_datasize_tooltip"))
+        self.datasize_combo.setToolTip(lang_manager.get_text("port_combo_datasize_tooltip"))
         self.datasize_combo.setFixedWidth(40)
 
         # 패리티 비트
         self.parity_combo = QComboBox()
         self.parity_combo.addItems(["N", "E", "O", "M", "S"])
-        self.parity_combo.setToolTip(language_manager.get_text("port_combo_parity_tooltip"))
+        self.parity_combo.setToolTip(lang_manager.get_text("port_combo_parity_tooltip"))
         self.parity_combo.setFixedWidth(40)
 
         # 정지 비트
         self.stopbits_combo = QComboBox()
         self.stopbits_combo.addItems(["1", "1.5", "2"])
-        self.stopbits_combo.setToolTip(language_manager.get_text("port_combo_stopbits_tooltip"))
+        self.stopbits_combo.setToolTip(lang_manager.get_text("port_combo_stopbits_tooltip"))
         self.stopbits_combo.setFixedWidth(45)
 
         # 흐름 제어
         self.flow_combo = QComboBox()
         self.flow_combo.addItems(["None", "RTS/CTS", "XON/XOFF"])
-        self.flow_combo.setToolTip(language_manager.get_text("port_combo_flow_tooltip"))
+        self.flow_combo.setToolTip(lang_manager.get_text("port_combo_flow_tooltip"))
         self.flow_combo.setMinimumWidth(70)
 
         # 제어 신호
@@ -137,10 +137,10 @@ class PortSettingsWidget(QGroupBox):
         self.rts_check = QCheckBox("RTS")
         self.rts_check.setChecked(True)
 
-        self.datasize_lbl = QLabel(language_manager.get_text("port_lbl_datasize"))
-        self.parity_lbl = QLabel(language_manager.get_text("port_lbl_parity"))
-        self.stopbits_lbl = QLabel(language_manager.get_text("port_lbl_stop"))
-        self.flow_lbl = QLabel(language_manager.get_text("port_lbl_flow"))
+        self.datasize_lbl = QLabel(lang_manager.get_text("port_lbl_datasize"))
+        self.parity_lbl = QLabel(lang_manager.get_text("port_lbl_parity"))
+        self.stopbits_lbl = QLabel(lang_manager.get_text("port_lbl_stop"))
+        self.flow_lbl = QLabel(lang_manager.get_text("port_lbl_flow"))
 
         row2_layout.addWidget(self.datasize_lbl)
         row2_layout.addWidget(self.datasize_combo)
@@ -160,34 +160,34 @@ class PortSettingsWidget(QGroupBox):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.setTitle(language_manager.get_text("port_grp_settings"))
+        self.setTitle(lang_manager.get_text("port_grp_settings"))
 
-        self.port_combo.setToolTip(language_manager.get_text("port_combo_tooltip"))
+        self.port_combo.setToolTip(lang_manager.get_text("port_combo_tooltip"))
 
-        self.scan_btn.setText(language_manager.get_text("port_btn_scan"))
-        self.scan_btn.setToolTip(language_manager.get_text("port_btn_scan_tooltip"))
+        self.scan_btn.setText(lang_manager.get_text("port_btn_scan"))
+        self.scan_btn.setToolTip(lang_manager.get_text("port_btn_scan_tooltip"))
 
-        self.baud_combo.setToolTip(language_manager.get_text("port_combo_baud_tooltip"))
+        self.baud_combo.setToolTip(lang_manager.get_text("port_combo_baud_tooltip"))
 
         # 연결 버튼 텍스트는 상태에 따라 다르므로 현재 상태 확인 필요
         if self.connect_btn.isChecked():
-            self.connect_btn.setText(language_manager.get_text("port_btn_disconnect"))
+            self.connect_btn.setText(lang_manager.get_text("port_btn_disconnect"))
         else:
-            self.connect_btn.setText(language_manager.get_text("port_btn_connect"))
-        self.connect_btn.setToolTip(language_manager.get_text("port_btn_connect_tooltip"))
+            self.connect_btn.setText(lang_manager.get_text("port_btn_connect"))
+        self.connect_btn.setToolTip(lang_manager.get_text("port_btn_connect_tooltip"))
 
-        self.port_lbl.setText(language_manager.get_text("port_lbl_port"))
-        self.baud_lbl.setText(language_manager.get_text("port_lbl_baudrate"))
+        self.port_lbl.setText(lang_manager.get_text("port_lbl_port"))
+        self.baud_lbl.setText(lang_manager.get_text("port_lbl_baudrate"))
 
-        self.datasize_combo.setToolTip(language_manager.get_text("port_combo_datasize_tooltip"))
-        self.parity_combo.setToolTip(language_manager.get_text("port_combo_parity_tooltip"))
-        self.stopbits_combo.setToolTip(language_manager.get_text("port_combo_stopbits_tooltip"))
-        self.flow_combo.setToolTip(language_manager.get_text("port_combo_flow_tooltip"))
+        self.datasize_combo.setToolTip(lang_manager.get_text("port_combo_datasize_tooltip"))
+        self.parity_combo.setToolTip(lang_manager.get_text("port_combo_parity_tooltip"))
+        self.stopbits_combo.setToolTip(lang_manager.get_text("port_combo_stopbits_tooltip"))
+        self.flow_combo.setToolTip(lang_manager.get_text("port_combo_flow_tooltip"))
 
-        self.datasize_lbl.setText(language_manager.get_text("port_lbl_datasize"))
-        self.parity_lbl.setText(language_manager.get_text("port_lbl_parity"))
-        self.stopbits_lbl.setText(language_manager.get_text("port_lbl_stop"))
-        self.flow_lbl.setText(language_manager.get_text("port_lbl_flow"))
+        self.datasize_lbl.setText(lang_manager.get_text("port_lbl_datasize"))
+        self.parity_lbl.setText(lang_manager.get_text("port_lbl_parity"))
+        self.stopbits_lbl.setText(lang_manager.get_text("port_lbl_stop"))
+        self.flow_lbl.setText(lang_manager.get_text("port_lbl_flow"))
 
     def on_connect_clicked(self) -> None:
         """연결 버튼 클릭 핸들러입니다."""
@@ -204,11 +204,11 @@ class PortSettingsWidget(QGroupBox):
                 "rts": self.rts_check.isChecked()
             }
             self.port_open_requested.emit(config)
-            self.connect_btn.setText(language_manager.get_text("port_btn_disconnect"))
+            self.connect_btn.setText(lang_manager.get_text("port_btn_disconnect"))
         else:
             # 해제 요청 (Request Close)
             self.port_close_requested.emit()
-            self.connect_btn.setText(language_manager.get_text("port_btn_connect"))
+            self.connect_btn.setText(lang_manager.get_text("port_btn_connect"))
 
 
     def set_port_list(self, ports: List[str]) -> None:
@@ -258,10 +258,10 @@ class PortSettingsWidget(QGroupBox):
         self.connect_btn.style().polish(self.connect_btn)
 
         if state == 'connected':
-            self.connect_btn.setText(language_manager.get_text("port_btn_disconnect"))
+            self.connect_btn.setText(lang_manager.get_text("port_btn_disconnect"))
             self.connect_btn.setChecked(True)
         elif state == 'disconnected':
-            self.connect_btn.setText(language_manager.get_text("port_btn_connect"))
+            self.connect_btn.setText(lang_manager.get_text("port_btn_connect"))
             self.connect_btn.setChecked(False)
         elif state == 'error':
             self.connect_btn.setText("Reconnect") # TODO: Add lang key

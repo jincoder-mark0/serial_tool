@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from typing import Optional
-from view.language_manager import language_manager
+from view.lang_manager import lang_manager
 
 from view.panels.port_panel import PortPanel
 from view.panels.manual_control_panel import ManualControlPanel
@@ -25,7 +25,7 @@ class MainLeftSection(QWidget):
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
-        language_manager.language_changed.connect(self.retranslate_ui)
+        lang_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""

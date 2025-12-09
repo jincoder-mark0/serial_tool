@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QToolBar, QAction
 from PyQt5.QtCore import Qt, pyqtSignal
-from view.language_manager import language_manager
+from view.lang_manager import lang_manager
 
 class MainToolBar(QToolBar):
     open_requested = pyqtSignal()
@@ -19,7 +19,7 @@ class MainToolBar(QToolBar):
         self.setMovable(False)
         self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
         self.init_ui()
-        language_manager.language_changed.connect(self.retranslate_ui)
+        lang_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self):
         self.clear()

@@ -19,8 +19,8 @@
 - **패널 분리**: `MainWindow`를 **`LeftPanel`**(포트/수동제어)과 **`RightPanel`**(커맨드/인스펙터)로 분리하여 구조 단순화.
 - **위젯 리팩토링**:
   - `view/widgets/` 패키지 생성 및 하위 위젯 분리.
-  - `CommandListWidget`: 행 추가/삭제/이동 기능 및 체크박스 로직 구현.
-  - `CommandControlWidget`: 스크립트 저장/로드 및 자동 실행 UI 추가.
+  - `MacroListWidget`: 행 추가/삭제/이동 기능 및 체크박스 로직 구현.
+  - `MacroCtrlWidget`: 스크립트 저장/로드 및 자동 실행 UI 추가.
   - `ManualControlWidget`: `OperationArea`를 재작성하여 수동 제어 기능 통합.
 
 ### C. 문서화 (Documentation)

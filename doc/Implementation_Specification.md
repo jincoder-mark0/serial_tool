@@ -127,7 +127,7 @@
         - 10.4.1 ① 메뉴 바 (QMenuBar)
         - 10.4.2 ② 상단 툴바 (QToolBar)
         - 10.4.3 ③ 좌측 패널 (QVBoxLayout 50%)
-        - 10.4.4 ④ 우측 패널 (CommandListPanel 50%)
+        - 10.4.4 ④ 우측 패널 (MacroListPanel 50%)
         - 10.4.5 ⑤ 하단 상태바 (QStatusBar)
     - 10.5 High DPI 및 테마 지원
         - 10.5.1 DPI 스케일링
@@ -147,7 +147,7 @@
         - 11.3.2 로그 컨트롤 버튼들
     - 11.4 우측 Tx/Command List 패널
         - 11.4.1 TxPanel (수동 전송)
-        - 11.4.2 CommandListPanel (QTableView + Delegate)
+        - 11.4.2 MacroListPanel (QTableView + Delegate)
     - 11.5 하단 상태바 및 로그/파일 전송 패널
         - 11.5.1 StatusBar (QStatusBar 확장)
         - 11.5.2 Console (에러/디버그 출력)
@@ -815,7 +815,7 @@ serial_tool_v1.0.0/
 ┌─────────────────────────────────────────────────────────────┐
 │                    Presentation Layer                       │
 │  ┌─────────────┐  ┌──────────────┐  ┌──────────────────┐   │
-│  │   MainView   │  │ PortPanels   │  │ CommandListPanel │   │
+│  │   MainView   │  │ PortPanels   │  │ MacroListPanel │   │
 │  │ (PyQt5 UI)  │◄─┼──EventRouter──┼►│ PacketInspector  │   │
 │  └─────────────┘  └──────────────┘  └──────────────────┘   │
 │                    Presenter Core                           │
@@ -950,7 +950,7 @@ View는 **UI 전용**으로, 논리 처리나 상태 보유를 금지한다 .
 | PortPanel | 포트 설정 UI, Connect 버튼 | SerialWorker 직접 접근 |
 | RxLogView | QTextEdit 기반 로그 표시, 스크롤 관리 | 자체 파싱/필터링 로직 |
 | TxPanel | 입력창, Send 버튼, CR/LF 체크박스 | TxQueue 직접 관리 |
-| CommandListPanel | QTableView 기반 명령 리스트, Run 버튼 | CLRunner 직접 실행 제어 |
+| MacroListPanel | QTableView 기반 명령 리스트, Run 버튼 | CLRunner 직접 실행 제어 |
 
 **통신 규칙**: 모든 사용자 입력 → `signal_xxx_requested()` → Presenter 전달.
 
@@ -1228,7 +1228,7 @@ serial_tool/
 | :-- | :-- | :-- |
 | main_window.py | 전체 레이아웃(QSplitter), MenuBar, Toolbar | `MainWindow` |
 | rx_log_view.py | QTextEdit 기반 고성능 로그 뷰, Trim 정책  | `RxLogView` |
-| command_list_panel.py | QTableView + 커스텀 delegate, Drag\&Drop 지원 | `CommandListPanel` |
+| command_list_panel.py | QTableView + 커스텀 delegate, Drag\&Drop 지원 | `MacroListPanel` |
 | view/widgets/ | 재사용 가능한 세분화된 UI 컴포넌트 | `HexTextEdit`, `PortCombo` |
 
 ### 7.6 tests 구성 및 대상
@@ -1732,7 +1732,7 @@ MainWindow.centralWidget() → QSplitter(Qt.Horizontal, sizes=[50,50])
 │   ├── QTabWidget (75%, tabsClosable=true, dynamic tabs) [web:9]
 │   │   └── TabContent → QVBoxLayout(PortSettings15% + RxLog60% + Status15% + Spacer10%)
 │   └── TxPanel (25%, minimumHeight=175px)
-└── ③.2 RightPanel (CommandListPanel 50%, minWidth=800px)
+└── ③.2 RightPanel (MacroListPanel 50%, minWidth=800px)
     └── QVBoxLayout(TableView70% + RowControls10% + RunControls20%)
 
 QSplitter.setStretchFactor(0,1), QSplitter.setStretchFactor(1,1)
@@ -1842,10 +1842,10 @@ QVBoxLayout
 ```
 
 
-#### 10.4.4 ④ 우측 패널 (CommandListPanel 50%)
+#### 10.4.4 ④ 우측 패널 (MacroListPanel 50%)
 
 ```
-QWidget(objectName="CommandListPanel", minimumWidth=800px)
+QWidget(objectName="MacroListPanel", minimumWidth=800px)
 ├── QTableView (70%, QStandardItemModel 7cols) [web:10]
 ├── RowControls (10%, QHBoxLayout)
 └── RunControls (20%, QVBoxLayout 2행)
@@ -2070,7 +2070,7 @@ Timestamp → 회색 #9E9E9E
 - **입력 검증**: 빈 문자열 방지, HEX 모드면 유효성 검사.
 
 
-#### 11.4.2 CommandListPanel (QTableView + Delegate)
+#### 11.4.2 MacroListPanel (QTableView + Delegate)
 
 ```
 | ☑ | 명령                          | H | CR | 지연 | Expect | ▶️ |

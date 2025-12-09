@@ -4,11 +4,13 @@ import logging
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt
 
-# 프로젝트 루트 경로를 sys.path에 추가하여 모듈 import 가능하게 함
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
 from version import __version__
 from view.main_window import MainWindow
+
+from presenter.main_presenter import MainPresenter
+
+# 프로젝트 루트 경로를 sys.path에 추가하여 모듈 import 가능하게 함
+sys.path.append(os.path.dirname(os.path.abspath(__file__)))
 
 def setup_logging() -> None:
     """
@@ -34,14 +36,13 @@ def main() -> None:
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
     app = QApplication(sys.argv)
-    
+
     # MainWindow 초기화
     window = MainWindow()
-    
+
     # MainPresenter 초기화 (View와 Model 연결)
-    from presenter.main_presenter import MainPresenter
     presenter = MainPresenter(window)
-    
+
     window.show()
 
     logging.info("Application initialized")

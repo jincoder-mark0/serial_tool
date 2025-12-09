@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from typing import Optional
-from view.language_manager import language_manager
+from view.lang_manager import lang_manager
 from view.widgets.packet_inspector import PacketInspectorWidget
 
 class PacketInspectorPanel(QWidget):
@@ -15,7 +15,7 @@ class PacketInspectorPanel(QWidget):
         self.init_ui()
 
         # 언어 변경 시 툴팁 업데이트 등을 위해 연결
-        language_manager.language_changed.connect(self.retranslate_ui)
+        lang_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self) -> None:
         layout = QVBoxLayout()

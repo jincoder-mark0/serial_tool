@@ -92,7 +92,7 @@ class Example:
 | `port` | 포트 설정 위젯 | `port_lbl_baudrate`, `port_btn_connect` |
 | `manual_ctrl` | 수동 제어 위젯 | `manual_ctrl_btn_send`, `manual_ctrl_chk_hex` |
 | `cmd` | 명령 리스트/제어 | `cmd_btn_add`, `cmd_col_command` |
-| `cmd_list` | 명령 리스트 패널 | `cmd_list_col_delay` |
+| `macro_list` | 명령 리스트 패널 | `macro_list_col_delay` |
 | `recv` | 수신 영역 위젯 | `recv_btn_clear`, `recv_chk_timestamp` |
 | `pref` | Preferences 다이얼로그 | `pref_lbl_font_size`, `pref_tab_general` |
 | `about` | About 다이얼로그 | `about_title`, `about_lbl_version` |
@@ -113,7 +113,7 @@ class Example:
 | `input` | 입력 필드 | `manual_ctrl_input_cmd` |
 | `grp` | 그룹박스 | `cmd_grp_auto`, `font_grp_fixed` |
 | `tab` | 탭 | `pref_tab_general`, `right_tab_inspector` |
-| `col` | 테이블 컬럼 | `cmd_list_col_command`, `inspector_col_field` |
+| `col` | 테이블 컬럼 | `macro_list_col_command`, `inspector_col_field` |
 | `dialog` | 다이얼로그 | `manual_ctrl_dialog_select_file` |
 | `txt` | 텍스트 영역 | `recv_txt_log` |
 | `status` | 상태 메시지 | `file_prog_status_sending` |
@@ -132,7 +132,7 @@ class Example:
 # ✅ 올바른 예시
 "port_btn_connect"                    # 포트 연결 버튼
 "port_combo_baud_tooltip"             # 보드레이트 콤보박스의 툴팁
-"cmd_list_col_command"                # 명령 리스트의 명령 컬럼
+"macro_list_col_command"                # 명령 리스트의 명령 컬럼
 "manual_ctrl_grp_control"             # 수동 제어의 제어 그룹박스
 "recv_txt_log_placeholder"            # 수신 영역의 로그 텍스트 플레이스홀더
 "about_lbl_app_name"                  # About 다이얼로그의 앱 이름 라벨
@@ -161,7 +161,7 @@ class Example:
 ```python
 "manual_ctrl_dialog_save_log_title"        # 로그 저장 다이얼로그 제목
 "pref_dialog_select_dir"                   # 디렉토리 선택 다이얼로그
-"cmd_list_dialog_title_save"               # 저장 다이얼로그 제목
+"macro_list_dialog_title_save"               # 저장 다이얼로그 제목
 ```
 
 #### 파일 필터
@@ -299,7 +299,7 @@ self.log_txt = QTextEdit()
 | 타입 | 접미사 | 예시 |
 |------|--------|------|
 | 독립 위젯 | `Widget` | `PortSettingsWidget`, `ManualControlWidget` |
-| 복합 패널 | `Panel` | `PortPanel`, `CommandListPanel` |
+| 복합 패널 | `Panel` | `PortPanel`, `MacroListPanel` |
 | 다이얼로그 | `Dialog` | `PreferencesDialog`, `AboutDialog` |
 | 레이아웃 영역 | `Section` | `LeftSection`, `RightSection` |
 | 관리 클래스 | `Manager` | `SettingsManager`, `LanguageManager` |

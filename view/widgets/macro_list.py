@@ -5,9 +5,9 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtCore import Qt, pyqtSignal
 from typing import Optional, List, Dict, Any
-from view.language_manager import language_manager
+from view.lang_manager import lang_manager
 
-class CommandListWidget(QWidget):
+class MacroListWidget(QWidget):
     """
     명령어 목록(Command List)을 관리하는 위젯 클래스입니다.
     명령어의 추가, 삭제, 순서 변경 및 선택 기능을 제공합니다.
@@ -15,11 +15,11 @@ class CommandListWidget(QWidget):
 
     # 시그널 정의
     send_row_requested = pyqtSignal(int) # row_index
-    cmd_list_changed = pyqtSignal()  # 데이터 변경 시그널
+    macro_list_changed = pyqtSignal()  # 데이터 변경 시그널
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
-        CommandListWidget을 초기화합니다.
+        MacroListWidget을 초기화합니다.
 
         Args:
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
@@ -35,7 +35,7 @@ class CommandListWidget(QWidget):
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
-        language_manager.language_changed.connect(self.retranslate_ui)
+        lang_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
@@ -46,29 +46,29 @@ class CommandListWidget(QWidget):
         header_layout = QHBoxLayout()
 
         # 전체 선택 체크박스 (Tristate 지원)
-        self.select_all_chk = QCheckBox(language_manager.get_text("cmd_list_chk_select_all"))
-        self.select_all_chk.setToolTip(language_manager.get_text("cmd_list_chk_select_all_tooltip"))
+        self.select_all_chk = QCheckBox(lang_manager.get_text("macro_list_chk_select_all"))
+        self.select_all_chk.setToolTip(lang_manager.get_text("macro_list_chk_select_all_tooltip"))
         self.select_all_chk.setTristate(True)
         self.select_all_chk.stateChanged.connect(self.on_select_all_changed)
 
         self.add_cmd_btn = QPushButton()
         self.add_cmd_btn.setObjectName("add_cmd_btn")
-        self.add_cmd_btn.setToolTip(language_manager.get_text("cmd_list_btn_add_cmd_tooltip"))
+        self.add_cmd_btn.setToolTip(lang_manager.get_text("macro_list_btn_add_cmd_tooltip"))
         self.add_cmd_btn.setFixedSize(30, 30)
 
         self.del_cmd_btn = QPushButton()
         self.del_cmd_btn.setObjectName("del_cmd_btn")
-        self.del_cmd_btn.setToolTip(language_manager.get_text("cmd_list_btn_del_cmd_tooltip"))
+        self.del_cmd_btn.setToolTip(lang_manager.get_text("macro_list_btn_del_cmd_tooltip"))
         self.del_cmd_btn.setFixedSize(30, 30)
 
         self.up_cmd_btn = QPushButton()
         self.up_cmd_btn.setObjectName("up_cmd_btn")
-        self.up_cmd_btn.setToolTip(language_manager.get_text("cmd_list_btn_up_cmd_tooltip"))
+        self.up_cmd_btn.setToolTip(lang_manager.get_text("macro_list_btn_up_cmd_tooltip"))
         self.up_cmd_btn.setFixedSize(30, 30)
 
         self.down_cmd_btn = QPushButton()
         self.down_cmd_btn.setObjectName("down_cmd_btn")
-        self.down_cmd_btn.setToolTip(language_manager.get_text("cmd_list_btn_down_cmd_tooltip"))
+        self.down_cmd_btn.setToolTip(lang_manager.get_text("macro_list_btn_down_cmd_tooltip"))
         self.down_cmd_btn.setFixedSize(30, 30)
 
         header_layout.addWidget(self.select_all_chk)
@@ -91,7 +91,7 @@ class CommandListWidget(QWidget):
         # 컬럼: 선택, 접두사, 명령어, 접미사, HEX, 지연시간, 전송버튼
         self.update_header_labels()
         self.cmd_table.setModel(self.cmd_table_model)
-        self.cmd_table.setToolTip(language_manager.get_text("cmd_list_table_cmd"))
+        self.cmd_table.setToolTip(lang_manager.get_text("macro_list_table_cmd"))
 
         # 스크롤바 정책 - 항상 표시
         self.cmd_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
@@ -121,21 +121,21 @@ class CommandListWidget(QWidget):
 
         # 모델 시그널 연결
         self.cmd_table_model.itemChanged.connect(self.on_item_changed)
-        self.cmd_table_model.rowsInserted.connect(lambda: self.cmd_list_changed.emit())
-        self.cmd_table_model.rowsRemoved.connect(lambda: self.cmd_list_changed.emit())
-        self.cmd_table_model.rowsMoved.connect(lambda: self.cmd_list_changed.emit())
+        self.cmd_table_model.rowsInserted.connect(lambda: self.macro_list_changed.emit())
+        self.cmd_table_model.rowsRemoved.connect(lambda: self.macro_list_changed.emit())
+        self.cmd_table_model.rowsMoved.connect(lambda: self.macro_list_changed.emit())
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.select_all_chk.setText(language_manager.get_text("cmd_list_chk_select_all"))
-        self.select_all_chk.setToolTip(language_manager.get_text("cmd_list_chk_select_all_tooltip"))
+        self.select_all_chk.setText(lang_manager.get_text("macro_list_chk_select_all"))
+        self.select_all_chk.setToolTip(lang_manager.get_text("macro_list_chk_select_all_tooltip"))
 
-        self.add_cmd_btn.setToolTip(language_manager.get_text("cmd_list_btn_add_cmd_tooltip"))
-        self.del_cmd_btn.setToolTip(language_manager.get_text("cmd_list_btn_del_cmd_tooltip"))
-        self.up_cmd_btn.setToolTip(language_manager.get_text("cmd_list_btn_up_cmd_tooltip"))
-        self.down_cmd_btn.setToolTip(language_manager.get_text("cmd_list_btn_down_cmd_tooltip"))
+        self.add_cmd_btn.setToolTip(lang_manager.get_text("macro_list_btn_add_cmd_tooltip"))
+        self.del_cmd_btn.setToolTip(lang_manager.get_text("macro_list_btn_del_cmd_tooltip"))
+        self.up_cmd_btn.setToolTip(lang_manager.get_text("macro_list_btn_up_cmd_tooltip"))
+        self.down_cmd_btn.setToolTip(lang_manager.get_text("macro_list_btn_down_cmd_tooltip"))
 
-        self.cmd_table.setToolTip(language_manager.get_text("cmd_list_table_cmd"))
+        self.cmd_table.setToolTip(lang_manager.get_text("macro_list_table_cmd"))
         self.update_header_labels()
 
         # Send 버튼 텍스트 업데이트 (모든 행)
@@ -145,18 +145,18 @@ class CommandListWidget(QWidget):
             if widget:
                 btn_send = widget.findChild(QPushButton)
                 if btn_send:
-                    btn_send.setText(language_manager.get_text("cmd_list_btn_send"))
+                    btn_send.setText(lang_manager.get_text("macro_list_btn_send"))
 
     def update_header_labels(self) -> None:
         """테이블 헤더 라벨을 업데이트합니다."""
         labels = [
             "",
-            language_manager.get_text("cmd_list_col_prefix"),
-            language_manager.get_text("cmd_list_col_command"),
-            language_manager.get_text("cmd_list_col_suffix"),
-            language_manager.get_text("cmd_list_col_hex"),
-            language_manager.get_text("cmd_list_col_delay"),
-            language_manager.get_text("cmd_list_col_send")
+            lang_manager.get_text("macro_list_col_prefix"),
+            lang_manager.get_text("macro_list_col_command"),
+            lang_manager.get_text("macro_list_col_suffix"),
+            lang_manager.get_text("macro_list_col_hex"),
+            lang_manager.get_text("macro_list_col_delay"),
+            lang_manager.get_text("macro_list_col_send")
         ]
         self.cmd_table_model.setHorizontalHeaderLabels(labels)
 
@@ -170,9 +170,9 @@ class CommandListWidget(QWidget):
 
         # 데이터 변경 시그널 발생 (Select 컬럼 제외)
         if item.column() != 0:
-            self.cmd_list_changed.emit()
+            self.macro_list_changed.emit()
 
-    def get_cmd_list(self) -> List[Dict[str, Any]]:
+    def get_macro_list(self) -> List[Dict[str, Any]]:
         """
         현재 커맨드 리스트 데이터를 반환합니다.
 
@@ -192,7 +192,7 @@ class CommandListWidget(QWidget):
             commands.append(cmd_data)
         return commands
 
-    def set_cmd_list(self, commands: List[Dict[str, Any]]) -> None:
+    def set_macro_list(self, commands: List[Dict[str, Any]]) -> None:
         """
         커맨드 리스트 데이터를 설정합니다.
 
@@ -313,7 +313,7 @@ class CommandListWidget(QWidget):
         layout.setContentsMargins(2, 2, 2, 2)
         layout.setAlignment(Qt.AlignCenter)
 
-        btn = QPushButton(language_manager.get_text("cmd_list_btn_send"))
+        btn = QPushButton(lang_manager.get_text("macro_list_btn_send"))
         btn.setCursor(Qt.PointingHandCursor)
         # 초기 상태는 비활성화 (포트 연결 전)
         btn.setEnabled(False)
@@ -464,7 +464,7 @@ class CommandListWidget(QWidget):
         Returns:
             list: 명령어 목록 데이터.
         """
-        commands = self.get_cmd_list()
+        commands = self.get_macro_list()
         return commands
 
     def load_state(self, state: list) -> None:
@@ -477,7 +477,7 @@ class CommandListWidget(QWidget):
         if not state:
             return
 
-        self.set_cmd_list(state)
+        self.set_macro_list(state)
 
 
 

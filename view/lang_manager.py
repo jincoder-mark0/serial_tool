@@ -8,7 +8,7 @@ from typing import Dict, Optional
 from PyQt5.QtCore import QObject, pyqtSignal
 from core.logger import logger
 
-class LanguageManager(QObject):
+class LangManager(QObject):
     """
     애플리케이션 언어 관리 클래스 (싱글톤 패턴 적용).
     JSON 파일에서 언어 리소스를 로드하고 다국어 텍스트를 제공합니다.
@@ -19,7 +19,7 @@ class LanguageManager(QObject):
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(LanguageManager, cls).__new__(cls)
+            cls._instance = super(LangManager, cls).__new__(cls)
             cls._instance._initialized = False
         return cls._instance
 
@@ -36,7 +36,7 @@ class LanguageManager(QObject):
         """
         config/languages 디렉토리에서 언어 파일(*.json)을 로드합니다.
         """
-        # 프로젝트 루트 경로 계산 (view/language_manager.py 기준)
+        # 프로젝트 루트 경로 계산 (view/lang_manager.py 기준)
         base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
         lang_dir = os.path.join(base_dir, 'config', 'languages')
 
@@ -115,4 +115,4 @@ class LanguageManager(QObject):
         return False
 
 # 전역 인스턴스
-language_manager = LanguageManager()
+lang_manager = LangManager()

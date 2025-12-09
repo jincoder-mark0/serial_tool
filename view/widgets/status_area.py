@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTextEdit, QLabel
 from typing import Optional
 import datetime
-from view.language_manager import language_manager
+from view.lang_manager import lang_manager
 
 class StatusAreaWidget(QWidget):
     """
@@ -20,7 +20,7 @@ class StatusAreaWidget(QWidget):
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
-        language_manager.language_changed.connect(self.retranslate_ui)
+        lang_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
@@ -28,14 +28,14 @@ class StatusAreaWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
 
-        self.log_lbl = QLabel(language_manager.get_text("status_lbl_log"))
+        self.log_lbl = QLabel(lang_manager.get_text("status_lbl_log"))
         # log_lbl.setStyleSheet("font-weight: bold; font-size: 10px;")
 
         self.log_txt = QTextEdit()
         self.log_txt.setReadOnly(True)
         self.log_txt.setMaximumHeight(100) # 높이 제한
-        self.log_txt.setToolTip(language_manager.get_text("status_txt_log_tooltip"))
-        self.log_txt.setPlaceholderText(language_manager.get_text("status_txt_log_placeholder"))
+        self.log_txt.setToolTip(lang_manager.get_text("status_txt_log_tooltip"))
+        self.log_txt.setPlaceholderText(lang_manager.get_text("status_txt_log_placeholder"))
         self.log_txt.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
 
         layout.addWidget(self.log_lbl)
@@ -44,9 +44,9 @@ class StatusAreaWidget(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.log_lbl.setText(language_manager.get_text("status_lbl_log"))
-        self.log_txt.setToolTip(language_manager.get_text("status_txt_log_tooltip"))
-        self.log_txt.setPlaceholderText(language_manager.get_text("status_txt_log_placeholder"))
+        self.log_lbl.setText(lang_manager.get_text("status_lbl_log"))
+        self.log_txt.setToolTip(lang_manager.get_text("status_txt_log_tooltip"))
+        self.log_txt.setPlaceholderText(lang_manager.get_text("status_txt_log_placeholder"))
 
     def log(self, message: str, level: str = "INFO") -> None:
         """

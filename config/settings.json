@@ -72,7 +72,7 @@
     "rts": false,
     "dtr": false
   },
-  "cmd_list": {
+  "macro_list": {
     "commands": [
       {
         "enabled": true,

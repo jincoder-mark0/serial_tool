@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QProgressBar, QLabel, QPushButton
 from PyQt5.QtCore import pyqtSignal
 from typing import Optional
-from view.language_manager import language_manager
+from view.lang_manager import lang_manager
 
 class FileProgressWidget(QWidget):
     """
@@ -22,7 +22,7 @@ class FileProgressWidget(QWidget):
         self.reset()
 
         # 언어 변경 시 UI 업데이트 연결
-        language_manager.language_changed.connect(self.retranslate_ui)
+        lang_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self) -> None:
         """UI 컴포넌트를 초기화합니다."""
@@ -31,7 +31,7 @@ class FileProgressWidget(QWidget):
         layout.setSpacing(2)
 
         # 파일명 및 상태 레이블
-        self.status_lbl = QLabel(language_manager.get_text("file_prog_lbl_status_ready"))
+        self.status_lbl = QLabel(lang_manager.get_text("file_prog_lbl_status_ready"))
         self.status_lbl.setStyleSheet("font-weight: bold;")
 
         # 진행률 바
@@ -45,9 +45,9 @@ class FileProgressWidget(QWidget):
         info_layout = QHBoxLayout()
 
         self.speed_lbl = QLabel("0 KB/s")
-        self.eta_lbl = QLabel(language_manager.get_text("file_prog_lbl_eta_placeholder"))
+        self.eta_lbl = QLabel(lang_manager.get_text("file_prog_lbl_eta_placeholder"))
 
-        self.cancel_btn = QPushButton(language_manager.get_text("file_prog_btn_cancel"))
+        self.cancel_btn = QPushButton(lang_manager.get_text("file_prog_btn_cancel"))
         self.cancel_btn.setFixedWidth(60)
         self.cancel_btn.clicked.connect(self.cancel_requested.emit)
         self.cancel_btn.setEnabled(False)
@@ -67,14 +67,14 @@ class FileProgressWidget(QWidget):
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
         # 상태 레이블은 현재 상태에 따라 동적으로 변경되므로 여기서 일괄 변경하기 어려움
         # 다만, Ready 상태라면 변경 가능
-        if language_manager.text_matches_key(self.status_lbl.text(), "file_prog_lbl_status_ready"):
-            self.status_lbl.setText(language_manager.get_text("file_prog_lbl_status_ready"))
+        if lang_manager.text_matches_key(self.status_lbl.text(), "file_prog_lbl_status_ready"):
+            self.status_lbl.setText(lang_manager.get_text("file_prog_lbl_status_ready"))
 
-        self.cancel_btn.setText(language_manager.get_text("file_prog_btn_cancel"))
+        self.cancel_btn.setText(lang_manager.get_text("file_prog_btn_cancel"))
 
         # ETA 플레이스홀더 업데이트 (진행 중이 아닐 때)
-        if language_manager.text_matches_key(self.eta_lbl.text(), "file_prog_lbl_eta_placeholder"):
-            self.eta_lbl.setText(language_manager.get_text("file_prog_lbl_eta_placeholder"))
+        if lang_manager.text_matches_key(self.eta_lbl.text(), "file_prog_lbl_eta_placeholder"):
+            self.eta_lbl.setText(lang_manager.get_text("file_prog_lbl_eta_placeholder"))
 
     def update_progress(self, sent_bytes: int, total_bytes: int, speed_bps: float, eta_seconds: float) -> None:
         """
@@ -106,16 +106,16 @@ class FileProgressWidget(QWidget):
         self.eta_lbl.setText(f"ETA: {eta_min:02d}:{eta_sec:02d}")
 
         # 상태 메시지 업데이트
-        status_msg = language_manager.get_text("file_prog_lbl_status_sending").format(sent_bytes, total_bytes)
+        status_msg = lang_manager.get_text("file_prog_lbl_status_sending").format(sent_bytes, total_bytes)
         self.status_lbl.setText(status_msg)
         self.cancel_btn.setEnabled(True)
 
     def reset(self) -> None:
         """위젯 상태를 초기화합니다."""
         self.progress_bar.setValue(0)
-        self.status_lbl.setText(language_manager.get_text("file_prog_lbl_status_ready"))
+        self.status_lbl.setText(lang_manager.get_text("file_prog_lbl_status_ready"))
         self.speed_lbl.setText("0 KB/s")
-        self.eta_lbl.setText(language_manager.get_text("file_prog_lbl_eta_placeholder"))
+        self.eta_lbl.setText(lang_manager.get_text("file_prog_lbl_eta_placeholder"))
         self.cancel_btn.setEnabled(False)
 
     def set_complete(self, success: bool, message: str = "") -> None:
@@ -129,9 +129,9 @@ class FileProgressWidget(QWidget):
         self.cancel_btn.setEnabled(False)
         if success:
             self.progress_bar.setValue(100)
-            status_msg = language_manager.get_text("file_prog_lbl_status_completed").format(message)
+            status_msg = lang_manager.get_text("file_prog_lbl_status_completed").format(message)
             self.status_lbl.setText(status_msg)
         else:
-            status_msg = language_manager.get_text("file_prog_lbl_status_failed").format(message)
+            status_msg = lang_manager.get_text("file_prog_lbl_status_failed").format(message)
             self.status_lbl.setText(status_msg)
             self.progress_bar.setStyleSheet("QProgressBar::chunk { background-color: red; }")

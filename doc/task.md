@@ -17,8 +17,8 @@
     - [x] `PortSettingsWidget` (포트 설정)
     - [x] `ReceivedArea` (로그 뷰)
     - [x] `ManualControlWidget` (수동 제어)
-    - [x] `CommandListWidget` (커맨드 리스트)
-    - [x] `CommandControlWidget` (커맨드 제어)
+    - [x] `MacroListWidget` (커맨드 리스트)
+    - [x] `MacroCtrlWidget` (커맨드 제어)
     - [x] `PacketInspectorWidget` (패킷 인스펙터)
     - [x] `FileProgressWidget` (파일 전송 진행)
 - [x] 테마 시스템 구현
@@ -41,8 +41,8 @@
     - [x] `en.json` 및 `ko.json` 생성
     - [x] `ManualControlWidget`에 적용
     - [x] `ReceivedArea`에 적용
-    - [x] `CommandListWidget`에 적용
-    - [x] `CommandControlWidget`에 적용
+    - [x] `MacroListWidget`에 적용
+    - [x] `MacroCtrlWidget`에 적용
     - [x] `FileProgressWidget`에 적용
     - [x] `PacketInspectorWidget`에 적용
     - [x] `MainWindow`에 적용 (메뉴, 독 타이틀)

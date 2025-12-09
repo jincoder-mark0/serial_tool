@@ -3,7 +3,7 @@
 ## 주요 작업 내용
 
 ### 1. 시그널 네이밍 리팩토링 및 일관성 확보
-- **CommandControlWidget**:
+- **MacroCtrlWidget**:
   - `cmd_run_single_requested` → `cmd_run_once_requested` (버튼 텍스트와 일치)
   - `cmd_stop_requested` → `cmd_stop_run_requested` (명확성 향상)
   - `cmd_auto_start_requested` → `cmd_repeat_start_requested` (기능 명확화)
@@ -31,17 +31,29 @@
   - 패널 숨김 시: 윈도우 너비 감소 (패널 너비만큼)
   - 패널 표시 시: 윈도우 너비 증가 (기본값 400px)
 
+### 4. 네이밍 리팩토링 (Command -> Macro)
+- **용어 변경**: `Command` → `Macro` (시스템 명령과의 혼동 방지 및 기능 명확화)
+- **클래스명 변경**:
+  - `CommandListWidget` → `MacroListWidget`
+  - `CommandControlWidget` → `MacroControlWidget`
+  - `CommandListPanel` → `MacroPanel`
+- **파일명 변경**:
+  - `view/widgets/command_list.py` → `view/widgets/macro_list.py`
+  - `view/widgets/command_control.py` → `view/widgets/macro_control.py`
+  - `view/panels/command_list_panel.py` → `view/panels/macro_panel.py`
+
 ## 변경된 파일
-- `view/widgets/command_control.py`: 시그널 리네임
+- `view/widgets/macro_control.py`: (구 command_control.py) 시그널 리네임 및 클래스명 변경
+- `view/widgets/macro_list.py`: (구 command_list.py) 클래스명 변경
+- `view/panels/macro_panel.py`: (구 command_list_panel.py) 클래스명 변경 및 시그널 연결 수정
 - `view/widgets/port_settings.py`: 시그널 리네임, `is_connected` 추가
-- `view/panels/command_list_panel.py`: 시그널 연결 수정
 - `view/panels/port_panel.py`: `is_connected` 추가
 - `view/sections/main_left_section.py`: `open/close_current_port` 로직 개선
 - `view/main_window.py`: 초기화 순서 변경, 툴바 시그널 연결 수정, 윈도우 리사이징 구현
 - `model/port_controller.py`: Import 경로 수정
 - `presenter/port_presenter.py`: 시그널 연결 수정
-- `tests/test_view.py`: 테스트 코드 최신화
-- `tests/test_ui_translations.py`: 테스트 코드 최신화
+- `tests/test_view.py`: 테스트 코드 최신화 (MacroListWidget 반영)
+- `tests/test_ui_translations.py`: 테스트 코드 최신화 (MacroListWidget 반영)
 
 ## 다음 단계 (Next Steps)
 - **StatusPanel 구현**: `view/doc/implementation_plan.md`에 따른 상태 패널 구현

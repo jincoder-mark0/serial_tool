@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget, QGroupBox, QGridLayout, QLabel
-from view.language_manager import language_manager
+from view.lang_manager import lang_manager
 
 class StatusWidget(QWidget):
     def __init__(self, parent=None):
@@ -11,13 +11,13 @@ class StatusWidget(QWidget):
         self.rx_label = None
         self.group_box = None
         self.init_ui()
-        language_manager.language_changed.connect(self.retranslate_ui)
+        lang_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self):
         layout = QGridLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.group_box = QGroupBox(language_manager.get_text("status_grp_title"))
+        self.group_box = QGroupBox(lang_manager.get_text("status_grp_title"))
         gb_layout = QGridLayout()
 
         self.rx_label = QLabel("RX: 0 B")
@@ -37,7 +37,7 @@ class StatusWidget(QWidget):
         self.setLayout(layout)
 
     def retranslate_ui(self):
-        self.group_box.setTitle(language_manager.get_text("status_grp_title"))
+        self.group_box.setTitle(lang_manager.get_text("status_grp_title"))
 
     def update_rx(self, bytes_count: int):
         self.rx_label.setText(f"RX: {self.format_bytes(bytes_count)}")

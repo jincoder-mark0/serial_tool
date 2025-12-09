@@ -54,7 +54,7 @@ serial_tool2/
 ├── view/                    # UI 계층
 │   ├── main_window.py      # 메인 윈도우 [완료]
 │   ├── theme_manager.py    # 테마 관리 [완료]
-│   ├── language_manager.py # 언어 관리 [완료]
+│   ├── lang_manager.py # 언어 관리 [완료]
 │   ├── sections/           # 섹션 (화면 분할) [완료]
 │   │   ├── left_section.py # 좌측 섹션 [완료]
 │   │   └── right_section.py# 우측 섹션 [완료]
@@ -326,14 +326,14 @@ class CommandEntry:
 - `MainWindow`: 메인 레이아웃, 메뉴, 툴바
 - `LeftSection`: 포트 탭 + 수동 제어 (화면 좌측)
 - `RightSection`: 커맨드 리스트 + 패킷 인스펙터 (화면 우측)
-- `Panels`: 기능 단위 그룹 (PortPanel, CommandListPanel 등)
+- `Panels`: 기능 단위 그룹 (PortPanel, MacroListPanel 등)
 
 #### [완료] 위젯
 - `PortSettingsWidget`: 컴팩트 2줄 레이아웃
 - `ReceivedArea`: 로그 뷰, 색상 규칙, 타임스탬프, Trim
 - `ManualControlWidget`: 수동 전송, 파일 선택
-- `CommandListWidget`: Prefix/Suffix, 3단계 체크박스
-- `CommandControlWidget`: 스크립트 저장/로드, Auto Run
+- `MacroListWidget`: Prefix/Suffix, 3단계 체크박스
+- `MacroCtrlWidget`: 스크립트 저장/로드, Auto Run
 - `PacketInspectorWidget`: 패킷 상세 뷰
 
 #### [완료] 테마 시스템
@@ -658,8 +658,8 @@ jobs:
     - [x] MainWindow "Tools" 메뉴 수정
     - [x] ManualControlWidget 다국어 적용
     - [x] ReceivedArea 다국어 적용
-    - [x] CommandListWidget 다국어 적용
-    - [x] CommandControlWidget 다국어 적용
+    - [x] MacroListWidget 다국어 적용
+    - [x] MacroCtrlWidget 다국어 적용
     - [x] FileProgressWidget 다국어 적용
     - [x] PacketInspectorWidget 다국어 적용
     - [x] MainWindow 다국어 적용 (메뉴, 타이틀)

@@ -4,9 +4,9 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Optional
-from view.language_manager import language_manager
+from view.lang_manager import lang_manager
 
-class CommandControlWidget(QWidget):
+class MacroCtrlWidget(QWidget):
     """
     Command List 실행을 제어하는 위젯 클래스입니다.
     실행(Run), 정지(Stop), 자동 실행(Auto Run), 스크립트 저장/로드 기능을 제공합니다.
@@ -24,7 +24,7 @@ class CommandControlWidget(QWidget):
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
-        CommandControlWidget을 초기화합니다.
+        MacroCtrlWidget을 초기화합니다.
 
         Args:
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
@@ -45,7 +45,7 @@ class CommandControlWidget(QWidget):
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
-        language_manager.language_changed.connect(self.retranslate_ui)
+        lang_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
@@ -57,12 +57,12 @@ class CommandControlWidget(QWidget):
         top_layout = QHBoxLayout()
         top_layout.setContentsMargins(0, 0, 0, 0)
 
-        self.script_save_btn = QPushButton(language_manager.get_text("cmd_ctrl_btn_save_script"))
-        self.script_save_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_save_script_tooltip"))
+        self.script_save_btn = QPushButton(lang_manager.get_text("marco_ctrl_btn_save_script"))
+        self.script_save_btn.setToolTip(lang_manager.get_text("marco_ctrl_btn_save_script_tooltip"))
         self.script_save_btn.clicked.connect(self.script_save_requested.emit)
 
-        self.script_load_btn = QPushButton(language_manager.get_text("cmd_ctrl_btn_load_script"))
-        self.script_load_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_load_script_tooltip"))
+        self.script_load_btn = QPushButton(lang_manager.get_text("marco_ctrl_btn_load_script"))
+        self.script_load_btn.setToolTip(lang_manager.get_text("marco_ctrl_btn_load_script_tooltip"))
         self.script_load_btn.clicked.connect(self.script_load_requested.emit)
 
         top_layout.addStretch()
@@ -70,18 +70,18 @@ class CommandControlWidget(QWidget):
         top_layout.addWidget(self.script_load_btn)
 
         # 2. 자동 실행 설정 그룹 (Auto Run Settings Group)
-        self.execution_settings_grp = QGroupBox(language_manager.get_text("cmd_ctrl_grp_execution"))
+        self.execution_settings_grp = QGroupBox(lang_manager.get_text("marco_ctrl_grp_execution"))
         execution_layout = QGridLayout()
         execution_layout.setContentsMargins(2, 2, 2, 2)
         execution_layout.setSpacing(5)
 
         # Row 0: 단일 실행 및 정지
-        self.cmd_run_once_btn = QPushButton(language_manager.get_text("cmd_ctrl_btn_run_once"))
-        self.cmd_run_once_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_run_once_tooltip"))
+        self.cmd_run_once_btn = QPushButton(lang_manager.get_text("marco_ctrl_btn_run_once"))
+        self.cmd_run_once_btn.setToolTip(lang_manager.get_text("marco_ctrl_btn_run_once_tooltip"))
         self.cmd_run_once_btn.clicked.connect(self.cmd_run_once_requested.emit)
 
-        self.cmd_stop_run_btn = QPushButton(language_manager.get_text("cmd_ctrl_btn_stop_run"))
-        self.cmd_stop_run_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_stop_run_tooltip"))
+        self.cmd_stop_run_btn = QPushButton(lang_manager.get_text("marco_ctrl_btn_stop_run"))
+        self.cmd_stop_run_btn.setToolTip(lang_manager.get_text("marco_ctrl_btn_stop_run_tooltip"))
         self.cmd_stop_run_btn.clicked.connect(self.cmd_stop_run_requested.emit)
         self.cmd_stop_run_btn.setEnabled(False)
         self.cmd_stop_run_btn.setProperty("class", "danger") # 빨간색 스타일
@@ -90,7 +90,7 @@ class CommandControlWidget(QWidget):
         execution_layout.addWidget(self.cmd_stop_run_btn, 0, 2, 1, 2)
 
         # Row 1: 자동 실행 설정
-        self.interval_lbl = QLabel(language_manager.get_text("cmd_ctrl_lbl_interval"))
+        self.interval_lbl = QLabel(lang_manager.get_text("marco_ctrl_lbl_interval"))
         execution_layout.addWidget(self.interval_lbl, 1, 0)
 
         self.repeat_delay_input = QLineEdit("1000")
@@ -98,23 +98,23 @@ class CommandControlWidget(QWidget):
         self.repeat_delay_input.setAlignment(Qt.AlignRight)
         execution_layout.addWidget(self.repeat_delay_input, 1, 1)
 
-        self.repeat_max_lbl = QLabel(language_manager.get_text("cmd_ctrl_lbl_repeat_max"))
+        self.repeat_max_lbl = QLabel(lang_manager.get_text("marco_ctrl_lbl_repeat_max"))
         execution_layout.addWidget(self.repeat_max_lbl, 1, 2)
 
         self.repeat_count_spin = QSpinBox()
         self.repeat_count_spin.setRange(0, 9999)
         self.repeat_count_spin.setValue(0)
-        self.repeat_count_spin.setToolTip(language_manager.get_text("cmd_ctrl_spin_repeat_tooltip"))
+        self.repeat_count_spin.setToolTip(lang_manager.get_text("marco_ctrl_spin_repeat_tooltip"))
         execution_layout.addWidget(self.repeat_count_spin, 1, 3)
 
         # Row 2: 자동 실행 제어
-        self.cmd_repeat_start_btn = QPushButton(language_manager.get_text("cmd_ctrl_btn_repeat_start"))
-        self.cmd_repeat_start_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_repeat_start_tooltip"))
+        self.cmd_repeat_start_btn = QPushButton(lang_manager.get_text("marco_ctrl_btn_repeat_start"))
+        self.cmd_repeat_start_btn.setToolTip(lang_manager.get_text("marco_ctrl_btn_repeat_start_tooltip"))
         self.cmd_repeat_start_btn.setProperty("class", "accent") # 초록색 스타일
         self.cmd_repeat_start_btn.clicked.connect(self.on_cmd_repeat_start_clicked)
 
-        self.cmd_repeat_stop_btn = QPushButton(language_manager.get_text("cmd_ctrl_btn_repeat_stop"))
-        self.cmd_repeat_stop_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_repeat_stop_tooltip"))
+        self.cmd_repeat_stop_btn = QPushButton(lang_manager.get_text("marco_ctrl_btn_repeat_stop"))
+        self.cmd_repeat_stop_btn.setToolTip(lang_manager.get_text("marco_ctrl_btn_repeat_stop_tooltip"))
         self.cmd_repeat_stop_btn.clicked.connect(self.cmd_repeat_stop_requested.emit)
         self.cmd_repeat_stop_btn.setEnabled(False)
 
@@ -137,26 +137,26 @@ class CommandControlWidget(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.script_save_btn.setText(language_manager.get_text("cmd_ctrl_btn_save_script"))
-        self.script_save_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_save_script_tooltip"))
+        self.script_save_btn.setText(lang_manager.get_text("marco_ctrl_btn_save_script"))
+        self.script_save_btn.setToolTip(lang_manager.get_text("marco_ctrl_btn_save_script_tooltip"))
 
-        self.script_load_btn.setText(language_manager.get_text("cmd_ctrl_btn_load_script"))
-        self.script_load_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_load_script_tooltip"))
+        self.script_load_btn.setText(lang_manager.get_text("marco_ctrl_btn_load_script"))
+        self.script_load_btn.setToolTip(lang_manager.get_text("marco_ctrl_btn_load_script_tooltip"))
 
-        self.execution_settings_grp.setTitle(language_manager.get_text("cmd_ctrl_grp_execution"))
+        self.execution_settings_grp.setTitle(lang_manager.get_text("marco_ctrl_grp_execution"))
 
-        self.cmd_run_once_btn.setText(language_manager.get_text("cmd_ctrl_btn_run_once"))
-        self.cmd_run_once_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_run_once_tooltip"))
+        self.cmd_run_once_btn.setText(lang_manager.get_text("marco_ctrl_btn_run_once"))
+        self.cmd_run_once_btn.setToolTip(lang_manager.get_text("marco_ctrl_btn_run_once_tooltip"))
 
-        self.cmd_stop_run_btn.setText(language_manager.get_text("cmd_ctrl_btn_stop_run"))
-        self.cmd_stop_run_btn.setToolTip(language_manager.get_text("cmd_ctrl_btn_stop_run_tooltip"))
+        self.cmd_stop_run_btn.setText(lang_manager.get_text("marco_ctrl_btn_stop_run"))
+        self.cmd_stop_run_btn.setToolTip(lang_manager.get_text("marco_ctrl_btn_stop_run_tooltip"))
 
-        self.interval_lbl.setText(language_manager.get_text("cmd_ctrl_lbl_interval"))
-        self.repeat_max_lbl.setText(language_manager.get_text("cmd_ctrl_lbl_repeat_max"))
-        self.repeat_count_spin.setToolTip(language_manager.get_text("cmd_ctrl_spin_repeat_tooltip"))
+        self.interval_lbl.setText(lang_manager.get_text("marco_ctrl_lbl_interval"))
+        self.repeat_max_lbl.setText(lang_manager.get_text("marco_ctrl_lbl_repeat_max"))
+        self.repeat_count_spin.setToolTip(lang_manager.get_text("marco_ctrl_spin_repeat_tooltip"))
 
-        self.cmd_repeat_start_btn.setText(language_manager.get_text("cmd_ctrl_btn_repeat_start"))
-        self.cmd_repeat_stop_btn.setText(language_manager.get_text("cmd_ctrl_btn_repeat_stop"))
+        self.cmd_repeat_start_btn.setText(lang_manager.get_text("marco_ctrl_btn_repeat_start"))
+        self.cmd_repeat_stop_btn.setText(lang_manager.get_text("marco_ctrl_btn_repeat_stop"))
 
     def on_cmd_repeat_start_clicked(self) -> None:
         """자동 실행 시작 버튼 핸들러"""

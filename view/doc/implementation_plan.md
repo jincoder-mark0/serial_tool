@@ -57,7 +57,7 @@
 - `format_bytes(bytes_count: int) -> str` - 바이트 단위 변환 헬퍼
 
 **언어 지원**:
-- `language_manager` 연결
+- `lang_manager` 연결
 - 언어 키: `status_grp_title`
 
 ---

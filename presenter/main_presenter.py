@@ -3,7 +3,7 @@ from view.main_window import MainWindow
 from model.port_controller import PortController
 from .port_presenter import PortPresenter
 from core.settings_manager import SettingsManager
-from view.language_manager import language_manager
+from view.lang_manager import lang_manager
 from core.logger import logger
 
 class MainPresenter(QObject):
@@ -145,7 +145,7 @@ class MainPresenter(QObject):
             self.view.switch_theme(new_settings['theme'].lower())
 
         if 'language' in new_settings:
-            language_manager.set_language(new_settings['language'])
+            lang_manager.set_language(new_settings['language'])
 
         # 상태 메시지 표시
         if hasattr(self.view, 'global_status_bar'):

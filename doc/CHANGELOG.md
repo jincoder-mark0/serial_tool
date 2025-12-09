@@ -19,12 +19,19 @@
 #### 변경 사항 (Changed)
 
 - **시그널 네이밍 일관성 강화**
-  - `CommandControlWidget`: `cmd_run_single` → `cmd_run_once`, `cmd_auto_start` → `cmd_repeat_start` 등
+  - `MacroCtrlWidget`: `cmd_run_single` → `cmd_run_once`, `cmd_auto_start` → `cmd_repeat_start` 등
   - `PortSettingsWidget`: `scan_requested` → `port_scan_requested`
   - 버튼 텍스트 및 기능과 일치하도록 시그널 이름 직관화
 
 - **테스트 코드 최신화**
   - `test_view.py`, `test_ui_translations.py`를 최신 위젯 클래스명(`ReceivedAreaWidget` 등) 및 시그널로 업데이트
+
+- **네이밍 리팩토링 (Command -> Macro)**
+  - `CommandListWidget` → `MacroListWidget`
+  - `CommandControlWidget` → `MacroControlWidget`
+  - `CommandListPanel` → `MacroPanel`
+  - 관련 파일명 및 변수명 일괄 변경 (`command_list.py` → `macro_list.py` 등)
+  - "Command" 용어의 모호성(시스템 명령 등) 해소 및 "Macro"로 명확화
 
 #### 추가 사항 (Added)
 
@@ -55,8 +62,8 @@
 
 - **언어 비교 로직 개선**
   - `manual_control.py`, `main_status_bar.py`, `file_progress.py`에서 하드코딩된 언어별 비교 제거
-  - `== language_manager.get_text("key", "en") or == language_manager.get_text("key", "ko")` 패턴을
-  - `language_manager.text_matches_key(text, "key")` 호출로 변경
+  - `== lang_manager.get_text("key", "en") or == lang_manager.get_text("key", "ko")` 패턴을
+  - `lang_manager.text_matches_key(text, "key")` 호출로 변경
   - 일본어, 중국어 등 새 언어 추가 시 코드 수정 불필요
 
 #### 이점 (Benefits)
@@ -134,7 +141,7 @@
 
 #### 수정 사항 (Fixed)
 
-- **CommandListWidget Send 버튼 상태 버그**
+- **MacroListWidget Send 버튼 상태 버그**
   - 행 이동 시 Send 버튼 활성화 상태가 초기화되는 문제 수정
   - `_move_row` 메서드에서 이동 전 버튼 상태 저장 후 복원
 
@@ -302,7 +309,7 @@
   - 각 계층의 역할 명확화:
     - **Window**: 최상위 애플리케이션 셸 (`MainWindow`)
     - **Section**: 화면 구획 분할, Panel만 포함 (`LeftSection`, `RightSection`)
-    - **Panel**: 기능 단위 그룹, Widget만 포함 (`PortPanel`, `CommandListPanel`, `ManualControlPanel` 등)
+    - **Panel**: 기능 단위 그룹, Widget만 포함 (`PortPanel`, `MacroListPanel`, `ManualControlPanel` 등)
     - **Widget**: 실제 UI 요소 및 로직 (`PortSettingsWidget`, `ManualControlWidget` 등)
   - Presenter 계층 업데이트 (`port_presenter.py`, `main_presenter.py`)
 
@@ -320,7 +327,7 @@
   - 데이터 전송 시 포맷팅 옵션 적용 기능
 
 - **스크립트 저장/로드**
-  - Command List 및 실행 설정을 JSON 파일로 저장/로드하는 기능 구현 (`CommandListPanel`)
+  - Command List 및 실행 설정을 JSON 파일로 저장/로드하는 기능 구현 (`MacroListPanel`)
   - `save_script_to_file`, `load_script_from_file` 메서드 추가
 
 - **아이콘**
@@ -329,7 +336,7 @@
 #### 수정 사항 (Fixed)
 
 - **UI 아이콘 표시**
-  - `CommandListWidget` 버튼의 objectName 불일치 수정 (`btn_add` → `add_btn` 등)으로 아이콘 미표시 문제 해결
+  - `MacroListWidget` 버튼의 objectName 불일치 수정 (`btn_add` → `add_btn` 등)으로 아이콘 미표시 문제 해결
 - **테마 스타일**
   - 다크 테마에서 Placeholder 텍스트 색상 문제 수정 (`placeholder-text-color` 추가)
 
@@ -399,7 +406,7 @@
   - ManualControlWidget: 입력 텍스트, HEX 모드, RTS/DTR 상태 저장/복원
   - ReceivedArea: 검색어, HEX 모드, 타임스탬프, 일시정지 상태 저장/복원
   - CommandControl: 초기화 문제 수정 및 상태 저장/복원 안정화
-  - CommandListPanel: 초기화 순서 변경으로 load_state 오류 해결
+  - MacroListPanel: 초기화 순서 변경으로 load_state 오류 해결
 
 #### 수정 사항 (Fixed)
 
@@ -410,7 +417,7 @@
   - `on_language_changed` 및 `_save_window_state` 메서드 복구
 - **PortSettingsWidget**: 필수 메서드 복원 (`set_port_list`, `set_connected`)
 - **CommandControl**: SyntaxError 수정 (중복 코드 제거)
-- **CommandListPanel**: 초기화 순서 변경으로 상태 복원 시 오류 해결
+- **MacroListPanel**: 초기화 순서 변경으로 상태 복원 시 오류 해결
 - **탭 관리**:
   - 포트 탭 증식 문제 수정 (재시작 시 탭이 계속 추가되던 버그)
   - LeftPanel의 탭 추가 로직 개선
@@ -450,12 +457,12 @@
   - `PortSettingsWidget`: 컴팩트한 2줄 레이아웃
     - 1행: 포트 | 스캔 | 보레이트 | 열기
     - 2행: 데이터 | 패리티 | 정지 | 흐름 | DTR | RTS
-  - `CommandListWidget`:
+  - `MacroListWidget`:
     - Prefix/Suffix 컬럼 추가 (이전 Head/Tail에서 변경)
     - 3단계 Select All 체크박스 (선택 안함, 부분 선택, 전체 선택)
     - 세로 스크롤바 항상 표시
     - 행별 Send 버튼
-  - `CommandControlWidget`:
+  - `MacroCtrlWidget`:
     - 전역 명령 수정을 위한 Prefix/Suffix 입력 필드 추가
     - 스크립트 저장/로드 버튼
     - 자동 실행 설정 (지연시간, 최대 실행 횟수)
@@ -518,7 +525,7 @@
   - 입력창을 `QTextEdit`에서 `QLineEdit`으로 변경하여 높이 축소
   - Send 버튼 높이 조정 및 스타일 적용
   - Flow Control (RTS/DTR) 체크박스 추가
-- **CommandControlWidget 개선**:
+- **MacroCtrlWidget 개선**:
   - 레이아웃 정리 및 버튼 배치 최적화
   - Start Auto Run (녹색), Stop (붉은색) 버튼에 강조 스타일 적용
 - **MainWindow 개선**:
@@ -534,7 +541,7 @@
 
 - Layered MVP 아키텍처 확립
 - 모듈식 폴더 구조 생성:
-  - `view/panels/`: LeftPanel, RightPanel, PortPanel, CommandListPanel
+  - `view/panels/`: LeftPanel, RightPanel, PortPanel, MacroListPanel
   - `view/widgets/`: PortSettings, CommandList, CommandControl, ManualControl
   - `resources/themes/`: 테마 관리자 및 QSS 파일
   - `resources/icons/`: SVG 아이콘

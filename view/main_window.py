@@ -6,7 +6,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QByteArray
 from view.sections.main_left_section import MainLeftSection
 from view.sections.main_right_section import MainRightSection
 from view.theme_manager import ThemeManager
-from view.language_manager import language_manager
+from view.lang_manager import lang_manager
 from view.dialogs.font_settings_dialog import FontSettingsDialog
 from view.dialogs.about_dialog import AboutDialog
 from view.dialogs.preferences_dialog import PreferencesDialog
@@ -37,10 +37,10 @@ class MainWindow(QMainWindow):
 
         # 언어 관리자 초기화 및 설정에서 언어 로드
         lang = self.settings.get('ui.language', 'en')
-        language_manager.set_language(lang)
-        language_manager.language_changed.connect(self.on_language_changed)
+        lang_manager.set_language(lang)
+        lang_manager.language_changed.connect(self.on_language_changed)
 
-        self.setWindowTitle(f"{language_manager.get_text('main_title')} v1.0")
+        self.setWindowTitle(f"{lang_manager.get_text('main_title')} v1.0")
         self.resize(1400, 900)
 
         self.init_ui()
@@ -119,7 +119,7 @@ class MainWindow(QMainWindow):
         self.menu_bar.exit_requested.connect(self.close)
         self.menu_bar.theme_changed.connect(self.switch_theme)
         self.menu_bar.font_settings_requested.connect(self.open_font_settings_dialog)
-        self.menu_bar.language_changed.connect(lambda lang: language_manager.set_language(lang))
+        self.menu_bar.language_changed.connect(lambda lang: lang_manager.set_language(lang))
         self.menu_bar.preferences_requested.connect(self.open_preferences_dialog)
         self.menu_bar.about_requested.connect(self.open_about_dialog)
 
@@ -230,7 +230,7 @@ class MainWindow(QMainWindow):
         Args:
             lang_code (str): 변경된 언어 코드 (예: 'en', 'ko').
         """
-        self.setWindowTitle(f"{language_manager.get_text('main_title')} v1.0")
+        self.setWindowTitle(f"{lang_manager.get_text('main_title')} v1.0")
 
         # 상태바 업데이트
         self.global_status_bar.retranslate_ui()

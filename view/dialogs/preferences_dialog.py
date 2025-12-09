@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import pyqtSignal
 from typing import Dict, Any, Optional
 import os
-from view.language_manager import language_manager
+from view.lang_manager import lang_manager
 from core.settings_manager import SettingsManager
 
 class PreferencesDialog(QDialog):
@@ -19,7 +19,7 @@ class PreferencesDialog(QDialog):
 
     def __init__(self, parent: Optional[QWidget] = None, current_settings: Dict[str, Any] = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle(language_manager.get_text("pref_title"))
+        self.setWindowTitle(lang_manager.get_text("pref_title"))
         self.resize(500, 400)
         self.settings = SettingsManager()
         self.current_settings = current_settings or {}
@@ -32,10 +32,10 @@ class PreferencesDialog(QDialog):
 
         # 탭 위젯 생성
         self.tabs = QTabWidget()
-        self.tabs.addTab(self.create_general_tab(), language_manager.get_text("pref_tab_general"))
-        self.tabs.addTab(self.create_serial_tab(), language_manager.get_text("pref_tab_serial"))
-        self.tabs.addTab(self.create_cmd_tab(), language_manager.get_text("pref_tab_command")) # New Tab
-        self.tabs.addTab(self.create_logging_tab(), language_manager.get_text("pref_tab_logging"))
+        self.tabs.addTab(self.create_general_tab(), lang_manager.get_text("pref_tab_general"))
+        self.tabs.addTab(self.create_serial_tab(), lang_manager.get_text("pref_tab_serial"))
+        self.tabs.addTab(self.create_cmd_tab(), lang_manager.get_text("pref_tab_command")) # New Tab
+        self.tabs.addTab(self.create_logging_tab(), lang_manager.get_text("pref_tab_logging"))
 
         layout.addWidget(self.tabs)
 
@@ -43,13 +43,13 @@ class PreferencesDialog(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
 
-        self.ok_btn = QPushButton(language_manager.get_text("pref_btn_ok"))
+        self.ok_btn = QPushButton(lang_manager.get_text("pref_btn_ok"))
         self.ok_btn.clicked.connect(self.accept)
 
-        self.cancel_btn = QPushButton(language_manager.get_text("pref_btn_cancel"))
+        self.cancel_btn = QPushButton(lang_manager.get_text("pref_btn_cancel"))
         self.cancel_btn.clicked.connect(self.reject)
 
-        self.apply_btn = QPushButton(language_manager.get_text("pref_btn_apply"))
+        self.apply_btn = QPushButton(lang_manager.get_text("pref_btn_apply"))
         self.apply_btn.clicked.connect(self.apply_settings)
 
         btn_layout.addWidget(self.ok_btn)
@@ -65,7 +65,7 @@ class PreferencesDialog(QDialog):
         layout = QVBoxLayout()
 
         # UI Appearance 그룹
-        ui_group = QGroupBox(language_manager.get_text("pref_grp_ui"))
+        ui_group = QGroupBox(lang_manager.get_text("pref_grp_ui"))
         ui_layout = QFormLayout()
 
         self.theme_combo = QComboBox()
@@ -79,9 +79,9 @@ class PreferencesDialog(QDialog):
         self.proportional_font_size_spin.setRange(8, 24)
         self.proportional_font_size_spin.setValue(10)
 
-        ui_layout.addRow(language_manager.get_text("pref_lbl_theme"), self.theme_combo)
-        ui_layout.addRow(language_manager.get_text("pref_lbl_language"), self.language_combo)
-        ui_layout.addRow(language_manager.get_text("pref_lbl_font_size"), self.proportional_font_size_spin)
+        ui_layout.addRow(lang_manager.get_text("pref_lbl_theme"), self.theme_combo)
+        ui_layout.addRow(lang_manager.get_text("pref_lbl_language"), self.language_combo)
+        ui_layout.addRow(lang_manager.get_text("pref_lbl_font_size"), self.proportional_font_size_spin)
         ui_group.setLayout(ui_layout)
 
         layout.addWidget(ui_group)
@@ -95,7 +95,7 @@ class PreferencesDialog(QDialog):
         layout = QVBoxLayout()
 
         # Defaults 그룹
-        default_group = QGroupBox(language_manager.get_text("pref_grp_default"))
+        default_group = QGroupBox(lang_manager.get_text("pref_grp_default"))
         default_layout = QFormLayout()
 
         self.default_baud_combo = QComboBox()
@@ -107,8 +107,8 @@ class PreferencesDialog(QDialog):
         self.scan_interval_spin.setSingleStep(1000)
         self.scan_interval_spin.setSuffix(" ms")
 
-        default_layout.addRow(language_manager.get_text("pref_lbl_baud"), self.default_baud_combo)
-        default_layout.addRow(language_manager.get_text("pref_lbl_scan"), self.scan_interval_spin)
+        default_layout.addRow(lang_manager.get_text("pref_lbl_baud"), self.default_baud_combo)
+        default_layout.addRow(lang_manager.get_text("pref_lbl_scan"), self.scan_interval_spin)
         default_group.setLayout(default_layout)
 
         layout.addWidget(default_group)
@@ -122,7 +122,7 @@ class PreferencesDialog(QDialog):
         layout = QVBoxLayout()
 
         # Prefix/Suffix 그룹
-        format_group = QGroupBox(language_manager.get_text("pref_grp_cmd_format"))
+        format_group = QGroupBox(lang_manager.get_text("pref_grp_cmd_format"))
         format_layout = QFormLayout()
 
         self.prefix_combo = QComboBox()
@@ -133,8 +133,8 @@ class PreferencesDialog(QDialog):
         self.suffix_combo.setEditable(True)
         self.suffix_combo.addItems(["", "\\r", "\\n", "\\r\\n"])
 
-        format_layout.addRow(language_manager.get_text("pref_lbl_prefix"), self.prefix_combo)
-        format_layout.addRow(language_manager.get_text("pref_lbl_suffix"), self.suffix_combo)
+        format_layout.addRow(lang_manager.get_text("pref_lbl_prefix"), self.prefix_combo)
+        format_layout.addRow(lang_manager.get_text("pref_lbl_suffix"), self.suffix_combo)
         format_group.setLayout(format_layout)
 
         layout.addWidget(format_group)
@@ -148,13 +148,13 @@ class PreferencesDialog(QDialog):
         layout = QVBoxLayout()
 
         # File Logging 그룹
-        file_group = QGroupBox(language_manager.get_text("pref_grp_logging"))
+        file_group = QGroupBox(lang_manager.get_text("pref_grp_logging"))
         file_layout = QFormLayout()
 
         path_layout = QHBoxLayout()
         self.log_path_edit = QLabel("Default Path")
         self.log_path_edit.setFrameStyle(QLabel.Sunken | QLabel.Panel)
-        self.browse_btn = QPushButton(language_manager.get_text("pref_btn_browse"))
+        self.browse_btn = QPushButton(lang_manager.get_text("pref_btn_browse"))
         self.browse_btn.clicked.connect(self.browse_log_path)
 
         path_layout.addWidget(self.log_path_edit)
@@ -164,8 +164,8 @@ class PreferencesDialog(QDialog):
         self.max_lines_spin.setRange(100, 100000)
         self.max_lines_spin.setSingleStep(100)
 
-        file_layout.addRow(language_manager.get_text("pref_lbl_log_path"), path_layout)
-        file_layout.addRow(language_manager.get_text("pref_lbl_max_lines"), self.max_lines_spin)
+        file_layout.addRow(lang_manager.get_text("pref_lbl_log_path"), path_layout)
+        file_layout.addRow(lang_manager.get_text("pref_lbl_max_lines"), self.max_lines_spin)
         file_group.setLayout(file_layout)
 
         layout.addWidget(file_group)
@@ -175,7 +175,7 @@ class PreferencesDialog(QDialog):
 
     def browse_log_path(self) -> None:
         """로그 저장 경로 선택 다이얼로그를 엽니다."""
-        directory = QFileDialog.getExistingDirectory(self, language_manager.get_text("pref_dialog_title_select_dir"))
+        directory = QFileDialog.getExistingDirectory(self, lang_manager.get_text("pref_dialog_title_select_dir"))
         if directory:
             self.log_path_edit.setText(directory)
 

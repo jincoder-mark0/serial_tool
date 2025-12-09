@@ -6,7 +6,7 @@
 
 1. **SmartNumberEdit 위젯 생성**: HEX 모드 지원 입력 필드
 2. **PortTabWidget 생성**: 포트 탭 관리 캡슐화
-3. **CommandListWidget 버그 수정**: Send 버튼 상태 유지
+3. **MacroListWidget 버그 수정**: Send 버튼 상태 유지
 4. **테마별 아이콘 지원**: SVG 아이콘 로딩
 5. **포트 탭 닫기 버튼 수정**: 탭 삭제 문제 해결
 6. **포트 탭 이름 수정 기능**: 커스텀 이름 지정
@@ -91,7 +91,7 @@
 - `LeftSection`에서 `QTabWidget` → `PortTabPanel` 사용
 - 탭 관리 메서드들을 `PortTabPanel`로 이동
 
-### 3. CommandListWidget Send 버튼 상태 버그 수정
+### 3. MacroListWidget Send 버튼 상태 버그 수정
 
 **파일**: `view/widgets/command_list.py`
 
@@ -314,7 +314,7 @@ def close_port_tab(self, index: int) -> None:
 
 ### 9. 언어 확장성 개선
 
-**파일**: `view/language_manager.py`
+**파일**: `view/lang_manager.py`
 
 **문제**: 언어별로 하드코딩된 비교 방식 (`"en"`, `"ko"`)은 새 언어가 추가될 때마다 코드를 수정해야 하는 확장성 문제
 
@@ -345,13 +345,13 @@ def text_matches_key(self, text: str, key: str) -> bool:
 
 **변경 전**:
 ```python
-if self.file_path_lbl.text() == language_manager.get_text("key", "en") or \
-   self.file_path_lbl.text() == language_manager.get_text("key", "ko"):
+if self.file_path_lbl.text() == lang_manager.get_text("key", "en") or \
+   self.file_path_lbl.text() == lang_manager.get_text("key", "ko"):
 ```
 
 **변경 후**:
 ```python
-if language_manager.text_matches_key(self.file_path_lbl.text(), "key"):
+if lang_manager.text_matches_key(self.file_path_lbl.text(), "key"):
 ```
 
 ### 10. UI 아이콘 표시 문제 수정
@@ -402,7 +402,7 @@ QPushButton#add_cmd_btn { qproperty-icon: url(resources/icons/add_black.svg); }
 - `view/widgets/manual_control.py`
 - `view/widgets/main_status_bar.py`
 - `view/widgets/file_progress.py`
-- `view/language_manager.py`
+- `view/lang_manager.py`
 - `view/theme_manager.py`
 - `resources/themes/dark_theme.qss`
 - `resources/themes/light_theme.qss`
@@ -425,7 +425,7 @@ QPushButton#add_cmd_btn { qproperty-icon: url(resources/icons/add_black.svg); }
 4. ✅ **안정성 향상**: 버튼 상태 및 탭 닫기 버그 수정
 
 ### 해결된 문제
-1. ✅ CommandListWidget 행 이동 시 Send 버튼 상태 초기화 버그
+1. ✅ MacroListWidget 행 이동 시 Send 버튼 상태 초기화 버그
 2. ✅ 포트 탭 추가 시 닫기 버튼이 사라지는 버그
 3. ✅ 설정 키 불일치 (`menu_theme` vs `theme`)
 4. ✅ ThemeManager에서 QIcon import 누락

@@ -2,11 +2,9 @@ from PyQt5.QtWidgets import QTabWidget, QWidget, QTabBar, QInputDialog
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIcon
 from typing import Optional, TYPE_CHECKING
-from view.language_manager import language_manager
+from view.lang_manager import lang_manager
 from view.theme_manager import ThemeManager
-
-if TYPE_CHECKING:
-    from view.panels.port_panel import PortPanel
+from view.panels.port_panel import PortPanel
 
 class PortTabPanel(QTabWidget):
     """
@@ -22,7 +20,7 @@ class PortTabPanel(QTabWidget):
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self.close_port_tab)
         self.currentChanged.connect(self.on_tab_changed)
-        self.setToolTip(language_manager.get_text("left_tooltip_port_tab"))
+        self.setToolTip(lang_manager.get_text("left_tooltip_port_tab"))
 
         # 탭바에서 더블클릭 이벤트 처리 위해 이벤트 필터 설치
         self.tabBar().installEventFilter(self)
@@ -31,10 +29,10 @@ class PortTabPanel(QTabWidget):
         self.add_plus_tab()
 
         # 언어 변경 연결
-        language_manager.language_changed.connect(self.retranslate_ui)
+        lang_manager.language_changed.connect(self.retranslate_ui)
 
     def retranslate_ui(self) -> None:
-        self.setToolTip(language_manager.get_text("left_tooltip_port_tab"))
+        self.setToolTip(lang_manager.get_text("left_tooltip_port_tab"))
 
     def eventFilter(self, obj, event):
         """탭바 더블클릭 이벤트를 감지합니다."""
@@ -130,8 +128,6 @@ class PortTabPanel(QTabWidget):
 
     def add_new_port_tab(self) -> "PortPanel":
         """새로운 포트 탭을 추가하고 패널을 반환합니다."""
-        from view.panels.port_panel import PortPanel
-
         # 시그널 차단 (탭 조작 중 불필요한 이벤트 방지)
         self.blockSignals(True)
         try:

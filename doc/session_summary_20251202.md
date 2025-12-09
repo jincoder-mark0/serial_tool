@@ -18,8 +18,8 @@
   - **PortSettingsWidget**: 포트, 스캔, 보레이트 버튼 다국어 지원
   - **ManualControlWidget**: 모든 레이블, 버튼, 툴팁 다국어 지원
   - **ReceivedArea**: 로그 관련 UI 요소 다국어 지원
-  - **CommandListWidget**: 테이블 헤더 및 버튼 다국어 지원
-  - **CommandControlWidget**: 스크립트 관련 UI 다국어 지원
+  - **MacroListWidget**: 테이블 헤더 및 버튼 다국어 지원
+  - **MacroCtrlWidget**: 스크립트 관련 UI 다국어 지원
   - **FileProgressWidget**: 진행 상태 메시지 다국어 지원
   - AboutDialog 테스트
   - FileProgressWidget 테스트
@@ -52,7 +52,7 @@
   - `MainWindow`: Import 구문을 파일 상단으로 이동, `on_language_changed` 및 `_save_window_state` 메서드 복구
   - `tests/test_view.py`: `ThemeManager.apply_theme` 정적 메서드 사용 수정
   - `CommandControl`: 초기화 문제 수정
-  - `CommandListPanel`: 초기화 순서 변경으로 상태 복원 시 오류 해결
+  - `MacroListPanel`: 초기화 순서 변경으로 상태 복원 시 오류 해결
 
 - **주요 버그 수정**:
   - **탭 증식 문제**: 재시작 시 포트 탭이 계속 추가되던 버그 수정

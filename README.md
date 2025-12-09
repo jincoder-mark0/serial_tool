@@ -101,9 +101,12 @@ serial_tool2/
 │
 ├── view/                   # UI 계층
 │   ├── main_window.py      # 메인 윈도우
-│   ├── language_manager.py # 다국어 관리
+│   ├── lang_manager.py # 다국어 관리
 │   ├── theme_manager.py    # 테마 관리
 │   ├── color_rules.py      # 로그 색상 규칙
+│   │
+│   ├── pyqt_customs/       # PyQt5 커스텀 위젯
+│   │   ├── smart_number_edit.py
 │   │
 │   ├── sections/           # 섹션 (대 분할)
 │   │   ├── main_left_section.py
@@ -114,7 +117,7 @@ serial_tool2/
 │   ├── panels/             # 패널 (중 단위)
 │   │   ├── port_panel.py
 │   │   ├── port_tab_panel.py
-│   │   ├── command_list_panel.py
+│   │   ├── macro_panel.py
 │   │   ├── manual_control_panel.py
 │   │   ├── packet_inspector_panel.py
 │   │   └── tx_panel.py
@@ -123,8 +126,8 @@ serial_tool2/
 │   │   ├── port_settings.py
 │   │   ├── received_area.py
 │   │   ├── manual_control.py
-│   │   ├── command_list.py
-│   │   ├── command_control.py
+│   │   ├── macro_list.py
+│   │   ├── macro_control.py
 │   │   ├── main_toolbar.py
 │   │   ├── file_progress.py
 │   │   ├── packet_inspector.py
