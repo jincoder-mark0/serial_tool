@@ -49,7 +49,7 @@ class FileProgressWidget(QWidget):
 
         self.cancel_btn = QPushButton(lang_manager.get_text("file_prog_btn_cancel"))
         self.cancel_btn.setFixedWidth(60)
-        self.cancel_btn.clicked.connect(self.cancel_requested.emit)
+        self.cancel_btn.clicked.connect(self.on_cancel_clicked)
         self.cancel_btn.setEnabled(False)
 
         info_layout.addWidget(self.speed_lbl)
@@ -62,6 +62,10 @@ class FileProgressWidget(QWidget):
         layout.addLayout(info_layout)
 
         self.setLayout(layout)
+
+    def on_cancel_clicked(self) -> None:
+        """취소 버튼 클릭 시 호출됩니다."""
+        self.cancel_requested.emit()
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""

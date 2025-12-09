@@ -67,7 +67,7 @@ class PortSettingsWidget(QGroupBox):
         self.scan_btn = QPushButton(lang_manager.get_text("port_btn_scan"))
         self.scan_btn.setFixedWidth(50)
         self.scan_btn.setToolTip(lang_manager.get_text("port_btn_scan_tooltip"))
-        self.scan_btn.clicked.connect(self.port_scan_requested.emit)
+        self.scan_btn.clicked.connect(self.on_port_scan_clicked)
 
         # 보드레이트 선택 콤보박스
         self.baud_combo = QComboBox()
@@ -210,6 +210,9 @@ class PortSettingsWidget(QGroupBox):
             self.port_close_requested.emit()
             self.connect_btn.setText(lang_manager.get_text("port_btn_connect"))
 
+    def on_port_scan_clicked(self) -> None:
+        """포트 스캔 버튼 클릭 핸들러입니다."""
+        self.port_scan_requested.emit()
 
     def set_port_list(self, ports: List[str]) -> None:
         """
@@ -264,7 +267,7 @@ class PortSettingsWidget(QGroupBox):
             self.connect_btn.setText(lang_manager.get_text("port_btn_connect"))
             self.connect_btn.setChecked(False)
         elif state == 'error':
-            self.connect_btn.setText("Reconnect") # TODO: Add lang key
+            self.connect_btn.setText(lang_manager.get_text("port_btn_reconnect"))
             self.connect_btn.setChecked(False)
 
     def toggle_connection(self) -> None:

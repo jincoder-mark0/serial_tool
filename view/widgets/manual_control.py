@@ -80,7 +80,7 @@ class ManualControlWidget(QWidget):
 
         self.clear_manual_options_btn = QPushButton(lang_manager.get_text("manual_ctrl_btn_clear"))
         self.clear_manual_options_btn.setToolTip(lang_manager.get_text("manual_ctrl_btn_clear_tooltip"))
-        self.clear_manual_options_btn.clicked.connect(self.manual_options_clear_requested.emit)
+        self.clear_manual_options_btn.clicked.connect(self.on_manual_options_clear_clicked)
 
         self.save_manual_log_btn = QPushButton(lang_manager.get_text("manual_ctrl_btn_save_log"))
         self.save_manual_log_btn.setToolTip(lang_manager.get_text("manual_ctrl_btn_save_log_tooltip"))
@@ -206,6 +206,10 @@ class ManualControlWidget(QWidget):
         if path and path != lang_manager.get_text("manual_ctrl_lbl_file_path_no_file"):
             self.transfer_file_send_requested.emit(path)
 
+    def on_manual_options_clear_clicked(self) -> None:
+        """제어 옵션 초기화 버튼 클릭 시 호출됩니다."""
+        self.manual_options_clear_requested.emit()
+
     def on_save_manual_log_clicked(self) -> None:
         """로그 저장 버튼 클릭 시 호출됩니다."""
         filter_str = f"{lang_manager.get_text('manual_ctrl_dialog_file_filter_txt')} (*.txt);;{lang_manager.get_text('manual_ctrl_dialog_file_filter_all')} (*)"
@@ -239,10 +243,10 @@ class ManualControlWidget(QWidget):
         state = {
             "input_text": self.manual_cmd_input.text(),
             "hex_mode": self.hex_chk.isChecked(),
-            "cmd_prefix": self.prefix_chk.isChecked(),
-            "cmd_suffix": self.suffix_chk.isChecked(),
-            "rts": self.rts_chk.isChecked(),
-            "dtr": self.dtr_chk.isChecked(),
+            "prefix_chk": self.prefix_chk.isChecked(),
+            "suffix_chk": self.suffix_chk.isChecked(),
+            "rts_chk": self.rts_chk.isChecked(),
+            "dtr_chk": self.dtr_chk.isChecked(),
         }
         return state
 
@@ -257,8 +261,8 @@ class ManualControlWidget(QWidget):
             return
 
         self.hex_chk.setChecked(state.get("hex_mode", False))
-        self.prefix_chk.setChecked(state.get("cmd_prefix", False))
-        self.suffix_chk.setChecked(state.get("cmd_suffix", False))
-        self.rts_chk.setChecked(state.get("rts", False))
-        self.dtr_chk.setChecked(state.get("dtr", False))
+        self.prefix_chk.setChecked(state.get("prefix_chk", False))
+        self.suffix_chk.setChecked(state.get("suffix_chk", False))
+        self.rts_chk.setChecked(state.get("rts_chk", False))
+        self.dtr_chk.setChecked(state.get("dtr_chk", False))
         self.manual_cmd_input.setText(state.get("input_text", ""))

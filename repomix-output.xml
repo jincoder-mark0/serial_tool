@@ -1,0 +1,5059 @@
+This file is a merged representation of a subset of the codebase, containing specifically included files, combined into a single document by Repomix.
+
+<file_summary>
+This section contains a summary of this file.
+
+<purpose>
+This file contains a packed representation of a subset of the repository's contents that is considered the most important context.
+It is designed to be easily consumable by AI systems for analysis, code review,
+or other automated processes.
+</purpose>
+
+<file_format>
+The content is organized as follows:
+1. This summary section
+2. Repository information
+3. Directory structure
+4. Repository files (if enabled)
+5. Multiple file entries, each consisting of:
+  - File path as an attribute
+  - Full contents of the file
+</file_format>
+
+<usage_guidelines>
+- This file should be treated as read-only. Any changes should be made to the
+  original repository files, not this packed version.
+- When processing this file, use the file path to distinguish
+  between different files in the repository.
+- Be aware that this file may contain sensitive information. Handle it with
+  the same level of security as you would the original repository.
+</usage_guidelines>
+
+<notes>
+- Some files may have been excluded based on .gitignore rules and Repomix's configuration
+- Binary files are not included in this packed representation. Please refer to the Repository Structure section for a complete list of file paths, including binary files
+- Only files matching these patterns are included: view
+- Files matching patterns in .gitignore are excluded
+- Files matching default ignore patterns are excluded
+- Files are sorted by Git change count (files with more changes are at the bottom)
+</notes>
+
+</file_summary>
+
+<directory_structure>
+view/color_rules.py
+view/dialogs/__init__.py
+view/dialogs/about_dialog.py
+view/dialogs/font_settings_dialog.py
+view/dialogs/preferences_dialog.py
+view/doc/implementation_plan.md
+view/lang_manager.py
+view/main_window.py
+view/panels/macro_panel.py
+view/panels/manual_control_panel.py
+view/panels/packet_inspector_panel.py
+view/panels/port_panel.py
+view/panels/port_tab_panel.py
+view/panels/tx_panel.py
+view/pyqt_customs/smart_number_edit.py
+view/sections/main_left_section.py
+view/sections/main_menu_bar.py
+view/sections/main_right_section.py
+view/sections/main_status_bar.py
+view/theme_manager.py
+view/widgets/file_progress.py
+view/widgets/macro_ctrl.py
+view/widgets/macro_list.py
+view/widgets/main_toolbar.py
+view/widgets/manual_control.py
+view/widgets/packet_inspector.py
+view/widgets/port_settings.py
+view/widgets/received_area.py
+view/widgets/status_area.py
+view/widgets/status.py
+</directory_structure>
+
+<files>
+This section contains the contents of the repository's files.
+
+<file path="view/dialogs/__init__.py">
+# Dialogs package
+</file>
+
+<file path="view/lang_manager.py">
+try:
+    import commentjson as json
+except ImportError:
+    import json
+    print("Warning: commentjson not found, using standard json. Comments in language files will not be supported.")
+import os
+from typing import Dict, Optional
+from PyQt5.QtCore import QObject, pyqtSignal
+from core.logger import logger
+
+class LangManager(QObject):
+    """
+    애플리케이션 언어 관리 클래스 (싱글톤 패턴 적용).
+    JSON 파일에서 언어 리소스를 로드하고 다국어 텍스트를 제공합니다.
+    """
+    language_changed = pyqtSignal(str)
+
+    _instance = None
+
+    def __new__(cls):
+        if cls._instance is None:
+            cls._instance = super(LangManager, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+
+    def __init__(self):
+        if self._initialized:
+            return
+        super().__init__()
+        self._initialized = True
+        self.current_language = 'en'
+        self.resources: Dict[str, Dict[str, str]] = {}
+        self.load_languages()
+
+    def load_languages(self) -> None:
+        """
+        config/languages 디렉토리에서 언어 파일(*.json)을 로드합니다.
+        """
+        # 프로젝트 루트 경로 계산 (view/lang_manager.py 기준)
+        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+        lang_dir = os.path.join(base_dir, 'config', 'languages')
+
+        if not os.path.exists(lang_dir):
+            logger.error(f"Language directory not found: {lang_dir}")
+            return
+
+        for filename in os.listdir(lang_dir):
+            if filename.endswith('.json'):
+                lang_code = os.path.splitext(filename)[0]
+                file_path = os.path.join(lang_dir, filename)
+                try:
+                    with open(file_path, 'r', encoding='utf-8') as f:
+                        self.resources[lang_code] = json.load(f)
+                except Exception as e:
+                    logger.error(f"Failed to load language file {filename}: {e}")
+
+    def set_language(self, lang_code: str) -> None:
+        """
+        현재 언어를 설정하고 시그널을 발생시킵니다.
+
+        Args:
+            lang_code (str): 설정할 언어 코드 (예: 'en', 'ko').
+        """
+        if lang_code in self.resources and self.current_language != lang_code:
+            self.current_language = lang_code
+            self.language_changed.emit(lang_code)
+
+    def get_text(self, key: str, lang_code: Optional[str] = None) -> str:
+        """
+        지정된 언어(또는 현재 언어)에 맞는 텍스트를 반환합니다.
+
+        Args:
+            key (str): 텍스트 키.
+            lang_code (Optional[str]): 언어 코드. None이면 현재 언어 사용.
+
+        Returns:
+            str: 번역된 텍스트. 키가 없으면 키 자체를 반환.
+        """
+        target_lang = lang_code if lang_code else self.current_language
+        lang_dict = self.resources.get(target_lang, {})
+        text = lang_dict.get(key)
+
+        if text is None:
+            # 지정된 언어에 키가 없으면 기본 언어(영어)에서 시도
+            if target_lang != 'en':
+                fallback_dict = self.resources.get('en', {})
+                text = fallback_dict.get(key)
+
+        # 여전히 없으면 키 자체를 반환
+        return text if text is not None else key
+
+    def get_supported_languages(self) -> list:
+        """
+        지원되는 모든 언어 코드 목록을 반환합니다.
+
+        Returns:
+            list: 언어 코드 리스트 (예: ['en', 'ko']).
+        """
+        return list(self.resources.keys())
+
+    def text_matches_key(self, text: str, key: str) -> bool:
+        """
+        주어진 텍스트가 특정 키의 어떤 언어 번역과 일치하는지 확인합니다.
+
+        Args:
+            text (str): 확인할 텍스트.
+            key (str): 언어 키.
+
+        Returns:
+            bool: 일치하면 True, 아니면 False.
+        """
+        for lang_code in self.get_supported_languages():
+            if text == self.get_text(key, lang_code):
+                return True
+        return False
+
+# 전역 인스턴스
+lang_manager = LangManager()
+</file>
+
+<file path="view/pyqt_customs/smart_number_edit.py">
+from PyQt5.QtWidgets import QLineEdit
+from PyQt5.QtGui import QRegExpValidator
+from PyQt5.QtCore import QRegExp
+
+class QSmartLineEdit(QLineEdit):
+    """
+    HEX 모드와 일반 텍스트 모드를 지원하는 스마트 라인 에디트입니다.
+    HEX 모드일 때는 0-9, A-F, 공백만 입력을 허용하고 자동으로 대문자로 변환합니다.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self._hex_mode = False
+        self._ascii_validator = None # 기본적으로 모든 입력 허용
+
+        # HEX 모드용 검증기 (0-9, A-F, a-f, 공백)
+        hex_regex = QRegExp("[0-9A-Fa-f ]+")
+        self._hex_validator = QRegExpValidator(hex_regex)
+
+    def set_hex_mode(self, enabled: bool):
+        """
+        HEX 모드 활성화/비활성화를 설정합니다.
+        """
+        self._hex_mode = enabled
+        if enabled:
+            self.setValidator(self._hex_validator)
+            # 현재 텍스트를 HEX 형식에 맞게 정리 (선택 사항)
+            # self.setText(self.text().upper())
+        else:
+            self.setValidator(self._ascii_validator)
+
+    def keyPressEvent(self, event):
+        """
+        키 입력 이벤트를 처리합니다.
+        HEX 모드일 때 소문자를 대문자로 변환합니다.
+        """
+        if self._hex_mode:
+            text = event.text()
+            if text.isalnum():
+                # 소문자 a-f를 대문자로 변환하여 입력
+                if 'a' <= text <= 'f':
+                    new_event = type(event)(
+                        event.type(),
+                        event.key(),
+                        event.modifiers(),
+                        text.upper(),
+                        event.isAutoRepeat(),
+                        event.count()
+                    )
+                    super().keyPressEvent(new_event)
+                    return
+
+        super().keyPressEvent(event)
+</file>
+
+<file path="view/widgets/macro_list.py">
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QTableView, QPushButton,
+    QHeaderView, QCheckBox
+)
+from PyQt5.QtGui import QStandardItemModel, QStandardItem
+from PyQt5.QtCore import Qt, pyqtSignal
+from typing import Optional, List, Dict, Any
+from view.lang_manager import lang_manager
+
+class MacroListWidget(QWidget):
+    """
+    명령어 목록(Command List)을 관리하는 위젯 클래스입니다.
+    명령어의 추가, 삭제, 순서 변경 및 선택 기능을 제공합니다.
+    """
+
+    # 시그널 정의
+    send_row_requested = pyqtSignal(int) # row_index
+    macro_list_changed = pyqtSignal()  # 데이터 변경 시그널
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        """
+        MacroListWidget을 초기화합니다.
+
+        Args:
+            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
+        """
+        super().__init__(parent)
+        self.cmd_table_model = None
+        self.cmd_table = None
+        self.down_cmd_btn = None
+        self.up_cmd_btn = None
+        self.del_cmd_btn = None
+        self.add_cmd_btn = None
+        self.select_all_chk = None
+        self.init_ui()
+
+        # 언어 변경 시 UI 업데이트 연결
+        lang_manager.language_changed.connect(self.retranslate_ui)
+
+    def init_ui(self) -> None:
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        # 헤더 / 제어 버튼 (Header / Controls)
+        header_layout = QHBoxLayout()
+
+        # 전체 선택 체크박스 (Tristate 지원)
+        self.select_all_chk = QCheckBox(lang_manager.get_text("macro_list_chk_select_all"))
+        self.select_all_chk.setToolTip(lang_manager.get_text("macro_list_chk_select_all_tooltip"))
+        self.select_all_chk.setTristate(True)
+        self.select_all_chk.stateChanged.connect(self.on_select_all_changed)
+
+        self.add_cmd_btn = QPushButton()
+        self.add_cmd_btn.setObjectName("add_cmd_btn")
+        self.add_cmd_btn.setToolTip(lang_manager.get_text("macro_list_btn_add_cmd_tooltip"))
+        self.add_cmd_btn.setFixedSize(30, 30)
+
+        self.del_cmd_btn = QPushButton()
+        self.del_cmd_btn.setObjectName("del_cmd_btn")
+        self.del_cmd_btn.setToolTip(lang_manager.get_text("macro_list_btn_del_cmd_tooltip"))
+        self.del_cmd_btn.setFixedSize(30, 30)
+
+        self.up_cmd_btn = QPushButton()
+        self.up_cmd_btn.setObjectName("up_cmd_btn")
+        self.up_cmd_btn.setToolTip(lang_manager.get_text("macro_list_btn_up_cmd_tooltip"))
+        self.up_cmd_btn.setFixedSize(30, 30)
+
+        self.down_cmd_btn = QPushButton()
+        self.down_cmd_btn.setObjectName("down_cmd_btn")
+        self.down_cmd_btn.setToolTip(lang_manager.get_text("macro_list_btn_down_cmd_tooltip"))
+        self.down_cmd_btn.setFixedSize(30, 30)
+
+        header_layout.addWidget(self.select_all_chk)
+        header_layout.addStretch()
+        header_layout.addWidget(self.add_cmd_btn)
+        header_layout.addWidget(self.del_cmd_btn)
+        header_layout.addWidget(self.up_cmd_btn)
+        header_layout.addWidget(self.down_cmd_btn)
+
+        # 시그널 연결
+        self.add_cmd_btn.clicked.connect(self.add_cmd_row)
+        self.del_cmd_btn.clicked.connect(self.del_cmd_rows)
+        self.up_cmd_btn.clicked.connect(self.move_cmd_up)
+        self.down_cmd_btn.clicked.connect(self.move_cmd_down)
+
+        # 테이블 뷰 (Table View)
+        self.cmd_table = QTableView()
+        self.cmd_table.setProperty("class", "fixed-font")  # 테이블에 고정폭 폰트 적용
+        self.cmd_table_model = QStandardItemModel()
+        # 컬럼: 선택, 접두사, 명령어, 접미사, HEX, 지연시간, 전송버튼
+        self.update_header_labels()
+        self.cmd_table.setModel(self.cmd_table_model)
+        self.cmd_table.setToolTip(lang_manager.get_text("macro_list_table_cmd"))
+
+        # 스크롤바 정책 - 항상 표시
+        self.cmd_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
+        self.cmd_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+
+        # 수직 헤더(행 번호) 숨김
+        self.cmd_table.verticalHeader().setVisible(False)
+
+        # 선택 모드 설정
+        self.cmd_table.setSelectionBehavior(QTableView.SelectRows)
+        self.cmd_table.setSelectionMode(QTableView.ExtendedSelection)
+
+        # 컬럼 너비 조정
+        header = self.cmd_table.horizontalHeader()
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents) # Select
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents) # Prefix
+        header.setSectionResizeMode(2, QHeaderView.Stretch)          # Command
+        header.setSectionResizeMode(3, QHeaderView.ResizeToContents) # Suffix
+        header.setSectionResizeMode(4, QHeaderView.ResizeToContents) # HEX
+        header.setSectionResizeMode(5, QHeaderView.ResizeToContents) # Delay
+        header.setSectionResizeMode(6, QHeaderView.ResizeToContents) # Send Btn
+
+        layout.addLayout(header_layout)
+        layout.addWidget(self.cmd_table)
+
+        self.setLayout(layout)
+
+        # 모델 시그널 연결
+        self.cmd_table_model.itemChanged.connect(self.on_item_changed)
+        self.cmd_table_model.rowsInserted.connect(lambda: self.macro_list_changed.emit())
+        self.cmd_table_model.rowsRemoved.connect(lambda: self.macro_list_changed.emit())
+        self.cmd_table_model.rowsMoved.connect(lambda: self.macro_list_changed.emit())
+
+    def retranslate_ui(self) -> None:
+        """언어 변경 시 UI 텍스트를 업데이트합니다."""
+        self.select_all_chk.setText(lang_manager.get_text("macro_list_chk_select_all"))
+        self.select_all_chk.setToolTip(lang_manager.get_text("macro_list_chk_select_all_tooltip"))
+
+        self.add_cmd_btn.setToolTip(lang_manager.get_text("macro_list_btn_add_cmd_tooltip"))
+        self.del_cmd_btn.setToolTip(lang_manager.get_text("macro_list_btn_del_cmd_tooltip"))
+        self.up_cmd_btn.setToolTip(lang_manager.get_text("macro_list_btn_up_cmd_tooltip"))
+        self.down_cmd_btn.setToolTip(lang_manager.get_text("macro_list_btn_down_cmd_tooltip"))
+
+        self.cmd_table.setToolTip(lang_manager.get_text("macro_list_table_cmd"))
+        self.update_header_labels()
+
+        # Send 버튼 텍스트 업데이트 (모든 행)
+        for row in range(self.cmd_table_model.rowCount()):
+            index = self.cmd_table_model.index(row, 6)
+            widget = self.cmd_table.indexWidget(index)
+            if widget:
+                btn_send = widget.findChild(QPushButton)
+                if btn_send:
+                    btn_send.setText(lang_manager.get_text("macro_list_btn_send"))
+
+    def update_header_labels(self) -> None:
+        """테이블 헤더 라벨을 업데이트합니다."""
+        labels = [
+            "",
+            lang_manager.get_text("macro_list_col_prefix"),
+            lang_manager.get_text("macro_list_col_command"),
+            lang_manager.get_text("macro_list_col_suffix"),
+            lang_manager.get_text("macro_list_col_hex"),
+            lang_manager.get_text("macro_list_col_delay"),
+            lang_manager.get_text("macro_list_col_send")
+        ]
+        self.cmd_table_model.setHorizontalHeaderLabels(labels)
+
+    def on_item_changed(self, item: QStandardItem) -> None:
+        """
+        모델 아이템 변경 핸들러입니다.
+        Select 컬럼이 변경되면 Select All 상태를 업데이트합니다.
+        """
+        if item.column() == 0:  # Select column
+            self.update_select_all_state()
+
+        # 데이터 변경 시그널 발생 (Select 컬럼 제외)
+        if item.column() != 0:
+            self.macro_list_changed.emit()
+
+    def get_macro_list(self) -> List[Dict[str, Any]]:
+        """
+        현재 커맨드 리스트 데이터를 반환합니다.
+
+        Returns:
+            List[Dict[str, Any]]: 커맨드 데이터 리스트.
+        """
+        commands = []
+        for row in range(self.cmd_table_model.rowCount()):
+            cmd_data = {
+                "enabled": self.cmd_table_model.item(row, 0).checkState() == Qt.Checked,
+                "prefix": self.cmd_table_model.item(row, 1).checkState() == Qt.Checked,
+                "command": self.cmd_table_model.item(row, 2).text(),
+                "suffix": self.cmd_table_model.item(row, 3).checkState() == Qt.Checked,
+                "hex_mode": self.cmd_table_model.item(row, 4).checkState() == Qt.Checked,
+                "delay": self.cmd_table_model.item(row, 5).text()
+            }
+            commands.append(cmd_data)
+        return commands
+
+    def set_macro_list(self, commands: List[Dict[str, Any]]) -> None:
+        """
+        커맨드 리스트 데이터를 설정합니다.
+
+        Args:
+            commands (List[Dict[str, Any]]): 커맨드 데이터 리스트.
+        """
+        self.cmd_table_model.removeRows(0, self.cmd_table_model.rowCount())
+        for cmd in commands:
+            self._append_row(
+                cmd.get("command", ""),
+                cmd.get("prefix", True),
+                cmd.get("hex_mode", False),
+                cmd.get("suffix", True),
+                str(cmd.get("delay", "100")),
+                cmd.get("enabled", True)
+            )
+        self.update_select_all_state()
+
+    def add_dummy_row(self, cmd: str, hex_mode: bool, suffix: bool, delay: str) -> None:
+        """테스트용 더미 데이터를 추가합니다."""
+        self._append_row(cmd, True, hex_mode, suffix, delay)
+
+    def add_cmd_row(self) -> None:
+        """빈 행을 추가합니다. 선택된 행이 있으면 복사, 없으면 마지막 행 복사."""
+        # 기본값
+        cmd = ""
+        prefix = True
+        hex_mode = False
+        suffix = True
+        delay = "100"
+        enabled = True
+
+        # 선택된 행 확인
+        selected_rows = self.cmd_table.selectionModel().selectedRows()
+        target_row = -1
+
+        if selected_rows:
+            target_row = selected_rows[-1].row()  # 마지막 선택된 행
+        elif self.cmd_table_model.rowCount() > 0:
+            target_row = self.cmd_table_model.rowCount() - 1  # 마지막 행
+
+        if target_row >= 0:
+            # 데이터 복사
+            enabled = self.cmd_table_model.item(target_row, 0).checkState() == Qt.Checked
+            prefix = self.cmd_table_model.item(target_row, 1).checkState() == Qt.Checked
+            cmd = self.cmd_table_model.item(target_row, 2).text()
+            suffix = self.cmd_table_model.item(target_row, 3).checkState() == Qt.Checked
+            hex_mode = self.cmd_table_model.item(target_row, 4).checkState() == Qt.Checked
+            delay = self.cmd_table_model.item(target_row, 5).text()
+
+        self._append_row(cmd, prefix, hex_mode, suffix, delay, enabled)
+
+    def _append_row(self, cmd: str, prefix: bool, hex_mode: bool, suffix: bool, delay: str, enabled: bool = True) -> None:
+        """
+        새로운 행을 모델에 추가합니다.
+
+        Args:
+            cmd (str): 명령어.
+            prefix (bool): 접두사 사용 여부.
+            hex_mode (bool): HEX 모드 여부.
+            suffix (bool): 접미사 사용 여부.
+            delay (str): 지연 시간.
+            enabled (bool): 활성화 여부 (Select).
+        """
+        row_idx = self.cmd_table_model.rowCount()
+
+        # 0: Select Checkbox
+        item_select = QStandardItem()
+        item_select.setCheckable(True)
+        item_select.setCheckState(Qt.Checked if enabled else Qt.Unchecked)
+        item_select.setEditable(False)
+
+        # 1: Prefix Checkbox
+        item_prefix = QStandardItem()
+        item_prefix.setCheckable(True)
+        item_prefix.setCheckState(Qt.Checked if prefix else Qt.Unchecked)
+        item_prefix.setEditable(False)
+
+        # 2: Command
+        item_cmd = QStandardItem(cmd)
+
+        # 3: Suffix Checkbox
+        item_suffix = QStandardItem()
+        item_suffix.setCheckable(True)
+        item_suffix.setCheckState(Qt.Checked if suffix else Qt.Unchecked)
+        item_suffix.setEditable(False)
+
+        # 4: HEX
+        item_hex = QStandardItem()
+        item_hex.setCheckable(True)
+        item_hex.setCheckState(Qt.Checked if hex_mode else Qt.Unchecked)
+        item_hex.setEditable(False)
+
+        # 5: Delay
+        item_delay = QStandardItem(delay)
+
+        # 6: Send (Placeholder)
+        item_send = QStandardItem("")
+        item_send.setEditable(False)
+
+        self.cmd_table_model.appendRow([item_select, item_prefix, item_cmd, item_suffix, item_hex, item_delay, item_send])
+
+        # Send 버튼 설정
+        self._set_send_button(row_idx)
+
+        # Select All 상태 업데이트
+        self.update_select_all_state()
+
+    def _set_send_button(self, row: int) -> None:
+        """
+        해당 행에 Send 버튼을 설정합니다.
+
+        Args:
+            row (int): 행 인덱스.
+        """
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        layout.setContentsMargins(2, 2, 2, 2)
+        layout.setAlignment(Qt.AlignCenter)
+
+        btn = QPushButton(lang_manager.get_text("macro_list_btn_send"))
+        btn.setCursor(Qt.PointingHandCursor)
+        # 초기 상태는 비활성화 (포트 연결 전)
+        btn.setEnabled(False)
+
+        # 버튼 클릭 시 해당 버튼의 위치를 찾아 시그널 발생
+        btn.clicked.connect(lambda: self._on_send_btn_clicked(btn))
+
+        layout.addWidget(btn)
+
+        index = self.cmd_table_model.index(row, 6)
+        self.cmd_table.setIndexWidget(index, widget)
+
+    def _on_send_btn_clicked(self, btn: QPushButton) -> None:
+        """
+        Send 버튼 클릭 핸들러입니다.
+        버튼의 위치를 기반으로 행 인덱스를 찾아 시그널을 발생시킵니다.
+
+        Args:
+            btn (QPushButton): 클릭된 버튼 객체.
+        """
+        # 버튼의 부모 위젯(컨테이너)을 통해 위치 확인
+        # btn -> layout -> widget -> table_view
+        # viewport mapFromGlobal을 사용하는 것이 가장 정확함
+        pos = self.cmd_table.viewport().mapFromGlobal(btn.mapToGlobal(btn.rect().center()))
+        index = self.cmd_table.indexAt(pos)
+        if index.isValid():
+            self.send_row_requested.emit(index.row())
+
+    def set_send_enabled(self, enabled: bool) -> None:
+        """
+        모든 Send 버튼의 활성화 상태를 변경합니다.
+
+        Args:
+            enabled (bool): 활성화 여부.
+        """
+        for row in range(self.cmd_table_model.rowCount()):
+            index = self.cmd_table_model.index(row, 6)
+            widget = self.cmd_table.indexWidget(index)
+            if widget:
+                # widget은 컨테이너이므로 그 안의 버튼을 찾아야 함
+                btn = widget.findChild(QPushButton)
+                if btn:
+                    btn.setEnabled(enabled)
+
+    def del_cmd_rows(self) -> None:
+        """선택된 행들을 삭제합니다."""
+        rows = sorted(set(index.row() for index in self.cmd_table.selectionModel().selectedRows()), reverse=True)
+        for row in rows:
+            self.cmd_table_model.removeRow(row)
+        self.update_select_all_state()
+
+    def move_cmd_up(self) -> None:
+        """선택된 행들을 위로 이동합니다."""
+        rows = sorted(set(index.row() for index in self.cmd_table.selectionModel().selectedRows()))
+        if not rows or rows[0] == 0:
+            return
+
+        # 위에서부터 순서대로 이동해야 인덱스가 꼬이지 않음
+        for row in rows:
+            self._move_row(row, row - 1)
+
+        # 선택 상태 복구
+        for row in rows:
+            self.cmd_table.selectRow(row - 1)
+
+    def move_cmd_down(self) -> None:
+        """선택된 행들을 아래로 이동합니다."""
+        rows = sorted(set(index.row() for index in self.cmd_table.selectionModel().selectedRows()), reverse=True)
+        if not rows or rows[0] == self.cmd_table_model.rowCount() - 1:
+            return
+
+        # 아래에서부터 이동
+        for row in rows:
+            self._move_row(row, row + 1)
+
+        # 선택 상태 복구
+        for row in rows:
+            self.cmd_table.selectRow(row + 1)
+
+    def _move_row(self, source_row: int, dest_row: int) -> None:
+        """
+        행을 이동하고 위젯(버튼)을 복구합니다.
+
+        Args:
+            source_row (int): 원본 행 인덱스.
+            dest_row (int): 대상 행 인덱스.
+        """
+        # 0. 이동 전 버튼 상태 저장
+        is_enabled = False
+        index = self.cmd_table_model.index(source_row, 6)
+        widget = self.cmd_table.indexWidget(index)
+        if widget:
+            btn = widget.findChild(QPushButton)
+            if btn:
+                is_enabled = btn.isEnabled()
+
+        # 1. 데이터 가져오기
+        items = self.cmd_table_model.takeRow(source_row)
+
+        # 2. 새 위치에 삽입
+        self.cmd_table_model.insertRow(dest_row, items)
+
+        # 3. 위젯(버튼) 복구
+        # 이동 시 기존 위젯은 삭제되므로 새로 생성해야 함
+        self._set_send_button(dest_row)
+
+        # 4. 버튼 상태 복원
+        new_index = self.cmd_table_model.index(dest_row, 6)
+        new_widget = self.cmd_table.indexWidget(new_index)
+        if new_widget:
+            new_btn = new_widget.findChild(QPushButton)
+            if new_btn:
+                new_btn.setEnabled(is_enabled)
+
+    def get_selected_indices(self) -> List[int]:
+        """
+        체크박스가 선택된 항목의 인덱스 리스트를 반환합니다.
+
+        Returns:
+            List[int]: 선택된 행 인덱스 리스트.
+        """
+        indices: List[int] = []
+        for row in range(self.cmd_table_model.rowCount()):
+            item = self.cmd_table_model.item(row, 0)
+            if item.checkState() == Qt.Checked:
+                indices.append(row)
+        return indices
+
+    def on_select_all_changed(self, state: int) -> None:
+        """
+        Select All 체크박스 상태 변경 핸들러입니다.
+
+        Args:
+            state (int): 체크박스 상태 (Qt.Checked 등).
+        """
+        if state == Qt.PartiallyChecked:
+            # PartiallyChecked 상태에서 클릭하면 모두 선택으로 변경
+            self.select_all_chk.setCheckState(Qt.Checked)
+        elif state == Qt.Checked:
+            self.set_all_checked(True)
+        else:  # Qt.Unchecked
+            self.set_all_checked(False)
+
+    def save_state(self) -> list:
+        """
+        현재 명령어 목록을 리스트로 반환합니다.
+
+        Returns:
+            list: 명령어 목록 데이터.
+        """
+        commands = self.get_macro_list()
+        return commands
+
+    def load_state(self, state: list) -> None:
+        """
+        저장된 명령어 목록을 위젯에 적용합니다.
+
+        Args:
+            state (list): 명령어 목록 데이터.
+        """
+        if not state:
+            return
+
+        self.set_macro_list(state)
+
+
+
+    def set_all_checked(self, checked: bool) -> None:
+        """
+        모든 항목의 체크 상태를 변경합니다.
+
+        Args:
+            checked (bool): 체크 여부.
+        """
+        state = Qt.Checked if checked else Qt.Unchecked
+        for row in range(self.cmd_table_model.rowCount()):
+            item = self.cmd_table_model.item(row, 0)
+            item.setCheckState(state)
+        self.update_select_all_state()
+
+    def update_select_all_state(self) -> None:
+        """Select All 체크박스의 상태(전체/부분/없음)를 업데이트합니다."""
+        total = self.cmd_table_model.rowCount()
+        if total == 0:
+            self.select_all_chk.setCheckState(Qt.Unchecked)
+            return
+
+        checked_count = 0
+        for row in range(total):
+            item = self.cmd_table_model.item(row, 0)
+            if item and item.checkState() == Qt.Checked:
+                checked_count += 1
+
+        # 재귀 호출 방지를 위해 시그널 차단
+        self.select_all_chk.blockSignals(True)
+        if checked_count == 0:
+            self.select_all_chk.setCheckState(Qt.Unchecked)
+        elif checked_count == total:
+            self.select_all_chk.setCheckState(Qt.Checked)
+        else:
+            self.select_all_chk.setCheckState(Qt.PartiallyChecked)
+        self.select_all_chk.blockSignals(False)
+</file>
+
+<file path="view/panels/macro_panel.py">
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QFileDialog, QMessageBox
+from PyQt5.QtCore import pyqtSignal
+import commentjson
+from typing import Optional
+
+from view.widgets.macro_list import MacroListWidget
+from view.widgets.macro_ctrl import MacroCtrlWidget
+from view.lang_manager import lang_manager
+
+from core.settings_manager import SettingsManager
+
+class MacroPanel(QWidget):
+    """
+    MacroListWidget과 MacroCtrlWidget을 조합하여
+    커맨드 리스트 관리 및 실행 기능을 제공하는 패널 클래스입니다.
+    """
+
+    repeat_start_requested = pyqtSignal(list) # indices
+    repeat_stop_requested = pyqtSignal()
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        """
+        MacroListPanel을 초기화합니다.
+
+        Args:
+            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
+        """
+        super().__init__(parent)
+        self.settings = None
+        self.marco_ctrl = None
+        self.macro_list = None
+        self._loading = False
+        self.init_ui()
+
+    def init_ui(self) -> None:
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(5)
+
+        self.macro_list = MacroListWidget()
+        self.marco_ctrl = MacroCtrlWidget()
+
+        # 설정 관리자 (Settings Manager)
+        self.settings = SettingsManager()
+
+        # 시그널 연결
+        self.marco_ctrl.cmd_repeat_start_requested.connect(self.on_repeat_start_requested)
+        self.marco_ctrl.cmd_repeat_repeat_stop_requested.connect(self.on_repeat_repeat_stop_requested) # Stop signal is same for now
+
+        self.marco_ctrl.script_save_requested.connect(self.save_script_to_file)
+        self.marco_ctrl.script_load_requested.connect(self.load_script_from_file)
+
+        # 데이터 변경 시 자동 저장
+        self.macro_list.macro_list_changed.connect(self.save_state)
+
+        # CommandControl의 입력 필드 변경 시에도 저장 (textChanged, valueChanged 등)
+        self.marco_ctrl.repeat_delay_input.textChanged.connect(self.save_state)
+        self.marco_ctrl.repeat_count_spin.valueChanged.connect(self.save_state)
+
+        layout.addWidget(self.macro_list)
+        layout.addWidget(self.marco_ctrl)
+
+        self.setLayout(layout)
+
+        # 초기 데이터 로드 (위젯 생성 후)
+        self.load_state()
+
+    def load_state(self) -> None:
+        """설정에서 상태를 로드합니다."""
+        self._loading = True
+        try:
+            # 커맨드 리스트 로드
+            commands = self.settings.get("macro_list.commands", [])
+            if commands:
+                self.macro_list.load_state(commands)
+
+            # 컨트롤 설정 로드
+            control_state = self.settings.get("macro_list.control_state", {})
+            if control_state:
+                self.marco_ctrl.load_state(control_state)
+        finally:
+            self._loading = False
+
+    def save_state(self) -> None:
+        """현재 상태를 설정에 저장합니다."""
+        if self._loading:
+            return
+
+        # 커맨드 리스트 저장
+        commands = self.macro_list.save_state()
+        self.settings.set("macro_list.commands", commands)
+
+        # 컨트롤 설정 저장
+        control_state = self.marco_ctrl.save_state()
+        self.settings.set("macro_list.control_state", control_state)
+
+        self.settings.save_settings()
+
+    def on_repeat_start_requested(self, delay: int, max_runs: int) -> None:
+        """
+        Repeat Start 버튼 클릭 핸들러입니다.
+
+        Args:
+            delay (int): 실행 간 지연 시간(ms).
+            max_runs (int): 최대 실행 횟수.
+        """
+        indices = self.macro_list.get_selected_indices()
+        if indices:
+            # TODO: 자동 실행 파라미터를 시그널이나 별도 메서드로 전달해야 함
+            self.repeat_start_requested.emit(indices)
+            self.marco_ctrl.set_running_state(True, is_auto=True)
+
+    def on_repeat_repeat_stop_requested(self) -> None:
+        """
+        Repeat Stop 버튼 클릭 핸들러입니다.
+        """
+        self.repeat_stop_requested.emit()
+
+    def set_running_state(self, running: bool) -> None:
+        """
+        실행 상태를 전파합니다.
+
+        Args:
+            running (bool): 실행 중 여부.
+        """
+        # TODO: UI를 올바르게 업데이트하려면 자동 실행 여부를 알아야 함
+        # 현재는 단순히 비실행 상태로 초기화
+        self.marco_ctrl.set_running_state(running)
+
+    def save_script_to_file(self) -> None:
+        """현재 커맨드 리스트와 설정을 파일로 저장합니다."""
+        filter_str = "JSON Files (*.json);;All Files (*)"
+        path, _ = QFileDialog.getSaveFileName(self, lang_manager.get_text("macro_list_dialog_title_save"), "", filter_str)
+
+        if not path:
+            return
+
+        data = {
+            "commands": self.macro_list.save_state(),
+            "control_state": self.marco_ctrl.save_state()
+        }
+
+        try:
+            with open(path, 'w', encoding='utf-8') as f:
+                commentjson.dump(data, f, indent=4)
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to save script: {str(e)}")
+
+    def load_script_from_file(self) -> None:
+        """파일에서 커맨드 리스트와 설정을 로드합니다."""
+        filter_str = "JSON Files (*.json);;All Files (*)"
+        path, _ = QFileDialog.getOpenFileName(self, lang_manager.get_text("macro_list_dialog_title_open"), "", filter_str)
+
+        if not path:
+            return
+
+        try:
+            with open(path, 'r', encoding='utf-8') as f:
+                data = commentjson.load(f)
+
+            if "commands" in data:
+                self.macro_list.load_state(data["commands"])
+
+            if "control_state" in data:
+                self.marco_ctrl.load_state(data["control_state"])
+
+        except Exception as e:
+            QMessageBox.critical(self, "Error", f"Failed to load script: {str(e)}")
+</file>
+
+<file path="view/panels/manual_control_panel.py">
+from PyQt5.QtWidgets import QWidget, QVBoxLayout
+from typing import Optional
+from view.widgets.manual_control import ManualControlWidget
+
+class ManualControlPanel(QWidget):
+    """
+    ManualControlWidget을 감싸는 패널 클래스입니다.
+    Section -> Panel -> Widget 계층 구조를 준수하기 위해 사용됩니다.
+    """
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.manual_control_widget = None
+        self.init_ui()
+
+    def init_ui(self) -> None:
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self.manual_control_widget = ManualControlWidget()
+        layout.addWidget(self.manual_control_widget)
+
+        self.setLayout(layout)
+
+    def save_state(self) -> dict:
+        """위젯의 상태를 저장합니다."""
+        return self.manual_control_widget.save_state()
+
+    def load_state(self, state: dict) -> None:
+        """위젯의 상태를 복원합니다."""
+        self.manual_control_widget.load_state(state)
+
+    def set_controls_enabled(self, enabled: bool) -> None:
+        """제어 위젯의 활성화 상태를 설정합니다."""
+        self.manual_control_widget.set_controls_enabled(enabled)
+</file>
+
+<file path="view/sections/main_right_section.py">
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget
+from typing import Optional
+from view.lang_manager import lang_manager
+
+from view.panels.macro_panel import MacroPanel
+from view.panels.packet_inspector_panel import PacketInspectorPanel
+
+class MainRightSection(QWidget):
+    """
+    MainWindow의 우측 영역을 담당하는 패널 클래스입니다.
+    Command List와 Packet Inspector를 탭으로 관리합니다.
+    """
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        """
+        RightSection을 초기화합니다.
+
+        Args:
+            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
+        """
+        super().__init__(parent)
+        self.packet_inspector = None
+        self.macro_panel = None
+        self.tabs = None
+        self.init_ui()
+
+        # 언어 변경 시 UI 업데이트 연결
+        lang_manager.language_changed.connect(self.retranslate_ui)
+
+    def init_ui(self) -> None:
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self.tabs = QTabWidget()
+
+        self.macro_panel = MacroPanel()
+        self.macro_panel.setToolTip(lang_manager.get_text("right_tooltip_macro_list"))
+
+        self.packet_inspector = PacketInspectorPanel()
+        self.packet_inspector.setToolTip(lang_manager.get_text("right_tooltip_inspector"))
+
+        self.tabs.addTab(self.macro_panel, lang_manager.get_text("right_tab_macro_list"))
+        self.tabs.addTab(self.packet_inspector, lang_manager.get_text("right_tab_inspector"))
+
+        layout.addWidget(self.tabs)
+        self.setLayout(layout)
+
+    def retranslate_ui(self) -> None:
+        """언어 변경 시 UI 텍스트를 업데이트합니다."""
+        self.macro_panel.setToolTip(lang_manager.get_text("right_macro_panel_tooltip"))
+        self.packet_inspector.setToolTip(lang_manager.get_text("right_packet_inspector_tooltip"))
+
+        self.tabs.setTabText(0, lang_manager.get_text("right_tab_macro_list"))
+        self.tabs.setTabText(1, lang_manager.get_text("right_tab_inspector"))
+
+    def save_state(self) -> None:
+        """패널 상태를 저장합니다."""
+        self.macro_panel.save_state()
+        # PacketInspector 상태 저장도 필요하다면 여기에 추가
+</file>
+
+<file path="view/widgets/macro_ctrl.py">
+from PyQt5.QtWidgets import (
+    QWidget, QHBoxLayout, QVBoxLayout, QPushButton,
+    QLabel, QLineEdit, QSpinBox, QGroupBox, QGridLayout
+)
+from PyQt5.QtCore import pyqtSignal, Qt
+from typing import Optional
+from view.lang_manager import lang_manager
+
+class MacroCtrlWidget(QWidget):
+    """
+    Command List 실행을 제어하는 위젯 클래스입니다.
+    Repeat, 스크립트 저장/로드 기능을 제공합니다.
+    """
+
+    # 시그널 정의
+    cmd_repeat_start_requested = pyqtSignal(int, int) # delay_ms, max_runs
+    cmd_repeat_repeat_stop_requested = pyqtSignal()
+
+    script_save_requested = pyqtSignal()
+    script_load_requested = pyqtSignal()
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        """
+        MacroCtrlWidget을 초기화합니다.
+
+        Args:
+            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
+        """
+        super().__init__(parent)
+        self.cmd_repeat_count_lbl = None
+        self.cmd_repeat_stop_btn = None
+        self.cmd_repeat_start_btn = None
+        self.repeat_count_spin = None
+        self.repeat_max_lbl = None
+        self.repeat_delay_input = None
+        self.interval_lbl = None
+        self.execution_settings_grp = None
+        self.script_load_btn = None
+        self.script_save_btn = None
+        self.init_ui()
+
+        # 언어 변경 시 UI 업데이트 연결
+        lang_manager.language_changed.connect(self.retranslate_ui)
+
+    def init_ui(self) -> None:
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+
+        # 1. 상단 행: 스크립트 제어 및 접두사/접미사 (Top Row)
+        top_layout = QHBoxLayout()
+        top_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.script_save_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_save_script"))
+        self.script_save_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_save_script_tooltip"))
+        self.script_save_btn.clicked.connect(self.on_script_save_requested)
+
+        self.script_load_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_load_script"))
+        self.script_load_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_load_script_tooltip"))
+        self.script_load_btn.clicked.connect(self.on_script_load_requested)
+
+        top_layout.addStretch()
+        top_layout.addWidget(self.script_save_btn)
+        top_layout.addWidget(self.script_load_btn)
+
+        # 2. 자동 실행 설정 그룹 (Repeat Settings Group)
+        self.execution_settings_grp = QGroupBox(lang_manager.get_text("macro_ctrl_grp_execution"))
+        execution_layout = QGridLayout()
+        execution_layout.setContentsMargins(2, 2, 2, 2)
+        execution_layout.setSpacing(5)
+
+        # Row 0: 자동 실행 설정
+        self.interval_lbl = QLabel(lang_manager.get_text("macro_ctrl_lbl_interval"))
+        execution_layout.addWidget(self.interval_lbl, 0, 0)
+
+        self.repeat_delay_input = QLineEdit("1000")
+        self.repeat_delay_input.setFixedWidth(50)
+        self.repeat_delay_input.setAlignment(Qt.AlignRight)
+        execution_layout.addWidget(self.repeat_delay_input, 1, 1)
+
+        self.repeat_max_lbl = QLabel(lang_manager.get_text("macro_ctrl_lbl_repeat_max"))
+        execution_layout.addWidget(self.repeat_max_lbl, 0, 2)
+
+        self.repeat_count_spin = QSpinBox()
+        self.repeat_count_spin.setRange(0, 9999)
+        self.repeat_count_spin.setValue(0)
+        self.repeat_count_spin.setToolTip(lang_manager.get_text("macro_ctrl_spin_repeat_tooltip"))
+        execution_layout.addWidget(self.repeat_count_spin, 0, 3)
+
+        # Row 1: 자동 실행 제어
+        self.cmd_repeat_start_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_repeat_start"))
+        self.cmd_repeat_start_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_repeat_start_tooltip"))
+        self.cmd_repeat_start_btn.setProperty("class", "accent") # 초록색 스타일
+        self.cmd_repeat_start_btn.clicked.connect(self.on_cmd_repeat_start_clicked)
+
+        self.cmd_repeat_stop_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_repeat_stop"))
+        self.cmd_repeat_stop_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_repeat_stop_tooltip"))
+        self.cmd_repeat_stop_btn.setEnabled(False)
+        self.cmd_repeat_stop_btn.setProperty("class", "danger") # 빨간색 스타일
+        self.cmd_repeat_stop_btn.clicked.connect(self.on_cmd_repeat_stop_clicked)
+
+        self.cmd_repeat_count_lbl = QLabel("0 / ∞")
+        self.cmd_repeat_count_lbl.setAlignment(Qt.AlignCenter)
+
+        execution_layout.addWidget(self.cmd_repeat_start_btn, 1, 0, 1, 2)
+        execution_layout.addWidget(self.cmd_repeat_stop_btn, 1, 2)
+        execution_layout.addWidget(self.cmd_repeat_count_lbl, 1, 3)
+
+        self.execution_settings_grp.setLayout(execution_layout)
+
+        layout.addLayout(top_layout)
+        layout.addWidget(self.execution_settings_grp)
+
+        self.setLayout(layout)
+
+        # 초기 상태: 연결 전까지 비활성화
+        self.set_controls_enabled(False)
+
+    def retranslate_ui(self) -> None:
+        """언어 변경 시 UI 텍스트를 업데이트합니다."""
+        self.script_save_btn.setText(lang_manager.get_text("macro_ctrl_btn_save_script"))
+        self.script_save_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_save_script_tooltip"))
+
+        self.script_load_btn.setText(lang_manager.get_text("macro_ctrl_btn_load_script"))
+        self.script_load_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_load_script_tooltip"))
+
+        self.execution_settings_grp.setTitle(lang_manager.get_text("macro_ctrl_grp_execution"))
+
+        self.interval_lbl.setText(lang_manager.get_text("macro_ctrl_lbl_interval"))
+        self.repeat_max_lbl.setText(lang_manager.get_text("macro_ctrl_lbl_repeat_max"))
+        self.repeat_count_spin.setToolTip(lang_manager.get_text("macro_ctrl_spin_repeat_tooltip"))
+
+        self.cmd_repeat_start_btn.setText(lang_manager.get_text("macro_ctrl_btn_repeat_start"))
+        self.cmd_repeat_stop_btn.setText(lang_manager.get_text("macro_ctrl_btn_repeat_stop"))
+
+    def on_cmd_repeat_start_clicked(self) -> None:
+        """자동 실행 시작 버튼 핸들러"""
+        try:
+            delay = int(self.repeat_delay_input.text())
+        except ValueError:
+            delay = 1000
+        max_runs = self.repeat_count_spin.value()
+        self.cmd_repeat_start_requested.emit(delay, max_runs)
+
+    def on_cmd_repeat_stop_clicked(self) -> None:
+        """자동 실행 정지 버튼 핸들러"""
+        self.cmd_repeat_repeat_stop_requested.emit()
+
+    def on_script_save_requested(self) -> None:
+        """스크립트 저장 버튼 핸들러"""
+        self.script_save_requested.emit()
+
+    def on_script_load_requested(self) -> None:
+        """스크립트 로드 버튼 핸들러"""
+        self.script_load_requested.emit()
+
+    def set_running_state(self, running: bool, is_repeat: bool = False) -> None:
+        """
+        실행 상태에 따라 버튼 활성화/비활성화를 설정합니다.
+
+        Args:
+            running (bool): 실행 중 여부.
+            is_repeat (bool): 자동 실행 모드 여부.
+        """
+        if running:
+            self.cmd_repeat_start_btn.setEnabled(False)
+            if is_repeat:
+                self.cmd_repeat_stop_btn.setEnabled(True)
+        else:
+            self.cmd_repeat_start_btn.setEnabled(True)
+            self.cmd_repeat_stop_btn.setEnabled(False)
+
+    def update_auto_count(self, current: int, total: int) -> None:
+        """
+        자동 실행 카운트를 업데이트합니다.
+
+        Args:
+            current (int): 현재 실행 횟수.
+            total (int): 전체 실행 횟수 (0이면 무한).
+        """
+        total_str = "∞" if total == 0 else str(total)
+        self.cmd_repeat_count_lbl.setText(f"{current} / {total_str}")
+
+    def set_controls_enabled(self, enabled: bool) -> None:
+        """
+        제어 위젯들의 활성화 상태를 설정합니다.
+
+        Args:
+            enabled (bool): 활성화 여부.
+        """
+        self.cmd_repeat_start_btn.setEnabled(enabled)
+        # Stop 버튼은 실행 상태에 따라 별도 관리되므로 여기서는 건드리지 않음
+
+    def save_state(self) -> dict:
+        """
+        현재 위젯의 상태를 딕셔너리로 반환합니다.
+
+        Returns:
+            dict: 위젯 상태 데이터.
+        """
+        state = {
+            "delay": self.repeat_delay_input.text(),
+            "max_runs": self.repeat_count_spin.value()
+        }
+        return state
+
+    def load_state(self, state: dict) -> None:
+        """
+        저장된 상태를 위젯에 적용합니다.
+
+        Args:
+            state (dict): 위젯 상태 데이터.
+        """
+        if not state:
+            return
+
+        self.repeat_delay_input.setText(state.get("delay", "1000"))
+        self.repeat_count_spin.setValue(state.get("max_runs", 0))
+</file>
+
+<file path="view/widgets/status.py">
+from PyQt5.QtWidgets import QWidget, QGroupBox, QGridLayout, QLabel
+from view.lang_manager import lang_manager
+
+class StatusWidget(QWidget):
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.last_rx_label = None
+        self.uptime_label = None
+        self.errors_label = None
+        self.tx_label = None
+        self.rx_label = None
+        self.group_box = None
+        self.init_ui()
+        lang_manager.language_changed.connect(self.retranslate_ui)
+
+    def init_ui(self):
+        layout = QGridLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self.group_box = QGroupBox(lang_manager.get_text("status_grp_title"))
+        gb_layout = QGridLayout()
+
+        self.rx_label = QLabel("RX: 0 B")
+        self.tx_label = QLabel("TX: 0 B")
+        self.errors_label = QLabel("Errors: 0")
+        self.uptime_label = QLabel("Uptime: 00:00:00")
+        self.last_rx_label = QLabel("Last RX: [--:--:--.---]")
+
+        gb_layout.addWidget(self.rx_label, 0, 0)
+        gb_layout.addWidget(self.tx_label, 0, 1)
+        gb_layout.addWidget(self.errors_label, 1, 0)
+        gb_layout.addWidget(self.uptime_label, 1, 1)
+        gb_layout.addWidget(self.last_rx_label, 2, 0, 1, 2)
+
+        self.group_box.setLayout(gb_layout)
+        layout.addWidget(self.group_box, 0, 0)
+        self.setLayout(layout)
+
+    def retranslate_ui(self):
+        self.group_box.setTitle(lang_manager.get_text("status_grp_title"))
+
+    def update_rx(self, bytes_count: int):
+        self.rx_label.setText(f"RX: {self.format_bytes(bytes_count)}")
+
+    def update_tx(self, bytes_count: int):
+        self.tx_label.setText(f"TX: {self.format_bytes(bytes_count)}")
+
+    def update_errors(self, count: int):
+        self.errors_label.setText(f"Errors: {count}")
+
+    def update_uptime(self, seconds: int):
+        m, s = divmod(seconds, 60)
+        h, m = divmod(m, 60)
+        self.uptime_label.setText(f"Uptime: {h:02d}:{m:02d}:{s:02d}")
+
+    def update_last_rx(self, timestamp: str):
+        self.last_rx_label.setText(f"Last RX: [{timestamp}]")
+
+    @staticmethod
+    def format_bytes(size: int) -> str:
+        power = 2**10
+        n = 0
+        power_labels = {0 : 'B', 1: 'KB', 2: 'MB', 3: 'GB', 4: 'TB'}
+        while size > power:
+            size /= power
+            n += 1
+        return f"{size:.2f} {power_labels[n]}"
+</file>
+
+<file path="view/panels/packet_inspector_panel.py">
+from PyQt5.QtWidgets import QWidget, QVBoxLayout
+from typing import Optional
+from view.lang_manager import lang_manager
+from view.widgets.packet_inspector import PacketInspectorWidget
+
+class PacketInspectorPanel(QWidget):
+    """
+    PacketInspectorWidget을 감싸는 패널 클래스입니다.
+    Section -> Panel -> Widget 계층 구조를 준수하기 위해 사용됩니다.
+    """
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.packet_inspector_widget = None
+        self.init_ui()
+
+        # 언어 변경 시 툴팁 업데이트 등을 위해 연결
+        lang_manager.language_changed.connect(self.retranslate_ui)
+
+    def init_ui(self) -> None:
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self.packet_inspector_widget = PacketInspectorWidget()
+        layout.addWidget(self.packet_inspector_widget)
+
+        self.setLayout(layout)
+
+    def retranslate_ui(self) -> None:
+        """언어 변경 시 UI 텍스트를 업데이트합니다."""
+        # 패널 자체의 툴팁이나 타이틀이 있다면 여기서 업데이트
+        # 현재는 RightSection에서 탭 툴팁을 관리하므로 여기서는 위젯 내부 갱신만 트리거될 수 있음
+        pass
+
+    def setToolTip(self, text: str) -> None:
+        """패널의 툴팁을 설정합니다 (주로 탭 툴팁용)."""
+        super().setToolTip(text)
+</file>
+
+<file path="view/panels/port_tab_panel.py">
+from PyQt5.QtWidgets import QTabWidget, QWidget, QTabBar, QInputDialog
+from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtGui import QIcon
+from typing import Optional, TYPE_CHECKING
+from view.lang_manager import lang_manager
+from view.theme_manager import ThemeManager
+from view.panels.port_panel import PortPanel
+
+class PortTabPanel(QTabWidget):
+    """
+    포트 탭들을 관리하는 패널입니다.
+    탭 추가/삭제 및 '+' 탭 기능을 캡슐화합니다.
+    """
+
+    # 시그널 정의
+    tab_added = pyqtSignal(object)  # 새 탭이 추가되었을 때 (패널 전달)
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.setTabsClosable(True)
+        self.tabCloseRequested.connect(self.close_port_tab)
+        self.currentChanged.connect(self.on_tab_changed)
+        self.setToolTip(lang_manager.get_text("left_tooltip_port_tab"))
+
+        # 탭바에서 더블클릭 이벤트 처리 위해 이벤트 필터 설치
+        self.tabBar().installEventFilter(self)
+
+        # 초기화
+        self.add_plus_tab()
+
+        # 언어 변경 연결
+        lang_manager.language_changed.connect(self.retranslate_ui)
+
+    def retranslate_ui(self) -> None:
+        self.setToolTip(lang_manager.get_text("left_tooltip_port_tab"))
+
+    def eventFilter(self, obj, event):
+        """탭바 더블클릭 이벤트를 감지합니다."""
+        if obj == self.tabBar() and event.type() == event.MouseButtonDblClick:
+            # 더블클릭된 탭 인덱스 찾기
+            index = self.tabBar().tabAt(event.pos())
+            if 0 <= index < self.count() - 1:  # 플러스 탭 제외
+                self.edit_tab_name(index)
+                return True
+        return super().eventFilter(obj, event)
+
+    def edit_tab_name(self, index: int) -> None:
+        """탭 이름을 수정합니다."""
+        from view.panels.port_panel import PortPanel
+
+        widget = self.widget(index)
+        if not isinstance(widget, PortPanel):
+            return
+
+        current_name = widget.get_custom_name()
+        new_name, ok = QInputDialog.getText(
+            self,
+            "Edit Tab Name",
+            "Enter custom name:",
+            text=current_name
+        )
+
+        if ok and new_name and new_name != current_name:
+            widget.set_custom_name(new_name)
+
+    def add_plus_tab(self) -> None:
+        """탭 추가를 위한 '+' 탭을 생성합니다."""
+        # 빈 위젯 추가
+        self.addTab(QWidget(), "")
+
+        self.update_plus_tab_icon()
+
+        # 마지막 탭(+)은 닫기 버튼 제거
+        index = self.count() - 1
+        self.tabBar().setTabButton(index, QTabBar.RightSide, None)
+        self.tabBar().setTabButton(index, QTabBar.LeftSide, None)
+
+    def update_plus_tab_icon(self) -> None:
+        """플러스 탭의 아이콘을 테마에 맞춰 업데이트합니다."""
+        count = self.count()
+        if count == 0:
+            return
+
+        index = count - 1
+        theme_manager = ThemeManager()
+        icon = theme_manager.get_icon("add")
+
+        if icon.isNull():
+             self.setTabText(index, "+")
+             self.setTabIcon(index, QIcon())
+        else:
+             self.setTabIcon(index, icon)
+             self.setTabText(index, "")
+
+    def close_port_tab(self, index: int) -> None:
+        """탭 닫기 요청 처리"""
+        # 마지막 탭(+)은 닫을 수 없음
+        if index == self.count() - 1:
+            return
+
+        # 최소 1개의 포트 탭은 유지 (플러스 탭 제외)
+        # count가 2이면 [포트탭1개, +탭] 이므로 삭제 불가
+        if self.count() <= 2:
+            return
+
+        # 시그널 차단하여 탭 삭제 시 on_tab_changed가 호출되지 않도록 함
+        self.blockSignals(True)
+        try:
+            self.removeTab(index)
+
+            # 삭제 후 적절한 탭으로 포커스 이동
+            # 플러스 탭이 아닌 탭으로 이동
+            if self.count() > 1:  # 플러스 탭 외에 다른 탭이 있으면
+                # 삭제된 탭의 이전 탭으로 이동 (또는 0번 탭)
+                new_index = max(0, index - 1)
+                self.setCurrentIndex(new_index)
+            # else: 플러스 탭만 남은 경우는 그대로 둠
+        finally:
+            self.blockSignals(False)
+
+    def on_tab_changed(self, index: int) -> None:
+        """탭 변경 시 처리"""
+        if index == -1: return
+
+        # 마지막 탭(+)을 클릭하면 새 탭 추가
+        if index == self.count() - 1:
+            self.add_new_port_tab()
+
+    def add_new_port_tab(self) -> "PortPanel":
+        """새로운 포트 탭을 추가하고 패널을 반환합니다."""
+        # 시그널 차단 (탭 조작 중 불필요한 이벤트 방지)
+        self.blockSignals(True)
+        try:
+            # 1. 기존 플러스 탭 제거 (항상 마지막에 있음)
+            count = self.count()
+            if count > 0:
+                self.removeTab(count - 1)
+
+            # 2. 새 패널 추가 (닫기 버튼 자동 생성됨)
+            panel = PortPanel()
+            initial_title = panel.get_tab_title()
+            self.addTab(panel, initial_title)
+
+            # 탭 제목 변경 시그널 연결
+            panel.tab_title_changed.connect(lambda title, p=panel: self._on_panel_title_changed(p, title))
+
+            # 3. 플러스 탭 다시 추가
+            self.add_plus_tab()
+
+            # 4. 새 탭으로 포커스 이동
+            # 플러스 탭이 추가되었으므로 새 탭은 count-2 인덱스임
+            new_tab_index = self.count() - 2
+            self.setCurrentIndex(new_tab_index)
+
+        finally:
+            self.blockSignals(False)
+
+        # 시그널 차단 해제 후 변경 알림 (필요 시)
+        # self.currentChanged.emit(self.currentIndex())
+
+        self.tab_added.emit(panel)
+        return panel
+
+    def _on_panel_title_changed(self, panel: "PortPanel", title: str) -> None:
+        """패널의 탭 제목이 변경되었을 때 호출됩니다."""
+        index = self.indexOf(panel)
+        if index >= 0:
+            self.setTabText(index, title)
+</file>
+
+<file path="view/sections/main_status_bar.py">
+from PyQt5.QtWidgets import QStatusBar, QLabel, QProgressBar
+from PyQt5.QtCore import Qt
+from view.lang_manager import lang_manager
+
+class MainStatusBar(QStatusBar):
+    """
+    메인 윈도우의 상태바를 관리하는 클래스입니다.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.init_ui()
+
+    def init_ui(self) -> None:
+        """상태바 초기화"""
+        self.showMessage(lang_manager.get_text("main_status_msg_ready"))
+        self.init_widgets()
+
+    def init_widgets(self):
+        # 1. Port Label
+        self.port_label = QLabel("Port: -- ○")
+        self.addPermanentWidget(self.port_label)
+
+        # 2. RX Speed
+        self.rx_label = QLabel("RX: 0 KB/s")
+        self.addPermanentWidget(self.rx_label)
+
+        # 3. TX Speed
+        self.tx_label = QLabel("TX: 0 KB/s")
+        self.addPermanentWidget(self.tx_label)
+
+        # 4. BPS
+        self.bps_label = QLabel("BPS: 0")
+        self.addPermanentWidget(self.bps_label)
+
+        # 5. Buffer Bar
+        self.buffer_bar = QProgressBar()
+        self.buffer_bar.setMaximum(100)
+        self.buffer_bar.setMaximumWidth(100)
+        self.buffer_bar.setFormat("Buffer: %p%")
+        self.buffer_bar.setAlignment(Qt.AlignCenter)
+        self.addPermanentWidget(self.buffer_bar)
+
+        # 6. Time Label
+        self.time_label = QLabel("00:00:00")
+        self.addPermanentWidget(self.time_label)
+
+    def update_port_status(self, port: str, connected: bool):
+        status_symbol = "●" if connected else "○"
+        color = "green" if connected else "gray"
+        self.port_label.setText(f"Port: {port} <span style='color:{color}'>{status_symbol}</span>")
+
+    def update_rx_speed(self, bytes_per_sec: int):
+        speed = bytes_per_sec / 1024
+        self.rx_label.setText(f"RX: {speed:.1f} KB/s")
+
+    def update_tx_speed(self, bytes_per_sec: int):
+        speed = bytes_per_sec / 1024
+        self.tx_label.setText(f"TX: {speed:.1f} KB/s")
+
+    def update_buffer(self, percent: int):
+        self.buffer_bar.setValue(percent)
+        if percent >= 80:
+            self.buffer_bar.setStyleSheet("QProgressBar::chunk { background-color: red; }")
+        else:
+            self.buffer_bar.setStyleSheet("")
+
+    def update_time(self, time_str: str):
+        self.time_label.setText(time_str)
+
+    def show_message(self, message: str, timeout: int = 0) -> None:
+        """
+        상태바에 메시지를 표시합니다.
+
+        Args:
+            message (str): 표시할 메시지
+            timeout (int): 메시지 표시 시간 (ms). 0이면 계속 표시.
+        """
+        self.showMessage(message, timeout)
+
+    def retranslate_ui(self) -> None:
+        """언어 변경 시 상태바 텍스트를 업데이트합니다."""
+        # (임시 메시지가 떠있는 경우는 그대로 둠)
+        current_msg = self.currentMessage()
+        if not current_msg or lang_manager.text_matches_key(current_msg, "main_status_msg_ready"):
+            self.showMessage(lang_manager.get_text("main_status_msg_ready"))
+</file>
+
+<file path="view/widgets/main_toolbar.py">
+from PyQt5.QtWidgets import QToolBar, QAction
+from PyQt5.QtCore import Qt, pyqtSignal
+from view.lang_manager import lang_manager
+
+class MainToolBar(QToolBar):
+    open_requested = pyqtSignal()
+    close_requested = pyqtSignal()
+    clear_requested = pyqtSignal()
+    save_log_requested = pyqtSignal()
+    settings_requested = pyqtSignal()
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.settings_action = None
+        self.save_log_action = None
+        self.clear_action = None
+        self.close_action = None
+        self.open_action = None
+        self.setMovable(False)
+        self.setToolButtonStyle(Qt.ToolButtonTextUnderIcon)
+        self.init_ui()
+        lang_manager.language_changed.connect(self.retranslate_ui)
+
+    def init_ui(self):
+        self.clear()
+
+        # Open
+        self.open_action = QAction("Open", self) # TODO: Add lang key
+        self.open_action.triggered.connect(self.open_requested.emit)
+        self.addAction(self.open_action)
+
+        # Close
+        self.close_action = QAction("Close", self) # TODO: Add lang key
+        self.close_action.triggered.connect(self.close_requested.emit)
+        self.addAction(self.close_action)
+
+        # Clear
+        self.clear_action = QAction("Clear", self) # TODO: Add lang key
+        self.clear_action.triggered.connect(self.clear_requested.emit)
+        self.addAction(self.clear_action)
+
+        # Save Log
+        self.save_log_action = QAction("Save Log", self) # TODO: Add lang key
+        self.save_log_action.triggered.connect(self.save_log_requested.emit)
+        self.addAction(self.save_log_action)
+
+        # Settings
+        self.settings_action = QAction("Settings", self) # TODO: Add lang key
+        self.settings_action.triggered.connect(self.settings_requested.emit)
+        self.addAction(self.settings_action)
+
+    def retranslate_ui(self):
+        self.open_action.setText("Open")
+        self.close_action.setText("Close")
+        self.clear_action.setText("Clear")
+        self.save_log_action.setText("Save Log")
+        self.settings_action.setText("Settings")
+</file>
+
+<file path="view/doc/implementation_plan.md">
+# View 계층 구현 가이드
+
+> **목적**: View 계층에서 구현해야 할 UI 컴포넌트 목록과 요구사항 정의
+
+**최종 업데이트**: 2025-12-05
+
+---
+
+## 📋 구현 항목 한눈에 보기
+
+| # | 항목 | 난이도 | 파일 | View 전용 | 상태 |
+|---|------|--------|------|----------|------|
+| 1 | Connect 버튼 색상 | ⭐ 쉬움 | `view/widgets/port_settings.py` | ✅ | ❌ 부분 |
+| 2 | 색상 코드 표준화 | ⭐ 쉬움 | `.qss` 파일들 | ✅ | ❌ 부분 |
+| 3 | Packet Inspector 설정 | ⭐⭐ 보통 | `view/dialogs/preferences_dialog.py` | ✅ | ❌ 누락 |
+
+**View 전용 ✅**: 비즈니스 로직 없이 순수 UI만으로 구현 가능
+**View 전용 ❌**: Presenter/Model 로직 필요 (제외)
+
+---
+
+## 🎯 구현 항목 상세
+
+### 1. Connect 버튼 색상 변경 ⭐ 쉬움
+
+**3가지 상태별 UI**:
+
+| 상태 | 텍스트 | 배경색 | 텍스트 색 |
+|------|--------|--------|-----------|
+| Disconnected | "Connect" | 기본 테마 | 기본 |
+| Connected | "Disconnect" | `#4CAF50` (녹색) | `white` |
+| Error | "Reconnect" | `#F44336` (빨강) | `white` |
+
+**구현 사항**:
+- `view/widgets/port_settings.py`에 메서드 추가
+- `set_connection_state(state: str)` 메서드
+  - 인자: `'disconnected'`, `'connected'`, `'error'`
+  - 텍스트 변경: `setText()`
+  - 스타일 변경: `setStyleSheet()`
+  - property 설정: `setProperty("state", value)`
+  - 즉시 적용: `style().unpolish()` + `style().polish()`
+
+---
+
+### 2. 색상 코드 표준화 ⭐ 쉬움
+
+**표준 색상 팔레트** (일관성 유지):
+
+**상태 색상** (버튼, 배경):
+- ✅ Connected: `#4CAF50` (녹색)
+- ⚪ Disconnected: `#9E9E9E` (회색)
+- ❌ Error: `#F44336` (빨강)
+- ▶️ Running: `#2196F3` (파랑)
+- ⚠️ Warning: `#FF9800` (주황)
+
+**로그 텍스트 색상** (ReceivedArea):
+- OK: `#4CAF50` (녹색)
+- ERROR: `#F44336` (빨강)
+- URC: `#FFEB3B` (노랑)
+- Prompt (>): `#00BCD4` (청록)
+- Timestamp: `#9E9E9E` (회색)
+
+**적용 위치**:
+- `resources/themes/dark_theme.qss`
+- `resources/themes/light_theme.qss`
+- `view/widgets/received_area.py` (appendHtml 시 적용)
+
+**QSS 선택자**:
+- `QPushButton[state="connected"]`
+- `QPushButton[state="error"]`
+- `QProgressBar[warning="true"]::chunk`
+
+---
+
+### 3. Packet Inspector 설정 (Preferences) ⭐⭐ 보통
+
+**목적**: 패킷 파서 동작을 사용자가 설정할 수 있는 UI 제공
+
+**설정 항목**:
+
+1. **Parser 타입 선택**:
+   - Auto Detect (자동 감지)
+   - AT Parser (AT 명령)
+   - Delimiter Parser (구분자 기반)
+   - Fixed Length Parser (고정 길이)
+   - Raw Parser (원시 데이터)
+
+2. **Delimiter 설정**:
+   - 기본값: `\r\n`, `0xFF`, `0x7E`
+   - 사용자 정의 구분자 추가/삭제
+   - 16진수 입력 지원
+
+3. **Fixed Length 설정**:
+   - 패킷 길이 (바이트)
+   - 범위: 1-4096
+
+4. **AT Parser 색상 규칙**:
+   - OK: 녹색 (#4CAF50) ☑
+   - ERROR: 빨강 (#F44336) ☑
+   - URC: 노랑 (#FFEB3B) ☑
+   - Prompt: 청록 (#00BCD4) ☑
+   - 사용자 정의 패턴 추가
+
+5. **Inspector 동작**:
+   - 최근 패킷 버퍼 크기 (기본: 100개)
+   - 실시간 추적 활성화 ☑
+   - 자동 스크롤 ☑
+
+**UI 레이아웃** (Preferences 대화상자 내 탭):
+```
+┌─ Parser Settings ──────────────────────┐
+│ Parser Type:                           │
+│   ○ Auto Detect                        │
+│   ● AT Parser                          │
+│   ○ Delimiter Parser                   │
+│   ○ Fixed Length Parser                │
+│   ○ Raw Parser                         │
+│                                         │
+│ ┌─ Delimiter Settings ────────────┐   │
+│ │ Delimiters:                      │   │
+│ │ [×] \r\n    [×] 0xFF   [×] 0x7E  │   │
+│ │ [Add Custom] [____________]      │   │
+│ └──────────────────────────────────┘   │
+│                                         │
+│ ┌─ Fixed Length ──────────────────┐   │
+│ │ Packet Length: [64] bytes        │   │
+│ └──────────────────────────────────┘   │
+│                                         │
+│ ┌─ AT Color Rules ────────────────┐   │
+│ │ ☑ OK Pattern:     [Green  ▼]    │   │
+│ │ ☑ ERROR Pattern:  [Red    ▼]    │   │
+│ │ ☑ URC Pattern:    [Yellow ▼]    │   │
+│ │ ☑ Prompt Pattern: [Cyan   ▼]    │   │
+│ └──────────────────────────────────┘   │
+│                                         │
+│ ┌─ Inspector Options ─────────────┐   │
+│ │ Buffer Size: [100] packets       │   │
+│ │ ☑ Real-time Tracking             │   │
+│ │ ☑ Auto Scroll                    │   │
+│ └──────────────────────────────────┘   │
+│                                         │
+│         [Apply] [Reset] [Cancel]       │
+└─────────────────────────────────────────┘
+```
+
+**구현 위치**:
+- `view/dialogs/preferences_dialog.py`에 새 탭 추가
+- 탭 이름: "Packet Inspector" 또는 "Parser"
+
+**필요한 컴포넌트**:
+- QRadioButton 그룹 (Parser 타입)
+- QListWidget + QPushButton (Delimiter 관리)
+- QSpinBox (Fixed Length, Buffer Size)
+- QCheckBox (색상 규칙, 옵션)
+- QComboBox (색상 선택)
+
+**설정 저장 경로**:
+```json
+{
+  "parser": {
+    "type": "at",
+    "delimiters": ["\r\n", "0xFF"],
+    "fixed_length": 64,
+    "at_colors": {
+      "ok": "#4CAF50",
+      "error": "#F44336",
+      "urc": "#FFEB3B",
+      "prompt": "#00BCD4"
+    },
+    "inspector": {
+      "buffer_size": 100,
+      "real_time_tracking": true,
+      "auto_scroll": true
+    }
+  }
+}
+```
+
+**업데이트 메서드**:
+- `load_parser_settings()` - 설정 로드
+- `save_parser_settings()` - 설정 저장
+- `apply_parser_settings()` - 설정 적용 (Presenter에 시그널 emit)
+- `reset_parser_settings()` - 기본값 복원
+
+**언어 지원**:
+- `parser_settings_title`
+- `parser_type_auto`, `parser_type_at` 등
+- `delimiter_custom_hint`
+- `inspector_buffer_size`
+
+---
+
+## 🚫 View 범위 밖 (제외 항목)
+
+다음 항목들은 **Presenter/Model 구현 필요** (현재 제외):
+
+1. ❌ **PortCombo 자동 스캔** - 타이머 로직
+2. ❌ **실시간 데이터 업데이트** - QTimer 호출
+3. ❌ **RxLogView 성능 최적화** - Chunk 렌더링, Virtual Scrolling
+4. ❌ **CommandList Drag&Drop** - 복잡한 이벤트 처리
+5. ❌ **애니메이션 효과** - QPropertyAnimation
+6. ❌ **Console 패널** - logger 연동
+
+**데이터 연동은 다음 단계(Presenter 구현)에서!**
+</file>
+
+<file path="view/sections/main_left_section.py">
+from PyQt5.QtWidgets import QWidget, QVBoxLayout
+from typing import Optional
+from view.lang_manager import lang_manager
+
+from view.panels.port_panel import PortPanel
+from view.panels.manual_control_panel import ManualControlPanel
+from view.panels.port_tab_panel import PortTabPanel
+from core.settings_manager import SettingsManager
+
+class MainLeftSection(QWidget):
+    """
+    MainWindow의 좌측 영역을 담당하는 패널 클래스입니다.
+    여러 포트 탭(PortTabs)과 전역 수동 제어(ManualControlWidget)를 포함합니다.
+    """
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        """
+        LeftSection을 초기화합니다.
+
+        Args:
+            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
+        """
+        super().__init__(parent)
+        self.port_tabs = None
+        self.init_ui()
+
+        # 언어 변경 시 UI 업데이트 연결
+        lang_manager.language_changed.connect(self.retranslate_ui)
+
+    def init_ui(self) -> None:
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(5)
+
+        # 포트 탭 (Port Tabs) - PortTabPanel 사용
+        self.port_tabs = PortTabPanel()
+        self.port_tabs.tab_added.connect(self._on_tab_added)
+
+        # 수동 제어 패널 (현재 포트에 대한 전역 제어)
+        self.manual_control = ManualControlPanel()
+
+        layout.addWidget(self.port_tabs, 1) # 탭이 남은 공간 차지
+        layout.addWidget(self.manual_control) # 수동 제어는 하단에 위치
+
+        self.setLayout(layout)
+
+    def retranslate_ui(self) -> None:
+        """언어 변경 시 UI 텍스트를 업데이트합니다."""
+        # PortTabPanel 내부에서 처리됨
+        pass
+
+    def add_new_port_tab(self) -> None:
+        """새로운 포트 탭을 추가합니다. (외부 호출용 래퍼)"""
+        self.port_tabs.add_new_port_tab()
+
+    def open_current_port(self) -> None:
+        """현재 활성화된 탭의 포트를 엽니다 (이미 열려있으면 무시)."""
+        current_index = self.port_tabs.currentIndex()
+        current_widget = self.port_tabs.widget(current_index)
+        if isinstance(current_widget, PortPanel):
+            if not current_widget.is_connected():
+                current_widget.toggle_connection()
+
+    def close_current_port(self) -> None:
+        """현재 활성화된 탭의 포트를 닫습니다 (이미 닫혀있으면 무시)."""
+        current_index = self.port_tabs.currentIndex()
+        current_widget = self.port_tabs.widget(current_index)
+        if isinstance(current_widget, PortPanel):
+            if current_widget.is_connected():
+                current_widget.toggle_connection()
+
+    def close_current_tab(self) -> None:
+        """현재 활성화된 탭을 닫습니다."""
+        current_index = self.port_tabs.currentIndex()
+        # 마지막 탭(플러스 탭)은 닫을 수 없음
+        if current_index == self.port_tabs.count() - 1:
+            return
+
+        if current_index >= 0:
+            self.port_tabs.removeTab(current_index)
+
+    def _on_tab_added(self, panel: PortPanel) -> None:
+        """새 탭이 추가되었을 때 호출되는 핸들러"""
+        # 포트 설정의 연결 상태 변경 시그널을 수동 제어 위젯에 연결
+        panel.port_settings.connection_state_changed.connect(
+            self._on_port_connection_changed
+        )
+
+    def save_state(self) -> list:
+        """
+        모든 포트 탭의 상태를 리스트로 저장합니다.
+        또한 ManualControlWidget의 상태를 별도로 저장합니다.
+
+        Returns:
+            list: 탭 상태 리스트.
+        """
+        # ManualControl 상태 저장
+        settings = SettingsManager()
+        manual_state = self.manual_control.save_state()
+        settings.set("manual_control", manual_state)
+
+        states = []
+        count = self.port_tabs.count()
+        for i in range(count):
+            # 마지막 탭(+) 제외
+            if i == count - 1:
+                continue
+            widget = self.port_tabs.widget(i)
+            if isinstance(widget, PortPanel):
+                state = widget.save_state()
+                states.append(state)
+        return states
+
+    def load_state(self, states: list) -> None:
+        """
+        저장된 상태 리스트를 기반으로 탭을 복원합니다.
+        또한 ManualControlWidget의 상태를 복원합니다.
+
+        Args:
+            states (list): 탭 상태 리스트.
+        """
+        # ManualControl 상태 복원
+        settings = SettingsManager()
+        manual_state = settings.get("manual_control", {})
+        if manual_state:
+            self.manual_control.load_state(manual_state)
+
+        # 시그널 차단
+        self.port_tabs.blockSignals(True)
+        try:
+            # 기존 탭 모두 제거 (플러스 탭 제외)
+            # 역순으로 제거해야 인덱스 문제 없음, 단 플러스 탭은 유지
+            count = self.port_tabs.count()
+            for i in range(count - 2, -1, -1): # 마지막 탭(count-1)은 +탭이므로 제외
+                self.port_tabs.removeTab(i)
+
+            # 저장된 상태가 없으면 기본 탭 하나 추가
+            if not states:
+                self.port_tabs.add_new_port_tab()
+                return
+
+            # 상태 복원
+            for state in states:
+                panel = self.port_tabs.add_new_port_tab()
+                panel.load_state(state)
+        finally:
+            self.port_tabs.blockSignals(False)
+
+    def _on_port_connection_changed(self, connected: bool) -> None:
+        """
+        포트 연결 상태 변경 핸들러입니다.
+        현재 활성 탭의 연결 상태가 변경되면 ManualControl을 활성화/비활성화합니다.
+
+        Args:
+            connected (bool): 연결 여부.
+        """
+        # 현재 활성 탭의 변경인지 확인
+        sender_widget = self.sender()
+        if sender_widget:
+            # sender의 부모를 찾아서 현재 활성 탭인지 확인
+            current_index = self.port_tabs.currentIndex()
+            current_widget = self.port_tabs.widget(current_index)
+            if current_widget and hasattr(current_widget, 'port_settings'):
+                if current_widget.port_settings == sender_widget:
+                    # 현재 탭의 변경이면 ManualControl 업데이트
+                    self.manual_control.set_controls_enabled(connected)
+</file>
+
+<file path="view/sections/main_menu_bar.py">
+from PyQt5.QtWidgets import QMenuBar, QAction
+from PyQt5.QtCore import pyqtSignal
+from pygments.lexers.sql import language_re
+
+from view.lang_manager import lang_manager
+
+class MainMenuBar(QMenuBar):
+    """
+    메인 윈도우의 메뉴바를 관리하는 클래스입니다.
+    """
+    # Signals
+    new_tab_requested = pyqtSignal()
+    exit_requested = pyqtSignal()
+    theme_changed = pyqtSignal(str)
+    font_settings_requested = pyqtSignal()
+    language_changed = pyqtSignal(str)
+    preferences_requested = pyqtSignal()
+    about_requested = pyqtSignal()
+    open_port_requested = pyqtSignal()
+    close_tab_requested = pyqtSignal()
+    save_log_requested = pyqtSignal()
+    toggle_right_panel_requested = pyqtSignal(bool)
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.init_menu()
+
+    def init_menu(self) -> None:
+        """메뉴바를 초기화하고 액션을 설정합니다."""
+        self.clear()
+
+        # 파일 메뉴 (File Menu)
+        file_menu = self.addMenu(lang_manager.get_text("main_menu_file"))
+
+        new_tab_action = QAction(lang_manager.get_text("main_menu_new_tab"), self)
+        new_tab_action.setShortcut("Ctrl+T")
+        new_tab_action.setToolTip(lang_manager.get_text("main_menu_new_tab_tooltip"))
+        new_tab_action.triggered.connect(self.new_tab_requested.emit)
+        file_menu.addAction(new_tab_action)
+
+        open_port_action = QAction("Open", self) # TODO: Add lang key
+        open_port_action.setShortcut("Ctrl+O")
+        open_port_action.triggered.connect(self.open_port_requested.emit)
+        file_menu.addAction(open_port_action)
+
+        close_tab_action = QAction("Close", self) # TODO: Add lang key
+        close_tab_action.setShortcut("Ctrl+W")
+        close_tab_action.triggered.connect(self.close_tab_requested.emit)
+        file_menu.addAction(close_tab_action)
+
+        save_log_action = QAction("Save Log", self) # TODO: Add lang key
+        save_log_action.setShortcut("Ctrl+Shift+S")
+        save_log_action.triggered.connect(self.save_log_requested.emit)
+        file_menu.addAction(save_log_action)
+
+        file_menu.addSeparator()
+
+        exit_action = QAction(lang_manager.get_text("main_menu_exit"), self)
+        exit_action.setShortcut("Ctrl+Q")
+        exit_action.setToolTip(lang_manager.get_text("main_menu_exit_tooltip"))
+        exit_action.triggered.connect(self.exit_requested.emit)
+        file_menu.addAction(exit_action)
+
+        # 보기 메뉴 (View Menu)
+        view_menu = self.addMenu(lang_manager.get_text("main_menu_view"))
+
+        # Right Panel Toggle
+        self.toggle_right_panel_action = QAction("Show Right Panel", self) # TODO: Add lang key
+        self.toggle_right_panel_action.setCheckable(True)
+        self.toggle_right_panel_action.setChecked(True) # Default, will be updated by MainWindow
+        self.toggle_right_panel_action.triggered.connect(self.toggle_right_panel_requested.emit)
+        view_menu.addAction(self.toggle_right_panel_action)
+
+        view_menu.addSeparator()
+
+        # 테마 서브메뉴
+        theme_menu = view_menu.addMenu(lang_manager.get_text("main_menu_theme"))
+
+        theme_dark_action = QAction(lang_manager.get_text("main_menu_theme_dark"), self)
+        theme_dark_action.triggered.connect(lambda: self.theme_changed.emit("dark"))
+        theme_menu.addAction(theme_dark_action)
+
+        theme_light_action = QAction(lang_manager.get_text("main_menu_theme_light"), self)
+        theme_light_action.triggered.connect(lambda: self.theme_changed.emit("light"))
+        theme_menu.addAction(theme_light_action)
+
+        # 폰트 설정 액션
+        font_action = QAction(lang_manager.get_text("main_menu_font"), self)
+        font_action.setShortcut("Ctrl+Shift+F")
+        font_action.setToolTip(lang_manager.get_text("main_menu_font_tooltip"))
+        font_action.triggered.connect(self.font_settings_requested.emit)
+        view_menu.addAction(font_action)
+
+        # 언어 서브메뉴 (Language Submenu)
+        lang_menu = view_menu.addMenu(lang_manager.get_text("main_menu_lang"))
+
+        lang_en_action = QAction(lang_manager.get_text("main_menu_lang_en"), self)
+        lang_en_action.triggered.connect(lambda: self.language_changed.emit("en"))
+        lang_menu.addAction(lang_en_action)
+
+        lang_ko_action = QAction(lang_manager.get_text("main_menu_lang_ko"), self)
+        lang_ko_action.triggered.connect(lambda: self.language_changed.emit("ko"))
+        lang_menu.addAction(lang_ko_action)
+
+        # Preferences 액션
+        preferences_action = QAction(lang_manager.get_text("main_menu_preferences"), self)
+        preferences_action.setShortcut("Ctrl+,")
+        preferences_action.triggered.connect(self.preferences_requested.emit)
+        view_menu.addAction(preferences_action)
+
+        # 도구 메뉴 (Tools Menu)
+        tools_menu = self.addMenu(lang_manager.get_text("main_menu_tools"))
+
+        # 도움말 메뉴 (Help Menu)
+        help_menu = self.addMenu(lang_manager.get_text("main_menu_help"))
+        about_action = QAction(lang_manager.get_text("main_menu_about"), self)
+        about_action.triggered.connect(self.about_requested.emit)
+        help_menu.addAction(about_action)
+
+    def set_right_panel_checked(self, checked: bool) -> None:
+        """우측 패널 토글 액션의 체크 상태를 설정합니다."""
+        if hasattr(self, 'toggle_right_panel_action'):
+            self.toggle_right_panel_action.setChecked(checked)
+
+    def retranslate_ui(self) -> None:
+        """언어 변경 시 메뉴 텍스트를 업데이트합니다."""
+        self.init_menu()
+</file>
+
+<file path="view/widgets/file_progress.py">
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QProgressBar, QLabel, QPushButton
+from PyQt5.QtCore import pyqtSignal
+from typing import Optional
+from view.lang_manager import lang_manager
+
+class FileProgressWidget(QWidget):
+    """
+    파일 전송 진행률을 표시하는 위젯입니다.
+    진행률 바, 전송 속도, 남은 시간(ETA), 취소 버튼을 포함합니다.
+    """
+
+    cancel_requested = pyqtSignal()  # 취소 요청 시그널
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.cancel_btn = None
+        self.eta_lbl = None
+        self.speed_lbl = None
+        self.progress_bar = None
+        self.status_lbl = None
+        self.init_ui()
+        self.reset()
+
+        # 언어 변경 시 UI 업데이트 연결
+        lang_manager.language_changed.connect(self.retranslate_ui)
+
+    def init_ui(self) -> None:
+        """UI 컴포넌트를 초기화합니다."""
+        layout = QVBoxLayout()
+        layout.setContentsMargins(5, 5, 5, 5)
+        layout.setSpacing(2)
+
+        # 파일명 및 상태 레이블
+        self.status_lbl = QLabel(lang_manager.get_text("file_prog_lbl_status_ready"))
+        self.status_lbl.setStyleSheet("font-weight: bold;")
+
+        # 진행률 바
+        self.progress_bar = QProgressBar()
+        self.progress_bar.setRange(0, 100)
+        self.progress_bar.setValue(0)
+        self.progress_bar.setTextVisible(True)
+        self.progress_bar.setFormat("%p%")
+
+        # 상세 정보 (속도, ETA) 및 취소 버튼
+        info_layout = QHBoxLayout()
+
+        self.speed_lbl = QLabel("0 KB/s")
+        self.eta_lbl = QLabel(lang_manager.get_text("file_prog_lbl_eta_placeholder"))
+
+        self.cancel_btn = QPushButton(lang_manager.get_text("file_prog_btn_cancel"))
+        self.cancel_btn.setFixedWidth(60)
+        self.cancel_btn.clicked.connect(self.on_cancel_clicked)
+        self.cancel_btn.setEnabled(False)
+
+        info_layout.addWidget(self.speed_lbl)
+        info_layout.addStretch()
+        info_layout.addWidget(self.eta_lbl)
+        info_layout.addWidget(self.cancel_btn)
+
+        layout.addWidget(self.status_lbl)
+        layout.addWidget(self.progress_bar)
+        layout.addLayout(info_layout)
+
+        self.setLayout(layout)
+
+    def on_cancel_clicked(self) -> None:
+        """취소 버튼 클릭 시 호출됩니다."""
+        self.cancel_requested.emit()
+
+    def retranslate_ui(self) -> None:
+        """언어 변경 시 UI 텍스트를 업데이트합니다."""
+        # 상태 레이블은 현재 상태에 따라 동적으로 변경되므로 여기서 일괄 변경하기 어려움
+        # 다만, Ready 상태라면 변경 가능
+        if lang_manager.text_matches_key(self.status_lbl.text(), "file_prog_lbl_status_ready"):
+            self.status_lbl.setText(lang_manager.get_text("file_prog_lbl_status_ready"))
+
+        self.cancel_btn.setText(lang_manager.get_text("file_prog_btn_cancel"))
+
+        # ETA 플레이스홀더 업데이트 (진행 중이 아닐 때)
+        if lang_manager.text_matches_key(self.eta_lbl.text(), "file_prog_lbl_eta_placeholder"):
+            self.eta_lbl.setText(lang_manager.get_text("file_prog_lbl_eta_placeholder"))
+
+    def update_progress(self, sent_bytes: int, total_bytes: int, speed_bps: float, eta_seconds: float) -> None:
+        """
+        진행률 및 상태를 업데이트합니다.
+
+        Args:
+            sent_bytes (int): 전송된 바이트 수
+            total_bytes (int): 전체 바이트 수
+            speed_bps (float): 전송 속도 (bytes/sec)
+            eta_seconds (float): 남은 시간 (초)
+        """
+        if total_bytes > 0:
+            percent = int((sent_bytes / total_bytes) * 100)
+            self.progress_bar.setValue(percent)
+
+        # 속도 포맷팅 (KB/s, MB/s)
+        if speed_bps < 1024:
+            speed_str = f"{speed_bps:.1f} B/s"
+        elif speed_bps < 1024 * 1024:
+            speed_str = f"{speed_bps/1024:.1f} KB/s"
+        else:
+            speed_str = f"{speed_bps/(1024*1024):.1f} MB/s"
+
+        self.speed_lbl.setText(speed_str)
+
+        # ETA 포맷팅 (MM:SS)
+        eta_min = int(eta_seconds // 60)
+        eta_sec = int(eta_seconds % 60)
+        self.eta_lbl.setText(f"ETA: {eta_min:02d}:{eta_sec:02d}")
+
+        # 상태 메시지 업데이트
+        status_msg = lang_manager.get_text("file_prog_lbl_status_sending").format(sent_bytes, total_bytes)
+        self.status_lbl.setText(status_msg)
+        self.cancel_btn.setEnabled(True)
+
+    def reset(self) -> None:
+        """위젯 상태를 초기화합니다."""
+        self.progress_bar.setValue(0)
+        self.status_lbl.setText(lang_manager.get_text("file_prog_lbl_status_ready"))
+        self.speed_lbl.setText("0 KB/s")
+        self.eta_lbl.setText(lang_manager.get_text("file_prog_lbl_eta_placeholder"))
+        self.cancel_btn.setEnabled(False)
+
+    def set_complete(self, success: bool, message: str = "") -> None:
+        """
+        전송 완료 상태를 설정합니다.
+
+        Args:
+            success (bool): 성공 여부
+            message (str): 완료 메시지
+        """
+        self.cancel_btn.setEnabled(False)
+        if success:
+            self.progress_bar.setValue(100)
+            status_msg = lang_manager.get_text("file_prog_lbl_status_completed").format(message)
+            self.status_lbl.setText(status_msg)
+        else:
+            status_msg = lang_manager.get_text("file_prog_lbl_status_failed").format(message)
+            self.status_lbl.setText(status_msg)
+            self.progress_bar.setStyleSheet("QProgressBar::chunk { background-color: red; }")
+</file>
+
+<file path="view/color_rules.py">
+"""
+색상 규칙 관리
+ReceivedArea에서 사용하는 패턴 매칭 색상 규칙을 관리합니다.
+"""
+from dataclasses import dataclass
+from typing import List
+import re
+from pathlib import Path
+import os
+
+try:
+    import commentjson as json
+except ImportError:
+    import json
+
+@dataclass
+class ColorRule:
+    """단일 색상 규칙 데이터 클래스입니다."""
+    name: str           # 규칙 이름 (예: "AT_OK")
+    pattern: str        # 정규식 패턴 또는 문자열
+    color: str          # HTML 색상 코드 (예: "#FF0000")
+    is_regex: bool = True  # 정규식 사용 여부
+    enabled: bool = True   # 규칙 활성화 여부
+
+class ColorRulesManager:
+    """
+    색상 규칙 관리자 클래스입니다.
+    패턴 매칭을 통해 텍스트에 색상을 입히는 규칙들을 관리합니다.
+    """
+
+    # 기본 규칙 (Implementation_Specification.md 섹션 11.3.1 기준)
+    DEFAULT_RULES = [
+        ColorRule("AT_OK", r'\bOK\b', '#4CAF50'),
+        ColorRule("AT_ERROR", r'\bERROR\b', '#F44336'),
+        ColorRule("URC", r'(\+\w+:)', '#FFEB3B'),
+        ColorRule("PROMPT", r'^>', '#00BCD4'),
+    ]
+
+    def __init__(self) -> None:
+        """
+        ColorRulesManager를 초기화합니다.
+        config/color_rules.json 파일이 있으면 로드하고, 없으면 기본 규칙을 생성하여 저장합니다.
+        """
+        self.rules: List[ColorRule] = []
+        self.config_path = self._get_config_path()
+
+        # 설정 파일 로드 시도, 실패 시 기본 규칙 사용
+        if self.config_path.exists():
+            self.load_from_json(str(self.config_path))
+        else:
+            self.rules = self.DEFAULT_RULES.copy()
+            # 설정 디렉토리 생성 및 기본 규칙 저장
+            self.config_path.parent.mkdir(parents=True, exist_ok=True)
+            self.save_to_json(str(self.config_path))
+
+    def apply_rules(self, text: str) -> str:
+        """
+        텍스트에 모든 활성화된 색상 규칙을 적용합니다.
+
+        Args:
+            text (str): 색상 규칙을 적용할 원본 텍스트.
+
+        Returns:
+            str: HTML span 태그로 색상이 적용된 텍스트.
+        """
+        result = text
+        for rule in self.rules:
+            if rule.enabled:
+                result = self._apply_single_rule(result, rule)
+        return result
+
+    def add_custom_rule(self, name: str, pattern: str, color: str, is_regex: bool = True) -> None:
+        """
+        사용자 정의 색상 규칙을 추가합니다.
+
+        Args:
+            name (str): 규칙 이름.
+            pattern (str): 매칭 패턴 (정규식 또는 일반 문자열).
+            color (str): HTML 색상 코드 (예: '#FF0000').
+            is_regex (bool, optional): 정규식 패턴 여부. 기본값은 True.
+        """
+        self.rules.append(ColorRule(name, pattern, color, is_regex))
+
+    def remove_rule(self, name: str) -> None:
+        """
+        이름으로 색상 규칙을 제거합니다.
+
+        Args:
+            name (str): 제거할 규칙의 이름.
+        """
+        self.rules = [r for r in self.rules if r.name != name]
+
+    def toggle_rule(self, name: str) -> None:
+        """
+        규칙의 활성화 상태를 토글합니다.
+
+        Args:
+            name (str): 토글할 규칙의 이름.
+        """
+        for rule in self.rules:
+            if rule.name == name:
+                rule.enabled = not rule.enabled
+                break
+
+    def save_to_json(self, filepath: str) -> None:
+        """
+        현재 규칙들을 JSON 파일로 저장합니다.
+
+        Args:
+            filepath (str): 저장할 파일 경로.
+        """
+        rules_data = [
+            {
+                'name': r.name,
+                'pattern': r.pattern,
+                'color': r.color,
+                'is_regex': r.is_regex,
+                'enabled': r.enabled
+            }
+            for r in self.rules
+        ]
+
+        # 구조 개선을 위해 color_rules 키로 래핑
+        data = {'color_rules': rules_data}
+
+        with open(filepath, 'w', encoding='utf-8') as f:
+            json.dump(data, f, indent=2, ensure_ascii=False)
+
+    def load_from_json(self, filepath: str) -> None:
+        """
+        JSON 파일에서 규칙들을 로드합니다.
+        파일이 없거나 잘못된 경우 기본 규칙을 사용합니다.
+
+        Args:
+            filepath (str): 읽을 파일 경로.
+        """
+        try:
+            with open(filepath, 'r', encoding='utf-8') as f:
+                data = json.load(f)
+
+            # 두 가지 형식 지원: 직접 배열 또는 "color_rules" 키로 래핑
+            if isinstance(data, dict) and 'color_rules' in data:
+                rules_data = data['color_rules']
+            else:
+                rules_data = data
+
+            self.rules = [
+                ColorRule(
+                    r['name'],
+                    r['pattern'],
+                    r['color'],
+                    r.get('is_regex', True),
+                    r.get('enabled', True)
+                )
+                for r in rules_data
+            ]
+        except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
+            # 파일이 없거나 잘못된 경우 기본 규칙 사용
+            print(f"색상 규칙 로드 실패 ({filepath}): {e}")
+            self.rules = self.DEFAULT_RULES.copy()
+
+    @staticmethod
+    def _get_config_path() -> 'Path':
+        """
+        색상 규칙 설정 파일의 경로를 반환합니다.
+
+        Returns:
+            Path: config/color_rules.json 파일의 Path 객체.
+        """
+
+        # 애플리케이션 루트 디렉토리 확인
+        if hasattr(os, '_MEIPASS'):
+            # PyInstaller 번들 환경
+            base_path = Path(os._MEIPASS)
+        else:
+            # 개발 모드 환경
+            base_path = Path(__file__).parent.parent
+
+        return base_path / 'config' / 'color_rules.json'
+
+    @staticmethod
+    def _apply_single_rule(text: str, rule: ColorRule) -> str:
+        """
+        단일 색상 규칙을 텍스트에 적용합니다.
+
+        Args:
+            text (str): 원본 텍스트.
+            rule (ColorRule): 적용할 색상 규칙 객체.
+
+        Returns:
+            str: 규칙이 적용된 텍스트.
+        """
+        if rule.is_regex:
+            try:
+                return re.sub(
+                    rule.pattern,
+                    rf'<span style="color:{rule.color};">\g<0></span>',
+                    text
+                )
+            except re.error:
+                return text
+        else:
+            # 단순 문자열 치환
+            return text.replace(
+                rule.pattern,
+                f'<span style="color:{rule.color};">{rule.pattern}</span>'
+            )
+</file>
+
+<file path="view/panels/tx_panel.py">
+from typing import Optional
+
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QTextEdit, QPushButton,
+    QCheckBox, QLabel, QComboBox
+)
+from PyQt5.QtCore import pyqtSignal
+
+class TxPanel(QWidget):
+    """
+    데이터 전송을 담당하는 패널 클래스입니다.
+    텍스트 입력, HEX 모드, CR/LF 설정 및 전송 내역 기능을 제공합니다.
+    """
+    text_data_send_requested = pyqtSignal(str, bool, bool) # text, hex_mode, with_enter
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        """
+        TxPanel을 초기화합니다.
+
+        Args:
+            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
+        """
+        super().__init__(parent)
+        self.tx_history_combo = None
+        self.send_text_data_btn = None
+        self.tx_lf_chk = None
+        self.tx_cr_chk = None
+        self.tx_hex_chk = None
+        self.init_ui()
+
+    def init_ui(self) -> None:
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        # 입력 영역 (Input Area)
+        self.tx_data_edit = QTextEdit()
+        self.tx_data_edit.setMaximumHeight(60)
+        self.tx_data_edit.setPlaceholderText("Enter command here...")
+        self.tx_data_edit.setToolTip("전송할 데이터를 입력하세요 (Ctrl+Enter로 전송)")
+
+        # 제어 버튼 영역 (Controls)
+        controls_layout = QHBoxLayout()
+
+        self.tx_hex_chk = QCheckBox("HEX")
+        self.tx_hex_chk.setToolTip("HEX 문자열로 전송합니다 (예: '41 42')")
+        self.tx_cr_chk = QCheckBox("CR")
+        self.tx_cr_chk.setChecked(True)
+        self.tx_cr_chk.setToolTip("Carriage Return (\\r)을 추가합니다")
+        self.tx_lf_chk = QCheckBox("LF")
+        self.tx_lf_chk.setChecked(True)
+        self.tx_lf_chk.setToolTip("Line Feed (\\n)을 추가합니다")
+
+        self.send_text_data_btn = QPushButton("Send")
+        self.send_text_data_btn.clicked.connect(self.on_send_text_data_clicked)
+        self.send_text_data_btn.setToolTip("데이터를 전송합니다 (Enter)")
+
+        controls_layout.addWidget(self.tx_hex_chk)
+        controls_layout.addWidget(self.tx_cr_chk)
+        controls_layout.addWidget(self.tx_lf_chk)
+        controls_layout.addStretch()
+        controls_layout.addWidget(self.send_text_data_btn)
+
+        # 전송 내역 (History)
+        self.tx_history_combo = QComboBox()
+        self.tx_history_combo.setPlaceholderText("History...")
+        self.tx_history_combo.setToolTip("전송 내역")
+        self.tx_history_combo.currentIndexChanged.connect(self.on_tx_history_selected)
+
+        layout.addWidget(QLabel("TX Input"))
+        layout.addWidget(QLabel("TX Input"))
+        layout.addWidget(self.tx_data_edit)
+        layout.addLayout(controls_layout)
+        layout.addWidget(self.tx_history_combo)
+
+        self.setLayout(layout)
+
+    def on_send_text_data_clicked(self) -> None:
+        """전송 버튼 클릭 핸들러입니다."""
+        text = self.tx_data_edit.toPlainText()
+        if not text:
+            return
+
+        hex_mode = self.tx_hex_chk.isChecked()
+
+        # CR/LF 처리
+        # Presenter로 플래그를 넘기는 것이 더 깔끔하지만, 여기서는 직접 처리 후 전송
+        with_enter = False
+
+        suffix = ""
+        if self.tx_cr_chk.isChecked(): suffix += "\r"
+        if self.tx_lf_chk.isChecked(): suffix += "\n"
+
+        # HEX 모드가 아닐 경우에만 접미사 추가
+        if not hex_mode:
+            text += suffix
+
+        self.text_data_send_requested.emit(text, hex_mode, False) # with_enter는 수동 처리했으므로 False
+
+        # 내역에 추가
+        if self.tx_history_combo.findText(text.strip()) == -1:
+            self.tx_history_combo.addItem(text.strip())
+
+    def on_tx_history_selected(self, index: int) -> None:
+        """
+        전송 내역 선택 핸들러입니다.
+
+        Args:
+            index (int): 선택된 내역의 인덱스.
+        """
+        if index >= 0:
+            self.tx_data_edit.setPlainText(self.tx_history_combo.itemText(index))
+</file>
+
+<file path="view/dialogs/about_dialog.py">
+from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
+from PyQt5.QtCore import Qt
+from view.lang_manager import lang_manager
+
+class AboutDialog(QDialog):
+    """
+    애플리케이션 정보를 보여주는 About 다이얼로그입니다.
+    """
+
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        self.setWindowTitle(lang_manager.get_text("about_title"))
+        self.setFixedSize(400, 300)
+        self.init_ui()
+
+    def init_ui(self):
+        layout = QVBoxLayout()
+        layout.setAlignment(Qt.AlignCenter)
+        layout.setSpacing(20)
+
+        # 앱 이름 및 버전
+        title_label = QLabel(lang_manager.get_text("about_lbl_app_name"))
+        title_label.setStyleSheet("font-size: 24px; font-weight: bold;")
+        title_label.setAlignment(Qt.AlignCenter)
+
+        version_label = QLabel(lang_manager.get_text("about_lbl_version"))
+        version_label.setStyleSheet("font-size: 14px; color: #888;")
+        version_label.setAlignment(Qt.AlignCenter)
+
+        # 설명
+        desc_label = QLabel(lang_manager.get_text("about_lbl_description"))
+        desc_label.setAlignment(Qt.AlignCenter)
+
+        # 저작권
+        copyright_label = QLabel(lang_manager.get_text("about_lbl_copyright"))
+        copyright_label.setStyleSheet("font-size: 12px; color: #666;")
+        copyright_label.setAlignment(Qt.AlignCenter)
+
+        # 닫기 버튼
+        close_btn = QPushButton(lang_manager.get_text("about_btn_close"))
+        close_btn.setFixedWidth(100)
+        close_btn.clicked.connect(self.accept)
+
+        layout.addStretch()
+        layout.addWidget(title_label)
+        layout.addWidget(version_label)
+        layout.addWidget(desc_label)
+        layout.addStretch()
+        layout.addWidget(copyright_label)
+        layout.addStretch()
+        layout.addWidget(close_btn)
+        layout.setAlignment(close_btn, Qt.AlignCenter)
+        layout.addStretch()
+
+        self.setLayout(layout)
+</file>
+
+<file path="view/panels/port_panel.py">
+from PyQt5.QtWidgets import QWidget, QVBoxLayout
+from PyQt5.QtCore import pyqtSignal
+from typing import Optional
+
+from view.widgets.port_settings import PortSettingsWidget
+from view.widgets.received_area import ReceivedAreaWidget
+from view.widgets.status_area import StatusAreaWidget
+from view.widgets.status import StatusWidget
+
+class PortPanel(QWidget):
+    """
+    개별 시리얼 포트 탭의 메인 위젯 클래스입니다.
+    포트 설정(PortSettings), 수신 로그(ReceivedArea), 상태 로그(StatusArea) 영역을 포함합니다.
+    """
+
+    # 시그널 정의
+    tab_title_changed = pyqtSignal(str)  # 탭 제목 변경 시그널
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        """
+        PortPanel을 초기화합니다.
+
+        Args:
+            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
+        """
+        super().__init__(parent)
+        self.status_area = None
+        self.received_area = None
+        self.status_panel = None
+        self.port_settings = None
+        self.custom_name = "Port"  # 커스텀 이름 (기본값)
+        self.init_ui()
+
+        # 포트 변경 시 탭 제목 업데이트
+        self.port_settings.port_combo.currentTextChanged.connect(self._on_port_changed)
+
+    def init_ui(self) -> None:
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+
+        # 컴포넌트 생성
+        self.port_settings = PortSettingsWidget()
+        self.status_panel = StatusWidget()
+        self.received_area = ReceivedAreaWidget()
+        self.status_area = StatusAreaWidget()
+
+        # 레이아웃 구성
+        # 상단: 설정 (Top: Settings)
+        layout.addWidget(self.port_settings)
+
+        # 상태 패널 (Status Panel)
+        layout.addWidget(self.status_panel)
+
+        # 중간: 로그 (Middle: Log)
+        layout.addWidget(self.received_area, 1) # Stretch 1
+
+        # 하단: 상태 로그 영역 (Bottom: Status Log Area)
+        layout.addWidget(self.status_area)
+
+        self.setLayout(layout)
+
+    def toggle_connection(self) -> None:
+        """연결 상태를 토글합니다."""
+        self.port_settings.toggle_connection()
+
+    def is_connected(self) -> bool:
+        """현재 연결 상태를 반환합니다."""
+        return self.port_settings.is_connected()
+
+    def _on_port_changed(self, port_name: str) -> None:
+        """포트 변경 시 탭 제목을 업데이트합니다."""
+        self.update_tab_title()
+
+    def set_custom_name(self, name: str) -> None:
+        """
+        커스텀 이름을 설정합니다.
+
+        Args:
+            name (str): 커스텀 이름.
+        """
+        self.custom_name = name
+        self.update_tab_title()
+
+    def get_custom_name(self) -> str:
+        """
+        커스텀 이름을 반환합니다.
+
+        Returns:
+            str: 커스텀 이름.
+        """
+        return self.custom_name
+
+    def get_port_name(self) -> str:
+        """
+        현재 선택된 포트 이름을 반환합니다.
+
+        Returns:
+            str: 포트 이름.
+        """
+        return self.port_settings.port_combo.currentText()
+
+    def get_tab_title(self) -> str:
+        """
+        탭 제목을 생성합니다 ("[커스텀명]:포트명" 형식).
+
+        Returns:
+            str: 탭 제목.
+        """
+        port_name = self.get_port_name()
+        if port_name:
+            return f"{self.custom_name}:{port_name}"
+        else:
+            return self.custom_name
+
+    def update_tab_title(self) -> None:
+        """탭 제목 변경 시그널을 발생시킵니다."""
+        self.tab_title_changed.emit(self.get_tab_title())
+
+    def save_state(self) -> dict:
+        """
+        패널 상태를 저장합니다.
+
+        Returns:
+            dict: 패널 상태 데이터.
+        """
+        return {
+            "custom_name": self.custom_name,
+            "port_settings": self.port_settings.save_state(),
+            "received_area": self.received_area.save_state()
+        }
+
+    def load_state(self, state: dict) -> None:
+        """
+        패널 상태를 복원합니다.
+
+        Args:
+            state (dict): 패널 상태 데이터.
+        """
+        if not state:
+            return
+        self.custom_name = state.get("custom_name", "Port")
+        self.port_settings.load_state(state.get("port_settings", {}))
+        self.received_area.load_state(state.get("received_area", {}))
+        self.update_tab_title()
+</file>
+
+<file path="view/widgets/packet_inspector.py">
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QTreeWidget, QTreeWidgetItem
+from typing import Optional
+from view.lang_manager import lang_manager
+
+class PacketInspectorWidget(QWidget):
+    """
+    패킷 구조를 트리 형태로 시각화하여 보여주는 위젯 클래스입니다.
+    (현재는 더미 데이터로 구현되어 있으며, 추후 실제 패킷 분석 기능이 추가될 예정입니다.)
+    """
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        """
+        PacketInspector를 초기화합니다.
+
+        Args:
+            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
+        """
+        super().__init__(parent)
+        self.tree = None
+        self.title_lbl = None
+        self.init_ui()
+
+        # 언어 변경 시 UI 업데이트 연결
+        lang_manager.language_changed.connect(self.retranslate_ui)
+
+    def init_ui(self) -> None:
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+
+        self.title_lbl = QLabel(lang_manager.get_text("inspector_grp_title"))
+        layout.addWidget(self.title_lbl)
+
+        self.tree = QTreeWidget()
+        self.tree.setHeaderLabels([
+            lang_manager.get_text("inspector_col_field"),
+            lang_manager.get_text("inspector_col_value")
+        ])
+
+        # 더미 데이터 (Dummy Data)
+        root = QTreeWidgetItem(self.tree)
+        root.setText(0, "Packet #1")
+        root.setText(1, "AT_OK")
+
+        child1 = QTreeWidgetItem(root)
+        child1.setText(0, "Raw")
+        child1.setText(1, "OK\\r\\n")
+
+        child2 = QTreeWidgetItem(root)
+        child2.setText(0, "Timestamp")
+        child2.setText(1, "14:30:00.123")
+
+        self.tree.expandAll()
+
+        layout.addWidget(self.tree)
+        self.setLayout(layout)
+
+    def retranslate_ui(self) -> None:
+        """언어 변경 시 UI 텍스트를 업데이트합니다."""
+        self.title_lbl.setText(lang_manager.get_text("inspector_grp_title"))
+        self.tree.setHeaderLabels([
+            lang_manager.get_text("inspector_col_field"),
+            lang_manager.get_text("inspector_col_value")
+        ])
+</file>
+
+<file path="view/theme_manager.py">
+import os
+import platform
+from PyQt5.QtWidgets import QApplication
+from PyQt5.QtGui import QFont, QIcon
+from core.logger import logger
+
+class ThemeManager:
+    """애플리케이션 테마와 폰트를 관리하는 클래스입니다."""
+
+    # 플랫폼별 기본 폰트 설정
+    _PROPORTIONAL_FONTS = {
+        "Windows": ("Segoe UI", 9),
+        "Linux": ("Ubuntu", 9),
+        "Darwin": ("SF Pro Text", 9)  # macOS
+    }
+
+    _FIXED_FONTS = {
+        "Windows": ("Consolas", 9),
+        "Linux": ("Monospace", 9),
+        "Darwin": ("Menlo", 9)  # macOS
+    }
+
+    def __init__(self):
+        """ThemeManager를 초기화하고 플랫폼별 기본 폰트를 설정합니다."""
+        self._current_theme = "dark"
+        self._app = None
+
+        # 플랫폼 확인
+        system = platform.system()
+
+        # 플랫폼에 따른 기본 폰트 설정
+        prop_family, prop_size = self._PROPORTIONAL_FONTS.get(system, ("Arial", 9))
+        fixed_family, fixed_size = self._FIXED_FONTS.get(system, ("Courier New", 9))
+
+        self._proportional_font = QFont(prop_family, prop_size)
+        self._fixed_font = QFont(fixed_family, fixed_size)
+        self._fixed_font.setStyleHint(QFont.Monospace)
+
+    def load_theme(self, theme_name: str = "dark") -> str:
+        """
+        지정된 테마의 QSS 콘텐츠를 로드합니다. 공통 스타일을 먼저 로드합니다.
+
+        Args:
+            theme_name (str): 로드할 테마 이름 ("dark" 또는 "light"). 기본값은 "dark".
+
+        Returns:
+            str: 결합된 QSS 문자열.
+        """
+        common_path = "resources/themes/common.qss"
+        theme_files = {
+            "dark": "resources/themes/dark_theme.qss",
+            "light": "resources/themes/light_theme.qss"
+        }
+
+        qss_content = ""
+
+        # 1. 공통 QSS 로드
+        if os.path.exists(common_path):
+            try:
+                with open(common_path, "r", encoding="utf-8") as f:
+                    qss_content += f.read() + "\n"
+            except Exception as e:
+                logger.error(f"Error loading common theme: {e}")
+        else:
+            logger.warning(f"Common theme file not found: {common_path}")
+
+        # 2. 특정 테마 QSS 로드
+        qss_path = theme_files.get(theme_name)
+        if qss_path and os.path.exists(qss_path):
+            try:
+                with open(qss_path, "r", encoding="utf-8") as f:
+                    qss_content += f.read()
+            except Exception as e:
+                logger.error(f"Error loading theme {theme_name}: {e}")
+        else:
+            logger.warning(f"Theme file not found: {qss_path}")
+
+        # 3. 폴백 스타일시트 (파일 로드 실패 시)
+        if not qss_content.strip():
+            logger.warning("Failed to load theme file, using fallback stylesheet.")
+            qss_content = self._get_fallback_stylesheet(theme_name)
+
+        return qss_content
+
+    @staticmethod
+    def _get_fallback_stylesheet(theme_name: str) -> str:
+        """
+        테마 파일이 없을 경우 사용할 최소한의 스타일시트를 반환합니다.
+
+        Args:
+            theme_name (str): 테마 이름.
+
+        Returns:
+            str: 폴백 QSS 문자열.
+        """
+        if theme_name == "dark":
+            return """
+            QMainWindow, QWidget { background-color: #2b2b2b; color: #ffffff; }
+            QLineEdit, QTextEdit, QPlainTextEdit { background-color: #3b3b3b; color: #ffffff; border: 1px solid #555555; }
+            QComboBox, QPushButton { background-color: #444444; color: #ffffff; border: 1px solid #555555; padding: 5px; }
+            QHeaderView::section { background-color: #444444; color: #ffffff; }
+            QTableView { background-color: #2b2b2b; color: #ffffff; gridline-color: #555555; }
+            """
+        else:
+            return """
+            QMainWindow, QWidget { background-color: #f0f0f0; color: #000000; }
+            QLineEdit, QTextEdit, QPlainTextEdit { background-color: #ffffff; color: #000000; border: 1px solid #cccccc; }
+            QComboBox, QPushButton { background-color: #e0e0e0; color: #000000; border: 1px solid #cccccc; padding: 5px; }
+            """
+
+    def apply_theme(self, app: QApplication, theme_name: str = "dark"):
+        """
+        지정된 테마를 QApplication 인스턴스에 적용합니다.
+
+        Args:
+            app (QApplication): 스타일을 적용할 애플리케이션 인스턴스.
+            theme_name (str): 적용할 테마 이름. 기본값은 "dark".
+        """
+        self._app = app
+        self._current_theme = theme_name
+
+        # 1. 기본 테마 로드 (공통 + 특정)
+        base_stylesheet = self.load_theme(theme_name)
+
+        # 2. 폰트 스타일시트 생성
+        font_stylesheet = self._generate_font_stylesheet()
+
+        # 3. 결합 및 적용
+        full_stylesheet = base_stylesheet + "\n" + font_stylesheet
+
+        if full_stylesheet:
+            app.setStyleSheet(full_stylesheet)
+        else:
+            logger.error(f"Failed to apply theme: {theme_name}")
+
+    def _generate_font_stylesheet(self) -> str:
+        """
+        현재 폰트 설정에 대한 QSS를 생성합니다.
+
+        Returns:
+            str: 폰트 설정이 포함된 QSS 문자열.
+        """
+        prop_family = self._proportional_font.family()
+        prop_size = self._proportional_font.pointSize()
+
+        fixed_family = self._fixed_font.family()
+        fixed_size = self._fixed_font.pointSize()
+
+        return f"""
+        /* 동적 폰트 설정 */
+
+        /* 전역 폰트 (가변폭) */
+        QWidget {{
+            font-family: "{prop_family}", sans-serif;
+            font-size: {prop_size}pt;
+        }}
+
+        .proportional-font {{
+            font-family: "{prop_family}", sans-serif;
+            font-size: {prop_size}pt;
+        }}
+
+        .fixed-font {{
+            font-family: "{fixed_family}", monospace;
+            font-size: {fixed_size}pt;
+        }}
+
+        /* 고정폭 폰트를 텍스트 데이터 위젯에 적용 */
+        QTextEdit.fixed-font,
+        QPlainTextEdit.fixed-font,
+        QLineEdit.fixed-font,
+        QTableView.fixed-font {{
+            font-family: "{fixed_family}", monospace;
+            font-size: {fixed_size}pt;
+        }}
+        """
+
+    def get_current_theme(self) -> str:
+        """
+        현재 테마 이름을 반환합니다.
+
+        Returns:
+            str: 현재 테마 이름.
+        """
+        return self._current_theme
+
+    # 가변폭(Proportional) 폰트 메서드
+    def set_proportional_font(self, family: str, size: int):
+        """
+        UI 요소에 사용할 가변폭 폰트를 설정합니다.
+
+        Args:
+            family (str): 폰트 패밀리 이름.
+            size (int): 폰트 크기 (pt).
+        """
+        self._proportional_font = QFont(family, size)
+        if self._app:
+            self._app.setFont(self._proportional_font)
+            # 테마를 다시 적용하여 QSS 업데이트
+            self.apply_theme(self._app, self._current_theme)
+
+    def get_proportional_font(self) -> QFont:
+        """
+        현재 가변폭 폰트를 반환합니다.
+
+        Returns:
+            QFont: 현재 설정된 가변폭 폰트 객체 (복사본).
+        """
+        return QFont(self._proportional_font)  # 복사본 반환
+
+    def get_proportional_font_info(self) -> tuple[str, int]:
+        """
+        가변폭 폰트의 정보(패밀리, 크기)를 반환합니다.
+
+        Returns:
+            tuple[str, int]: (폰트 패밀리, 폰트 크기) 튜플.
+        """
+        return self._proportional_font.family(), self._proportional_font.pointSize()
+
+    # 고정폭(Fixed) 폰트 메서드
+    def set_fixed_font(self, family: str, size: int):
+        """
+        텍스트 데이터에 사용할 고정폭 폰트를 설정합니다.
+
+        Args:
+            family (str): 폰트 패밀리 이름.
+            size (int): 폰트 크기 (pt).
+        """
+        self._fixed_font = QFont(family, size)
+        self._fixed_font.setStyleHint(QFont.Monospace)
+        if self._app:
+            # 테마를 다시 적용하여 QSS 업데이트
+            self.apply_theme(self._app, self._current_theme)
+
+    def get_fixed_font(self) -> QFont:
+        """
+        현재 고정폭 폰트를 반환합니다.
+
+        Returns:
+            QFont: 현재 설정된 고정폭 폰트 객체 (복사본).
+        """
+        return QFont(self._fixed_font)  # 복사본 반환
+
+    def get_fixed_font_info(self) -> tuple[str, int]:
+        """
+        고정폭 폰트의 정보(패밀리, 크기)를 반환합니다.
+
+        Returns:
+            tuple[str, int]: (폰트 패밀리, 폰트 크기) 튜플.
+        """
+        return self._fixed_font.family(), self._fixed_font.pointSize()
+
+    # 설정에서 폰트 복원
+    def restore_fonts_from_settings(self, settings: dict):
+        """
+        설정 딕셔너리에서 폰트 설정을 복원합니다.
+
+        Args:
+            settings (dict): 애플리케이션 설정 딕셔너리.
+        """
+        ui_settings = settings.get("ui", {})
+
+        # 가변폭 폰트 복원
+        prop_family = ui_settings.get("proportional_font_family")
+        prop_size = ui_settings.get("proportional_font_size")
+        if prop_family and prop_size:
+            self._proportional_font = QFont(prop_family, prop_size)
+
+        # 고정폭 폰트 복원
+        fixed_family = ui_settings.get("fixed_font_family")
+        fixed_size = ui_settings.get("fixed_font_size")
+        if fixed_family and fixed_size:
+            self._fixed_font = QFont(fixed_family, fixed_size)
+            self._fixed_font.setStyleHint(QFont.Monospace)
+
+        # 참고: apply_theme이 초기화 직후 호출되므로 여기서 바로 적용하지 않아도 됨.
+        # 하지만 app이 설정되어 있다면 명시적으로 적용.
+        if self._app:
+             self.apply_theme(self._app, self._current_theme)
+
+    def get_font_settings(self) -> dict:
+        """
+        현재 폰트 설정을 딕셔너리로 반환합니다.
+
+        Returns:
+            dict: 폰트 설정 딕셔너리 (저장용).
+        """
+        prop_family, prop_size = self.get_proportional_font_info()
+        fixed_family, fixed_size = self.get_fixed_font_info()
+
+        return {
+            "proportional_font_family": prop_family,
+            "proportional_font_size": prop_size,
+            "fixed_font_family": fixed_family,
+            "fixed_font_size": fixed_size
+        }
+
+    # 레거시 호환성
+    @staticmethod
+    def set_font(app: QApplication, font_family: str, font_size: int = 10):
+        """
+        애플리케이션 전체 폰트를 설정합니다 (레거시 메서드).
+
+        Args:
+            app (QApplication): 애플리케이션 인스턴스.
+            font_family (str): 폰트 패밀리 이름.
+            font_size (int): 폰트 크기. 기본값은 10.
+        """
+        font = QFont(font_family, font_size)
+        app.setFont(font)
+
+    def get_icon(self, name: str) -> QIcon:
+        """
+        현재 테마에 맞는 아이콘을 반환합니다.
+        아이콘 파일명 규칙: {name}_{theme}.svg (예: add_dark.svg, add_light.svg)
+        다크 테마인 경우 밝은 아이콘(_dark.svg)을, 라이트 테마인 경우 어두운 아이콘(_light.svg)을 찾습니다.
+
+        Args:
+            name (str): 아이콘 이름 (예: "add").
+
+        Returns:
+            QIcon: 테마에 맞는 QIcon 객체.
+        """
+        # 테마에 따른 접미사 결정
+        # 다크 테마 -> 밝은 아이콘 필요 -> _dark 접미사 (또는 _white)
+        # 라이트 테마 -> 어두운 아이콘 필요 -> _light 접미사 (또는 _black)
+        # 여기서는 파일명 규칙을 {name}_{theme}.svg로 가정하고,
+        # theme 값은 현재 테마 이름("dark", "light")을 그대로 사용
+
+        icon_path = f"resources/icons/{name}_{self._current_theme}.svg"
+
+        if not os.path.exists(icon_path):
+            # 폴백: 테마 접미사 없이 시도
+            fallback_path = f"resources/icons/{name}.svg"
+            if os.path.exists(fallback_path):
+                return QIcon(fallback_path)
+            # 파일이 없으면 빈 아이콘 반환
+            return QIcon()
+
+        return QIcon(icon_path)
+</file>
+
+<file path="view/widgets/status_area.py">
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTextEdit, QLabel
+from typing import Optional
+import datetime
+from view.lang_manager import lang_manager
+
+class StatusAreaWidget(QWidget):
+    """
+    시스템 상태 메시지 및 에러 로그를 표시하는 위젯 클래스입니다.
+    QTextEdit를 사용하여 여러 줄의 상태 이력을 관리합니다.
+    """
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        """
+        StatusArea를 초기화합니다.
+
+        Args:
+            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
+        """
+        super().__init__(parent)
+        self.init_ui()
+
+        # 언어 변경 시 UI 업데이트 연결
+        lang_manager.language_changed.connect(self.retranslate_ui)
+
+    def init_ui(self) -> None:
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+
+        self.log_lbl = QLabel(lang_manager.get_text("status_lbl_log"))
+        # log_lbl.setStyleSheet("font-weight: bold; font-size: 10px;")
+
+        self.log_txt = QTextEdit()
+        self.log_txt.setReadOnly(True)
+        self.log_txt.setMaximumHeight(100) # 높이 제한
+        self.log_txt.setToolTip(lang_manager.get_text("status_txt_log_tooltip"))
+        self.log_txt.setPlaceholderText(lang_manager.get_text("status_txt_log_placeholder"))
+        self.log_txt.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
+
+        layout.addWidget(self.log_lbl)
+        layout.addWidget(self.log_txt)
+        self.setLayout(layout)
+
+    def retranslate_ui(self) -> None:
+        """언어 변경 시 UI 텍스트를 업데이트합니다."""
+        self.log_lbl.setText(lang_manager.get_text("status_lbl_log"))
+        self.log_txt.setToolTip(lang_manager.get_text("status_txt_log_tooltip"))
+        self.log_txt.setPlaceholderText(lang_manager.get_text("status_txt_log_placeholder"))
+
+    def log(self, message: str, level: str = "INFO") -> None:
+        """
+        상태 메시지를 로그에 추가합니다.
+
+        Args:
+            message (str): 표시할 메시지.
+            level (str): 로그 레벨 (INFO, ERROR, WARN, SUCCESS). 기본값은 "INFO".
+        """
+        timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+        color = "black"
+        if level == "ERROR":
+            color = "red"
+        elif level == "WARN":
+            color = "orange"
+        elif level == "SUCCESS":
+            color = "green"
+
+        # 색상 적용을 위한 HTML 포맷팅
+        formatted_msg = f'<span style="color:gray;">[{timestamp}]</span> <span style="color:{color};">[{level}]</span> {message}'
+        self.log_txt.append(formatted_msg)
+
+    def clear(self) -> None:
+        """로그를 초기화합니다."""
+        self.log_txt.clear()
+</file>
+
+<file path="view/dialogs/font_settings_dialog.py">
+from PyQt5.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel,
+    QPushButton, QFontComboBox, QSpinBox, QTextEdit, QDialogButtonBox
+)
+from PyQt5.QtGui import QFont
+import platform
+from view.lang_manager import lang_manager
+
+class FontSettingsDialog(QDialog):
+    """
+    듀얼 폰트 설정 대화상자입니다.
+    가변폭(Proportional) 폰트와 고정폭(Fixed) 폰트를 개별적으로 설정할 수 있습니다.
+    """
+
+    def __init__(self, theme_manager, parent=None):
+        """
+        FontSettingsDialog를 초기화합니다.
+
+        Args:
+            theme_manager (ThemeManager): 테마 및 폰트 관리를 위한 ThemeManager 인스턴스.
+            parent (QWidget, optional): 부모 위젯. 기본값은 None.
+        """
+        super().__init__(parent)
+        self.theme_manager = theme_manager
+
+        self.setWindowTitle(lang_manager.get_text("font_title_settings"))
+        self.setMinimumWidth(600)
+        self.setMinimumHeight(500)
+
+        self.init_ui()
+        self.load_current_fonts()
+
+    def init_ui(self):
+        """UI 컴포넌트를 초기화하고 레이아웃을 구성합니다."""
+        layout = QVBoxLayout(self)
+        layout.setSpacing(15)
+
+        # 가변폭 폰트 그룹 (Proportional Font Group)
+        self.prop_grp = QGroupBox(lang_manager.get_text("font_grp_proportional"))
+        self.prop_grp.setToolTip(lang_manager.get_text("font_grp_proportional_tooltip"))
+        prop_layout = QVBoxLayout(self.prop_grp)
+
+        # 가변폭 폰트 컨트롤
+        prop_controls = QHBoxLayout()
+        self.prop_font_lbl = QLabel(lang_manager.get_text("font_lbl_font"))
+        prop_controls.addWidget(self.prop_font_lbl)
+        self.prop_font_combo = QFontComboBox()
+        self.prop_font_combo.setFontFilters(QFontComboBox.ScalableFonts)
+        self.prop_font_combo.currentFontChanged.connect(self.update_prop_preview)
+        prop_controls.addWidget(self.prop_font_combo, 1)
+
+        self.prop_size_lbl = QLabel(lang_manager.get_text("font_lbl_size"))
+        prop_controls.addWidget(self.prop_size_lbl)
+        self.prop_size_spin = QSpinBox()
+        self.prop_size_spin.setRange(6, 16)
+        self.prop_size_spin.setValue(9)
+        self.prop_size_spin.setSuffix(" pt")
+        self.prop_size_spin.valueChanged.connect(self.update_prop_preview)
+        prop_controls.addWidget(self.prop_size_spin)
+
+        prop_layout.addLayout(prop_controls)
+
+        # 가변폭 폰트 미리보기
+        self.prop_preview = QTextEdit()
+        self.prop_preview.setReadOnly(True)
+        self.prop_preview.setMaximumHeight(80)
+        self.prop_preview.setText("The quick brown fox jumps over the lazy dog.\n빠른 갈색 여우가 게으른 개를 뛰어넘습니다.")
+        self.prop_preview_lbl = QLabel(lang_manager.get_text("font_lbl_preview"))
+        prop_layout.addWidget(self.prop_preview_lbl)
+        prop_layout.addWidget(self.prop_preview)
+
+        layout.addWidget(self.prop_grp)
+
+        # 고정폭 폰트 그룹 (Fixed Font Group)
+        self.fixed_grp = QGroupBox(lang_manager.get_text("font_grp_fixed"))
+        self.fixed_grp.setToolTip(lang_manager.get_text("font_grp_fixed_tooltip"))
+        fixed_layout = QVBoxLayout(self.fixed_grp)
+
+        # 고정폭 폰트 컨트롤
+        fixed_controls = QHBoxLayout()
+        self.fixed_font_lbl = QLabel(lang_manager.get_text("font_lbl_font"))
+        fixed_controls.addWidget(self.fixed_font_lbl)
+        self.fixed_font_combo = QFontComboBox()
+        self.fixed_font_combo.setFontFilters(QFontComboBox.MonospacedFonts)
+        self.fixed_font_combo.currentFontChanged.connect(self.update_fixed_preview)
+        fixed_controls.addWidget(self.fixed_font_combo, 1)
+
+        self.fixed_size_lbl = QLabel(lang_manager.get_text("font_lbl_size"))
+        fixed_controls.addWidget(self.fixed_size_lbl)
+        self.fixed_size_spin = QSpinBox()
+        self.fixed_size_spin.setRange(6, 16)
+        self.fixed_size_spin.setValue(9)
+        self.fixed_size_spin.setSuffix(" pt")
+        self.fixed_size_spin.valueChanged.connect(self.update_fixed_preview)
+        fixed_controls.addWidget(self.fixed_size_spin)
+
+        fixed_layout.addLayout(fixed_controls)
+
+        # 고정폭 폰트 미리보기
+        self.fixed_preview = QTextEdit()
+        self.fixed_preview.setReadOnly(True)
+        self.fixed_preview.setMaximumHeight(80)
+        self.fixed_preview.setText("AT+CMD=OK\\r\\n0123456789ABCDEF\\r\\nMonospace Text Display")
+        self.fixed_preview_lbl = QLabel(lang_manager.get_text("font_lbl_preview"))
+        fixed_layout.addWidget(self.fixed_preview_lbl)
+        fixed_layout.addWidget(self.fixed_preview)
+
+        layout.addWidget(self.fixed_grp)
+
+        # 버튼 영역
+        button_layout = QHBoxLayout()
+
+        self.reset_btn = QPushButton(lang_manager.get_text("font_btn_reset"))
+        self.reset_btn.setToolTip(lang_manager.get_text("font_btn_reset_tooltip"))
+        self.reset_btn.clicked.connect(self.reset_to_defaults)
+        button_layout.addWidget(self.reset_btn)
+
+        button_layout.addStretch()
+
+        self.button_box = QDialogButtonBox(QDialogButtonBox.Ok | QDialogButtonBox.Cancel | QDialogButtonBox.Apply)
+        self.button_box.accepted.connect(self.accept_changes)
+        self.button_box.rejected.connect(self.reject)
+        self.button_box.button(QDialogButtonBox.Apply).clicked.connect(self.apply_changes)
+        button_layout.addWidget(self.button_box)
+
+        layout.addLayout(button_layout)
+
+    def showEvent(self, event):
+        """
+        다이얼로그가 표시될 때 호출됩니다. 프리뷰를 현재 설정으로 초기화합니다.
+
+        Args:
+            event (QShowEvent): 표시 이벤트.
+        """
+        super().showEvent(event)
+        # 프리뷰를 현재 설정으로 강제 업데이트
+        self.load_current_fonts()
+
+    def load_current_fonts(self):
+        """ThemeManager에서 현재 폰트 설정을 로드하여 UI에 반영합니다."""
+        # 가변폭 폰트 로드
+        prop_family, prop_size = self.theme_manager.get_proportional_font_info()
+        self.prop_font_combo.setCurrentFont(QFont(prop_family))
+        self.prop_size_spin.setValue(prop_size)
+
+        # 고정폭 폰트 로드
+        fixed_family, fixed_size = self.theme_manager.get_fixed_font_info()
+        self.fixed_font_combo.setCurrentFont(QFont(fixed_family))
+        self.fixed_size_spin.setValue(fixed_size)
+
+        # 로드된 값으로 프리뷰 명시적 업데이트
+        # (콤보박스 시그널은 값이 같거나 초기화 중일 때 발생하지 않을 수 있음)
+        self._update_prop_preview_with_font(QFont(prop_family, prop_size))
+        self._update_fixed_preview_with_font(QFont(fixed_family, fixed_size))
+
+    def update_prop_preview(self):
+        """가변폭 폰트 프리뷰를 업데이트합니다 (Signal Slot)."""
+        font = QFont(self.prop_font_combo.currentFont().family(), self.prop_size_spin.value())
+        self._update_prop_preview_with_font(font)
+
+    def _update_prop_preview_with_font(self, font: QFont):
+        """
+        가변폭 폰트 프리뷰를 실제 업데이트하는 내부 메서드입니다.
+
+        Args:
+            font (QFont): 적용할 폰트 객체.
+        """
+        self.prop_preview.setFont(font)
+
+    def update_fixed_preview(self):
+        """고정폭 폰트 프리뷰를 업데이트합니다 (Signal Slot)."""
+        font = QFont(self.fixed_font_combo.currentFont().family(), self.fixed_size_spin.value())
+        self._update_fixed_preview_with_font(font)
+
+    def _update_fixed_preview_with_font(self, font: QFont):
+        """
+        고정폭 폰트 프리뷰를 실제 업데이트하는 내부 메서드입니다.
+
+        Args:
+            font (QFont): 적용할 폰트 객체.
+        """
+        font.setStyleHint(QFont.Monospace)
+        self.fixed_preview.setFont(font)
+
+    def reset_to_defaults(self):
+        """폰트 설정을 플랫폼별 기본값으로 리셋합니다."""
+        system = platform.system()
+
+        # 가변폭 폰트 기본값
+        if system == "Windows":
+            self.prop_font_combo.setCurrentFont(QFont("Segoe UI"))
+            self.prop_size_spin.setValue(9)
+        elif system == "Linux":
+            self.prop_font_combo.setCurrentFont(QFont("Ubuntu"))
+            self.prop_size_spin.setValue(9)
+        else:  # macOS
+            self.prop_font_combo.setCurrentFont(QFont("SF Pro Text"))
+            self.prop_size_spin.setValue(9)
+
+        # 고정폭 폰트 기본값
+        if system == "Windows":
+            self.fixed_font_combo.setCurrentFont(QFont("Consolas"))
+            self.fixed_size_spin.setValue(9)
+        elif system == "Linux":
+            self.fixed_font_combo.setCurrentFont(QFont("Monospace"))
+            self.fixed_size_spin.setValue(9)
+        else:  # macOS
+            self.fixed_font_combo.setCurrentFont(QFont("Menlo"))
+            self.fixed_size_spin.setValue(9)
+
+        self.update_prop_preview()
+        self.update_fixed_preview()
+
+    def apply_changes(self):
+        """변경 사항을 ThemeManager에 적용합니다 (다이얼로그는 유지)."""
+        # 가변폭 폰트 적용
+        prop_family = self.prop_font_combo.currentFont().family()
+        prop_size = self.prop_size_spin.value()
+        self.theme_manager.set_proportional_font(prop_family, prop_size)
+
+        # 고정폭 폰트 적용
+        fixed_family = self.fixed_font_combo.currentFont().family()
+        fixed_size = self.fixed_size_spin.value()
+        self.theme_manager.set_fixed_font(fixed_family, fixed_size)
+
+    def accept_changes(self):
+        """변경 사항을 적용하고 대화상자를 닫습니다."""
+        self.apply_changes()
+        self.accept()
+</file>
+
+<file path="view/dialogs/preferences_dialog.py">
+from PyQt5.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
+    QLabel, QComboBox, QSpinBox, QPushButton,
+    QFileDialog, QGroupBox, QFormLayout
+)
+from PyQt5.QtCore import pyqtSignal
+from typing import Dict, Any, Optional
+import os
+from view.lang_manager import lang_manager
+from core.settings_manager import SettingsManager
+
+class PreferencesDialog(QDialog):
+    """
+    애플리케이션 설정을 관리하는 대화상자입니다.
+    General, Serial, Logging 탭으로 구성됩니다.
+    """
+
+    settings_changed = pyqtSignal(dict)  # 변경된 설정 딕셔너리 전송
+
+    def __init__(self, parent: Optional[QWidget] = None, current_settings: Dict[str, Any] = None) -> None:
+        super().__init__(parent)
+        self.setWindowTitle(lang_manager.get_text("pref_title"))
+        self.resize(500, 400)
+        self.settings = SettingsManager()
+        self.current_settings = current_settings or {}
+        self.init_ui()
+        self.load_settings()
+
+    def init_ui(self) -> None:
+        """UI 컴포넌트를 초기화합니다."""
+        layout = QVBoxLayout()
+
+        # 탭 위젯 생성
+        self.tabs = QTabWidget()
+        self.tabs.addTab(self.create_general_tab(), lang_manager.get_text("pref_tab_general"))
+        self.tabs.addTab(self.create_serial_tab(), lang_manager.get_text("pref_tab_serial"))
+        self.tabs.addTab(self.create_cmd_tab(), lang_manager.get_text("pref_tab_command")) # New Tab
+        self.tabs.addTab(self.create_logging_tab(), lang_manager.get_text("pref_tab_logging"))
+
+        layout.addWidget(self.tabs)
+
+        # 하단 버튼 (OK / Cancel / Apply)
+        btn_layout = QHBoxLayout()
+        btn_layout.addStretch()
+
+        self.ok_btn = QPushButton(lang_manager.get_text("pref_btn_ok"))
+        self.ok_btn.clicked.connect(self.accept)
+
+        self.cancel_btn = QPushButton(lang_manager.get_text("pref_btn_cancel"))
+        self.cancel_btn.clicked.connect(self.reject)
+
+        self.apply_btn = QPushButton(lang_manager.get_text("pref_btn_apply"))
+        self.apply_btn.clicked.connect(self.apply_settings)
+
+        btn_layout.addWidget(self.ok_btn)
+        btn_layout.addWidget(self.cancel_btn)
+        btn_layout.addWidget(self.apply_btn)
+
+        layout.addLayout(btn_layout)
+        self.setLayout(layout)
+
+    def create_general_tab(self) -> QWidget:
+        """General 설정 탭을 생성합니다."""
+        widget = QWidget()
+        layout = QVBoxLayout()
+
+        # UI Appearance 그룹
+        ui_group = QGroupBox(lang_manager.get_text("pref_grp_ui"))
+        ui_layout = QFormLayout()
+
+        self.theme_combo = QComboBox()
+        self.theme_combo.addItems(["Dark", "Light", "System"])
+
+        self.language_combo = QComboBox()
+        self.language_combo.addItem("English", "en")
+        self.language_combo.addItem("Korean", "ko")
+
+        self.proportional_font_size_spin = QSpinBox()
+        self.proportional_font_size_spin.setRange(8, 24)
+        self.proportional_font_size_spin.setValue(10)
+
+        ui_layout.addRow(lang_manager.get_text("pref_lbl_theme"), self.theme_combo)
+        ui_layout.addRow(lang_manager.get_text("pref_lbl_language"), self.language_combo)
+        ui_layout.addRow(lang_manager.get_text("pref_lbl_font_size"), self.proportional_font_size_spin)
+        ui_group.setLayout(ui_layout)
+
+        layout.addWidget(ui_group)
+        layout.addStretch()
+        widget.setLayout(layout)
+        return widget
+
+    def create_serial_tab(self) -> QWidget:
+        """Serial 설정 탭을 생성합니다."""
+        widget = QWidget()
+        layout = QVBoxLayout()
+
+        # Defaults 그룹
+        default_group = QGroupBox(lang_manager.get_text("pref_grp_default"))
+        default_layout = QFormLayout()
+
+        self.port_baud_combo = QComboBox()
+        self.port_baud_combo.addItems(["9600", "115200", "921600"])
+        self.port_baud_combo.setEditable(True)
+
+        self.port_newline_combo = QComboBox()
+        self.port_newline_combo.addItems(["\r", "\n", "\r\n"])
+        self.port_newline_combo.setEditable(True)
+
+        self.port_scan_interval_spin = QSpinBox()
+        self.port_scan_interval_spin.setRange(1000, 60000)
+        self.port_scan_interval_spin.setSingleStep(1000)
+        self.port_scan_interval_spin.setSuffix(" ms")
+
+        default_layout.addRow(lang_manager.get_text("pref_lbl_baud"), self.port_baud_combo)
+        default_layout.addRow(lang_manager.get_text("pref_lbl_newline"), self.port_newline_combo)
+        default_layout.addRow(lang_manager.get_text("pref_lbl_scan"), self.port_scan_interval_spin)
+        default_group.setLayout(default_layout)
+
+        layout.addWidget(default_group)
+        layout.addStretch()
+        widget.setLayout(layout)
+        return widget
+
+    def create_cmd_tab(self) -> QWidget:
+        """Command 설정 탭을 생성합니다."""
+        widget = QWidget()
+        layout = QVBoxLayout()
+
+        # Prefix/Suffix 그룹
+        format_group = QGroupBox(lang_manager.get_text("pref_grp_cmd_format"))
+        format_layout = QFormLayout()
+
+        self.prefix_combo = QComboBox()
+        self.prefix_combo.setEditable(True)
+        self.prefix_combo.addItems(["", "\\r", "\\n", "\\r\\n", "AT", "AT+"])
+
+        self.suffix_combo = QComboBox()
+        self.suffix_combo.setEditable(True)
+        self.suffix_combo.addItems(["", "\\r", "\\n", "\\r\\n"])
+
+        format_layout.addRow(lang_manager.get_text("pref_lbl_prefix"), self.prefix_combo)
+        format_layout.addRow(lang_manager.get_text("pref_lbl_suffix"), self.suffix_combo)
+        format_group.setLayout(format_layout)
+
+        layout.addWidget(format_group)
+        layout.addStretch()
+        widget.setLayout(layout)
+        return widget
+
+    def create_logging_tab(self) -> QWidget:
+        """Logging 설정 탭을 생성합니다."""
+        widget = QWidget()
+        layout = QVBoxLayout()
+
+        # File Logging 그룹
+        file_group = QGroupBox(lang_manager.get_text("pref_grp_logging"))
+        file_layout = QFormLayout()
+
+        path_layout = QHBoxLayout()
+        self.log_path_edit = QLabel("Default Path")
+        self.log_path_edit.setFrameStyle(QLabel.Sunken | QLabel.Panel)
+        self.browse_btn = QPushButton(lang_manager.get_text("pref_btn_browse"))
+        self.browse_btn.clicked.connect(self.browse_log_path)
+
+        path_layout.addWidget(self.log_path_edit)
+        path_layout.addWidget(self.browse_btn)
+
+        self.max_lines_spin = QSpinBox()
+        self.max_lines_spin.setRange(100, 100000)
+        self.max_lines_spin.setSingleStep(100)
+
+        file_layout.addRow(lang_manager.get_text("pref_lbl_log_path"), path_layout)
+        file_layout.addRow(lang_manager.get_text("pref_lbl_max_lines"), self.max_lines_spin)
+        file_group.setLayout(file_layout)
+
+        layout.addWidget(file_group)
+        layout.addStretch()
+        widget.setLayout(layout)
+        return widget
+
+    def browse_log_path(self) -> None:
+        """로그 저장 경로 선택 다이얼로그를 엽니다."""
+        directory = QFileDialog.getExistingDirectory(self, lang_manager.get_text("pref_dialog_title_select_dir"))
+        if directory:
+            self.log_path_edit.setText(directory)
+
+    def load_settings(self) -> None:
+        """현재 설정을 UI에 반영합니다."""
+        # General
+        theme = self.settings.get("settings.theme", "Dark").capitalize()
+        self.theme_combo.setCurrentText(theme)
+
+        lang_code = self.settings.get("settings.language", "en")
+        index = self.language_combo.findData(lang_code)
+        if index != -1:
+            self.language_combo.setCurrentIndex(index)
+
+        self.proportional_font_size_spin.setValue(self.settings.get("settings.proportional_font_size", 10))
+        self.max_lines_spin.setValue(self.settings.get("settings.rx_max_lines", 2000))
+
+        # Serial
+        self.port_baud_combo.setCurrentText(str(self.settings.get("settings.port_baudrate", 115200)))
+        self.port_newline_combo.setCurrentText(str(self.settings.get("settings.port_newline", "\n")))
+        self.port_scan_interval_spin.setValue(self.settings.get("settings.port_scan_interval", 5000))
+
+        # Command
+        self.prefix_combo.setCurrentText(self.settings.get("settings.cmd_prefix", ""))
+        self.suffix_combo.setCurrentText(self.settings.get("settings.cmd_suffix", ""))
+
+        # Logging
+        self.log_path_edit.setText(self.settings.get("logging.path", os.getcwd()))
+
+    def apply_settings(self) -> None:
+        """변경된 설정을 수집하여 시그널을 발생시킵니다."""
+        new_settings = {
+            "theme": self.theme_combo.currentText(),
+            "language": self.language_combo.currentData(),
+            "proportional_font_size": self.proportional_font_size_spin.value(),
+            "port_baudrate": self.port_baud_combo.currentText(),
+            "port_newline": self.port_newline_combo.currentText(),
+            "port_scan_interval": self.port_scan_interval_spin.value(),
+            "cmd_prefix": self.prefix_combo.currentText(),
+            "cmd_suffix": self.suffix_combo.currentText(),
+            "log_path": self.log_path_edit.text(),
+            "max_log_lines": self.max_lines_spin.value()
+        }
+        self.settings_changed.emit(new_settings)
+
+    def accept(self) -> None:
+        """OK 버튼 클릭 시 설정을 적용하고 닫습니다."""
+        self.apply_settings()
+        super().accept()
+</file>
+
+<file path="view/widgets/port_settings.py">
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton,
+    QLabel, QGroupBox, QCheckBox
+)
+from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtGui import QIntValidator
+from view.lang_manager import lang_manager
+from typing import Optional, List, Dict, Any
+
+class PortSettingsWidget(QGroupBox):
+    """
+    시리얼 포트 설정(Baudrate, Parity 등)을 제어하는 위젯 클래스입니다.
+    포트 스캔, 연결/해제 및 통신 파라미터 설정을 담당합니다.
+    """
+
+    # 시그널 정의
+    port_open_requested = pyqtSignal(dict)  # config dict
+    port_close_requested = pyqtSignal()
+    port_scan_requested = pyqtSignal()
+    connection_state_changed = pyqtSignal(bool)  # connected state
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        """
+        PortSettingsWidget을 초기화합니다.
+
+        Args:
+            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
+        """
+        super().__init__(lang_manager.get_text("port_grp_settings"), parent)
+        self.flow_lbl = None
+        self.stopbits_lbl = None
+        self.parity_lbl = None
+        self.datasize_lbl = None
+        self.rts_check = None
+        self.dtr_check = None
+        self.flow_combo = None
+        self.stopbits_combo = None
+        self.parity_combo = None
+        self.datasize_combo = None
+        self.baud_lbl = None
+        self.port_lbl = None
+        self.connect_btn = None
+        self.baud_combo = None
+        self.baud_validator = None
+        self.scan_btn = None
+        self.port_combo = None
+        self.init_ui()
+
+        # 언어 변경 시 UI 업데이트 연결
+        lang_manager.language_changed.connect(self.retranslate_ui)
+
+    def init_ui(self) -> None:
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(5, 5, 5, 5)
+        main_layout.setSpacing(5)
+
+        # 1행: Port | Scan | Baud | Open
+        row1_layout = QHBoxLayout()
+        row1_layout.setSpacing(5)
+
+        # 포트 선택 콤보박스
+        self.port_combo = QComboBox()
+        self.port_combo.setMinimumWidth(80)
+        self.port_combo.setToolTip(lang_manager.get_text("port_combo_port_tooltip"))
+
+        self.scan_btn = QPushButton(lang_manager.get_text("port_btn_scan"))
+        self.scan_btn.setFixedWidth(50)
+        self.scan_btn.setToolTip(lang_manager.get_text("port_btn_scan_tooltip"))
+        self.scan_btn.clicked.connect(self.on_port_scan_clicked)
+
+        # 보드레이트 선택 콤보박스
+        self.baud_combo = QComboBox()
+        self.baud_combo.setMinimumWidth(80)
+        self.baud_combo.setToolTip(lang_manager.get_text("port_combo_baud_tooltip"))
+        self.baud_combo.addItems([
+            "9600", "19200", "38400", "57600", "115200",
+            "230400", "460800", "921600", "1000000", "2000000", "4000000"
+        ])
+        self.baud_combo.setCurrentText("115200")
+        self.baud_combo.setEditable(True)
+        # Baudrate 유효성 검사 (50 ~ 4000000)
+        self.baud_validator = QIntValidator(50, 4000000)
+        self.baud_combo.setValidator(self.baud_validator)
+
+        # 연결 버튼
+        self.connect_btn = QPushButton(lang_manager.get_text("port_btn_connect"))
+        self.connect_btn.setCheckable(True)
+        self.connect_btn.setToolTip(lang_manager.get_text("port_btn_connect_tooltip"))
+        self.connect_btn.clicked.connect(self.on_connect_clicked)
+        self.connect_btn.setFixedWidth(60)
+
+        self.port_lbl = QLabel(lang_manager.get_text("port_lbl_port"))
+        self.baud_lbl = QLabel(lang_manager.get_text("port_lbl_baudrate"))
+
+        row1_layout.addWidget(self.port_lbl)
+        row1_layout.addWidget(self.port_combo)
+        row1_layout.addWidget(self.scan_btn)
+        row1_layout.addWidget(self.baud_lbl)
+        row1_layout.addWidget(self.baud_combo)
+        row1_layout.addWidget(self.connect_btn)
+
+        main_layout.addLayout(row1_layout)
+
+        # 2행: Data | Parity | Stop | Flow | DTR | RTS
+        row2_layout = QHBoxLayout()
+        row2_layout.setSpacing(5)
+
+        # 데이터 비트
+        self.datasize_combo = QComboBox()
+        self.datasize_combo.addItems(["5", "6", "7", "8"])
+        self.datasize_combo.setCurrentText("8")
+        self.datasize_combo.setToolTip(lang_manager.get_text("port_combo_datasize_tooltip"))
+        self.datasize_combo.setFixedWidth(40)
+
+        # 패리티 비트
+        self.parity_combo = QComboBox()
+        self.parity_combo.addItems(["N", "E", "O", "M", "S"])
+        self.parity_combo.setToolTip(lang_manager.get_text("port_combo_parity_tooltip"))
+        self.parity_combo.setFixedWidth(40)
+
+        # 정지 비트
+        self.stopbits_combo = QComboBox()
+        self.stopbits_combo.addItems(["1", "1.5", "2"])
+        self.stopbits_combo.setToolTip(lang_manager.get_text("port_combo_stopbits_tooltip"))
+        self.stopbits_combo.setFixedWidth(45)
+
+        # 흐름 제어
+        self.flow_combo = QComboBox()
+        self.flow_combo.addItems(["None", "RTS/CTS", "XON/XOFF"])
+        self.flow_combo.setToolTip(lang_manager.get_text("port_combo_flow_tooltip"))
+        self.flow_combo.setMinimumWidth(70)
+
+        # 제어 신호
+        self.dtr_check = QCheckBox("DTR")
+        self.dtr_check.setChecked(True)
+        self.rts_check = QCheckBox("RTS")
+        self.rts_check.setChecked(True)
+
+        self.datasize_lbl = QLabel(lang_manager.get_text("port_lbl_datasize"))
+        self.parity_lbl = QLabel(lang_manager.get_text("port_lbl_parity"))
+        self.stopbits_lbl = QLabel(lang_manager.get_text("port_lbl_stop"))
+        self.flow_lbl = QLabel(lang_manager.get_text("port_lbl_flow"))
+
+        row2_layout.addWidget(self.datasize_lbl)
+        row2_layout.addWidget(self.datasize_combo)
+        row2_layout.addWidget(self.parity_lbl)
+        row2_layout.addWidget(self.parity_combo)
+        row2_layout.addWidget(self.stopbits_lbl)
+        row2_layout.addWidget(self.stopbits_combo)
+        row2_layout.addWidget(self.flow_lbl)
+        row2_layout.addWidget(self.flow_combo)
+        row2_layout.addWidget(self.dtr_check)
+        row2_layout.addWidget(self.rts_check)
+        row2_layout.addStretch()
+
+        main_layout.addLayout(row2_layout)
+
+        self.setLayout(main_layout)
+
+    def retranslate_ui(self) -> None:
+        """언어 변경 시 UI 텍스트를 업데이트합니다."""
+        self.setTitle(lang_manager.get_text("port_grp_settings"))
+
+        self.port_combo.setToolTip(lang_manager.get_text("port_combo_tooltip"))
+
+        self.scan_btn.setText(lang_manager.get_text("port_btn_scan"))
+        self.scan_btn.setToolTip(lang_manager.get_text("port_btn_scan_tooltip"))
+
+        self.baud_combo.setToolTip(lang_manager.get_text("port_combo_baud_tooltip"))
+
+        # 연결 버튼 텍스트는 상태에 따라 다르므로 현재 상태 확인 필요
+        if self.connect_btn.isChecked():
+            self.connect_btn.setText(lang_manager.get_text("port_btn_disconnect"))
+        else:
+            self.connect_btn.setText(lang_manager.get_text("port_btn_connect"))
+        self.connect_btn.setToolTip(lang_manager.get_text("port_btn_connect_tooltip"))
+
+        self.port_lbl.setText(lang_manager.get_text("port_lbl_port"))
+        self.baud_lbl.setText(lang_manager.get_text("port_lbl_baudrate"))
+
+        self.datasize_combo.setToolTip(lang_manager.get_text("port_combo_datasize_tooltip"))
+        self.parity_combo.setToolTip(lang_manager.get_text("port_combo_parity_tooltip"))
+        self.stopbits_combo.setToolTip(lang_manager.get_text("port_combo_stopbits_tooltip"))
+        self.flow_combo.setToolTip(lang_manager.get_text("port_combo_flow_tooltip"))
+
+        self.datasize_lbl.setText(lang_manager.get_text("port_lbl_datasize"))
+        self.parity_lbl.setText(lang_manager.get_text("port_lbl_parity"))
+        self.stopbits_lbl.setText(lang_manager.get_text("port_lbl_stop"))
+        self.flow_lbl.setText(lang_manager.get_text("port_lbl_flow"))
+
+    def on_connect_clicked(self) -> None:
+        """연결 버튼 클릭 핸들러입니다."""
+        if self.connect_btn.isChecked():
+            # 연결 요청 (Request Open)
+            config: Dict[str, Any] = {
+                "port": self.port_combo.currentText(),
+                "baudrate": int(self.baud_combo.currentText()),
+                "datasize": int(self.datasize_combo.currentText()),
+                "parity": self.parity_combo.currentText(),
+                "stopbits": float(self.stopbits_combo.currentText()),
+                "flow": self.flow_combo.currentText(),
+                "dtr": self.dtr_check.isChecked(),
+                "rts": self.rts_check.isChecked()
+            }
+            self.port_open_requested.emit(config)
+            self.connect_btn.setText(lang_manager.get_text("port_btn_disconnect"))
+        else:
+            # 해제 요청 (Request Close)
+            self.port_close_requested.emit()
+            self.connect_btn.setText(lang_manager.get_text("port_btn_connect"))
+
+    def on_port_scan_clicked(self) -> None:
+        """포트 스캔 버튼 클릭 핸들러입니다."""
+        self.port_scan_requested.emit()
+
+    def set_port_list(self, ports: List[str]) -> None:
+        """
+        포트 목록을 업데이트합니다.
+
+        Args:
+            ports (List[str]): 포트 이름 리스트.
+        """
+        current_port = self.port_combo.currentText()
+        self.port_combo.clear()
+        self.port_combo.addItems(ports)
+
+        # 이전에 선택된 포트가 목록에 있으면 유지
+        if current_port in ports:
+            self.port_combo.setCurrentText(current_port)
+
+    def set_connected(self, connected: bool) -> None:
+        """
+        연결 상태에 따라 UI를 갱신합니다.
+
+        Args:
+            connected (bool): 연결 여부.
+        """
+        state = "connected" if connected else "disconnected"
+        self.set_connection_state(state)
+
+        self.port_combo.setEnabled(not connected)
+        self.baud_combo.setEnabled(not connected)
+        self.datasize_combo.setEnabled(not connected)
+        self.parity_combo.setEnabled(not connected)
+        self.stopbits_combo.setEnabled(not connected)
+        self.flow_combo.setEnabled(not connected)
+
+        # 연결 상태 변경 시그널 발생
+        self.connection_state_changed.emit(connected)
+
+    def set_connection_state(self, state: str) -> None:
+        """
+        연결 버튼의 상태(색상, 텍스트)를 변경합니다.
+
+        Args:
+            state (str): 'disconnected', 'connected', 'error'
+        """
+        self.connect_btn.setProperty("state", state)
+        self.connect_btn.style().unpolish(self.connect_btn)
+        self.connect_btn.style().polish(self.connect_btn)
+
+        if state == 'connected':
+            self.connect_btn.setText(lang_manager.get_text("port_btn_disconnect"))
+            self.connect_btn.setChecked(True)
+        elif state == 'disconnected':
+            self.connect_btn.setText(lang_manager.get_text("port_btn_connect"))
+            self.connect_btn.setChecked(False)
+        elif state == 'error':
+            self.connect_btn.setText(lang_manager.get_text("port_btn_reconnect"))
+            self.connect_btn.setChecked(False)
+
+    def toggle_connection(self) -> None:
+        """연결 상태를 토글합니다 (버튼 클릭 효과)."""
+        self.connect_btn.click()
+
+    def is_connected(self) -> bool:
+        """현재 연결 상태를 반환합니다."""
+        return self.connect_btn.isChecked()
+
+    def save_state(self) -> dict:
+        """
+        현재 설정을 딕셔너리로 반환합니다.
+
+        Returns:
+            dict: 설정 데이터.
+        """
+        state = {
+            "port": self.port_combo.currentText(),
+            "baudrate": self.baud_combo.currentText(),
+            "datasize": self.datasize_combo.currentText(),
+            "parity": self.parity_combo.currentText(),
+            "stopbits": self.stopbits_combo.currentText(),
+            "flow": self.flow_combo.currentText(),
+            "dtr": self.dtr_check.isChecked(),
+            "rts": self.rts_check.isChecked()
+        }
+        return state
+
+    def load_state(self, state: dict) -> None:
+        """
+        저장된 설정을 적용합니다.
+
+        Args:
+            state (dict): 설정 데이터.
+        """
+        if not state:
+            return
+
+        # 포트는 목록에 없을 수도 있으므로 addItem으로 추가 후 설정
+        port = state.get("port", "")
+        if port:
+            if self.port_combo.findText(port) == -1:
+                self.port_combo.addItem(port)
+            self.port_combo.setCurrentText(port)
+
+        self.baud_combo.setCurrentText(str(state.get("baudrate", "115200")))
+        self.datasize_combo.setCurrentText(str(state.get("datasize", "8")))
+        self.parity_combo.setCurrentText(state.get("parity", "N"))
+        self.stopbits_combo.setCurrentText(str(state.get("stopbits", "1")))
+        self.flow_combo.setCurrentText(state.get("flow", "None"))
+        self.dtr_check.setChecked(state.get("dtr", True))
+        self.rts_check.setChecked(state.get("rts", True))
+</file>
+
+<file path="view/widgets/received_area.py">
+from PyQt5.QtWidgets import QTextEdit, QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QCheckBox, QLabel, QLineEdit
+from PyQt5.QtCore import QTimer, Qt
+from PyQt5.QtGui import QTextCursor, QTextDocument
+from typing import Optional
+import datetime
+from view.color_rules import ColorRulesManager
+from view.lang_manager import lang_manager
+
+class ReceivedAreaWidget(QWidget):
+    """
+    수신된 시리얼 데이터를 표시하는 위젯 클래스입니다.
+    텍스트/HEX 모드 전환, 일시 정지, 타임스탬프 표시, 로그 저장 및 지우기 기능을 제공합니다.
+    """
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        """
+        ReceivedArea를 초기화합니다.
+
+        Args:
+            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
+        """
+        super().__init__(parent)
+        self.rx_search_prev_btn = None
+        self.rx_search_input = None
+        self.save_rx_log_btn = None
+        self.rx_pause_chk = None
+        self.rx_timestamp_chk = None
+        self.rx_hex_chk = None
+        self.clear_rx_log_btn = None
+        self.hex_mode: bool = False
+        self.paused: bool = False
+        self.batch_buffer: list[str] = []
+        self.max_lines: int = 2000
+        self.timestamp_enabled: bool = False
+
+        # 색상 규칙 관리자
+        self.color_manager = ColorRulesManager()
+
+        self.init_ui()
+
+        # 배치 렌더링 타이머 (성능 최적화)
+        self.batch_timer: QTimer = QTimer()
+        self.batch_timer.setInterval(50) # 50ms 간격
+        self.batch_timer.timeout.connect(self.flush_batch)
+        self.batch_timer.start()
+
+        # 언어 변경 시 UI 업데이트 연결
+        lang_manager.language_changed.connect(self.retranslate_ui)
+
+    def init_ui(self) -> None:
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+
+        # 툴바 (Toolbar)
+        toolbar = QHBoxLayout()
+
+        self.clear_rx_log_btn = QPushButton(lang_manager.get_text("recv_btn_clear"))
+        self.clear_rx_log_btn.setToolTip(lang_manager.get_text("recv_btn_clear_tooltip"))
+        self.clear_rx_log_btn.clicked.connect(self.on_clear_rx_log_clicked)
+
+        self.rx_hex_chk = QCheckBox(lang_manager.get_text("recv_chk_hex"))
+        self.rx_hex_chk.setToolTip(lang_manager.get_text("recv_chk_hex_tooltip"))
+        self.rx_hex_chk.stateChanged.connect(self.on_rx_hex_mode_changed)
+
+        self.rx_timestamp_chk = QCheckBox(lang_manager.get_text("recv_chk_timestamp"))
+        self.rx_timestamp_chk.setToolTip(lang_manager.get_text("recv_chk_timestamp_tooltip"))
+        self.rx_timestamp_chk.stateChanged.connect(self.on_rx_timestamp_changed)
+
+        self.rx_pause_chk = QCheckBox(lang_manager.get_text("recv_chk_pause"))
+        self.rx_pause_chk.setToolTip(lang_manager.get_text("recv_chk_pause_tooltip"))
+        self.rx_pause_chk.stateChanged.connect(self.on_rx_pause_changed)
+
+        self.save_rx_log_btn = QPushButton(lang_manager.get_text("recv_btn_save"))
+        self.save_rx_log_btn.setToolTip(lang_manager.get_text("recv_btn_save_tooltip"))
+
+        # 검색 바 (Search Bar)
+        self.rx_search_input = QLineEdit()
+        self.rx_search_input.setPlaceholderText(lang_manager.get_text("recv_input_search_placeholder"))
+        self.rx_search_input.setToolTip(lang_manager.get_text("recv_input_search_tooltip"))
+        self.rx_search_input.returnPressed.connect(self.on_rx_search_next_clicked)
+        self.rx_search_input.setMaximumWidth(200)
+
+        self.rx_search_prev_btn = QPushButton()
+        self.rx_search_prev_btn.setObjectName("rx_search_prev_btn")
+        self.rx_search_prev_btn.setToolTip(lang_manager.get_text("recv_btn_search_prev_tooltip"))
+        self.rx_search_prev_btn.setFixedWidth(30)
+        self.rx_search_prev_btn.clicked.connect(self.on_rx_search_prev_clicked)
+
+        self.rx_search_next_btn = QPushButton()
+        self.rx_search_next_btn.setObjectName("rx_search_next_btn")
+        self.rx_search_next_btn.setToolTip(lang_manager.get_text("recv_btn_search_next_tooltip"))
+        self.rx_search_next_btn.setFixedWidth(30)
+        self.rx_search_next_btn.clicked.connect(self.on_rx_search_next_clicked)
+
+        self.rx_log_lbl = QLabel(lang_manager.get_text("recv_lbl_log"))
+
+        toolbar.addWidget(self.rx_log_lbl)
+        toolbar.addStretch()
+        toolbar.addWidget(self.rx_search_input)
+        toolbar.addWidget(self.rx_search_prev_btn)
+        toolbar.addWidget(self.rx_search_next_btn)
+        toolbar.addWidget(self.rx_hex_chk)
+        toolbar.addWidget(self.rx_timestamp_chk)
+        toolbar.addWidget(self.rx_pause_chk)
+        toolbar.addWidget(self.clear_rx_log_btn)
+        toolbar.addWidget(self.save_rx_log_btn)
+
+        # 로그 표시 영역 (Log Display Area)
+        self.log_txt = QTextEdit()
+        self.log_txt.setReadOnly(True)
+        self.log_txt.setPlaceholderText(lang_manager.get_text("recv_txt_log_placeholder"))
+        self.log_txt.setToolTip(lang_manager.get_text("recv_lbl_log"))
+        self.log_txt.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
+
+        layout.addLayout(toolbar)
+        layout.addWidget(self.log_txt)
+        self.setLayout(layout)
+
+    def retranslate_ui(self) -> None:
+        """언어 변경 시 UI 텍스트를 업데이트합니다."""
+        self.clear_rx_log_btn.setText(lang_manager.get_text("recv_btn_clear"))
+        self.clear_rx_log_btn.setToolTip(lang_manager.get_text("recv_btn_clear_tooltip"))
+
+        self.rx_hex_chk.setText(lang_manager.get_text("recv_chk_hex"))
+        self.rx_hex_chk.setToolTip(lang_manager.get_text("recv_chk_hex_tooltip"))
+
+        self.rx_timestamp_chk.setText(lang_manager.get_text("recv_chk_timestamp"))
+        self.rx_timestamp_chk.setToolTip(lang_manager.get_text("recv_chk_timestamp_tooltip"))
+
+        self.rx_pause_chk.setText(lang_manager.get_text("recv_chk_pause"))
+        self.rx_pause_chk.setToolTip(lang_manager.get_text("recv_chk_pause_tooltip"))
+
+        self.save_rx_log_btn.setText(lang_manager.get_text("recv_btn_save"))
+        self.save_rx_log_btn.setToolTip(lang_manager.get_text("recv_btn_save_tooltip"))
+
+        self.rx_search_input.setPlaceholderText(lang_manager.get_text("recv_input_search_placeholder"))
+        self.rx_search_input.setToolTip(lang_manager.get_text("recv_input_search_tooltip"))
+
+        self.rx_search_prev_btn.setToolTip(lang_manager.get_text("recv_btn_search_prev_tooltip"))
+        self.rx_search_next_btn.setToolTip(lang_manager.get_text("recv_btn_search_next_tooltip"))
+
+        self.rx_log_lbl.setText(lang_manager.get_text("recv_lbl_log"))
+
+        self.log_txt.setToolTip(lang_manager.get_text("recv_lbl_log"))
+        self.log_txt.setPlaceholderText(lang_manager.get_text("recv_txt_log_placeholder"))
+
+    def on_rx_search_next_clicked(self) -> None:
+        """다음 검색 결과를 찾습니다."""
+        text = self.rx_search_input.text()
+        if not text:
+            return
+
+        # 정규식 검색 옵션 설정
+        options = QTextDocument.FindFlags()
+
+        # 정규식 사용 시도
+        import re
+        try:
+            re.compile(text)
+            # Qt의 FindRegularExpression 플래그 사용 (PyQt5 버전에 따라 다를 수 있음)
+            # 여기서는 간단히 일반 텍스트 검색으로 구현하고 추후 확장
+            # TODO: 정규식 검색 완벽 지원을 위해 QRegularExpression 사용 필요
+        except re.error:
+            pass # 정규식 오류 시 일반 텍스트로 취급
+
+        found = self.log_txt.find(text, options)
+        if not found:
+            # 처음부터 다시 검색 (Wrap around)
+            self.log_txt.moveCursor(QTextCursor.Start)
+            self.log_txt.find(text, options)
+
+    def on_rx_search_prev_clicked(self) -> None:
+        """이전 검색 결과를 찾습니다."""
+        text = self.rx_search_input.text()
+        if not text:
+            return
+
+        options = QTextDocument.FindBackward
+        found = self.log_txt.find(text, options)
+        if not found:
+            # 끝에서부터 다시 검색 (Wrap around)
+            self.log_txt.moveCursor(QTextCursor.End)
+            self.log_txt.find(text, options)
+
+    def append_data(self, data: bytes) -> None:
+        """
+        수신된 데이터를 버퍼에 추가합니다.
+
+        Args:
+            data (bytes): 수신된 바이트 데이터.
+        """
+        if self.paused:
+            return
+
+        text: str = ""
+        if self.hex_mode:
+            text = " ".join([f"{b:02X}" for b in data]) + " "
+        else:
+            try:
+                text = data.decode('utf-8', errors='replace')
+            except Exception:
+                text = str(data)
+
+        # 타임스탬프 추가
+        if self.timestamp_enabled:
+            ts = datetime.datetime.now().strftime("[%H:%M:%S]")
+            text = f'<span style="color:#9E9E9E;">{ts}</span> {text}'
+
+        # 색상 규칙 적용 (텍스트 모드일 때만)
+        if not self.hex_mode:
+            text = self.color_manager.apply_rules(text)
+
+        self.batch_buffer.append(text)
+
+    def flush_batch(self) -> None:
+        """버퍼에 쌓인 데이터를 UI에 일괄 업데이트합니다."""
+        if not self.batch_buffer:
+            return
+
+        text = "".join(self.batch_buffer)
+        self.log_txt.moveCursor(QTextCursor.End)
+        self.log_txt.insertHtml(text)  # 색상 지원을 위해 insertHtml 사용
+        self.batch_buffer.clear()
+
+        # 자동 스크롤 (Auto Scroll)
+        sb = self.log_txt.verticalScrollBar()
+        if sb:
+            sb.setValue(sb.maximum())
+
+        # 필요 시 오래된 로그 삭제 (Trim)
+        self._trim_if_needed()
+
+    def on_clear_rx_log_clicked(self) -> None:
+        """로그 뷰와 버퍼를 초기화합니다."""
+        self.log_txt.clear()
+        self.batch_buffer.clear()
+
+    def on_rx_hex_mode_changed(self, state: int) -> None:
+        """
+        HEX 모드 토글을 처리합니다.
+
+        Args:
+            state (int): 체크박스 상태 (Qt.Checked 등).
+        """
+        self.hex_mode = (state == Qt.Checked)
+
+    def on_rx_timestamp_changed(self, state: int) -> None:
+        """
+        타임스탬프 토글을 처리합니다.
+
+        Args:
+            state (int): 체크박스 상태.
+        """
+        self.timestamp_enabled = (state == Qt.Checked)
+
+    def on_rx_pause_changed(self, state: int) -> None:
+        """
+        일시 정지 토글을 처리합니다.
+
+        Args:
+            state (int): 체크박스 상태.
+        """
+        self.paused = (state == Qt.Checked)
+
+    def _trim_if_needed(self) -> None:
+        """
+        로그 라인 수가 최대치를 초과하면 상위 20%를 제거합니다.
+        (Implementation_Specification.md 섹션 18.3.2 기준)
+        """
+        document = self.log_txt.document()
+        if document.blockCount() > self.max_lines:
+            # 사용자가 스크롤 중인지 확인
+            sb = self.log_txt.verticalScrollBar()
+            if sb:
+                at_bottom = sb.value() >= (sb.maximum() - 10)
+
+                if at_bottom:  # 자동 스크롤 모드일 때만 trim 수행
+                    cursor = QTextCursor(document)
+                    cursor.movePosition(QTextCursor.Start)
+                    # 상위 20% (400줄) 선택 및 삭제
+                    for _ in range(400):
+                        cursor.movePosition(QTextCursor.Down, QTextCursor.KeepAnchor)
+                    cursor.removeSelectedText()
+    def save_state(self) -> dict:
+        """
+        현재 위젯 상태를 딕셔너리로 반환합니다.
+
+        Returns:
+            dict: 위젯 상태.
+        """
+        state = {
+            "hex_mode": self.hex_mode,
+            "timestamp": self.timestamp_enabled,
+            "paused": self.paused,
+            "search_text": self.rx_search_input.text()
+        }
+        return state
+
+    def load_state(self, state: dict) -> None:
+        """
+        저장된 상태를 위젯에 적용합니다.
+
+        Args:
+            state (dict): 위젯 상태.
+        """
+        if not state:
+            return
+
+        # 체크박스 상태 업데이트 (시그널 발생으로 내부 변수도 업데이트됨)
+        self.rx_hex_chk.setChecked(state.get("hex_mode", False))
+        self.rx_timestamp_chk.setChecked(state.get("timestamp", False))
+        self.rx_pause_chk.setChecked(state.get("paused", False))
+        self.rx_search_input.setText(state.get("search_text", ""))
+</file>
+
+<file path="view/widgets/manual_control.py">
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QCheckBox,
+    QLabel, QFileDialog, QGroupBox, QGridLayout
+)
+from PyQt5.QtCore import pyqtSignal, Qt
+from typing import Optional
+from view.lang_manager import lang_manager
+from view.pyqt_customs.smart_number_edit import QSmartLineEdit
+
+class ManualControlWidget(QWidget):
+    """
+    수동 명령 전송, 파일 전송, 로그 저장 및 각종 제어 옵션을 제공하는 위젯 클래스입니다.
+    (구 OperationArea)
+    """
+
+    # 시그널 정의
+    manual_cmd_send_requested = pyqtSignal(str, bool, bool, bool) # text, hex_mode, cmd_prefix, cmd_suffix
+    transfer_file_send_requested = pyqtSignal(str) # filepath
+    transfer_file_selected = pyqtSignal(str) # filepath
+    manual_log_save_requested = pyqtSignal(str) # filepath
+    manual_options_clear_requested = pyqtSignal()
+
+    # 접두사/접미사 상수 (CommandControl과 동일)
+    PREFIX_KEY = "prefix"
+    SUFFIX_KEY = "suffix"
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        """
+        ManualControlWidget을 초기화합니다.
+
+        Args:
+            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
+        """
+        super().__init__(parent)
+        self.send_transfer_file_btn = None
+        self.select_transfer_file_btn = None
+        self.transfer_file_path_lbl = None
+        self.file_transfer_grp = None
+        self.send_manual_cmd_btn = None
+        self.manual_cmd_input = None
+        self.manual_send_grp = None
+        self.save_manual_log_btn = None
+        self.clear_manual_options_btn = None
+        self.dtr_chk = None
+        self.rts_chk = None
+        self.suffix_chk = None
+        self.prefix_chk = None
+        self.hex_chk = None
+        self.manual_options_grp = None
+        self.init_ui()
+
+        # 언어 변경 시 UI 업데이트 연결
+        lang_manager.language_changed.connect(self.retranslate_ui)
+
+    def init_ui(self) -> None:
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2) # 간격 최소화
+
+        # 1. 제어 옵션 그룹 (Control Options Group)
+        self.manual_options_grp = QGroupBox(lang_manager.get_text("manual_ctrl_grp_control"))
+        option_layout = QGridLayout()
+        option_layout.setContentsMargins(2, 2, 2, 2) # 내부 여백 최소화
+        option_layout.setSpacing(5)
+
+        self.hex_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_hex"))
+        self.hex_chk.setToolTip(lang_manager.get_text("manual_ctrl_chk_hex_tooltip"))
+        self.hex_chk.stateChanged.connect(self.on_hex_mode_changed)
+
+        # 접두사/접미사 체크박스
+        self.prefix_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_prefix"))
+        self.suffix_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_suffix"))
+
+        # 흐름 제어 (Flow Control - RTS/DTR)
+        self.rts_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_rts"))
+        self.rts_chk.setToolTip(lang_manager.get_text("manual_ctrl_chk_rts_tooltip"))
+        self.dtr_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_dtr"))
+        self.dtr_chk.setToolTip(lang_manager.get_text("manual_ctrl_chk_dtr_tooltip"))
+
+        self.clear_manual_options_btn = QPushButton(lang_manager.get_text("manual_ctrl_btn_clear"))
+        self.clear_manual_options_btn.setToolTip(lang_manager.get_text("manual_ctrl_btn_clear_tooltip"))
+        self.clear_manual_options_btn.clicked.connect(self.on_manual_options_clear_clicked)
+
+        self.save_manual_log_btn = QPushButton(lang_manager.get_text("manual_ctrl_btn_save_log"))
+        self.save_manual_log_btn.setToolTip(lang_manager.get_text("manual_ctrl_btn_save_log_tooltip"))
+        self.save_manual_log_btn.clicked.connect(self.on_save_manual_log_clicked)
+
+        option_layout.addWidget(self.hex_chk, 0, 0)
+        option_layout.addWidget(self.prefix_chk, 0, 1)
+        option_layout.addWidget(self.suffix_chk, 0, 2)
+        option_layout.addWidget(self.rts_chk, 0, 3)
+        option_layout.addWidget(self.dtr_chk, 0, 4)
+
+        option_layout.addWidget(self.clear_manual_options_btn, 2, 0, 1, 2)
+        option_layout.addWidget(self.save_manual_log_btn, 2, 2, 1, 2)
+
+        self.manual_options_grp.setLayout(option_layout)
+
+        # 3. 수동 전송 영역 (Manual Send Area)
+        self.manual_send_grp = QGroupBox(lang_manager.get_text("manual_ctrl_grp_manual"))
+        send_layout = QHBoxLayout()
+        send_layout.setContentsMargins(2, 2, 2, 2)
+        send_layout.setSpacing(5)
+
+        self.manual_cmd_input = QSmartLineEdit() # QSmartLineEdit 사용
+        self.manual_cmd_input.setPlaceholderText(lang_manager.get_text("manual_ctrl_input_cmd_placeholder"))
+        self.manual_cmd_input.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
+        self.manual_cmd_input.returnPressed.connect(self.on_send_manual_cmd_clicked) # Enter 키 지원
+
+        self.send_manual_cmd_btn = QPushButton(lang_manager.get_text("manual_ctrl_btn_send"))
+        self.send_manual_cmd_btn.setCursor(Qt.PointingHandCursor)
+        # 스타일은 QSS에서 처리 권장 (강조색)
+        self.send_manual_cmd_btn.setProperty("class", "accent")
+        self.send_manual_cmd_btn.clicked.connect(self.on_send_manual_cmd_clicked)
+
+        send_layout.addWidget(self.manual_cmd_input, 1)
+        send_layout.addWidget(self.send_manual_cmd_btn)
+
+        self.manual_send_grp.setLayout(send_layout)
+
+        # 3. 파일 전송 영역 (File Transfer Area)
+        self.file_transfer_grp = QGroupBox(lang_manager.get_text("manual_ctrl_grp_file"))
+        file_layout = QHBoxLayout()
+        file_layout.setContentsMargins(2, 2, 2, 2)
+        file_layout.setSpacing(5)
+
+        self.transfer_file_path_lbl = QLabel(lang_manager.get_text("manual_ctrl_lbl_file_path_no_file"))
+        self.transfer_file_path_lbl.setStyleSheet("color: gray; border: 1px solid #555; padding: 2px; border-radius: 2px;")
+
+        self.select_transfer_file_btn = QPushButton(lang_manager.get_text("manual_ctrl_btn_select_file"))
+        self.select_transfer_file_btn.clicked.connect(self.on_select_transfer_file_clicked)
+
+        self.send_transfer_file_btn = QPushButton(lang_manager.get_text("manual_ctrl_btn_send_file"))
+        self.send_transfer_file_btn.clicked.connect(self.on_send_transfer_file_clicked)
+
+        file_layout.addWidget(self.transfer_file_path_lbl, 1)
+        file_layout.addWidget(self.select_transfer_file_btn)
+        file_layout.addWidget(self.send_transfer_file_btn)
+
+        self.file_transfer_grp.setLayout(file_layout)
+
+        layout.addWidget(self.manual_options_grp)
+        layout.addWidget(self.manual_send_grp)
+        layout.addWidget(self.file_transfer_grp)
+        layout.addStretch() # 하단 여백 추가
+
+        self.setLayout(layout)
+
+        # 초기 상태 설정
+        self.set_controls_enabled(False)
+
+    def retranslate_ui(self) -> None:
+        """언어 변경 시 UI 텍스트를 업데이트합니다."""
+        self.manual_options_grp.setTitle(lang_manager.get_text("manual_ctrl_grp_control"))
+        self.hex_chk.setText(lang_manager.get_text("manual_ctrl_chk_hex"))
+        self.prefix_chk.setText(lang_manager.get_text("manual_ctrl_chk_prefix"))
+        self.suffix_chk.setText(lang_manager.get_text("manual_ctrl_chk_suffix"))
+        self.rts_chk.setText(lang_manager.get_text("manual_ctrl_chk_rts"))
+        self.dtr_chk.setText(lang_manager.get_text("manual_ctrl_chk_dtr"))
+        self.clear_manual_options_btn.setText(lang_manager.get_text("manual_ctrl_btn_clear"))
+        self.save_manual_log_btn.setText(lang_manager.get_text("manual_ctrl_btn_save_log"))
+
+        self.manual_send_grp.setTitle(lang_manager.get_text("manual_ctrl_grp_manual"))
+        self.send_manual_cmd_btn.setText(lang_manager.get_text("manual_ctrl_btn_send"))
+        self.manual_cmd_input.setPlaceholderText(lang_manager.get_text("manual_ctrl_input_cmd_placeholder"))
+
+        self.file_transfer_grp.setTitle(lang_manager.get_text("manual_ctrl_grp_file"))
+        # 파일이 선택되지 않은 상태인지 확인
+        if lang_manager.text_matches_key(self.transfer_file_path_lbl.text(), "manual_ctrl_lbl_file_path_no_file"):
+            self.transfer_file_path_lbl.setText(lang_manager.get_text("manual_ctrl_lbl_file_path_no_file"))
+
+        self.select_transfer_file_btn.setText(lang_manager.get_text("manual_ctrl_btn_select_file"))
+        self.send_transfer_file_btn.setText(lang_manager.get_text("manual_ctrl_btn_send_file"))
+
+    def on_hex_mode_changed(self, state: int) -> None:
+        """HEX 모드 변경 시 QSmartLineEdit 모드 설정"""
+        is_hex_mode = (state == Qt.Checked)
+        self.manual_cmd_input.set_hex_mode(is_hex_mode)
+
+    def on_send_manual_cmd_clicked(self) -> None:
+        """전송 버튼 클릭 시 호출됩니다."""
+        text = self.manual_cmd_input.text()
+        if text:
+            # View는 원본 입력과 체크박스 상태만 전달
+            # prefix/suffix 처리는 Presenter에서 수행
+            self.manual_cmd_send_requested.emit(
+                text,
+                self.hex_chk.isChecked(),
+                self.prefix_chk.isChecked(),
+                self.suffix_chk.isChecked()
+            )
+            # 입력 후 지우지 않음 (히스토리 기능이 없으므로 유지하는 편이 나음)
+            # self.manual_cmd_input.clear()
+
+    def on_select_transfer_file_clicked(self) -> None:
+        """파일 선택 버튼 클릭 시 호출됩니다."""
+        path, _ = QFileDialog.getOpenFileName(self, lang_manager.get_text("manual_ctrl_dialog_select_file"))
+        if path:
+            self.transfer_file_path_lbl.setText(path)
+            self.transfer_file_selected.emit(path)
+
+    def on_send_transfer_file_clicked(self) -> None:
+        """파일 전송 버튼 클릭 시 호출됩니다."""
+        path = self.transfer_file_path_lbl.text()
+        if path and path != lang_manager.get_text("manual_ctrl_lbl_file_path_no_file"):
+            self.transfer_file_send_requested.emit(path)
+
+    def on_manual_options_clear_clicked(self) -> None:
+        """제어 옵션 초기화 버튼 클릭 시 호출됩니다."""
+        self.manual_options_clear_requested.emit()
+
+    def on_save_manual_log_clicked(self) -> None:
+        """로그 저장 버튼 클릭 시 호출됩니다."""
+        filter_str = f"{lang_manager.get_text('manual_ctrl_dialog_file_filter_txt')} (*.txt);;{lang_manager.get_text('manual_ctrl_dialog_file_filter_all')} (*)"
+        path, _ = QFileDialog.getSaveFileName(self, lang_manager.get_text("manual_ctrl_dialog_save_log_title"), "", filter_str)
+        if path:
+            self.manual_log_save_requested.emit(path)
+
+    def set_controls_enabled(self, enabled: bool) -> None:
+        """
+        포트 연결 상태에 따라 제어 버튼을 활성화/비활성화합니다.
+
+        Args:
+            enabled (bool): 활성화 여부.
+        """
+        self.send_manual_cmd_btn.setEnabled(enabled)
+        self.send_transfer_file_btn.setEnabled(enabled)
+        self.rts_chk.setEnabled(enabled)
+        self.dtr_chk.setEnabled(enabled)
+
+        self.clear_manual_options_btn.setEnabled(True)
+        self.save_manual_log_btn.setEnabled(True)
+        self.select_transfer_file_btn.setEnabled(True)
+
+    def save_state(self) -> dict:
+        """
+        현재 위젯 상태를 딕셔너리로 반환합니다.
+
+        Returns:
+            dict: 위젯 상태.
+        """
+        state = {
+            "input_text": self.manual_cmd_input.text(),
+            "hex_mode": self.hex_chk.isChecked(),
+            "prefix_chk": self.prefix_chk.isChecked(),
+            "suffix_chk": self.suffix_chk.isChecked(),
+            "rts_chk": self.rts_chk.isChecked(),
+            "dtr_chk": self.dtr_chk.isChecked(),
+        }
+        return state
+
+    def load_state(self, state: dict) -> None:
+        """
+        저장된 상태를 위젯에 적용합니다.
+
+        Args:
+            state (dict): 위젯 상태.
+        """
+        if not state:
+            return
+
+        self.hex_chk.setChecked(state.get("hex_mode", False))
+        self.prefix_chk.setChecked(state.get("prefix_chk", False))
+        self.suffix_chk.setChecked(state.get("suffix_chk", False))
+        self.rts_chk.setChecked(state.get("rts_chk", False))
+        self.dtr_chk.setChecked(state.get("dtr_chk", False))
+        self.manual_cmd_input.setText(state.get("input_text", ""))
+</file>
+
+<file path="view/main_window.py">
+from PyQt5.QtWidgets import (
+    QMainWindow, QWidget, QVBoxLayout, QSplitter, QApplication
+)
+from PyQt5.QtCore import Qt, pyqtSignal, QByteArray
+
+from view.sections.main_left_section import MainLeftSection
+from view.sections.main_right_section import MainRightSection
+from view.theme_manager import ThemeManager
+from view.lang_manager import lang_manager
+from view.dialogs.font_settings_dialog import FontSettingsDialog
+from view.dialogs.about_dialog import AboutDialog
+from view.dialogs.preferences_dialog import PreferencesDialog
+from core.settings_manager import SettingsManager
+from view.sections.main_menu_bar import MainMenuBar
+from view.sections.main_status_bar import MainStatusBar
+from view.widgets.main_toolbar import MainToolBar
+from view.panels.port_panel import PortPanel
+
+class MainWindow(QMainWindow):
+    """
+    애플리케이션의 메인 윈도우 클래스입니다.
+    MainLeftSection(포트/제어)과 MainRightSection(커맨드/인스펙터)을 포함하며,
+    메뉴바, 상태바 및 전역 설정을 관리합니다.
+    """
+
+    setting_save_requested = pyqtSignal(dict)
+
+    def __init__(self) -> None:
+        """MainWindow를 초기화하고 UI 및 설정을 로드합니다."""
+        super().__init__()
+
+        # 설정 관리자 초기화
+        self.settings = SettingsManager()
+
+        # 테마 관리자 초기화 (인스턴스 기반)
+        self.theme_manager = ThemeManager()
+
+        # 언어 관리자 초기화 및 설정에서 언어 로드
+        lang = self.settings.get('settings.language', 'en')
+        lang_manager.set_language(lang)
+        lang_manager.language_changed.connect(self.on_language_changed)
+
+        self.setWindowTitle(f"{lang_manager.get_text('main_title')} v1.0")
+        self.resize(1400, 900)
+
+        self.init_ui()
+
+        # 메뉴바 초기화 (위젯 사용)
+        self.menu_bar = MainMenuBar(self)
+        self.setMenuBar(self.menu_bar)
+        self._connect_menu_signals()
+
+        # 설정에서 테마 적용
+        theme = self.settings.get('settings.theme', 'dark')
+        self.switch_theme(theme)
+
+        # 설정에서 폰트 복원
+        settings_dict = self.settings.get_all_settings()
+        self.theme_manager.restore_fonts_from_settings(settings_dict)
+
+        # 애플리케이션에 가변폭 폰트 적용
+        prop_font = self.theme_manager.get_proportional_font()
+        QApplication.instance().setFont(prop_font)
+
+        # 저장된 윈도우 상태(크기, 위치) 로드
+        self._load_window_state()
+
+        # 포트 탭 상태 복원
+        port_states = self.settings.get('ports.tabs', [])
+        if hasattr(self, 'left_section'):
+            self.left_section.load_state(port_states)
+
+    def init_ui(self) -> None:
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
+        central_widget = QWidget()
+        self.setCentralWidget(central_widget)
+
+        main_layout = QVBoxLayout(central_widget)
+        main_layout.setContentsMargins(5, 5, 5, 5)
+        main_layout.setSpacing(5)
+
+        # 툴바 설정
+        self.main_toolbar = MainToolBar(self)
+        self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
+
+        # 스플리터 구성 (좌: 포트/제어, 우: 커맨드/인스펙터)
+        self.splitter = QSplitter(Qt.Horizontal)
+
+        self.left_section = MainLeftSection()
+        self.right_section = MainRightSection()
+
+        self.splitter.addWidget(self.left_section)
+        self.splitter.addWidget(self.right_section)
+
+        # 툴바 시그널 연결 (left_section 초기화 후)
+        self._connect_toolbar_signals()
+
+        # 스플리터 상태 복원
+        splitter_state = self.settings.get('ui.splitter_state')
+        if splitter_state:
+            self.splitter.restoreState(QByteArray.fromBase64(splitter_state.encode()))
+        else:
+            self.splitter.setStretchFactor(0, 1) # 좌측 패널 비율
+            self.splitter.setStretchFactor(1, 1) # 우측 패널 비율
+
+        # 우측 패널 가시성 복원
+        right_panel_visible = self.settings.get('settings.right_panel_visible', True)
+        self.right_section.setVisible(right_panel_visible)
+
+        main_layout.addWidget(self.splitter)
+
+        # 전역 상태바 설정 (위젯 사용)
+        self.global_status_bar = MainStatusBar()
+        self.setStatusBar(self.global_status_bar)
+
+    def _connect_menu_signals(self) -> None:
+        """메뉴바 시그널을 슬롯에 연결합니다."""
+        self.menu_bar.new_tab_requested.connect(self.left_section.add_new_port_tab)
+        self.menu_bar.exit_requested.connect(self.close)
+        self.menu_bar.theme_changed.connect(self.switch_theme)
+        self.menu_bar.font_settings_requested.connect(self.open_font_settings_dialog)
+        self.menu_bar.language_changed.connect(lambda lang: lang_manager.set_language(lang))
+        self.menu_bar.preferences_requested.connect(self.open_preferences_dialog)
+        self.menu_bar.about_requested.connect(self.open_about_dialog)
+
+        # New signals
+        self.menu_bar.open_port_requested.connect(self.left_section.open_current_port)
+        self.menu_bar.close_tab_requested.connect(self.left_section.close_current_tab)
+        self.menu_bar.save_log_requested.connect(self.save_log)
+        self.menu_bar.toggle_right_panel_requested.connect(self.toggle_right_panel)
+
+    def save_log(self) -> None:
+        """로그 저장 기능을 수행합니다."""
+        if hasattr(self, 'left_section'):
+            self.left_section.manual_control.manual_control_widget.on_save_manual_log_clicked()
+
+    def _connect_toolbar_signals(self) -> None:
+        """툴바 시그널을 슬롯에 연결합니다."""
+        self.main_toolbar.open_requested.connect(self.left_section.open_current_port)
+        self.main_toolbar.close_requested.connect(self.left_section.close_current_port)
+        self.main_toolbar.clear_requested.connect(self.clear_log)
+        self.main_toolbar.save_log_requested.connect(self.save_log)
+        self.main_toolbar.settings_requested.connect(self.open_preferences_dialog)
+
+    def clear_log(self) -> None:
+        """현재 활성화된 탭의 로그를 지웁니다."""
+        if hasattr(self, 'left_section'):
+             current_index = self.left_section.port_tabs.currentIndex()
+             current_widget = self.left_section.port_tabs.widget(current_index)
+             if isinstance(current_widget, PortPanel):
+                 current_widget.received_area.on_clear_rx_log_clicked()
+
+    def switch_theme(self, theme_name: str) -> None:
+        """
+        애플리케이션 테마를 전환합니다.
+
+        Args:
+            theme_name (str): 전환할 테마 이름 ("dark" 또는 "light").
+        """
+        self.theme_manager.apply_theme(QApplication.instance(), theme_name)
+
+        # 테마 설정을 저장
+        if hasattr(self, 'settings'):
+            self.settings.set('settings.theme', theme_name)
+
+        if theme_name == "dark":
+            self.global_status_bar.show_message("Theme changed to Dark", 2000)
+        else:
+            self.global_status_bar.show_message("Theme changed to Light", 2000)
+
+    def open_font_settings_dialog(self) -> None:
+        """듀얼 폰트 설정 대화상자를 엽니다."""
+        dialog = FontSettingsDialog(self.theme_manager, self)
+        if dialog.exec_():
+            # 폰트 설정 저장
+            font_settings = self.theme_manager.get_font_settings()
+            for key, value in font_settings.items():
+                self.settings.set(f'settings.{key}', value)
+
+            # 애플리케이션에 가변폭 폰트 적용
+            prop_font = self.theme_manager.get_proportional_font()
+            QApplication.instance().setFont(prop_font)
+
+            self.global_status_bar.show_message("Font settings updated", 2000)
+
+    def open_preferences_dialog(self) -> None:
+        """Preferences 다이얼로그를 엽니다."""
+        current_settings = self.settings.get_all_settings()
+        dialog = PreferencesDialog(self, current_settings)
+        dialog.settings_changed.connect(self.on_settings_change_requested)
+        dialog.exec_()
+
+
+    def open_about_dialog(self) -> None:
+        """About 다이얼로그를 엽니다."""
+        dialog = AboutDialog(self)
+        dialog.exec_()
+
+    def on_settings_change_requested(self, settings: dict) -> None:
+        """Preferences 설정 저장을 요청합니다."""
+        self.setting_save_requested.emit(settings)
+
+    def _load_window_state(self) -> None:
+        """
+        저장된 윈도우 상태(크기, 위치)를 로드하여 적용합니다.
+        """
+        # 윈도우 크기 로드
+        width = self.settings.get('ui.window_width', 1400)
+        height = self.settings.get('ui.window_height', 900)
+        self.resize(width, height)
+
+        # 윈도우 위치 로드 (옵션)
+        x = self.settings.get('ui.window_x')
+        y = self.settings.get('ui.window_y')
+        if x is not None and y is not None:
+            self.move(x, y)
+
+    def _save_window_state(self) -> None:
+        """
+        현재 윈도우 상태(크기, 위치)를 설정에 저장합니다.
+        """
+        self.settings.set('ui.window_width', self.width())
+        self.settings.set('ui.window_height', self.height())
+        self.settings.set('ui.window_x', self.x())
+        self.settings.set('ui.window_y', self.y())
+
+    def on_language_changed(self, lang_code: str) -> None:
+        """
+        언어 변경 시 호출되는 슬롯입니다.
+        윈도우 제목과 메뉴 텍스트를 업데이트합니다.
+
+        Args:
+            lang_code (str): 변경된 언어 코드 (예: 'en', 'ko').
+        """
+        self.setWindowTitle(f"{lang_manager.get_text('main_title')} v1.0")
+
+        # 상태바 업데이트
+        self.global_status_bar.retranslate_ui()
+
+        # 메뉴 재생성
+        self.menu_bar.retranslate_ui()
+
+        # 설정에 언어 저장
+        self.settings.set('settings.language', lang_code)
+
+    def toggle_right_panel(self, visible: bool) -> None:
+        """우측 패널의 가시성을 토글하고 윈도우 크기를 조정합니다."""
+        if visible == self.right_section.isVisible():
+            return
+
+        current_width = self.width()
+        handle_width = self.splitter.handleWidth()
+
+        if visible:
+            # 보이기: 윈도우 폭 증가
+            target_right_width = 400 # 기본값
+            left_width = self.left_section.width()
+
+            self.resize(current_width + target_right_width + handle_width, self.height())
+            self.right_section.setVisible(True)
+
+            # 스플리터 크기 설정: 왼쪽 패널 크기 유지, 오른쪽 패널 크기 설정
+            self.splitter.setSizes([left_width, target_right_width])
+
+        else:
+            # 숨기기: 윈도우 폭 감소
+            right_width = self.right_section.width()
+            self.right_section.setVisible(False)
+            self.resize(current_width - right_width - handle_width, self.height())
+
+    def closeEvent(self, event) -> None:
+        """
+        윈도우 종료 이벤트를 처리합니다.
+        윈도우 상태와 설정을 저장하고 애플리케이션을 종료합니다.
+
+        Args:
+            event (QCloseEvent): 종료 이벤트 객체.
+        """
+        # 윈도우 상태 저장
+        self._save_window_state()
+
+        # 스플리터 상태 저장
+        self.settings.set('ui.splitter_state', self.splitter.saveState().toBase64().data().decode())
+
+        # 우측 패널 가시성 저장
+        self.settings.set('settings.right_panel_visible', self.right_section.isVisible())
+
+        # 패널 상태 저장
+        if hasattr(self, 'right_section'):
+            self.right_section.save_state()
+
+        if hasattr(self, 'left_section'):
+            port_states = self.left_section.save_state()
+            self.settings.set('ports.tabs', port_states)
+
+        # 설정 파일 저장
+        self.settings.save_settings()
+
+        # 종료 이벤트 수락
+        event.accept()
+</file>
+
+</files>

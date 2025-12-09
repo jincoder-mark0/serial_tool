@@ -38,12 +38,12 @@ class MainMenuBar(QMenuBar):
         new_tab_action.triggered.connect(self.new_tab_requested.emit)
         file_menu.addAction(new_tab_action)
 
-        open_port_action = QAction("Open Port", self) # TODO: Add lang key
+        open_port_action = QAction("Open", self) # TODO: Add lang key
         open_port_action.setShortcut("Ctrl+O")
         open_port_action.triggered.connect(self.open_port_requested.emit)
         file_menu.addAction(open_port_action)
 
-        close_tab_action = QAction("Close Tab", self) # TODO: Add lang key
+        close_tab_action = QAction("Close", self) # TODO: Add lang key
         close_tab_action.setShortcut("Ctrl+W")
         close_tab_action.triggered.connect(self.close_tab_requested.emit)
         file_menu.addAction(close_tab_action)

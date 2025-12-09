@@ -23,7 +23,7 @@ class MainWindow(QMainWindow):
     메뉴바, 상태바 및 전역 설정을 관리합니다.
     """
 
-    preferences_save_requested = pyqtSignal(dict)
+    setting_save_requested = pyqtSignal(dict)
 
     def __init__(self) -> None:
         """MainWindow를 초기화하고 UI 및 설정을 로드합니다."""
@@ -36,7 +36,7 @@ class MainWindow(QMainWindow):
         self.theme_manager = ThemeManager()
 
         # 언어 관리자 초기화 및 설정에서 언어 로드
-        lang = self.settings.get('ui.language', 'en')
+        lang = self.settings.get('settings.language', 'en')
         lang_manager.set_language(lang)
         lang_manager.language_changed.connect(self.on_language_changed)
 
@@ -51,7 +51,7 @@ class MainWindow(QMainWindow):
         self._connect_menu_signals()
 
         # 설정에서 테마 적용
-        theme = self.settings.get('ui.theme', 'dark')
+        theme = self.settings.get('settings.theme', 'dark')
         self.switch_theme(theme)
 
         # 설정에서 폰트 복원
@@ -104,7 +104,7 @@ class MainWindow(QMainWindow):
             self.splitter.setStretchFactor(1, 1) # 우측 패널 비율
 
         # 우측 패널 가시성 복원
-        right_panel_visible = self.settings.get('ui.right_panel_visible', True)
+        right_panel_visible = self.settings.get('settings.right_panel_visible', True)
         self.right_section.setVisible(right_panel_visible)
 
         main_layout.addWidget(self.splitter)
@@ -161,7 +161,7 @@ class MainWindow(QMainWindow):
 
         # 테마 설정을 저장
         if hasattr(self, 'settings'):
-            self.settings.set('ui.theme', theme_name)
+            self.settings.set('settings.theme', theme_name)
 
         if theme_name == "dark":
             self.global_status_bar.show_message("Theme changed to Dark", 2000)
@@ -175,7 +175,7 @@ class MainWindow(QMainWindow):
             # 폰트 설정 저장
             font_settings = self.theme_manager.get_font_settings()
             for key, value in font_settings.items():
-                self.settings.set(f'ui.{key}', value)
+                self.settings.set(f'settings.{key}', value)
 
             # 애플리케이션에 가변폭 폰트 적용
             prop_font = self.theme_manager.get_proportional_font()
@@ -187,9 +187,8 @@ class MainWindow(QMainWindow):
         """Preferences 다이얼로그를 엽니다."""
         current_settings = self.settings.get_all_settings()
         dialog = PreferencesDialog(self, current_settings)
-        dialog.settings_changed.connect(self.preferences_save_requested.emit)
+        dialog.settings_changed.connect(self.on_settings_change_requested)
         dialog.exec_()
-
 
 
     def open_about_dialog(self) -> None:
@@ -197,6 +196,9 @@ class MainWindow(QMainWindow):
         dialog = AboutDialog(self)
         dialog.exec_()
 
+    def on_settings_change_requested(self, settings: dict) -> None:
+        """Preferences 설정 저장을 요청합니다."""
+        self.setting_save_requested.emit(settings)
 
     def _load_window_state(self) -> None:
         """
@@ -239,7 +241,7 @@ class MainWindow(QMainWindow):
         self.menu_bar.retranslate_ui()
 
         # 설정에 언어 저장
-        self.settings.set('ui.language', lang_code)
+        self.settings.set('settings.language', lang_code)
 
     def toggle_right_panel(self, visible: bool) -> None:
         """우측 패널의 가시성을 토글하고 윈도우 크기를 조정합니다."""
@@ -247,31 +249,22 @@ class MainWindow(QMainWindow):
             return
 
         current_width = self.width()
-        right_width = self.right_section.width()
-
-        # 스플리터 핸들 크기 고려 (기본값 약 5px)
         handle_width = self.splitter.handleWidth()
 
         if visible:
-            # 보이기: 윈도우 폭 증가 (이전 폭 + 우측 패널 폭 + 핸들)
-            # 저장된 우측 패널 폭이 있다면 그것을 사용하면 좋겠지만,
-            # 여기서는 단순화를 위해 기본값이나 이전 상태를 추정해야 함.
-            # 하지만 right_section이 숨겨져 있을 때 width()는 0일 수 있음.
-            # 따라서 적절한 기본값(예: 400)이나 비율을 사용해야 할 수도 있음.
-
-            # 팁: 숨겨진 상태에서 width()는 0이므로, 고정된 값이나 비율로 복원
+            # 보이기: 윈도우 폭 증가
             target_right_width = 400 # 기본값
+            left_width = self.left_section.width()
 
-            # 만약 이전에 숨기기 전의 너비를 알 수 있다면 좋음.
-            # 여기서는 단순하게 처리
             self.resize(current_width + target_right_width + handle_width, self.height())
             self.right_section.setVisible(True)
 
-            # 스플리터 비율 조정 (우측 패널이 보이도록)
-            # self.splitter.setSizes([self.left_section.width(), target_right_width])
+            # 스플리터 크기 설정: 왼쪽 패널 크기 유지, 오른쪽 패널 크기 설정
+            self.splitter.setSizes([left_width, target_right_width])
 
         else:
             # 숨기기: 윈도우 폭 감소
+            right_width = self.right_section.width()
             self.right_section.setVisible(False)
             self.resize(current_width - right_width - handle_width, self.height())
 
@@ -290,7 +283,7 @@ class MainWindow(QMainWindow):
         self.settings.set('ui.splitter_state', self.splitter.saveState().toBase64().data().decode())
 
         # 우측 패널 가시성 저장
-        self.settings.set('ui.right_panel_visible', self.right_section.isVisible())
+        self.settings.set('settings.right_panel_visible', self.right_section.isVisible())
 
         # 패널 상태 저장
         if hasattr(self, 'right_section'):

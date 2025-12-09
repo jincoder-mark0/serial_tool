@@ -36,7 +36,7 @@ class MainPresenter(QObject):
         )
 
         # 설정 저장 요청 시그널 연결
-        self.view.preferences_save_requested.connect(self.on_preferences_save_requested)
+        self.view.setting_save_requested.connect(self.on_settings_change_requested)
 
     def on_data_received(self, data: bytes) -> None:
         """
@@ -74,13 +74,13 @@ class MainPresenter(QObject):
 
         # Apply prefix if requested
         if cmd_prefix:
-            prefix = settings.get("manual_control.cmd_prefix", "")
+            prefix = settings.get("settings.cmd_prefix", "")
             prefix = prefix.replace("\\r", "\r").replace("\\n", "\n")
             final_text = prefix + final_text
 
         # Apply suffix if requested
         if cmd_suffix:
-            suffix = settings.get("manual_control.cmd_suffix", "\\r\\n")
+            suffix = settings.get("settings.cmd_suffix", "\\r\\n")
             suffix = suffix.replace("\\r", "\r").replace("\\n", "\n")
             final_text = final_text + suffix
 
@@ -100,7 +100,7 @@ class MainPresenter(QObject):
 
         self.port_controller.send_data(data)
 
-    def on_preferences_save_requested(self, new_settings: dict) -> None:
+    def on_settings_change_requested(self, new_settings: dict) -> None:
         """
         설정 저장 요청을 처리합니다.
         데이터 검증 및 변환 후 설정을 업데이트합니다.
@@ -112,14 +112,14 @@ class MainPresenter(QObject):
 
         # 설정 키 매핑
         settings_map = {
-            'theme': 'ui.theme',
-            'language': 'ui.language',
-            'proportional_font_size': 'ui.proportional_font_size',
-            'max_log_lines': 'ui.rx_max_lines',
-            'baudrate': 'ports.default_config.baudrate',
-            'scan_interval': 'ports.default_config.scan_interval',
-            'cmd_prefix': 'manual_control.cmd_prefix',
-            'cmd_suffix': 'manual_control.cmd_suffix',
+            'theme': 'settings.theme',
+            'language': 'settings.language',
+            'proportional_font_size': 'settings.proportional_font_size',
+            'max_log_lines': 'settings.rx_max_lines',
+            'cmd_prefix': 'settings.cmd_prefix',
+            'cmd_suffix': 'settings.cmd_suffix',
+            'port_baudrate': 'settings.port_baudrate',
+            'port_scan_interval': 'settings.port_scan_interval',
             'log_path': 'logging.path',
         }
 
@@ -130,7 +130,7 @@ class MainPresenter(QObject):
             # 데이터 변환 (Data Transformation)
             if key == 'theme':
                 final_value = value.lower()
-            elif key == 'baudrate':
+            elif key == 'port_baudrate':
                 try:
                     final_value = int(value)
                 except ValueError:

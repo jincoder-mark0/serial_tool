@@ -98,17 +98,22 @@ class PreferencesDialog(QDialog):
         default_group = QGroupBox(lang_manager.get_text("pref_grp_default"))
         default_layout = QFormLayout()
 
-        self.default_baud_combo = QComboBox()
-        self.default_baud_combo.addItems(["9600", "115200", "921600"])
-        self.default_baud_combo.setEditable(True)
+        self.port_baud_combo = QComboBox()
+        self.port_baud_combo.addItems(["9600", "115200", "921600"])
+        self.port_baud_combo.setEditable(True)
 
-        self.scan_interval_spin = QSpinBox()
-        self.scan_interval_spin.setRange(1000, 60000)
-        self.scan_interval_spin.setSingleStep(1000)
-        self.scan_interval_spin.setSuffix(" ms")
+        self.port_newline_combo = QComboBox()
+        self.port_newline_combo.addItems(["\r", "\n", "\r\n"])
+        self.port_newline_combo.setEditable(True)
 
-        default_layout.addRow(lang_manager.get_text("pref_lbl_baud"), self.default_baud_combo)
-        default_layout.addRow(lang_manager.get_text("pref_lbl_scan"), self.scan_interval_spin)
+        self.port_scan_interval_spin = QSpinBox()
+        self.port_scan_interval_spin.setRange(1000, 60000)
+        self.port_scan_interval_spin.setSingleStep(1000)
+        self.port_scan_interval_spin.setSuffix(" ms")
+
+        default_layout.addRow(lang_manager.get_text("pref_lbl_baud"), self.port_baud_combo)
+        default_layout.addRow(lang_manager.get_text("pref_lbl_newline"), self.port_newline_combo)
+        default_layout.addRow(lang_manager.get_text("pref_lbl_scan"), self.port_scan_interval_spin)
         default_group.setLayout(default_layout)
 
         layout.addWidget(default_group)
@@ -182,31 +187,25 @@ class PreferencesDialog(QDialog):
     def load_settings(self) -> None:
         """현재 설정을 UI에 반영합니다."""
         # General
-        theme = self.settings.get("ui.theme", "Dark").capitalize()
+        theme = self.settings.get("settings.theme", "Dark").capitalize()
         self.theme_combo.setCurrentText(theme)
 
-        lang_code = self.settings.get("ui.language", "en")
+        lang_code = self.settings.get("settings.language", "en")
         index = self.language_combo.findData(lang_code)
         if index != -1:
             self.language_combo.setCurrentIndex(index)
 
-        self.proportional_font_size_spin.setValue(self.settings.get("ui.proportional_font_size", 10))
-        self.max_lines_spin.setValue(self.settings.get("ui.rx_max_lines", 2000))
+        self.proportional_font_size_spin.setValue(self.settings.get("settings.proportional_font_size", 10))
+        self.max_lines_spin.setValue(self.settings.get("settings.rx_max_lines", 2000))
 
         # Serial
-        self.default_baud_combo.setCurrentText(str(self.settings.get("ports.default_config.baudrate", 115200)))
-        self.scan_interval_spin.setValue(self.settings.get("ports.default_config.scan_interval", 5000))
+        self.port_baud_combo.setCurrentText(str(self.settings.get("settings.port_baudrate", 115200)))
+        self.port_newline_combo.setCurrentText(str(self.settings.get("settings.port_newline", "\n")))
+        self.port_scan_interval_spin.setValue(self.settings.get("settings.port_scan_interval", 5000))
 
         # Command
-        # lang_code = self.settings.get("ui.language", "en")
-        # index = self.prefix_combo.findData(lang_code)
-        # if index != -1:
-        #     self.prefix_combo.setCurrentIndex(index)
-
-        # lang_code = self.settings.get("ui.language", "en")
-        # index = self.suffix_combo.findData(lang_code)
-        # if index != -1:
-        #     self.suffix_combo.setCurrentIndex(index)
+        self.prefix_combo.setCurrentText(self.settings.get("settings.cmd_prefix", ""))
+        self.suffix_combo.setCurrentText(self.settings.get("settings.cmd_suffix", ""))
 
         # Logging
         self.log_path_edit.setText(self.settings.get("logging.path", os.getcwd()))
@@ -217,8 +216,9 @@ class PreferencesDialog(QDialog):
             "theme": self.theme_combo.currentText(),
             "language": self.language_combo.currentData(),
             "proportional_font_size": self.proportional_font_size_spin.value(),
-            "baudrate": self.default_baud_combo.currentText(),
-            "scan_interval": self.scan_interval_spin.value(),
+            "port_baudrate": self.port_baud_combo.currentText(),
+            "port_newline": self.port_newline_combo.currentText(),
+            "port_scan_interval": self.port_scan_interval_spin.value(),
             "cmd_prefix": self.prefix_combo.currentText(),
             "cmd_suffix": self.suffix_combo.currentText(),
             "log_path": self.log_path_edit.text(),

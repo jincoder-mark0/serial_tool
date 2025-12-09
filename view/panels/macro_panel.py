@@ -15,8 +15,8 @@ class MacroPanel(QWidget):
     커맨드 리스트 관리 및 실행 기능을 제공하는 패널 클래스입니다.
     """
 
-    run_requested = pyqtSignal(list) # indices
-    stop_requested = pyqtSignal()
+    repeat_start_requested = pyqtSignal(list) # indices
+    repeat_stop_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -46,7 +46,7 @@ class MacroPanel(QWidget):
 
         # 시그널 연결
         self.marco_ctrl.cmd_repeat_start_requested.connect(self.on_repeat_start_requested)
-        self.marco_ctrl.cmd_repeat_stop_requested.connect(self.stop_requested.emit) # Stop signal is same for now
+        self.marco_ctrl.cmd_repeat_repeat_stop_requested.connect(self.on_repeat_repeat_stop_requested) # Stop signal is same for now
 
         self.marco_ctrl.script_save_requested.connect(self.save_script_to_file)
         self.marco_ctrl.script_load_requested.connect(self.load_script_from_file)
@@ -108,8 +108,14 @@ class MacroPanel(QWidget):
         indices = self.macro_list.get_selected_indices()
         if indices:
             # TODO: 자동 실행 파라미터를 시그널이나 별도 메서드로 전달해야 함
-            self.run_requested.emit(indices)
+            self.repeat_start_requested.emit(indices)
             self.marco_ctrl.set_running_state(True, is_auto=True)
+
+    def on_repeat_repeat_stop_requested(self) -> None:
+        """
+        Repeat Stop 버튼 클릭 핸들러입니다.
+        """
+        self.repeat_stop_requested.emit()
 
     def set_running_state(self, running: bool) -> None:
         """
