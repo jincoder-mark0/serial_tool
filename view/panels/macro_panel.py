@@ -45,8 +45,6 @@ class MacroPanel(QWidget):
         self.settings = SettingsManager()
 
         # 시그널 연결
-        self.marco_ctrl.cmd_run_once_requested.connect(self.on_run_once_requested)
-        self.marco_ctrl.cmd_stop_run_requested.connect(self.stop_requested.emit)
         self.marco_ctrl.cmd_repeat_start_requested.connect(self.on_repeat_start_requested)
         self.marco_ctrl.cmd_repeat_stop_requested.connect(self.stop_requested.emit) # Stop signal is same for now
 
@@ -99,16 +97,9 @@ class MacroPanel(QWidget):
 
         self.settings.save_settings()
 
-    def on_run_once_requested(self) -> None:
-        """Run(Single) 버튼 클릭 핸들러입니다."""
-        indices = self.macro_list.get_selected_indices()
-        if indices:
-            self.run_requested.emit(indices)
-            self.marco_ctrl.set_running_state(True, is_auto=False)
-
     def on_repeat_start_requested(self, delay: int, max_runs: int) -> None:
         """
-        Auto Run 버튼 클릭 핸들러입니다.
+        Repeat Start 버튼 클릭 핸들러입니다.
 
         Args:
             delay (int): 실행 간 지연 시간(ms).
