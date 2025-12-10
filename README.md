@@ -1,5 +1,7 @@
 # SerialTool v1.0
 
+**최종 업데이트**: 2025-12-10
+
 **SerialTool**은 Python과 PyQt5로 개발된 강력한 통신 유틸리티입니다. MVP(Model-View-Presenter) 패턴 기반의 깔끔한 아키텍처와 현대적인 UI/UX를 제공하며, Serial 통신뿐만 아니라 향후 SPI, I2C 등 다양한 프로토콜로 확장 예정입니다.
 
 ## 주요 기능 (Key Features)
@@ -9,10 +11,10 @@
 * **수동 제어**:
   - HEX/ASCII 모드
   - Prefix/Suffix
-  - Flow Control (RTS/DTR)
+  - 여러 줄 입력 지원 (라인 번호 표시, Ctrl+Enter 전송)
   - 파일 전송 기능
   - 로그 저장 및 화면(newline 설정, max line 수 설정) 클리어
-* **커맨드 리스트 자동화**:
+* **매크로 자동화**:
   - 여러 명령어를 리스트로 관리
   - 순차 명령 실행
   - Repeat 및 Delay 설정
@@ -29,10 +31,13 @@
   - SVG 기반 테마 적응형 아이콘
   - 컴팩트한 2줄 포트 설정 레이아웃
   - 3단계 Select All 체크박스
+  - PortState Enum 기반 연결 상태 표시
 * **사용성**:
   - 모든 기능 툴팁 제공
   - 설정 자동 저장 (창 크기, 테마, 폰트)
   - 견고한 폴백 메커니즘 (설정 파일 누락 시 복구)
+  - 중앙 집중식 경로 관리 (AppConfig)
+  - Package-level imports (__init__.py)
 
 ### 다국어 지원
 * **한국어/영어** 실시간 전환
@@ -111,15 +116,15 @@ serial_tool2/
 │   │   ├── main_left_section.py
 │   │   ├── main_right_section.py
 │   │   ├── main_menu_bar.py
-│   │   └── main_status_bar.py
+│   │   ├── main_status_bar.py
+│   │   └── main_tool_bar.py
 │   │
 │   ├── panels/             # 패널 (중 단위)
 │   │   ├── port_panel.py
 │   │   ├── port_tab_panel.py
 │   │   ├── macro_panel.py
 │   │   ├── manual_ctrl_panel.py
-│   │   ├── packet_inspector_panel.py
-│   │   └── tx_panel.py
+│   │   └── packet_inspector_panel.py
 │   │
 │   ├── widgets/            # 위젯 (소 단위)
 │   │   ├── port_settings.py
@@ -127,7 +132,6 @@ serial_tool2/
 │   │   ├── manual_ctrl.py
 │   │   ├── macro_list.py
 │   │   ├── macro_control.py
-│   │   ├── main_toolbar.py
 │   │   ├── file_progress.py
 │   │   ├── packet_inspector.py
 │   │   ├── status.py

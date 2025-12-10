@@ -1,11 +1,11 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QCheckBox,
-    QLabel, QFileDialog, QGroupBox, QGridLayout
+    QLabel, QFileDialog, QGroupBox, QGridLayout, QTextEdit
 )
 from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtGui import QKeyEvent
 from typing import Optional
 from view.tools.lang_manager import lang_manager
-from view.pyqt_customs.smart_number_edit import QSmartLineEdit
 
 class ManualCtrlWidget(QWidget):
     """
@@ -103,10 +103,12 @@ class ManualCtrlWidget(QWidget):
         send_layout.setContentsMargins(2, 2, 2, 2)
         send_layout.setSpacing(5)
 
-        self.manual_cmd_input = QSmartLineEdit() # QSmartLineEdit 사용
+        self.manual_cmd_input = QTextEdit()  # 여러 줄 입력 지원
         self.manual_cmd_input.setPlaceholderText(lang_manager.get_text("manual_ctrl_input_cmd_placeholder"))
         self.manual_cmd_input.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
-        self.manual_cmd_input.returnPressed.connect(self.on_send_manual_cmd_clicked) # Enter 키 지원
+        self.manual_cmd_input.setMaximumHeight(80)  # 최대 높이 제한
+        self.manual_cmd_input.setAcceptRichText(False)  # 일반 텍스트만 허용
+        # Ctrl+Enter로 전송하도록 keyPressEvent 오버라이드
 
         self.send_manual_cmd_btn = QPushButton(lang_manager.get_text("manual_ctrl_btn_send"))
         self.send_manual_cmd_btn.setCursor(Qt.PointingHandCursor)
@@ -150,6 +152,9 @@ class ManualCtrlWidget(QWidget):
         # 초기 상태 설정
         self.set_controls_enabled(False)
 
+        # QTextEdit에 keyPressEvent 연결
+        self.manual_cmd_input.keyPressEvent = self._cmd_input_key_press_event
+
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
         self.manual_options_grp.setTitle(lang_manager.get_text("manual_ctrl_grp_control"))
@@ -173,14 +178,32 @@ class ManualCtrlWidget(QWidget):
         self.select_transfer_file_btn.setText(lang_manager.get_text("manual_ctrl_btn_select_file"))
         self.send_transfer_file_btn.setText(lang_manager.get_text("manual_ctrl_btn_send_file"))
 
+    def _cmd_input_key_press_event(self, event: QKeyEvent) -> None:
+        """
+        QTextEdit의 키 입력 이벤트를 처리합니다.
+        Ctrl+Enter: 전송
+        Enter: 새 줄 추가
+        """
+        if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
+            if event.modifiers() == Qt.ControlModifier:
+                # Ctrl+Enter: 전송
+                self.on_send_manual_cmd_clicked()
+            else:
+                # Enter: 새 줄 추가
+                QTextEdit.keyPressEvent(self.manual_cmd_input, event)
+        else:
+            # 다른 키는 기본 동작
+            QTextEdit.keyPressEvent(self.manual_cmd_input, event)
+
     def on_hex_mode_changed(self, state: int) -> None:
-        """HEX 모드 변경 시 QSmartLineEdit 모드 설정"""
-        is_hex_mode = (state == Qt.Checked)
-        self.manual_cmd_input.set_hex_mode(is_hex_mode)
+        """HEX 모드 변경 시 처리 (QTextEdit는 hex 모드 미지원)"""
+        # QTextEdit는 QSmartLineEdit와 달리 hex 모드를 지원하지 않음
+        # 필요시 입력 검증 로직 추가 가능
+        pass
 
     def on_send_manual_cmd_clicked(self) -> None:
         """전송 버튼 클릭 시 호출됩니다."""
-        text = self.manual_cmd_input.text()
+        text = self.manual_cmd_input.toPlainText()  # QTextEdit는 toPlainText() 사용
         if text:
             # View는 원본 입력과 체크박스 상태만 전달
             # prefix/suffix 처리는 Presenter에서 수행
@@ -241,7 +264,7 @@ class ManualCtrlWidget(QWidget):
             dict: 위젯 상태.
         """
         state = {
-            "input_text": self.manual_cmd_input.text(),
+            "input_text": self.manual_cmd_input.toPlainText(),  # QTextEdit는 toPlainText() 사용
             "hex_mode": self.hex_chk.isChecked(),
             "prefix_chk": self.prefix_chk.isChecked(),
             "suffix_chk": self.suffix_chk.isChecked(),
@@ -265,4 +288,4 @@ class ManualCtrlWidget(QWidget):
         self.suffix_chk.setChecked(state.get("suffix_chk", False))
         self.rts_chk.setChecked(state.get("rts_chk", False))
         self.dtr_chk.setChecked(state.get("dtr_chk", False))
-        self.manual_cmd_input.setText(state.get("input_text", ""))
+        self.manual_cmd_input.setPlainText(state.get("input_text", ""))  # QTextEdit는 setPlainText() 사용

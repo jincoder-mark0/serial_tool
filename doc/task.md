@@ -64,9 +64,15 @@
     - [x] 테마 메뉴 체크 표시 추가
     - [x] 우측 패널 토글 개선 (왼쪽 패널 크기 유지)
     - [x] QSS warning 클래스 추가
+    - [x] ReceivedArea max_lines 동적 설정
+    - [x] PortState Enum 및 QSS 통합
+    - [x] Parser 탭 UI 구현 (PreferencesDialog)
+    - [x] 중앙 집중식 경로 관리 (AppConfig)
+    - [x] __init__.py 생성으로 import 간결화
+    - [x] 네이밍 일관성 개선 (rx → recv, manual_control → manual_ctrl)
 
 
-## Phase 3: Core 유틸리티 (계획됨)
+## Phase 3: Core 유틸리티 (진행 중)
 - [ ] `RingBuffer` 구현
     - [ ] `core/utils.py` 생성
     - [ ] 원형 버퍼 로직 구현
@@ -82,8 +88,10 @@
     - [ ] `core/logger.py` 생성
     - [ ] `RotatingFileHandler` 구현 (10MB 제한)
     - [ ] 성능 로거 구현 (CSV 내보내기)
-- [ ] `SettingsManager` 구현 (싱글톤)
-- [ ] `PortState` Enum 정의 및 PortSettingsWidget에 적용
+- [x] `SettingsManager` 구현 (싱글톤)
+    - [x] AppConfig 통합
+- [x] `PortState` Enum 정의 및 PortSettingsWidget에 적용
+- [x] `AppConfig` 구현 (중앙 경로 관리)
 
 ## Phase 4: Model 계층 (계획됨)
 - [ ] `SerialWorker` 구현

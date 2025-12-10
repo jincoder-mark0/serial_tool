@@ -92,7 +92,7 @@
     "manual_ctrl_grp_file": "File Transfer",
     "manual_ctrl_grp_format": "Format",
     "manual_ctrl_grp_manual": "Manual Send",
-    "manual_ctrl_input_cmd_placeholder": "Enter command...",
+    "manual_ctrl_input_cmd_placeholder": "Enter command (Ctrl+Enter to send)...",
     "manual_ctrl_lbl_file_path_no_file": "No file selected",
     "inspector_col_field": "Field",
     "inspector_col_value": "Value",

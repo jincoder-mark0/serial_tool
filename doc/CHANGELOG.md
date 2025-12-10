@@ -2,6 +2,115 @@
 
 ## [미배포] (Unreleased)
 
+### View 계층 완성 및 중앙 경로 관리 (2025-12-10)
+
+#### 추가 사항 (Added)
+
+- **Parser 탭 구현 (PreferencesDialog)**
+  - Parser Type 선택: Auto Detect, AT Parser, Delimiter Parser, Fixed Length Parser, Raw Parser
+  - Delimiter 설정: 구분자 리스트 관리 (추가/삭제)
+  - Fixed Length 설정: 패킷 길이 지정 (1-4096 바이트)
+  - Inspector Options: 버퍼 크기, 실시간 추적, 자동 스크롤
+  - 22개의 새로운 언어 키 추가 (en.json, ko.json)
+
+- **중앙 집중식 경로 관리 (AppConfig)**
+  - `config.py`: 모든 리소스 경로를 중앙에서 관리하는 `AppConfig` 클래스 생성
+  - 개발 모드와 PyInstaller 번들 환경 자동 감지
+  - 경로 검증 메서드 (`validate_paths()`)
+  - `SettingsManager`, `LangManager`, `ThemeManager`에 AppConfig 통합
+
+- **Package-level Imports**
+  - `view/sections/__init__.py`: 섹션 클래스 export
+  - `view/dialogs/__init__.py`: 다이얼로그 클래스 export
+  - `main_window.py` import 구문 간결화
+
+- **QSS 스타일 개선**
+  - `section-title` 클래스 추가: QGroupBox::title과 유사한 스타일
+  - `ReceivedAreaWidget.recv_log_title`, `StatusAreaWidget.status_log_title`에 적용
+  - Dark/Light 테마별 색상 지정 (녹색/파란색)
+  - `QSmartTextEdit` 스타일 추가 (공통, 다크, 라이트 테마)
+
+- **수동 제어 (ManualCtrl) 개선**
+  - `QSmartTextEdit` 도입: 라인 번호가 표시되는 멀티라인 에디터
+  - 여러 줄 입력 지원 (Enter: 새 줄, Ctrl+Enter: 전송)
+  - 플레이스홀더 텍스트 업데이트 ("Ctrl+Enter to send")
+
+#### 변경 사항 (Changed)
+
+- **네이밍 일관성 개선**
+  - `rx` → `recv`: ReceivedAreaWidget의 모든 변수 및 메서드명 변경
+    - `on_clear_rx_log_clicked()` → `on_clear_recv_log_clicked()`
+    - `rx_search_input` → `recv_search_input`
+    - `rx_hex_chk` → `recv_hex_chk` 등
+  - `manual_control` → `manual_ctrl`:
+    - 파일명: `manual_control.py` → `manual_ctrl.py`
+    - 클래스명: `ManualControlWidget` → `ManualCtrlWidget`
+    - 설정 키: `"manual_control"` → `"manual_ctrl"`
+  - 언어 키 통일:
+    - `recv_lbl_log` → `recv_title`
+    - `status_lbl_log` → `status_title`
+    - `right_tab_inspector` → `right_tab_packet`
+    - `pref_tab_parser` → `pref_tab_packet`
+
+- **DTR/RTS 제거**
+  - `PortSettingsWidget`에서 DTR/RTS 체크박스 제거
+  - 포트 설정 2행 레이아웃 간소화 (Data | Parity | Stop | Flow)
+  - 설정 저장/로드 로직에서 DTR/RTS 제거
+
+- **파일 이동**
+  - `view/widgets/main_toolbar.py` → `view/sections/main_tool_bar.py`
+  - 섹션 관련 파일은 `sections/`에 통합
+
+#### 수정 사항 (Fixed)
+
+- **싱글톤 패턴 수정**
+  - `SettingsManager`, `LangManager`의 `__new__` 메서드에 `*args, **kwargs` 추가
+  - `TypeError: takes 1 positional argument but 2 were given` 오류 해결
+
+- **경로 계산 수정**
+  - `LangManager`의 하위 호환성 경로 계산 오류 수정
+  - `view/tools/lang_manager.py`에서 3단계 상위 디렉토리로 이동하도록 수정
+
+- **우측 패널 표시 상태 복원**
+  - `MainWindow.init_ui()`에서 설정값 읽어서 메뉴 체크 상태 복원
+  - `right_panel_visible` 설정 적용
+
+- **clear_log() 메서드 개선**
+  - `isinstance(current_widget, PortPanel)` 체크 제거
+  - PortPanel import 제거로 의존성 감소
+
+#### 아키텍처 개선 (Architecture)
+
+- **ReceivedArea 동적 설정**
+  - `set_max_lines(max_lines)` 메서드 추가
+  - `MainPresenter`에서 설정 변경 시 모든 ReceivedArea 업데이트
+  - `PortPresenter`에서 초기화 시 설정값 적용
+
+- **PortState Enum 통합**
+  - `core/port_state.py`: `DISCONNECTED`, `CONNECTED`, `ERROR` 상태 정의
+  - `PortSettingsWidget.set_connection_state(PortState)` 구현
+  - QSS 동적 속성 (`QPushButton[state="..."]`) 활용
+
+- **SettingsManager 개선**
+  - `_get_config_path`를 `@property`로 변경
+  - AppConfig 통합으로 경로 관리 일원화
+
+#### 문서 업데이트 (Documentation)
+
+- **doc/task.md**
+  - Phase 2 완료 항목 추가 (ReceivedArea, PortState, Parser 탭, AppConfig)
+  - Phase 3 상태를 "진행 중"으로 변경
+
+- **doc/implementation_plan.md**
+  - 최종 업데이트 날짜: 2025-12-10
+  - 프로젝트 구조 업데이트 (AppConfig, __init__.py, 파일명 수정)
+
+- **README.md**
+  - 주요 기능 업데이트 (PortState, AppConfig, Package-level imports)
+  - 용어 통일 (커맨드 → 매크로)
+
+---
+
 ### 버그 수정 및 UI/UX 개선 (2025-12-09)
 
 #### 수정 사항 (Fixed)
