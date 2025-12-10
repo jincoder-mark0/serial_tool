@@ -117,14 +117,14 @@ serial_tool2/
 │   │   ├── port_panel.py
 │   │   ├── port_tab_panel.py
 │   │   ├── macro_panel.py
-│   │   ├── manual_control_panel.py
+│   │   ├── manual_ctrl_panel.py
 │   │   ├── packet_inspector_panel.py
 │   │   └── tx_panel.py
 │   │
 │   ├── widgets/            # 위젯 (소 단위)
 │   │   ├── port_settings.py
 │   │   ├── received_area.py
-│   │   ├── manual_control.py
+│   │   ├── manual_ctrl.py
 │   │   ├── macro_list.py
 │   │   ├── macro_control.py
 │   │   ├── main_toolbar.py
@@ -193,7 +193,7 @@ serial_tool2/
 - **Model**: 데이터 및 시리얼 통신 담당
 
 **최근 리팩토링 사례**:
-- ManualControlWidget: Prefix/Suffix 로직 → Presenter로 이동
+- ManualCtrlWidget: Prefix/Suffix 로직 → Presenter로 이동
 - PortSettingsWidget: 설정 접근 → SettingsManager 활용
 
 ### 설정 구조

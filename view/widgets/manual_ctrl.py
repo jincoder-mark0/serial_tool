@@ -7,7 +7,7 @@ from typing import Optional
 from view.tools.lang_manager import lang_manager
 from view.pyqt_customs.smart_number_edit import QSmartLineEdit
 
-class ManualControlWidget(QWidget):
+class ManualCtrlWidget(QWidget):
     """
     수동 명령 전송, 파일 전송, 로그 저장 및 각종 제어 옵션을 제공하는 위젯 클래스입니다.
     (구 OperationArea)
@@ -26,7 +26,7 @@ class ManualControlWidget(QWidget):
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
-        ManualControlWidget을 초기화합니다.
+        ManualCtrlWidget을 초기화합니다.
 
         Args:
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.

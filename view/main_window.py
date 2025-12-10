@@ -3,18 +3,21 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import Qt, pyqtSignal, QByteArray
 
-from view.sections.main_left_section import MainLeftSection
-from view.sections.main_right_section import MainRightSection
+from view.sections import (
+    MainLeftSection,
+    MainRightSection,
+    MainStatusBar,
+    MainMenuBar,
+    MainToolBar
+)
+from view.dialogs import (
+    FontSettingsDialog,
+    AboutDialog,
+    PreferencesDialog
+)
 from view.tools.theme_manager import ThemeManager
 from view.tools.lang_manager import lang_manager
-from view.dialogs.font_settings_dialog import FontSettingsDialog
-from view.dialogs.about_dialog import AboutDialog
-from view.dialogs.preferences_dialog import PreferencesDialog
 from core.settings_manager import SettingsManager
-from view.sections.main_menu_bar import MainMenuBar
-from view.sections.main_status_bar import MainStatusBar
-from view.widgets.main_toolbar import MainToolBar
-from view.panels.port_panel import PortPanel
 
 class MainWindow(QMainWindow):
     """
@@ -79,6 +82,10 @@ class MainWindow(QMainWindow):
         # 3. 설정에서 테마 적용 (폰트 스타일을 포함한 QSS 적용)
         theme = self.settings.get('settings.theme', 'dark')
         self.switch_theme(theme)
+
+        # 4. 설정에서 오른쪽 패널 표시 복원
+        right_panel_visible = self.settings.get('settings.right_panel_visible', True)
+        self.menu_bar.set_right_panel_checked(right_panel_visible)
 
         # 저장된 윈도우 상태(크기, 위치) 로드
         self._load_window_state()
@@ -150,7 +157,7 @@ class MainWindow(QMainWindow):
     def save_log(self) -> None:
         """로그 저장 기능을 수행합니다."""
         if hasattr(self, 'left_section'):
-            self.left_section.manual_control.manual_control_widget.on_save_manual_log_clicked()
+            self.left_section.manual_ctrl.manual_ctrl_widget.on_save_manual_log_clicked()
 
     def _connect_toolbar_signals(self) -> None:
         """툴바 시그널을 슬롯에 연결합니다."""

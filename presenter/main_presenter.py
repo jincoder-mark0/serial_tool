@@ -31,7 +31,7 @@ class MainPresenter(QObject):
         self.port_controller.data_received.connect(self.on_data_received)
 
         # 수동 전송 시그널 연결
-        self.view.left_section.manual_control.manual_control_widget.manual_cmd_send_requested.connect(
+        self.view.left_section.manual_ctrl.manual_ctrl_widget.manual_cmd_send_requested.connect(
             self.on_manual_cmd_send_requested
         )
 

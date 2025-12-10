@@ -4,7 +4,7 @@ import pytest
 from PyQt5.QtWidgets import QApplication
 
 from view.tools.lang_manager import lang_manager
-from view.widgets.manual_control import ManualControlWidget
+from view.widgets.manual_ctrl import ManualCtrlWidget
 from view.widgets.macro_list import MacroListWidget
 from view.widgets.received_area import ReceivedAreaWidget
 from view.widgets.packet_inspector import PacketInspectorWidget
@@ -25,91 +25,91 @@ def app():
         app = QApplication([])
     yield app
 
-def test_manual_control_translation(app, qtbot):
-    widget = ManualControlWidget()
-    qtbot.addWidget(widget)
+def test_manual_ctrl_translation(app, qtbot):
+    manual_ctrl_widget = ManualCtrlWidget()
+    qtbot.addWidget(manual_ctrl_widget)
 
     # Switch to English
     lang_manager.set_language('en')
-    assert widget.send_manual_cmd_btn.text() == "Send"
-    assert widget.hex_chk.text() == "Hex"
+    assert manual_ctrl_widget.send_manual_cmd_btn.text() == "Send"
+    assert manual_ctrl_widget.hex_chk.text() == "Hex"
 
     # Switch to Korean
     lang_manager.set_language('ko')
-    assert widget.send_manual_cmd_btn.text() == "전송"
-    assert widget.hex_chk.text() == "Hex"
+    assert manual_ctrl_widget.send_manual_cmd_btn.text() == "전송"
+    assert manual_ctrl_widget.hex_chk.text() == "Hex"
 
 def test_macro_list_translation(app, qtbot):
-    widget = MacroListWidget()
-    qtbot.addWidget(widget)
+    macro_list_widget = MacroListWidget()
+    qtbot.addWidget(macro_list_widget)
 
     lang_manager.set_language('en')
     # Check tooltips for buttons as they have no text
-    assert widget.add_cmd_btn.toolTip() == "Add new command"
+    assert macro_list_widget.add_cmd_btn.toolTip() == "Add new command"
 
     lang_manager.set_language('ko')
-    assert widget.add_cmd_btn.toolTip() == "새 명령 추가"
+    assert macro_list_widget.add_cmd_btn.toolTip() == "새 명령 추가"
 
 def test_received_area_translation(app, qtbot):
-    widget = ReceivedAreaWidget()
-    qtbot.addWidget(widget)
+    received_area_widget = ReceivedAreaWidget()
+    qtbot.addWidget(received_area_widget)
 
     lang_manager.set_language('en')
-    assert widget.recv_clear_log_btn.text() == "Clear"
+    assert received_area_widget.recv_clear_log_btn.text() == "Clear"
 
     lang_manager.set_language('ko')
-    assert widget.recv_clear_log_btn.text() == "지우기"
+    assert received_area_widget.recv_clear_log_btn.text() == "지우기"
 
 def test_packet_inspector_translation(app, qtbot):
-    widget = PacketInspectorWidget()
-    qtbot.addWidget(widget)
+    packet_inspector_widget = PacketInspectorWidget()
+    qtbot.addWidget(packet_inspector_widget)
 
     lang_manager.set_language('en')
-    assert widget.title_label.text() == "Packet Inspector"
+    assert packet_inspector_widget.title_label.text() == "Packet Inspector"
 
     lang_manager.set_language('ko')
-    assert widget.title_label.text() == "패킷 인스펙터"
+    assert packet_inspector_widget.title_label.text() == "패킷 인스펙터"
 
 def test_file_progress_translation(app, qtbot):
-    widget = FileProgressWidget()
-    qtbot.addWidget(widget)
+    file_progress_widget = FileProgressWidget()
+    qtbot.addWidget(file_progress_widget)
 
     # Force switch to Korean first to ensure change to English triggers signal
     lang_manager.set_language('ko')
     lang_manager.set_language('en')
-    assert widget.cancel_btn.text() == "Cancel"
+    assert file_progress_widget.cancel_btn.text() == "Cancel"
 
     lang_manager.set_language('ko')
-    assert widget.cancel_btn.text() == "취소"
+    assert file_progress_widget.cancel_btn.text() == "취소"
 
 def test_status_area_translation(app, qtbot):
-    widget = StatusAreaWidget()
-    qtbot.addWidget(widget)
+    status_area_widget = StatusAreaWidget()
+    qtbot.addWidget(status_area_widget)
 
     lang_manager.set_language('en')
-    assert widget.status_log_title.text() == "Status Log"
+    assert status_area_widget.status_log_title.text() == "Status Log"
 
     lang_manager.set_language('ko')
-    assert widget.status_log_title.text() == "상태 로그"
+    assert status_area_widget.status_log_title.text() == "상태 로그"
 
 def test_left_panel_translation(app, qtbot):
-    widget = MainLeftSection()
-    qtbot.addWidget(widget)
+    left_panel_widget = MainLeftSection()
+    qtbot.addWidget(left_panel_widget)
 
     lang_manager.set_language('en')
-    assert widget.port_tabs.toolTip() == "Port Tabs"
+    assert left_panel_widget.port_tabs.toolTip() == "Port Tabs"
 
     lang_manager.set_language('ko')
-    assert widget.port_tabs.toolTip() == "포트 탭"
+    assert left_panel_widget.port_tabs.toolTip() == "포트 탭"
 
 def test_right_panel_translation(app, qtbot):
-    widget = MainRightSection()
-    qtbot.addWidget(widget)
+    right_panel_widget = MainRightSection()
+    qtbot.addWidget(right_panel_widget)
 
     lang_manager.set_language('en')
-    assert widget.tabs.tabText(0) == "Macro List"
-    assert widget.tabs.tabText(1) == "Inspector"
+    assert right_panel_widget.tabs.tabText(0) == "Macro List"
+    assert right_panel_widget.tabs.tabText(1) == "Inspector"
 
     lang_manager.set_language('ko')
-    assert widget.tabs.tabText(0) == "매크로 리스트"
-    assert widget.tabs.tabText(1) == "인스펙터"
+    assert right_panel_widget.tabs.tabText(0) == "매크로 리스트"
+    assert right_panel_widget.tabs.tabText(1) == "인스펙터"

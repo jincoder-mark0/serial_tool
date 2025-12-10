@@ -70,7 +70,6 @@ class MainMenuBar(QMenuBar):
         # Right Panel Toggle
         self.toggle_right_panel_action = QAction(lang_manager.get_text("main_menu_toggle_right_panel"), self)
         self.toggle_right_panel_action.setCheckable(True)
-        self.toggle_right_panel_action.setChecked(True) # Default, will be updated by MainWindow
         self.toggle_right_panel_action.triggered.connect(self.toggle_right_panel_requested.emit)
         view_menu.addAction(self.toggle_right_panel_action)
 

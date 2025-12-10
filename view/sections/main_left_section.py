@@ -3,14 +3,14 @@ from typing import Optional
 from view.tools.lang_manager import lang_manager
 
 from view.panels.port_panel import PortPanel
-from view.panels.manual_control_panel import ManualControlPanel
+from view.panels.manual_ctrl_panel import ManualControlPanel
 from view.panels.port_tab_panel import PortTabPanel
 from core.settings_manager import SettingsManager
 
 class MainLeftSection(QWidget):
     """
     MainWindow의 좌측 영역을 담당하는 패널 클래스입니다.
-    여러 포트 탭(PortTabs)과 전역 수동 제어(ManualControlWidget)를 포함합니다.
+    여러 포트 탭(PortTabs)과 전역 수동 제어(ManualCtrlWidget)를 포함합니다.
     """
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
@@ -38,10 +38,10 @@ class MainLeftSection(QWidget):
         self.port_tabs.tab_added.connect(self._on_tab_added)
 
         # 수동 제어 패널 (현재 포트에 대한 전역 제어)
-        self.manual_control = ManualControlPanel()
+        self.manual_ctrl = ManualControlPanel()
 
         layout.addWidget(self.port_tabs, 1) # 탭이 남은 공간 차지
-        layout.addWidget(self.manual_control) # 수동 제어는 하단에 위치
+        layout.addWidget(self.manual_ctrl) # 수동 제어는 하단에 위치
 
         self.setLayout(layout)
 
@@ -90,15 +90,15 @@ class MainLeftSection(QWidget):
     def save_state(self) -> list:
         """
         모든 포트 탭의 상태를 리스트로 저장합니다.
-        또한 ManualControlWidget의 상태를 별도로 저장합니다.
+        또한 ManualCtrlWidget의 상태를 별도로 저장합니다.
 
         Returns:
             list: 탭 상태 리스트.
         """
         # ManualControl 상태 저장
         settings = SettingsManager()
-        manual_state = self.manual_control.save_state()
-        settings.set("manual_control", manual_state)
+        manual_state = self.manual_ctrl.save_state()
+        settings.set("manual_ctrl", manual_state)
 
         states = []
         count = self.port_tabs.count()
@@ -115,16 +115,16 @@ class MainLeftSection(QWidget):
     def load_state(self, states: list) -> None:
         """
         저장된 상태 리스트를 기반으로 탭을 복원합니다.
-        또한 ManualControlWidget의 상태를 복원합니다.
+        또한 ManualCtrlWidget의 상태를 복원합니다.
 
         Args:
             states (list): 탭 상태 리스트.
         """
         # ManualControl 상태 복원
         settings = SettingsManager()
-        manual_state = settings.get("manual_control", {})
+        manual_state = settings.get("manual_ctrl", {})
         if manual_state:
-            self.manual_control.load_state(manual_state)
+            self.manual_ctrl.load_state(manual_state)
 
         # 시그널 차단
         self.port_tabs.blockSignals(True)
@@ -164,4 +164,4 @@ class MainLeftSection(QWidget):
             if current_widget and hasattr(current_widget, 'port_settings'):
                 if current_widget.port_settings == sender_widget:
                     # 현재 탭의 변경이면 ManualControl 업데이트
-                    self.manual_control.set_controls_enabled(connected)
+                    self.manual_ctrl.set_controls_enabled(connected)

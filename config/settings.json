@@ -16,11 +16,11 @@
     "port_scan_interval": 5000
   },
   "ui": {
-    "window_width": 977,
+    "window_width": 1259,
     "window_height": 899,
     "window_x": 474,
     "window_y": 10,
-    "splitter_state": "AAAA/wAAAAEAAAACAAACMgAAAZAB/////wEAAAABAA=="
+    "splitter_state": "AAAA/wAAAAEAAAACAAADTAAAAZAB/////wEAAAABAA=="
   },
   "ports": {
     "default_config": {
@@ -39,7 +39,7 @@
           "datasize": "8",
           "parity": "N",
           "stopbits": "1",
-          "flow": "None",
+          "flow": "None"
         },
         "received_area": {
           "hex_mode": false,
@@ -50,7 +50,7 @@
       }
     ]
   },
-  "manual_control": {
+  "manual_ctrl": {
     "input_text": "",
     "hex_mode": false,
     "prefix_chk": true,

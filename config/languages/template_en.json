@@ -74,7 +74,7 @@
   // ============================================
   "main_status_msg_ready": "TODO: main_status_msg_ready",
   // ============================================
-  // Manual Control Widget (widgets/manual_control.py),
+  // Manual Control Widget (widgets/manual_ctrl.py),
   // ============================================
   "manual_ctrl_btn_clear": "TODO: manual_ctrl_btn_clear",
   "manual_ctrl_btn_clear_tooltip": "TODO: manual_ctrl_btn_clear_tooltip",

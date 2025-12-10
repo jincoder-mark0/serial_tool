@@ -34,7 +34,7 @@ def extract_keys_by_module() -> Dict[str, Set[str]]:
         if '__pycache__' in str(py_file) or py_file.name == '__init__.py':
             continue
 
-        # 모듈 경로 생성 (예: widgets/manual_control, dialogs/font_settings)
+        # 모듈 경로 생성 (예: widgets/manual_ctrl, dialogs/font_settings)
         try:
             relative_path = py_file.relative_to(view_dir)
             module_path = str(relative_path.with_suffix('')).replace('\\', '/')

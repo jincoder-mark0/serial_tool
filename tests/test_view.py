@@ -11,7 +11,7 @@ from PyQt5.QtWidgets import QPushButton, QHBoxLayout
 import os
 
 from view.widgets.received_area import ReceivedAreaWidget
-from view.widgets.manual_control import ManualControlWidget
+from view.widgets.manual_ctrl import ManualCtrlWidget
 from view.widgets.macro_list import MacroListWidget
 from view.widgets.status_area import StatusAreaWidget
 from view.panels.port_panel import PortPanel
@@ -60,7 +60,7 @@ class ViewTestWindow(QMainWindow):
         tabs.addTab(self.create_received_area_test(), "ReceivedArea Test")
 
         # Test 2: ManualControl (입력, 파일 전송 테스트)
-        tabs.addTab(self.create_manual_control_test(), "ManualControl Test")
+        tabs.addTab(self.create_manual_ctrl_test(), "ManualControl Test")
 
         # Test 3: CommandList (커맨드 리스트 테스트)
         tabs.addTab(self.create_macro_list_test(), "CommandList Test")
@@ -138,7 +138,7 @@ class ViewTestWindow(QMainWindow):
         for i in range(100):
             self.received_area.append_data(f"Line {i+1}: Test data\r\n".encode())
 
-    def create_manual_control_test(self) -> QWidget:
+    def create_manual_ctrl_test(self) -> QWidget:
         """
         ManualControl 테스트 위젯을 생성합니다.
 
@@ -151,8 +151,8 @@ class ViewTestWindow(QMainWindow):
         layout = QVBoxLayout(widget)
 
         # ManualControl 인스턴스
-        self.manual_control = ManualControlWidget()
-        layout.addWidget(self.manual_control)
+        self.manual_ctrl = ManualCtrlWidget()
+        layout.addWidget(self.manual_ctrl)
 
         # 출력 영역 (Output area)
         self.manual_output = QTextEdit()
@@ -161,15 +161,15 @@ class ViewTestWindow(QMainWindow):
         layout.addWidget(self.manual_output)
 
         # 시그널 연결
-        self.manual_control.manual_cmd_send_requested.connect(
+        self.manual_ctrl.manual_cmd_send_requested.connect(
             lambda text, hex_mode, prefix, suffix: self.manual_output.append(
                 f"Send: {text} (hex={hex_mode}, prefix={prefix}, suffix={suffix})"
             )
         )
-        self.manual_control.transfer_file_selected.connect(
+        self.manual_ctrl.transfer_file_selected.connect(
             lambda path: self.manual_output.append(f"File selected: {path}")
         )
-        self.manual_control.transfer_file_send_requested.connect(
+        self.manual_ctrl.transfer_file_send_requested.connect(
             lambda path: self.manual_output.append(f"Send file requested: {path}")
         )
 
@@ -181,11 +181,11 @@ class ViewTestWindow(QMainWindow):
         # 제어 활성화/비활성화 테스트
         btn_layout = QHBoxLayout()
         btn_enable = QPushButton("Enable Controls")
-        btn_enable.clicked.connect(lambda: self.manual_control.set_controls_enabled(True))
+        btn_enable.clicked.connect(lambda: self.manual_ctrl.set_controls_enabled(True))
         btn_layout.addWidget(btn_enable)
 
         btn_disable = QPushButton("Disable Controls")
-        btn_disable.clicked.connect(lambda: self.manual_control.set_controls_enabled(False))
+        btn_disable.clicked.connect(lambda: self.manual_ctrl.set_controls_enabled(False))
         btn_layout.addWidget(btn_disable)
 
         layout.addLayout(btn_layout)
