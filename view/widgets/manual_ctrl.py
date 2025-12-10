@@ -1,11 +1,12 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QCheckBox,
-    QLabel, QFileDialog, QGroupBox, QGridLayout, QTextEdit
+    QLabel, QFileDialog, QGroupBox, QGridLayout, QPlainTextEdit
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QKeyEvent
 from typing import Optional
 from view.tools.lang_manager import lang_manager
+from view.pyqt_customs.smart_text_edit import QSmartTextEdit
 
 class ManualCtrlWidget(QWidget):
     """
@@ -103,11 +104,10 @@ class ManualCtrlWidget(QWidget):
         send_layout.setContentsMargins(2, 2, 2, 2)
         send_layout.setSpacing(5)
 
-        self.manual_cmd_input = QTextEdit()  # 여러 줄 입력 지원
+        self.manual_cmd_input = QSmartTextEdit()  # 라인 번호 지원 에디터
         self.manual_cmd_input.setPlaceholderText(lang_manager.get_text("manual_ctrl_input_cmd_placeholder"))
         self.manual_cmd_input.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
         self.manual_cmd_input.setMaximumHeight(80)  # 최대 높이 제한
-        self.manual_cmd_input.setAcceptRichText(False)  # 일반 텍스트만 허용
         # Ctrl+Enter로 전송하도록 keyPressEvent 오버라이드
 
         self.send_manual_cmd_btn = QPushButton(lang_manager.get_text("manual_ctrl_btn_send"))
@@ -190,10 +190,10 @@ class ManualCtrlWidget(QWidget):
                 self.on_send_manual_cmd_clicked()
             else:
                 # Enter: 새 줄 추가
-                QTextEdit.keyPressEvent(self.manual_cmd_input, event)
+                QPlainTextEdit.keyPressEvent(self.manual_cmd_input, event)
         else:
             # 다른 키는 기본 동작
-            QTextEdit.keyPressEvent(self.manual_cmd_input, event)
+            QPlainTextEdit.keyPressEvent(self.manual_cmd_input, event)
 
     def on_hex_mode_changed(self, state: int) -> None:
         """HEX 모드 변경 시 처리 (QTextEdit는 hex 모드 미지원)"""

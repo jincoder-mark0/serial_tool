@@ -1,7 +1,7 @@
 """
 QSmartTextEdit - 라인 번호가 표시되는 스마트 텍스트 에디터
 """
-from PyQt5.QtWidgets import QWidget, QTextEdit, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QPlainTextEdit, QTextEdit, QHBoxLayout
 from PyQt5.QtCore import Qt, QRect
 from PyQt5.QtGui import QPainter, QColor, QTextFormat, QPaintEvent, QResizeEvent
 
@@ -20,7 +20,7 @@ class LineNumberArea(QWidget):
         self.code_editor.line_number_area_paint_event(event)
 
 
-class QSmartTextEdit(QTextEdit):
+class QSmartTextEdit(QPlainTextEdit):
     """
     라인 번호가 표시되는 스마트 텍스트 에디터
     여러 줄 입력을 지원하며, 왼쪽에 라인 번호를 표시합니다.
