@@ -235,7 +235,7 @@
 - `view/tools/lang_manager.py` - AppConfig 통합
 - `view/tools/theme_manager.py` - AppConfig 통합
 - `view/widgets/received_area.py` - rx → recv 네이밍 변경
-- `view/widgets/status_area.py` - section-title 스타일 적용
+- `view/widgets/system_log_widget.py` - section-title 스타일 적용
 - `view/widgets/port_settings.py` - DTR/RTS 제거
 - `view/dialogs/preferences_dialog.py` - Parser 탭 추가
 - `config/languages/en.json` - Parser 키 추가

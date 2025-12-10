@@ -7,17 +7,16 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Dict, Any, Optional
 import os
-from view.tools.lang_manager import lang_manager
+from view.managers.lang_manager import lang_manager
+from core.constants import VALID_BAUDRATES, DEFAULT_LOG_MAX_LINES
 
 class PreferencesDialog(QDialog):
     """
-    애플리케이션 설정을 관리하는 대화상자입니다.
-    General, Serial, Logging 탭으로 구성됩니다.
-    MVP 패턴을 준수하여 SettingsManager에 직접 접근하지 않고
-    부모로부터 전달받은 설정만 사용합니다.
+    설정 관리 대화상자
+    MVP 패턴 준수 (설정 직접 수정 안 함)
     """
 
-    settings_changed = pyqtSignal(dict)  # 변경된 설정 딕셔너리 전송
+    settings_changed = pyqtSignal(dict)
 
     def __init__(self, parent: Optional[QWidget] = None, current_settings: Dict[str, Any] = None) -> None:
         super().__init__(parent)
@@ -28,7 +27,7 @@ class PreferencesDialog(QDialog):
         self.load_settings()
 
     def init_ui(self) -> None:
-        """UI 컴포넌트를 초기화합니다."""
+        """UI 컴포넌트를 초기화"""
         layout = QVBoxLayout()
 
         # 탭 위젯 생성
@@ -62,7 +61,7 @@ class PreferencesDialog(QDialog):
         self.setLayout(layout)
 
     def create_general_tab(self) -> QWidget:
-        """General 설정 탭을 생성합니다."""
+        """General 탭 생성."""
         widget = QWidget()
         layout = QVBoxLayout()
 
@@ -100,9 +99,9 @@ class PreferencesDialog(QDialog):
         default_group = QGroupBox(lang_manager.get_text("pref_grp_default"))
         default_layout = QFormLayout()
 
-        self.port_baud_combo = QComboBox()
-        self.port_baud_combo.addItems(["9600", "115200", "921600"])
-        self.port_baud_combo.setEditable(True)
+        self.port_baudrate_combo = QComboBox()
+        self.port_baudrate_combo.addItems([str(baudrate) for baudrate in VALID_BAUDRATES])
+        self.port_baudrate_combo.setEditable(True)
 
         self.port_newline_combo = QComboBox()
         self.port_newline_combo.addItems(["\r", "\n", "\r\n"])
@@ -113,7 +112,7 @@ class PreferencesDialog(QDialog):
         self.port_scan_interval_spin.setSingleStep(1000)
         self.port_scan_interval_spin.setSuffix(" ms")
 
-        default_layout.addRow(lang_manager.get_text("pref_lbl_baud"), self.port_baud_combo)
+        default_layout.addRow(lang_manager.get_text("pref_lbl_baudrate"), self.port_baudrate_combo)
         default_layout.addRow(lang_manager.get_text("pref_lbl_newline"), self.port_newline_combo)
         default_layout.addRow(lang_manager.get_text("pref_lbl_scan"), self.port_scan_interval_spin)
         default_group.setLayout(default_layout)
@@ -170,6 +169,7 @@ class PreferencesDialog(QDialog):
         self.max_lines_spin = QSpinBox()
         self.max_lines_spin.setRange(100, 100000)
         self.max_lines_spin.setSingleStep(100)
+        self.max_lines_spin.setValue(DEFAULT_LOG_MAX_LINES)
 
         file_layout.addRow(lang_manager.get_text("pref_lbl_log_path"), path_layout)
         file_layout.addRow(lang_manager.get_text("pref_lbl_max_lines"), self.max_lines_spin)
@@ -324,10 +324,10 @@ class PreferencesDialog(QDialog):
             self.language_combo.setCurrentIndex(index)
 
         self.proportional_font_size_spin.setValue(self._get_setting("settings.proportional_font_size", 10))
-        self.max_lines_spin.setValue(self._get_setting("settings.recv_max_lines", 2000))
+        self.max_lines_spin.setValue(self._get_setting("settings.rx_max_lines", DEFAULT_LOG_MAX_LINES))
 
         # Serial
-        self.port_baud_combo.setCurrentText(str(self._get_setting("settings.port_baudrate", 115200)))
+        self.port_baudrate_combo.setCurrentText(str(self._get_setting("settings.port_baudrate", 115200)))
         self.port_newline_combo.setCurrentText(str(self._get_setting("settings.port_newline", "\n")))
         self.port_scan_interval_spin.setValue(self._get_setting("settings.port_scan_interval", 5000))
 
@@ -344,7 +344,7 @@ class PreferencesDialog(QDialog):
             "theme": self.theme_combo.currentText(),
             "language": self.language_combo.currentData(),
             "proportional_font_size": self.proportional_font_size_spin.value(),
-            "port_baudrate": self.port_baud_combo.currentText(),
+            "port_baudrate": self.port_baudrate_combo.currentText(),
             "port_newline": self.port_newline_combo.currentText(),
             "port_scan_interval": self.port_scan_interval_spin.value(),
             "cmd_prefix": self.prefix_combo.currentText(),

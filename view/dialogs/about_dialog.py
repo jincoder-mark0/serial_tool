@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
 from PyQt5.QtCore import Qt
-from view.tools.lang_manager import lang_manager
+from view.managers.lang_manager import lang_manager
 
 class AboutDialog(QDialog):
     """

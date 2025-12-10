@@ -2,11 +2,12 @@ from PyQt5.QtCore import QObject, pyqtSignal
 from typing import Optional
 from model.serial_worker import SerialWorker
 from core.utils import ThreadSafeQueue
+from core.constants import TX_QUEUE_SIZE, DEFAULT_BAUDRATE
 
 class PortController(QObject):
     """
-    시리얼 포트의 생명주기를 관리하고 포트 설정을 처리하는 클래스입니다.
-    Presenter와 SerialWorker 사이의 브리지 역할을 수행합니다.
+    포트 생명주기 및 설정 관리 클래스.
+    Presenter와 SerialWorker 간 브리지 역할.
 
     Signals:
         port_opened(str): 포트가 열렸을 때 발생 (포트 이름)
@@ -27,9 +28,9 @@ class PortController(QObject):
         """
         super().__init__()
         self.worker: Optional[SerialWorker] = None
-        self.tx_queue = ThreadSafeQueue()
+        self.tx_queue = ThreadSafeQueue(maxlen=TX_QUEUE_SIZE)
         self._port_name = ""
-        self._baudrate = 115200
+        self._baudrate = DEFAULT_BAUDRATE
 
     @property
     def is_open(self) -> bool:
@@ -87,7 +88,7 @@ class PortController(QObject):
             data (bytes): 전송할 바이트 데이터.
         """
         if self.is_open and self.worker:
-            self.worker.write_data(data)
+            self.worker.send_data(data)
         else:
             self.error_occurred.emit("Port is not open.")
 
@@ -103,7 +104,7 @@ class PortController(QObject):
 
     def set_rts(self, state: bool) -> None:
         """
-        RTS(Request To Send) 신호를 설정합니다.
+        RTS(Request To Send) 신호 설정
 
         Args:
             state (bool): True면 활성화, False면 비활성화.

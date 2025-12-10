@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QToolBar, QAction
 from PyQt5.QtCore import Qt, pyqtSignal
-from view.tools.lang_manager import lang_manager
+from view.managers.lang_manager import lang_manager
 
 class MainToolBar(QToolBar):
     open_requested = pyqtSignal()

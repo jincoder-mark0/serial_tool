@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QMenuBar, QAction
 from PyQt5.QtCore import pyqtSignal
 
-from view.tools.lang_manager import lang_manager
+from view.managers.lang_manager import lang_manager
 
 class MainMenuBar(QMenuBar):
     """

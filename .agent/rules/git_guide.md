@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Git 관리 가이드 (Git Management Guide)
 
 > **목적**: 일관된 버전 관리 규칙을 확립하고, 실무에서 유용한 Git 활용법을 공유합니다.

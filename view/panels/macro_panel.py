@@ -5,7 +5,7 @@ from typing import Optional
 
 from view.widgets.macro_list import MacroListWidget
 from view.widgets.macro_ctrl import MacroCtrlWidget
-from view.tools.lang_manager import lang_manager
+from view.managers.lang_manager import lang_manager
 
 from core.settings_manager import SettingsManager
 
@@ -45,8 +45,8 @@ class MacroPanel(QWidget):
         self.settings = SettingsManager()
 
         # 시그널 연결
-        self.marco_ctrl.cmd_repeat_start_requested.connect(self.on_repeat_start_requested)
-        self.marco_ctrl.cmd_repeat_stop_requested.connect(self.on_repeat_stop_requested) # Stop signal is same for now
+        self.marco_ctrl.macro_repeat_start_requested.connect(self.on_repeat_start_requested)
+        self.marco_ctrl.macro_repeat_stop_requested.connect(self.on_repeat_stop_requested) # Stop signal is same for now
 
         self.marco_ctrl.script_save_requested.connect(self.save_script_to_file)
         self.marco_ctrl.script_load_requested.connect(self.load_script_from_file)

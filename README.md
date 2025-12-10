@@ -135,7 +135,7 @@ serial_tool2/
 │   │   ├── file_progress.py
 │   │   ├── packet_inspector.py
 │   │   ├── status.py
-│   │   └── status_area.py
+│   │   └── system_log_widget.py
 │   │
 │   ├── dialogs/            # 대화상자
 │   │   ├── font_settings_dialog.py
@@ -325,10 +325,10 @@ Style: 스타일 변경
 
 ```bash
 # UI 파일에서 언어 키 자동 추출
-python tools/manage_lang_keys.py extract
+python managers/manage_lang_keys.py extract
 
 # 누락/미사용 키 확인
-python tools/manage_lang_keys.py check
+python managers/manage_lang_keys.py check
 ```
 
 ### 테스트 실행

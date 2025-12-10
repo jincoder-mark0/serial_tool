@@ -3,7 +3,7 @@ from view.main_window import MainWindow
 from model.port_controller import PortController
 from .port_presenter import PortPresenter
 from core.settings_manager import SettingsManager
-from view.tools.lang_manager import lang_manager
+from view.managers.lang_manager import lang_manager
 from core.logger import logger
 
 class MainPresenter(QObject):
@@ -50,8 +50,8 @@ class MainPresenter(QObject):
         index = self.view.left_section.port_tabs.currentIndex()
         if index >= 0:
             widget = self.view.left_section.port_tabs.widget(index)
-            if hasattr(widget, 'received_area'):
-                widget.received_area.append_data(data)
+            if hasattr(widget, 'received_area_widget'):
+                widget.received_area_widget.append_data(data)
 
     def on_manual_cmd_send_requested(self, text: str, hex_mode: bool, cmd_prefix: bool, cmd_suffix: bool) -> None:
         """
@@ -115,7 +115,7 @@ class MainPresenter(QObject):
             'theme': 'settings.theme',
             'language': 'settings.language',
             'proportional_font_size': 'settings.proportional_font_size',
-            'max_log_lines': 'settings.recv_max_lines',
+            'max_log_lines': 'settings.rx_max_lines',
             'cmd_prefix': 'settings.cmd_prefix',
             'cmd_suffix': 'settings.cmd_suffix',
             'port_baudrate': 'settings.port_baudrate',
@@ -155,8 +155,8 @@ class MainPresenter(QObject):
                 # 모든 포트 패널의 ReceivedAreaWidget에 적용
                 for i in range(self.view.left_section.port_tabs.count()):
                     widget = self.view.left_section.port_tabs.widget(i)
-                    if hasattr(widget, 'received_area'):
-                        widget.received_area.set_max_lines(max_lines_int)
+                    if hasattr(widget, 'received_area_widget'):
+                        widget.received_area_widget.set_max_lines(max_lines_int)
             except (ValueError, TypeError):
                 logger.warning(f"Invalid max_log_lines value: {max_lines}")
 

@@ -2,8 +2,8 @@ from PyQt5.QtWidgets import QTabWidget, QWidget, QTabBar, QInputDialog
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIcon
 from typing import Optional
-from view.tools.lang_manager import lang_manager
-from view.tools.theme_manager import ThemeManager
+from view.managers.lang_manager import lang_manager
+from view.managers.theme_manager import ThemeManager
 from view.panels.port_panel import PortPanel
 
 class PortTabPanel(QTabWidget):
@@ -26,7 +26,7 @@ class PortTabPanel(QTabWidget):
         self.tabBar().installEventFilter(self)
 
         # 초기화
-        self.add_plus_tab()
+        self.create_add_new_tab_bnt()
 
         # 언어 변경 연결
         lang_manager.language_changed.connect(self.retranslate_ui)
@@ -63,7 +63,7 @@ class PortTabPanel(QTabWidget):
         if ok and new_name and new_name != current_name:
             widget.set_custom_name(new_name)
 
-    def add_plus_tab(self) -> None:
+    def create_add_new_tab_bnt(self) -> None:
         """탭 추가를 위한 '+' 탭을 생성합니다."""
         # 빈 위젯 추가
         self.addTab(QWidget(), "")
@@ -145,7 +145,7 @@ class PortTabPanel(QTabWidget):
             panel.tab_title_changed.connect(lambda title, p=panel: self._on_panel_title_changed(p, title))
 
             # 3. 플러스 탭 다시 추가
-            self.add_plus_tab()
+            self.create_add_new_tab_bnt()
 
             # 4. 새 탭으로 포커스 이동
             # 플러스 탭이 추가되었으므로 새 탭은 count-2 인덱스임

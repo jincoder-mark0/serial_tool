@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Optional
-from view.tools.lang_manager import lang_manager
+from view.managers.lang_manager import lang_manager
 
 class MacroCtrlWidget(QWidget):
     """
@@ -13,9 +13,9 @@ class MacroCtrlWidget(QWidget):
     """
 
     # 시그널 정의
-    cmd_repeat_start_requested = pyqtSignal(int, int) # delay_ms, max_runs
-    cmd_repeat_stop_requested = pyqtSignal()
-    cmd_repeat_pause_requested = pyqtSignal()
+    macro_repeat_start_requested = pyqtSignal(int, int) # delay_ms, max_runs
+    macro_repeat_stop_requested = pyqtSignal()
+    macro_repeat_pause_requested = pyqtSignal()
 
     script_save_requested = pyqtSignal()
     script_load_requested = pyqtSignal()
@@ -28,9 +28,9 @@ class MacroCtrlWidget(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
-        self.cmd_repeat_count_lbl = None
-        self.cmd_repeat_stop_btn = None
-        self.cmd_repeat_start_btn = None
+        self.macro_repeat_count_lbl = None
+        self.macro_repeat_stop_btn = None
+        self.macro_repeat_start_btn = None
         self.repeat_count_spin = None
         self.repeat_max_lbl = None
         self.repeat_delay_line_edit = None
@@ -90,30 +90,30 @@ class MacroCtrlWidget(QWidget):
         execution_layout.addWidget(self.repeat_count_spin, 0, 3)
 
         # Row 1: 자동 실행 제어
-        self.cmd_repeat_start_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_repeat_start"))
-        self.cmd_repeat_start_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_repeat_start_tooltip"))
-        self.cmd_repeat_start_btn.setProperty("class", "accent") # 초록색 스타일
-        self.cmd_repeat_start_btn.clicked.connect(self.on_cmd_repeat_start_clicked)
+        self.macro_repeat_start_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_repeat_start"))
+        self.macro_repeat_start_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_repeat_start_tooltip"))
+        self.macro_repeat_start_btn.setProperty("class", "accent") # 초록색 스타일
+        self.macro_repeat_start_btn.clicked.connect(self.on_macro_repeat_start_clicked)
 
-        self.cmd_repeat_stop_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_repeat_stop"))
-        self.cmd_repeat_stop_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_repeat_stop_tooltip"))
-        self.cmd_repeat_stop_btn.setEnabled(False)
-        self.cmd_repeat_stop_btn.setProperty("class", "danger") # 빨간색 스타일
-        self.cmd_repeat_stop_btn.clicked.connect(self.on_cmd_repeat_stop_clicked)
+        self.macro_repeat_stop_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_repeat_stop"))
+        self.macro_repeat_stop_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_repeat_stop_tooltip"))
+        self.macro_repeat_stop_btn.setEnabled(False)
+        self.macro_repeat_stop_btn.setProperty("class", "danger") # 빨간색 스타일
+        self.macro_repeat_stop_btn.clicked.connect(self.on_macro_repeat_stop_clicked)
 
-        self.cmd_repeat_pause_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_repeat_pause"))
-        self.cmd_repeat_pause_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_repeat_pause_tooltip"))
-        self.cmd_repeat_pause_btn.setEnabled(False)
-        self.cmd_repeat_pause_btn.setProperty("class", "warning") # 노란색 스타일
-        self.cmd_repeat_pause_btn.clicked.connect(self.on_cmd_repeat_pause_clicked)
+        self.macro_repeat_pause_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_repeat_pause"))
+        self.macro_repeat_pause_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_repeat_pause_tooltip"))
+        self.macro_repeat_pause_btn.setEnabled(False)
+        self.macro_repeat_pause_btn.setProperty("class", "warning") # 노란색 스타일
+        self.macro_repeat_pause_btn.clicked.connect(self.on_macro_repeat_pause_clicked)
 
-        self.cmd_repeat_count_lbl = QLabel("0 / ∞")
-        self.cmd_repeat_count_lbl.setAlignment(Qt.AlignCenter)
+        self.macro_repeat_count_lbl = QLabel("0 / ∞")
+        self.macro_repeat_count_lbl.setAlignment(Qt.AlignCenter)
 
-        execution_layout.addWidget(self.cmd_repeat_start_btn, 1, 0, 1, 2)
-        execution_layout.addWidget(self.cmd_repeat_stop_btn, 1, 2)
-        execution_layout.addWidget(self.cmd_repeat_pause_btn, 1, 3)
-        execution_layout.addWidget(self.cmd_repeat_count_lbl, 1, 4)
+        execution_layout.addWidget(self.macro_repeat_start_btn, 1, 0, 1, 2)
+        execution_layout.addWidget(self.macro_repeat_stop_btn, 1, 2)
+        execution_layout.addWidget(self.macro_repeat_pause_btn, 1, 3)
+        execution_layout.addWidget(self.macro_repeat_count_lbl, 1, 4)
 
         self.execution_settings_grp.setLayout(execution_layout)
 
@@ -139,25 +139,25 @@ class MacroCtrlWidget(QWidget):
         self.repeat_max_lbl.setText(lang_manager.get_text("macro_ctrl_lbl_repeat_max"))
         self.repeat_count_spin.setToolTip(lang_manager.get_text("macro_ctrl_spin_repeat_tooltip"))
 
-        self.cmd_repeat_start_btn.setText(lang_manager.get_text("macro_ctrl_btn_repeat_start"))
-        self.cmd_repeat_stop_btn.setText(lang_manager.get_text("macro_ctrl_btn_repeat_stop"))
+        self.macro_repeat_start_btn.setText(lang_manager.get_text("macro_ctrl_btn_repeat_start"))
+        self.macro_repeat_stop_btn.setText(lang_manager.get_text("macro_ctrl_btn_repeat_stop"))
 
-    def on_cmd_repeat_start_clicked(self) -> None:
+    def on_macro_repeat_start_clicked(self) -> None:
         """자동 실행 시작 버튼 핸들러"""
         try:
             delay = int(self.repeat_delay_line_edit.text())
         except ValueError:
             delay = 1000
         max_runs = self.repeat_count_spin.value()
-        self.cmd_repeat_start_requested.emit(delay, max_runs)
+        self.macro_repeat_start_requested.emit(delay, max_runs)
 
-    def on_cmd_repeat_stop_clicked(self) -> None:
+    def on_macro_repeat_stop_clicked(self) -> None:
         """자동 실행 정지 버튼 핸들러"""
-        self.cmd_repeat_stop_requested.emit()
+        self.macro_repeat_stop_requested.emit()
 
-    def on_cmd_repeat_pause_clicked(self) -> None:
+    def on_macro_repeat_pause_clicked(self) -> None:
         """자동 실행 정지 버튼 핸들러"""
-        self.cmd_repeat_pause_requested.emit()
+        self.macro_repeat_pause_requested.emit()
 
     def on_script_save_requested(self) -> None:
         """스크립트 저장 버튼 핸들러"""
@@ -176,12 +176,12 @@ class MacroCtrlWidget(QWidget):
             is_repeat (bool): 자동 실행 모드 여부.
         """
         if running:
-            self.cmd_repeat_start_btn.setEnabled(False)
+            self.macro_repeat_start_btn.setEnabled(False)
             if is_repeat:
-                self.cmd_repeat_stop_btn.setEnabled(True)
+                self.macro_repeat_stop_btn.setEnabled(True)
         else:
-            self.cmd_repeat_start_btn.setEnabled(True)
-            self.cmd_repeat_stop_btn.setEnabled(False)
+            self.macro_repeat_start_btn.setEnabled(True)
+            self.macro_repeat_stop_btn.setEnabled(False)
 
     def update_auto_count(self, current: int, total: int) -> None:
         """
@@ -192,7 +192,7 @@ class MacroCtrlWidget(QWidget):
             total (int): 전체 실행 횟수 (0이면 무한).
         """
         total_str = "∞" if total == 0 else str(total)
-        self.cmd_repeat_count_lbl.setText(f"{current} / {total_str}")
+        self.macro_repeat_count_lbl.setText(f"{current} / {total_str}")
 
     def set_controls_enabled(self, enabled: bool) -> None:
         """
@@ -201,7 +201,7 @@ class MacroCtrlWidget(QWidget):
         Args:
             enabled (bool): 활성화 여부.
         """
-        self.cmd_repeat_start_btn.setEnabled(enabled)
+        self.macro_repeat_start_btn.setEnabled(enabled)
         # Stop 버튼은 실행 상태에 따라 별도 관리되므로 여기서는 건드리지 않음
 
     def save_state(self) -> dict:

@@ -85,7 +85,7 @@ serial_tool2/
 │   │   ├── macro_list.py          # 매크로 리스트 [완료]
 │   │   ├── macro_ctrl.py          # 매크로 제어 [완료]
 │   │   ├── packet_inspector.py    # 패킷 인스펙터 [완료]
-│   │   ├── status_area.py         # 상태 표시 영역 [완료]
+│   │   ├── system_log_widget.py         # 상태 표시 영역 [완료]
 │   │   └── file_progress.py       # 파일 전송 진행 [완료]
 │   ├── pyqt_customs/       # PyQt5 커스텀 위젯 [완료]
 │   │   └── smart_number_edit.py   # HEX 입력 필드 [완료]

@@ -58,7 +58,7 @@ def get_module_display_name(module_path: str) -> str:
         # 단일 파일 (예: main_window)
         name = parts[0].replace('_', ' ').title()
     else:
-        # 중첩된 파일 (예: widgets/port_settings)
+        # 중첩된 파일 (예: widgets/port_settings_widgets)
         category = parts[-2].rstrip('s').title()  # 'widgets' -> 'Widget'
         name = parts[-1].replace('_', ' ').title()
         name = f"{name} {category}"
@@ -127,7 +127,7 @@ def generate_template(keys_by_module: Dict[str, Set[str]], output_file: str, lan
 
         if module_specific_keys:
             display_name = get_module_display_name(module_path)
-            # 파일 경로 추가 (예: widgets/port_settings.py)
+            # 파일 경로 추가 (예: widgets/port_settings_widgets.py)
             file_path = f"{module_path}.py"
             lines.append('  // ============================================\n')
             lines.append(f'  // {display_name} ({file_path}),\n')

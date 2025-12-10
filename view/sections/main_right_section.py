@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget
 from typing import Optional
-from view.tools.lang_manager import lang_manager
+from view.managers.lang_manager import lang_manager
 
 from view.panels.macro_panel import MacroPanel
 from view.panels.packet_inspector_panel import PacketInspectorPanel

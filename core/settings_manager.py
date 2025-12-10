@@ -8,11 +8,12 @@ except ImportError:
     import json
 from pathlib import Path
 from typing import Dict, Any
+from core.constants import DEFAULT_BAUDRATE, DEFAULT_LOG_MAX_LINES
 
 class SettingsManager:
     """
-    애플리케이션 설정 관리자 클래스입니다.
-    AppConfig에서 제공하는 경로를 사용하여 설정을 로드하고 관리합니다.
+    애플리케이션 설정 관리 (Singleton)
+    설정 로드/저장 및 경로 관리
     """
 
     _instance = None
@@ -164,7 +165,7 @@ class SettingsManager:
 
     def get_all_settings(self) -> Dict[str, Any]:
         """
-        전체 설정 딕셔너리를 반환합니다.
+        전체 설정 반환
 
         Returns:
             Dict[str, Any]: 전체 설정 딕셔너리.
@@ -186,7 +187,7 @@ class SettingsManager:
                 "language": "ko"
             },
             "ui": {
-                "rx_max_lines": 2000,
+                "rx_max_lines": DEFAULT_LOG_MAX_LINES,
                 "proportional_font_family": "Segoe UI",
                 "proportional_font_size": 9,
                 "fixed_font_family": "Consolas",
@@ -194,9 +195,9 @@ class SettingsManager:
             },
             "ports": {
                 "default_config": {
-                    "baudrate": 115200,
+                    "baudrate": DEFAULT_BAUDRATE,
                     "parity": "N",
-                    "datasize": 8,
+                    "bytesize": 8,
                     "stopbits": 1
                 }
             }

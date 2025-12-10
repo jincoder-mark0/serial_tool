@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # SerialTool Naming Convention Guide
 
 이 문서는 SerialTool 프로젝트의 명명 규칙을 정의합니다. 일관된 명명 규칙을 통해 코드의 가독성과 유지보수성을 향상시킵니다.
@@ -146,7 +150,7 @@ class Example:
 ```python
 # ❌ 잘못된 예시
 "port_baud_combo_tooltip"       # type이 name 뒤에 위치
-"port_settings"                 # type 누락 (port_grp_settings가 올바름)
+"port_settings_widgets"                 # type 누락 (port_grp_settings가 올바름)
 "inspector_field"               # type 누락 (inspector_col_field가 올바름)
 "save"                          # context와 type 누락
 "btn_save"                      # context 누락
@@ -213,7 +217,7 @@ class Example:
 ### 4.2 도구 활용
 프로젝트에는 언어 키 관리를 위한 도구가 있습니다:
 ```bash
-python tools/manage_lang_keys.py
+python managers/manage_lang_keys.py
 ```
 
 이 도구는:

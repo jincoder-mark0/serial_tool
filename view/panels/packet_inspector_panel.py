@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from typing import Optional
-from view.tools.lang_manager import lang_manager
+from view.managers.lang_manager import lang_manager
 from view.widgets.packet_inspector import PacketInspectorWidget
 
 class PacketInspectorPanel(QWidget):

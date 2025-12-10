@@ -15,8 +15,8 @@ from view.dialogs import (
     AboutDialog,
     PreferencesDialog
 )
-from view.tools.theme_manager import ThemeManager
-from view.tools.lang_manager import lang_manager
+from view.managers.theme_manager import ThemeManager
+from view.managers.lang_manager import lang_manager
 from core.settings_manager import SettingsManager
 
 class MainWindow(QMainWindow):
@@ -49,7 +49,7 @@ class MainWindow(QMainWindow):
         # 언어 관리자 초기화 및 설정에서 언어 로드 (AppConfig 전달)
         # Note: lang_manager는 싱글톤이므로 첫 초기화 시에만 app_config 전달
         if app_config is not None:
-            from view.tools.lang_manager import LangManager
+            from view.managers.lang_manager import LangManager
             LangManager(app_config)
 
         lang = self.settings.get('settings.language', 'en')
@@ -172,7 +172,7 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'left_section'):
             current_index = self.left_section.port_tabs.currentIndex()
             current_widget = self.left_section.port_tabs.widget(current_index)
-            current_widget.received_area.on_clear_recv_log_clicked()
+            current_widget.received_area_widget.on_clear_rx_log_clicked()
 
     def switch_theme(self, theme_name: str) -> None:
         """

@@ -1442,7 +1442,7 @@ class TransferProgress:
     sent_bytes: int         # 전송 완료 바이트
     speed_bps: float        # 현재 전송 속도
     eta_seconds: float      # 예상 남은 시간
-    status: str             # "running", "paused", "cancelled", "completed"
+    status: str             # "running", "is_paused", "cancelled", "completed"
 ```
 
 
@@ -2154,7 +2154,7 @@ qdarkstyle.load_stylesheet_pyqt5()  # 또는 커스텀 QSS
 ```python
 class PortScanner:
     def scan(self) -> List[str]:
-        """OS별 포트 열거 - serial.tools.list_ports 사용"""
+        """OS별 포트 열거 - serial.managers.list_ports 사용"""
         ports = serial.tools.list_ports.comports()
         return [p.device for p in ports if self.is_serial_port(p)]
 
@@ -2896,7 +2896,7 @@ async def execute_step(self, step: CommandEntry) -> CLStepResult:
 class CLState(Enum):
     IDLE = "idle"           # 대기
     RUNNING = "running"     # 실행 중
-    PAUSED = "paused"       # 일시중지
+    PAUSED = "is_paused"       # 일시중지
     STOPPED = "stopped"     # 사용자 중단
     ERROR = "error"         # 타임아웃/전송 실패
     COMPLETED = "completed" # 정상 종료

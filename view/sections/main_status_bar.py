@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QStatusBar, QLabel, QProgressBar
 from PyQt5.QtCore import Qt
-from view.tools.lang_manager import lang_manager
+from view.managers.lang_manager import lang_manager
 
 class MainStatusBar(QStatusBar):
     """
@@ -17,20 +17,20 @@ class MainStatusBar(QStatusBar):
 
     def init_widgets(self):
         # 1. Port Label
-        self.port_label = QLabel("Port: -- ○")
-        self.addPermanentWidget(self.port_label)
+        self.port_lbl = QLabel("Port: -- ○")
+        self.addPermanentWidget(self.port_lbl)
 
         # 2. RX Speed
-        self.recv_label = QLabel("RX: 0 KB/s")
-        self.addPermanentWidget(self.recv_label)
+        self.rx_count_lbl = QLabel("RX: 0 KB/s")
+        self.addPermanentWidget(self.rx_count_lbl)
 
         # 3. TX Speed
-        self.tx_label = QLabel("TX: 0 KB/s")
-        self.addPermanentWidget(self.tx_label)
+        self.tx_count_lbl = QLabel("TX: 0 KB/s")
+        self.addPermanentWidget(self.tx_count_lbl)
 
         # 4. BPS
-        self.bps_label = QLabel("BPS: 0")
-        self.addPermanentWidget(self.bps_label)
+        self.bps_lbl = QLabel("BPS: 0")
+        self.addPermanentWidget(self.bps_lbl)
 
         # 5. Buffer Bar
         self.buffer_bar = QProgressBar()
@@ -41,21 +41,21 @@ class MainStatusBar(QStatusBar):
         self.addPermanentWidget(self.buffer_bar)
 
         # 6. Time Label
-        self.time_label = QLabel("00:00:00")
-        self.addPermanentWidget(self.time_label)
+        self.time_lbl = QLabel("00:00:00")
+        self.addPermanentWidget(self.time_lbl)
 
     def update_port_status(self, port: str, connected: bool):
         status_symbol = "●" if connected else "○"
         color = "green" if connected else "gray"
-        self.port_label.setText(f"Port: {port} <span style='color:{color}'>{status_symbol}</span>")
+        self.port_lbl.setText(f"Port: {port} <span style='color:{color}'>{status_symbol}</span>")
 
-    def update_recv_speed(self, bytes_per_sec: int):
+    def update_rx_speed(self, bytes_per_sec: int):
         speed = bytes_per_sec / 1024
-        self.recv_label.setText(f"RX: {speed:.1f} KB/s")
+        self.rx_count_lbl.setText(f"RX: {speed:.1f} KB/s")
 
     def update_tx_speed(self, bytes_per_sec: int):
         speed = bytes_per_sec / 1024
-        self.tx_label.setText(f"TX: {speed:.1f} KB/s")
+        self.tx_count_lbl.setText(f"TX: {speed:.1f} KB/s")
 
     def update_buffer(self, percent: int):
         self.buffer_bar.setValue(percent)
@@ -65,7 +65,7 @@ class MainStatusBar(QStatusBar):
             self.buffer_bar.setStyleSheet("")
 
     def update_time(self, time_str: str):
-        self.time_label.setText(time_str)
+        self.time_lbl.setText(time_str)
 
     def show_message(self, message: str, timeout: int = 0) -> None:
         """

@@ -46,14 +46,14 @@ class LangManager(QObject):
 
     def load_languages(self) -> None:
         """
-        config/languages 디렉토리에서 언어 파일(*.json)을 로드합니다.
+        언어 파일(*.json)을 로드합니다.
         """
         if LangManager._app_config is not None:
             # AppConfig가 제공되었으면 그것을 사용
             lang_dir = LangManager._app_config.languages_dir
         else:
             # 하위 호환성: AppConfig가 없으면 기존 방식 사용
-            # view/tools/lang_manager.py -> view/tools -> view -> project_root
+            # view/managers/lang_manager.py -> view/managers -> view -> project_root
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
             lang_dir = os.path.join(base_dir, 'config', 'languages')
 

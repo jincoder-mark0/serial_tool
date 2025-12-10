@@ -13,10 +13,10 @@ import os
 from view.widgets.received_area import ReceivedAreaWidget
 from view.widgets.manual_ctrl import ManualCtrlWidget
 from view.widgets.macro_list import MacroListWidget
-from view.widgets.status_area import StatusAreaWidget
+from view.widgets.system_log import SystemLogWidget
 from view.panels.port_panel import PortPanel
-from view.tools.theme_manager import ThemeManager
-from view.tools.lang_manager import lang_manager
+from view.managers.theme_manager import ThemeManager
+from view.managers.lang_manager import lang_manager
 from view.dialogs.preferences_dialog import PreferencesDialog
 from view.dialogs.about_dialog import AboutDialog
 from view.widgets.file_progress import FileProgressWidget
@@ -66,7 +66,7 @@ class ViewTestWindow(QMainWindow):
         tabs.addTab(self.create_macro_list_test(), "CommandList Test")
 
         # Test 4: StatusArea (상태 로그 테스트)
-        tabs.addTab(self.create_status_area_test(), "StatusArea Test")
+        tabs.addTab(self.create_system_log_widget_test(), "StatusArea Test")
 
         # Test 5: PortPanel (전체 패널 테스트)
         tabs.addTab(self.create_port_panel_test(), "PortPanel Test")
@@ -122,7 +122,7 @@ class ViewTestWindow(QMainWindow):
         button_layout.addWidget(btn_many)
 
         btn_clear = QPushButton("Clear")
-        btn_clear.clicked.connect(self.received_area.on_clear_recv_log_clicked)
+        btn_clear.clicked.connect(self.received_area.on_clear_rx_log_clicked)
         button_layout.addWidget(btn_clear)
 
         layout.addLayout(button_layout)
@@ -228,7 +228,7 @@ class ViewTestWindow(QMainWindow):
 
         return widget
 
-    def create_status_area_test(self) -> QWidget:
+    def create_system_log_widget_test(self) -> QWidget:
         """
         StatusArea 테스트 위젯을 생성합니다.
 
@@ -241,26 +241,26 @@ class ViewTestWindow(QMainWindow):
         layout = QVBoxLayout(widget)
 
         # StatusArea 인스턴스
-        self.status_area = StatusAreaWidget()
-        layout.addWidget(self.status_area)
+        self.system_log_widget = SystemLogWidget()
+        layout.addWidget(self.system_log_widget)
 
         # 테스트 버튼
         button_layout = QHBoxLayout()
 
         btn_info = QPushButton("Log INFO")
-        btn_info.clicked.connect(lambda: self.status_area.log("This is an info message", "INFO"))
+        btn_info.clicked.connect(lambda: self.system_log_widget.log("This is an info message", "INFO"))
         button_layout.addWidget(btn_info)
 
         btn_error = QPushButton("Log ERROR")
-        btn_error.clicked.connect(lambda: self.status_area.log("This is an error message", "ERROR"))
+        btn_error.clicked.connect(lambda: self.system_log_widget.log("This is an error message", "ERROR"))
         button_layout.addWidget(btn_error)
 
         btn_warn = QPushButton("Log WARN")
-        btn_warn.clicked.connect(lambda: self.status_area.log("This is a warning message", "WARN"))
+        btn_warn.clicked.connect(lambda: self.system_log_widget.log("This is a warning message", "WARN"))
         button_layout.addWidget(btn_warn)
 
         btn_success = QPushButton("Log SUCCESS")
-        btn_success.clicked.connect(lambda: self.status_area.log("This is a success message", "SUCCESS"))
+        btn_success.clicked.connect(lambda: self.system_log_widget.log("This is a success message", "SUCCESS"))
         button_layout.addWidget(btn_success)
 
         layout.addLayout(button_layout)

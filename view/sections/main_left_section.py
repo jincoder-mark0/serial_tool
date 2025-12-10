@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from typing import Optional
-from view.tools.lang_manager import lang_manager
+from view.managers.lang_manager import lang_manager
 
 from view.panels.port_panel import PortPanel
 from view.panels.manual_ctrl_panel import ManualControlPanel
@@ -83,7 +83,7 @@ class MainLeftSection(QWidget):
     def _on_tab_added(self, panel: PortPanel) -> None:
         """새 탭이 추가되었을 때 호출되는 핸들러"""
         # 포트 설정의 연결 상태 변경 시그널을 수동 제어 위젯에 연결
-        panel.port_settings.connection_state_changed.connect(
+        panel.port_settings_widgets.connection_changed.connect(
             self._on_port_connection_changed
         )
 
@@ -161,7 +161,7 @@ class MainLeftSection(QWidget):
             # sender의 부모를 찾아서 현재 활성 탭인지 확인
             current_index = self.port_tabs.currentIndex()
             current_widget = self.port_tabs.widget(current_index)
-            if current_widget and hasattr(current_widget, 'port_settings'):
-                if current_widget.port_settings == sender_widget:
+            if current_widget and hasattr(current_widget, 'port_settings_widgets'):
+                if current_widget.port_settings_widgets == sender_widget:
                     # 현재 탭의 변경이면 ManualControl 업데이트
                     self.manual_ctrl.set_controls_enabled(connected)

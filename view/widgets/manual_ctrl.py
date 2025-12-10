@@ -5,8 +5,8 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QKeyEvent
 from typing import Optional
-from view.tools.lang_manager import lang_manager
-from view.pyqt_customs.smart_text_edit import QSmartTextEdit
+from view.managers.lang_manager import lang_manager
+from view.custom_widgets.smart_text_edit import QSmartTextEdit
 
 class ManualCtrlWidget(QWidget):
     """

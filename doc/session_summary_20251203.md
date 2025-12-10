@@ -13,7 +13,7 @@
   - 모든 UI 컴포넌트에서 `lang_manager.get_text()` 호출 수정
   - 주석 제거 및 JSON 구조 정리
 - **대상 파일**:
-  - **Widgets**: `manual_control.py`, `command_list.py`, `command_control.py`, `received_area.py`, `port_settings.py`, `status_area.py`, `file_progress_widget.py`, `packet_inspector.py`
+  - **Widgets**: `manual_control.py`, `command_list.py`, `command_control.py`, `received_area.py`, `port_settings.py`, `system_log_widget.py`, `file_progress_widget.py`, `packet_inspector.py`
   - **Panels**: `left_panel.py`, `right_panel.py`
   - **Dialogs**: `font_settings_dialog.py`, `about_dialog.py`, `preferences_dialog.py`
   - **Main**: `main_window.py` (MenuBar 및 StatusBar 분리)

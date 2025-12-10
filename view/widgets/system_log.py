@@ -1,9 +1,9 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTextEdit, QLabel
 from typing import Optional
 import datetime
-from view.tools.lang_manager import lang_manager
+from view.managers.lang_manager import lang_manager
 
-class StatusAreaWidget(QWidget):
+class SystemLogWidget(QWidget):
     """
     시스템 상태 메시지 및 에러 로그를 표시하는 위젯 클래스입니다.
     QTextEdit를 사용하여 여러 줄의 상태 이력을 관리합니다.

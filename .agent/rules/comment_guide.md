@@ -1,3 +1,7 @@
+---
+trigger: always_on
+---
+
 # Source Code Comment Guide (소스코드 주석 가이드)
 
 이 문서는 `mkdocs`와 `mkdocstrings` 플러그인을 사용하여 프로젝트 문서를 자동화하기 위한 소스코드 주석 작성 규칙을 정의합니다. `code_style_guide.md`의 내용을 기반으로 하며, 자동화 도구가 인식할 수 있는 구체적인 형식을 제시합니다.
