@@ -75,13 +75,11 @@ class MainPresenter(QObject):
         # Apply prefix if requested
         if cmd_prefix:
             prefix = settings.get("settings.cmd_prefix", "")
-            prefix = prefix.replace("\\r", "\r").replace("\\n", "\n")
             final_text = prefix + final_text
 
         # Apply suffix if requested
         if cmd_suffix:
-            suffix = settings.get("settings.cmd_suffix", "\\r\\n")
-            suffix = suffix.replace("\\r", "\r").replace("\\n", "\n")
+            suffix = settings.get("settings.cmd_suffix", "")
             final_text = final_text + suffix
 
         # Convert to bytes

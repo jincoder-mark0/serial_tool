@@ -2,13 +2,13 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTextEdit, QLabel
 from typing import Optional
 import datetime
 from view.managers.lang_manager import lang_manager
+from view.custom_widgets.smart_list_view import QSmartListView
 
 from core.constants import (
     LOG_COLOR_INFO,
     LOG_COLOR_ERROR,
     LOG_COLOR_WARN,
-    LOG_COLOR_SUCCESS,
-    LOG_COLOR_TIMESTAMP
+    LOG_COLOR_SUCCESS
 )
 
 class SystemLogWidget(QWidget):
@@ -25,8 +25,8 @@ class SystemLogWidget(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
-        self.status_log_txt = None
-        self.status_log_title = None
+        self.system_log_list = None
+        self.system_log_title = None
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
@@ -38,26 +38,27 @@ class SystemLogWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
 
-        self.status_log_title = QLabel(lang_manager.get_text("status_title"))
-        self.status_log_title.setProperty("class", "section-title")  # 섹션 타이틀 스타일 적용
-        # status_log_title.setStyleSheet("font-weight: bold; font-size: 10px;")
+        self.system_log_title = QLabel(lang_manager.get_text("system_title"))
+        self.system_log_title.setProperty("class", "section-title")  # 섹션 타이틀 스타일 적용
+        # system_log_title.setStyleSheet("font-weight: bold; font-size: 10px;")
 
-        self.status_log_txt = QTextEdit()
-        self.status_log_txt.setReadOnly(True)
-        self.status_log_txt.setMaximumHeight(100) # 높이 제한
-        self.status_log_txt.setToolTip(lang_manager.get_text("status_txt_log_tooltip"))
-        self.status_log_txt.setPlaceholderText(lang_manager.get_text("status_txt_log_placeholder"))
-        self.status_log_txt.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
+        # self.system_log_list = QTextEdit()
+        self.system_log_list = QSmartListView()
+        self.system_log_list.setReadOnly(True)
+        self.system_log_list.setMaximumHeight(100) # 높이 제한
+        self.system_log_list.setToolTip(lang_manager.get_text("system_list_log_tooltip"))
+        self.system_log_list.setPlaceholderText(lang_manager.get_text("system_list_log_placeholder"))
+        self.system_log_list.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
 
-        layout.addWidget(self.status_log_title)
-        layout.addWidget(self.status_log_txt)
+        layout.addWidget(self.system_log_title)
+        layout.addWidget(self.system_log_list)
         self.setLayout(layout)
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.status_log_title.setText(lang_manager.get_text("status_title"))
-        self.status_log_txt.setToolTip(lang_manager.get_text("status_txt_log_tooltip"))
-        self.status_log_txt.setPlaceholderText(lang_manager.get_text("status_txt_log_placeholder"))
+        self.system_log_title.setText(lang_manager.get_text("system_title"))
+        self.system_log_list.setToolTip(lang_manager.get_text("system_list_log_tooltip"))
+        self.system_log_list.setPlaceholderText(lang_manager.get_text("system_list_log_placeholder"))
 
     def log(self, message: str, level: str = "INFO") -> None:
         """
@@ -67,8 +68,6 @@ class SystemLogWidget(QWidget):
             message (str): 표시할 메시지.
             level (str): 로그 레벨 (INFO, ERROR, WARN, SUCCESS). 기본값은 "INFO".
         """
-        timestamp = datetime.datetime.now().strftime("%H:%M:%S")
-
         level_colors = {
             "INFO": LOG_COLOR_INFO,
             "ERROR": LOG_COLOR_ERROR,
@@ -78,10 +77,14 @@ class SystemLogWidget(QWidget):
         color = level_colors.get(level, LOG_COLOR_INFO)
 
 
-        # 색상 적용을 위한 HTML 포맷팅
-        formatted_msg = f'<span style="color:{LOG_COLOR_TIMESTAMP};">[{timestamp}]</span> <span style="color:{color};">[{level}]</span> {message}'
-        self.status_log_txt.append(formatted_msg)
+        # HTML 포맷팅 (LogDelegate가 렌더링함)
+        formatted_msg = f'<span style="color:{color};">[{level}]</span> {message}'
+        
+        # 타임스탬프는 QSmartListView의 기능 활용
+        timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+        
+        self.system_log_list.append(formatted_msg, timestamp=timestamp)
 
     def clear(self) -> None:
         """로그를 초기화합니다."""
-        self.status_log_txt.clear()
+        self.system_log_list.clear()

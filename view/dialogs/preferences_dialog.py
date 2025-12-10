@@ -112,6 +112,8 @@ class PreferencesDialog(QDialog):
         self.port_newline_combo = QComboBox()
         self.port_newline_combo.addItems(["\r", "\n", "\r\n"])
         self.port_newline_combo.setEditable(True)
+        
+        self.port_localecho_chk = QCheckBox(lang_manager.get_text("pref_chk_localecho"))
 
         self.port_scan_interval_spin = QSpinBox()
         self.port_scan_interval_spin.setRange(MIN_SCAN_INTERVAL_MS, MAX_SCAN_INTERVAL_MS)
@@ -120,6 +122,7 @@ class PreferencesDialog(QDialog):
 
         default_layout.addRow(lang_manager.get_text("pref_lbl_baudrate"), self.port_baudrate_combo)
         default_layout.addRow(lang_manager.get_text("pref_lbl_newline"), self.port_newline_combo)
+        default_layout.addRow(lang_manager.get_text("pref_lbl_localecho"), self.port_localecho_chk)
         default_layout.addRow(lang_manager.get_text("pref_lbl_scan"), self.port_scan_interval_spin)
         default_group.setLayout(default_layout)
 
@@ -352,6 +355,7 @@ class PreferencesDialog(QDialog):
             "proportional_font_size": self.proportional_font_size_spin.value(),
             "port_baudrate": self.port_baudrate_combo.currentText(),
             "port_newline": self.port_newline_combo.currentText(),
+            "port_localecho": self.port_localecho_chk.checkState() == Qt.Checked,
             "port_scan_interval": self.port_scan_interval_spin.value(),
             "cmd_prefix": self.prefix_combo.currentText(),
             "cmd_suffix": self.suffix_combo.currentText(),

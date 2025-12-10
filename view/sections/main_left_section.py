@@ -83,8 +83,8 @@ class MainLeftSection(QWidget):
     def _on_tab_added(self, panel: PortPanel) -> None:
         """새 탭이 추가되었을 때 호출되는 핸들러"""
         # 포트 설정의 연결 상태 변경 시그널을 수동 제어 위젯에 연결
-        panel.port_settings_widgets.connection_changed.connect(
-            self._on_port_connection_changed
+        panel.port_settings_widgets.port_connection_changed.connect(
+            self._on_port_port_connection_changed
         )
 
     def save_state(self) -> list:
@@ -147,7 +147,7 @@ class MainLeftSection(QWidget):
         finally:
             self.port_tabs.blockSignals(False)
 
-    def _on_port_connection_changed(self, connected: bool) -> None:
+    def _on_port_port_connection_changed(self, connected: bool) -> None:
         """
         포트 연결 상태 변경 핸들러입니다.
         현재 활성 탭의 연결 상태가 변경되면 ManualControl을 활성화/비활성화합니다.

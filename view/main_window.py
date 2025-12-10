@@ -19,6 +19,9 @@ from view.managers.theme_manager import ThemeManager
 from view.managers.lang_manager import lang_manager
 from core.settings_manager import SettingsManager
 
+from view.managers.lang_manager import LangManager
+from view.managers.color_manager import ColorManager
+
 class MainWindow(QMainWindow):
     """
     애플리케이션의 메인 윈도우 클래스입니다.
@@ -49,8 +52,8 @@ class MainWindow(QMainWindow):
         # 언어 관리자 초기화 및 설정에서 언어 로드 (AppConfig 전달)
         # Note: lang_manager는 싱글톤이므로 첫 초기화 시에만 app_config 전달
         if app_config is not None:
-            from view.managers.lang_manager import LangManager
             LangManager(app_config)
+            ColorManager(app_config)
 
         lang = self.settings.get('settings.language', 'en')
         lang_manager.set_language(lang)

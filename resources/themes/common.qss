@@ -116,6 +116,20 @@ QTableView QTableCornerButton::section {
     border: none;
 }
 
+/* QListView */
+QListView {
+    border-width: 1px;
+    border-style: solid;
+}
+
+QListView QTableCornerButton::section {
+    border: none;
+}
+
+QListView[readOnly="true"] {
+    border: 1px;
+}
+
 /* QCheckBox */
 QCheckBox {
     spacing: 5px;

@@ -261,13 +261,13 @@ PyQt5 위젯 변수명은 `[용도]_[약어]` 형식을 사용합니다.
 self.reset_button = QPushButton()  # → reset_btn
 self.title_label = QLabel()  # → title_lbl
 self.option_group = QGroupBox()  # → option_grp
-self.log_edit = QTextEdit()  # → status_log_txt
+self.log_edit = QTextEdit()  # → status_log_list
 
 # ✅ 올바른 예시
 self.reset_btn = QPushButton()
 self.title_lbl = QLabel()
 self.option_grp = QGroupBox()
-self.status_log_txt = QTextEdit()
+self.status_log_list = QTextEdit()
 ```
 
 ---

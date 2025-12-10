@@ -85,7 +85,13 @@ class PortPresenter(QObject):
                 return
 
             if port:
-                self.port_controller.open_port(port, baudrate)
+                # TODO: PortSettingsWidget에서 config 딕셔너리를 만들어 보낸다.
+                config = {'port': 'COM1', 'baudrate': 115200, 'parity': 'N'}
+                self.port_controller.open_port(
+                    config['port'], 
+                    config['baudrate'], 
+                    **config  # 나머지 설정(parity, stopbits 등) 전달
+                )
             else:
                 print("No port selected")
 

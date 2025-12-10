@@ -73,6 +73,10 @@
 
 
 ## Phase 3: Core 유틸리티 (진행 중)
+- [x] `SettingsManager` 구현 (싱글톤, AppConfig 통합)
+- [x] `AppConfig` 구현 (중앙 경로 관리)
+- [x] `PortState` Enum 정의
+- [x] `ITransport` 인터페이스 정의 (`core/interfaces.py`)
 - [ ] `RingBuffer` 구현
     - [ ] `core/utils.py` 생성
     - [ ] 원형 버퍼 로직 구현
@@ -93,11 +97,13 @@
 - [x] `PortState` Enum 정의 및 PortSettingsWidget에 적용
 - [x] `AppConfig` 구현 (중앙 경로 관리)
 
-## Phase 4: Model 계층 (계획됨)
-- [ ] `SerialWorker` 구현
-    - [ ] `model/serial_worker.py` 생성
-    - [ ] QThread 구현
+## Phase 4: Model 계층 (진행 중)
+- [x] `SerialTransport` 구현 (`model/transports.py`)
+- [x] `ConnectionWorker` 구현 (구 SerialWorker 리팩토링)
+    - [x] `ITransport` 주입 구조 적용
+    - [x] QThread 기반 Loop 구현
 - [ ] `PortController` 구현
+    - [x] Transport 생성 및 Worker 주입 로직 구현
     - [ ] `model/port_controller.py` 생성
     - [ ] 상태 머신 구현
 - [ ] `SerialManager` (PortRegistry) 구현
@@ -128,6 +134,11 @@
     - [ ] RxLogView를 위한 `BatchRenderer` 구현
     - [ ] `RingBuffer` 최적화 (bytearray)
     - [ ] 논블로킹 I/O 루프 최적화
+    - [x] `QSmartListView` 구현 (`view/custom_widgets/smart_list_view.py`)
+        - [x] QAbstractListModel 기반 로그 모델
+        - [x] 검색(Find Next/Prev) 기능 구현
+    - [x] `ReceivedAreaWidget`에 QSmartListView 적용
+    - [x] `SystemLogWidget`에 QSmartListView 적용
 
 ## Phase 7: 플러그인 시스템 (계획됨)
 - [ ] 플러그인 인프라 구현

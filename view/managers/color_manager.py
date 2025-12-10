@@ -154,7 +154,7 @@ class ColorManager:
             with open(filepath, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
         except IOError as e:
-            print(f"Error saving color rules: {e}")
+            logger.error(f"Error saving color rules: {e}")
 
     def load_from_json(self, filepath: str) -> None:
         """

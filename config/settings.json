@@ -8,19 +8,20 @@
     "proportional_font_size": 9,
     "fixed_font_family": "Consolas",
     "fixed_font_size": 9,
-    "right_panel_visible": true,
+    "right_panel_visible": false,
     "cmd_prefix": "",
     "cmd_suffix": "",
-    "port_baudrate": 115200,
+    "port_baudrate": 200,
+    "port_localecho": true,
     "port_newline": "\n",
     "port_scan_interval": 5000
   },
   "ui": {
-    "window_width": 1259,
-    "window_height": 899,
-    "window_x": 474,
-    "window_y": 10,
-    "splitter_state": "AAAA/wAAAAEAAAACAAADTAAAAZAB/////wEAAAABAA=="
+    "window_width": 593,
+    "window_height": 796,
+    "window_x": 530,
+    "window_y": 108,
+    "splitter_state": "AAAA/wAAAAEAAAACAAADvgAAAZAB/////wEAAAABAA=="
   },
   "ports": {
     "default_config": {
@@ -34,12 +35,19 @@
       {
         "custom_name": "Port",
         "port_settings_widgets": {
-          "port": "COM1",
-          "baudrate": "115200",
-          "bytesize": "8",
-          "parity": "N",
-          "stopbits": "1",
-          "flowctrl": "None"
+          "protocol": "Serial",
+          "port": "COM5",
+          "serial": {
+            "baudrate": "115200",
+            "bytesize": "8",
+            "parity": "N",
+            "stopbits": "1",
+            "flowctrl": "None"
+          },
+          "spi": {
+            "speed": "1000000",
+            "mode": "0"
+          }
         },
         "received_area_widget": {
           "hex_mode": false,

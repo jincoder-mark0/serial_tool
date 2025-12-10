@@ -52,11 +52,10 @@ class MacroPanel(QWidget):
         self.marco_ctrl.script_load_requested.connect(self.load_script_from_file)
 
         # 데이터 변경 시 자동 저장
-        self.macro_list.macro_list_changed.connect(self.save_state)
-
-        # CommandControl의 입력 필드 변경 시에도 저장 (textChanged, valueChanged 등)
-        self.marco_ctrl.repeat_delay_line_edit.textChanged.connect(self.save_state)
-        self.marco_ctrl.repeat_count_spin.valueChanged.connect(self.save_state)
+        # 사용자가 입력할 때마다 파일 쓰기가 발생하여 성능 저하를 유발
+        # self.macro_list.macro_list_changed.connect(self.save_state)
+        # self.marco_ctrl.repeat_delay_line_edit.textChanged.connect(self.save_state)
+        # self.marco_ctrl.repeat_count_spin.valueChanged.connect(self.save_state)
 
         layout.addWidget(self.macro_list)
         layout.addWidget(self.marco_ctrl)

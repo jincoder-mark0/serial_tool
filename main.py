@@ -40,7 +40,6 @@ def main() -> None:
 
     # 핵심 모듈에 설정 주입
     logger.configure(app_config)
-    ColorManager(app_config) # 싱글톤 초기화
 
     # 경로 검증
     path_status = app_config.validate_paths()
