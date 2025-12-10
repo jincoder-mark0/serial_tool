@@ -36,7 +36,7 @@ class PreferencesDialog(QDialog):
         self.tabs.addTab(self.create_general_tab(), lang_manager.get_text("pref_tab_general"))
         self.tabs.addTab(self.create_serial_tab(), lang_manager.get_text("pref_tab_serial"))
         self.tabs.addTab(self.create_cmd_tab(), lang_manager.get_text("pref_tab_command"))
-        self.tabs.addTab(self.create_parser_tab(), lang_manager.get_text("pref_tab_parser"))
+        self.tabs.addTab(self.create_packet_tab(), lang_manager.get_text("pref_tab_packet"))
         self.tabs.addTab(self.create_logging_tab(), lang_manager.get_text("pref_tab_logging"))
 
         layout.addWidget(self.tabs)
@@ -180,8 +180,8 @@ class PreferencesDialog(QDialog):
         widget.setLayout(layout)
         return widget
 
-    def create_parser_tab(self) -> QWidget:
-        """Parser 설정 탭을 생성합니다."""
+    def create_packet_tab(self) -> QWidget:
+        """Packet 설정 탭을 생성합니다."""
         widget = QWidget()
         layout = QVBoxLayout()
 
@@ -324,7 +324,7 @@ class PreferencesDialog(QDialog):
             self.language_combo.setCurrentIndex(index)
 
         self.proportional_font_size_spin.setValue(self._get_setting("settings.proportional_font_size", 10))
-        self.max_lines_spin.setValue(self._get_setting("settings.rx_max_lines", 2000))
+        self.max_lines_spin.setValue(self._get_setting("settings.recv_max_lines", 2000))
 
         # Serial
         self.port_baud_combo.setCurrentText(str(self._get_setting("settings.port_baudrate", 115200)))

@@ -21,8 +21,8 @@ class MainStatusBar(QStatusBar):
         self.addPermanentWidget(self.port_label)
 
         # 2. RX Speed
-        self.rx_label = QLabel("RX: 0 KB/s")
-        self.addPermanentWidget(self.rx_label)
+        self.recv_label = QLabel("RX: 0 KB/s")
+        self.addPermanentWidget(self.recv_label)
 
         # 3. TX Speed
         self.tx_label = QLabel("TX: 0 KB/s")
@@ -49,9 +49,9 @@ class MainStatusBar(QStatusBar):
         color = "green" if connected else "gray"
         self.port_label.setText(f"Port: {port} <span style='color:{color}'>{status_symbol}</span>")
 
-    def update_rx_speed(self, bytes_per_sec: int):
+    def update_recv_speed(self, bytes_per_sec: int):
         speed = bytes_per_sec / 1024
-        self.rx_label.setText(f"RX: {speed:.1f} KB/s")
+        self.recv_label.setText(f"RX: {speed:.1f} KB/s")
 
     def update_tx_speed(self, bytes_per_sec: int):
         speed = bytes_per_sec / 1024

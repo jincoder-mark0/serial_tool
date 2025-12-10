@@ -115,7 +115,7 @@ class MainPresenter(QObject):
             'theme': 'settings.theme',
             'language': 'settings.language',
             'proportional_font_size': 'settings.proportional_font_size',
-            'max_log_lines': 'settings.rx_max_lines',
+            'max_log_lines': 'settings.recv_max_lines',
             'cmd_prefix': 'settings.cmd_prefix',
             'cmd_suffix': 'settings.cmd_suffix',
             'port_baudrate': 'settings.port_baudrate',

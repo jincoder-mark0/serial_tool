@@ -20,13 +20,13 @@ class ReceivedAreaWidget(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
-        self.rx_search_prev_btn = None
-        self.rx_search_input = None
-        self.save_rx_log_btn = None
-        self.rx_pause_chk = None
-        self.rx_timestamp_chk = None
-        self.rx_hex_chk = None
-        self.clear_rx_log_btn = None
+        self.recv_search_prev_btn = None
+        self.recv_search_input = None
+        self.recv_save_log_btn = None
+        self.recv_pause_chk = None
+        self.recv_timestamp_chk = None
+        self.recv_hex_chk = None
+        self.recv_clear_log_btn = None
         self.hex_mode: bool = False
         self.paused: bool = False
         self.batch_buffer: list[str] = []
@@ -57,99 +57,100 @@ class ReceivedAreaWidget(QWidget):
         # 툴바 (Toolbar)
         toolbar = QHBoxLayout()
 
-        self.clear_rx_log_btn = QPushButton(lang_manager.get_text("recv_btn_clear"))
-        self.clear_rx_log_btn.setToolTip(lang_manager.get_text("recv_btn_clear_tooltip"))
-        self.clear_rx_log_btn.clicked.connect(self.on_clear_rx_log_clicked)
+        self.recv_clear_log_btn = QPushButton(lang_manager.get_text("recv_btn_clear"))
+        self.recv_clear_log_btn.setToolTip(lang_manager.get_text("recv_btn_clear_tooltip"))
+        self.recv_clear_log_btn.clicked.connect(self.on_clear_recv_log_clicked)
 
-        self.rx_hex_chk = QCheckBox(lang_manager.get_text("recv_chk_hex"))
-        self.rx_hex_chk.setToolTip(lang_manager.get_text("recv_chk_hex_tooltip"))
-        self.rx_hex_chk.stateChanged.connect(self.on_rx_hex_mode_changed)
+        self.recv_hex_chk = QCheckBox(lang_manager.get_text("recv_chk_hex"))
+        self.recv_hex_chk.setToolTip(lang_manager.get_text("recv_chk_hex_tooltip"))
+        self.recv_hex_chk.stateChanged.connect(self.on_recv_hex_mode_changed)
 
-        self.rx_timestamp_chk = QCheckBox(lang_manager.get_text("recv_chk_timestamp"))
-        self.rx_timestamp_chk.setToolTip(lang_manager.get_text("recv_chk_timestamp_tooltip"))
-        self.rx_timestamp_chk.stateChanged.connect(self.on_rx_timestamp_changed)
+        self.recv_timestamp_chk = QCheckBox(lang_manager.get_text("recv_chk_timestamp"))
+        self.recv_timestamp_chk.setToolTip(lang_manager.get_text("recv_chk_timestamp_tooltip"))
+        self.recv_timestamp_chk.stateChanged.connect(self.on_recv_timestamp_changed)
 
-        self.rx_pause_chk = QCheckBox(lang_manager.get_text("recv_chk_pause"))
-        self.rx_pause_chk.setToolTip(lang_manager.get_text("recv_chk_pause_tooltip"))
-        self.rx_pause_chk.stateChanged.connect(self.on_rx_pause_changed)
+        self.recv_pause_chk = QCheckBox(lang_manager.get_text("recv_chk_pause"))
+        self.recv_pause_chk.setToolTip(lang_manager.get_text("recv_chk_pause_tooltip"))
+        self.recv_pause_chk.stateChanged.connect(self.on_recv_pause_changed)
 
-        self.save_rx_log_btn = QPushButton(lang_manager.get_text("recv_btn_save"))
-        self.save_rx_log_btn.setToolTip(lang_manager.get_text("recv_btn_save_tooltip"))
+        self.recv_save_log_btn = QPushButton(lang_manager.get_text("recv_btn_save"))
+        self.recv_save_log_btn.setToolTip(lang_manager.get_text("recv_btn_save_tooltip"))
 
         # 검색 바 (Search Bar)
-        self.rx_search_input = QLineEdit()
-        self.rx_search_input.setPlaceholderText(lang_manager.get_text("recv_input_search_placeholder"))
-        self.rx_search_input.setToolTip(lang_manager.get_text("recv_input_search_tooltip"))
-        self.rx_search_input.returnPressed.connect(self.on_rx_search_next_clicked)
-        self.rx_search_input.setMaximumWidth(200)
+        self.recv_search_input = QLineEdit()
+        self.recv_search_input.setPlaceholderText(lang_manager.get_text("recv_input_search_placeholder"))
+        self.recv_search_input.setToolTip(lang_manager.get_text("recv_input_search_tooltip"))
+        self.recv_search_input.returnPressed.connect(self.on_recv_search_next_clicked)
+        self.recv_search_input.setMaximumWidth(200)
 
-        self.rx_search_prev_btn = QPushButton()
-        self.rx_search_prev_btn.setObjectName("rx_search_prev_btn")
-        self.rx_search_prev_btn.setToolTip(lang_manager.get_text("recv_btn_search_prev_tooltip"))
-        self.rx_search_prev_btn.setFixedWidth(30)
-        self.rx_search_prev_btn.clicked.connect(self.on_rx_search_prev_clicked)
+        self.recv_search_prev_btn = QPushButton()
+        self.recv_search_prev_btn.setObjectName("recv_search_prev_btn")
+        self.recv_search_prev_btn.setToolTip(lang_manager.get_text("recv_btn_search_prev_tooltip"))
+        self.recv_search_prev_btn.setFixedWidth(30)
+        self.recv_search_prev_btn.clicked.connect(self.on_recv_search_prev_clicked)
 
-        self.rx_search_next_btn = QPushButton()
-        self.rx_search_next_btn.setObjectName("rx_search_next_btn")
-        self.rx_search_next_btn.setToolTip(lang_manager.get_text("recv_btn_search_next_tooltip"))
-        self.rx_search_next_btn.setFixedWidth(30)
-        self.rx_search_next_btn.clicked.connect(self.on_rx_search_next_clicked)
+        self.recv_search_next_btn = QPushButton()
+        self.recv_search_next_btn.setObjectName("recv_search_next_btn")
+        self.recv_search_next_btn.setToolTip(lang_manager.get_text("recv_btn_search_next_tooltip"))
+        self.recv_search_next_btn.setFixedWidth(30)
+        self.recv_search_next_btn.clicked.connect(self.on_recv_search_next_clicked)
 
-        self.rx_log_lbl = QLabel(lang_manager.get_text("recv_lbl_log"))
+        self.recv_log_title = QLabel(lang_manager.get_text("recv_title"))
+        self.recv_log_title.setProperty("class", "section-title")  # 섹션 타이틀 스타일 적용
 
-        toolbar.addWidget(self.rx_log_lbl)
+        toolbar.addWidget(self.recv_log_title)
         toolbar.addStretch()
-        toolbar.addWidget(self.rx_search_input)
-        toolbar.addWidget(self.rx_search_prev_btn)
-        toolbar.addWidget(self.rx_search_next_btn)
-        toolbar.addWidget(self.rx_hex_chk)
-        toolbar.addWidget(self.rx_timestamp_chk)
-        toolbar.addWidget(self.rx_pause_chk)
-        toolbar.addWidget(self.clear_rx_log_btn)
-        toolbar.addWidget(self.save_rx_log_btn)
+        toolbar.addWidget(self.recv_search_input)
+        toolbar.addWidget(self.recv_search_prev_btn)
+        toolbar.addWidget(self.recv_search_next_btn)
+        toolbar.addWidget(self.recv_hex_chk)
+        toolbar.addWidget(self.recv_timestamp_chk)
+        toolbar.addWidget(self.recv_pause_chk)
+        toolbar.addWidget(self.recv_clear_log_btn)
+        toolbar.addWidget(self.recv_save_log_btn)
 
         # 로그 표시 영역 (Log Display Area)
-        self.log_txt = QTextEdit()
-        self.log_txt.setReadOnly(True)
-        self.log_txt.setPlaceholderText(lang_manager.get_text("recv_txt_log_placeholder"))
-        self.log_txt.setToolTip(lang_manager.get_text("recv_lbl_log"))
-        self.log_txt.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
+        self.recv_log_txt = QTextEdit()
+        self.recv_log_txt.setReadOnly(True)
+        self.recv_log_txt.setPlaceholderText(lang_manager.get_text("recv_txt_log_placeholder"))
+        self.recv_log_txt.setToolTip(lang_manager.get_text("recv_title"))
+        self.recv_log_txt.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
 
         layout.addLayout(toolbar)
-        layout.addWidget(self.log_txt)
+        layout.addWidget(self.recv_log_txt)
         self.setLayout(layout)
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.clear_rx_log_btn.setText(lang_manager.get_text("recv_btn_clear"))
-        self.clear_rx_log_btn.setToolTip(lang_manager.get_text("recv_btn_clear_tooltip"))
+        self.recv_clear_log_btn.setText(lang_manager.get_text("recv_btn_clear"))
+        self.recv_clear_log_btn.setToolTip(lang_manager.get_text("recv_btn_clear_tooltip"))
 
-        self.rx_hex_chk.setText(lang_manager.get_text("recv_chk_hex"))
-        self.rx_hex_chk.setToolTip(lang_manager.get_text("recv_chk_hex_tooltip"))
+        self.recv_hex_chk.setText(lang_manager.get_text("recv_chk_hex"))
+        self.recv_hex_chk.setToolTip(lang_manager.get_text("recv_chk_hex_tooltip"))
 
-        self.rx_timestamp_chk.setText(lang_manager.get_text("recv_chk_timestamp"))
-        self.rx_timestamp_chk.setToolTip(lang_manager.get_text("recv_chk_timestamp_tooltip"))
+        self.recv_timestamp_chk.setText(lang_manager.get_text("recv_chk_timestamp"))
+        self.recv_timestamp_chk.setToolTip(lang_manager.get_text("recv_chk_timestamp_tooltip"))
 
-        self.rx_pause_chk.setText(lang_manager.get_text("recv_chk_pause"))
-        self.rx_pause_chk.setToolTip(lang_manager.get_text("recv_chk_pause_tooltip"))
+        self.recv_pause_chk.setText(lang_manager.get_text("recv_chk_pause"))
+        self.recv_pause_chk.setToolTip(lang_manager.get_text("recv_chk_pause_tooltip"))
 
-        self.save_rx_log_btn.setText(lang_manager.get_text("recv_btn_save"))
-        self.save_rx_log_btn.setToolTip(lang_manager.get_text("recv_btn_save_tooltip"))
+        self.recv_save_log_btn.setText(lang_manager.get_text("recv_btn_save"))
+        self.recv_save_log_btn.setToolTip(lang_manager.get_text("recv_btn_save_tooltip"))
 
-        self.rx_search_input.setPlaceholderText(lang_manager.get_text("recv_input_search_placeholder"))
-        self.rx_search_input.setToolTip(lang_manager.get_text("recv_input_search_tooltip"))
+        self.recv_search_input.setPlaceholderText(lang_manager.get_text("recv_input_search_placeholder"))
+        self.recv_search_input.setToolTip(lang_manager.get_text("recv_input_search_tooltip"))
 
-        self.rx_search_prev_btn.setToolTip(lang_manager.get_text("recv_btn_search_prev_tooltip"))
-        self.rx_search_next_btn.setToolTip(lang_manager.get_text("recv_btn_search_next_tooltip"))
+        self.recv_search_prev_btn.setToolTip(lang_manager.get_text("recv_btn_search_prev_tooltip"))
+        self.recv_search_next_btn.setToolTip(lang_manager.get_text("recv_btn_search_next_tooltip"))
 
-        self.rx_log_lbl.setText(lang_manager.get_text("recv_lbl_log"))
+        self.recv_log_title.setText(lang_manager.get_text("recv_title"))
 
-        self.log_txt.setToolTip(lang_manager.get_text("recv_lbl_log"))
-        self.log_txt.setPlaceholderText(lang_manager.get_text("recv_txt_log_placeholder"))
+        self.recv_log_txt.setToolTip(lang_manager.get_text("recv_txt_log_tooltip"))
+        self.recv_log_txt.setPlaceholderText(lang_manager.get_text("recv_txt_log_placeholder"))
 
-    def on_rx_search_next_clicked(self) -> None:
+    def on_recv_search_next_clicked(self) -> None:
         """다음 검색 결과를 찾습니다."""
-        text = self.rx_search_input.text()
+        text = self.recv_search_input.text()
         if not text:
             return
 
@@ -167,24 +168,24 @@ class ReceivedAreaWidget(QWidget):
         except re.error:
             pass # 정규식 오류 시 일반 텍스트로 취급
 
-        found = self.log_txt.find(text, options)
+        found = self.recv_log_txt.find(text, options)
         if not found:
             # 처음부터 다시 검색 (Wrap around)
-            self.log_txt.moveCursor(QTextCursor.Start)
-            self.log_txt.find(text, options)
+            self.recv_log_txt.moveCursor(QTextCursor.Start)
+            self.recv_log_txt.find(text, options)
 
-    def on_rx_search_prev_clicked(self) -> None:
+    def on_recv_search_prev_clicked(self) -> None:
         """이전 검색 결과를 찾습니다."""
-        text = self.rx_search_input.text()
+        text = self.recv_search_input.text()
         if not text:
             return
 
         options = QTextDocument.FindBackward
-        found = self.log_txt.find(text, options)
+        found = self.recv_log_txt.find(text, options)
         if not found:
             # 끝에서부터 다시 검색 (Wrap around)
-            self.log_txt.moveCursor(QTextCursor.End)
-            self.log_txt.find(text, options)
+            self.recv_log_txt.moveCursor(QTextCursor.End)
+            self.recv_log_txt.find(text, options)
 
     def append_data(self, data: bytes) -> None:
         """
@@ -222,24 +223,24 @@ class ReceivedAreaWidget(QWidget):
             return
 
         text = "".join(self.batch_buffer)
-        self.log_txt.moveCursor(QTextCursor.End)
-        self.log_txt.insertHtml(text)  # 색상 지원을 위해 insertHtml 사용
+        self.recv_log_txt.moveCursor(QTextCursor.End)
+        self.recv_log_txt.insertHtml(text)  # 색상 지원을 위해 insertHtml 사용
         self.batch_buffer.clear()
 
         # 자동 스크롤 (Auto Scroll)
-        sb = self.log_txt.verticalScrollBar()
+        sb = self.recv_log_txt.verticalScrollBar()
         if sb:
             sb.setValue(sb.maximum())
 
         # 필요 시 오래된 로그 삭제 (Trim)
         self._trim_if_needed()
 
-    def on_clear_rx_log_clicked(self) -> None:
+    def on_clear_recv_log_clicked(self) -> None:
         """로그 뷰와 버퍼를 초기화합니다."""
-        self.log_txt.clear()
+        self.recv_log_txt.clear()
         self.batch_buffer.clear()
 
-    def on_rx_hex_mode_changed(self, state: int) -> None:
+    def on_recv_hex_mode_changed(self, state: int) -> None:
         """
         HEX 모드 토글을 처리합니다.
 
@@ -248,7 +249,7 @@ class ReceivedAreaWidget(QWidget):
         """
         self.hex_mode = (state == Qt.Checked)
 
-    def on_rx_timestamp_changed(self, state: int) -> None:
+    def on_recv_timestamp_changed(self, state: int) -> None:
         """
         타임스탬프 토글을 처리합니다.
 
@@ -257,7 +258,7 @@ class ReceivedAreaWidget(QWidget):
         """
         self.timestamp_enabled = (state == Qt.Checked)
 
-    def on_rx_pause_changed(self, state: int) -> None:
+    def on_recv_pause_changed(self, state: int) -> None:
         """
         일시 정지 토글을 처리합니다.
 
@@ -270,10 +271,10 @@ class ReceivedAreaWidget(QWidget):
         """
         로그 라인 수가 최대치를 초과하면 상위 trim_chunk_size 비율로 선택 및 삭제합니다.
         """
-        document = self.log_txt.document()
+        document = self.recv_log_txt.document()
         if document.blockCount() > self.max_lines:
             # 사용자가 스크롤 중인지 확인
-            sb = self.log_txt.verticalScrollBar()
+            sb = self.recv_log_txt.verticalScrollBar()
             if sb:
                 at_bottom = sb.value() >= (sb.maximum() - 10)
 
@@ -306,7 +307,7 @@ class ReceivedAreaWidget(QWidget):
             "hex_mode": self.hex_mode,
             "timestamp": self.timestamp_enabled,
             "paused": self.paused,
-            "search_text": self.rx_search_input.text()
+            "search_text": self.recv_search_input.text()
         }
         return state
 
@@ -321,8 +322,8 @@ class ReceivedAreaWidget(QWidget):
             return
 
         # 체크박스 상태 업데이트 (시그널 발생으로 내부 변수도 업데이트됨)
-        self.rx_hex_chk.setChecked(state.get("hex_mode", False))
-        self.rx_timestamp_chk.setChecked(state.get("timestamp", False))
-        self.rx_pause_chk.setChecked(state.get("paused", False))
-        self.rx_search_input.setText(state.get("search_text", ""))
+        self.recv_hex_chk.setChecked(state.get("hex_mode", False))
+        self.recv_timestamp_chk.setChecked(state.get("timestamp", False))
+        self.recv_pause_chk.setChecked(state.get("paused", False))
+        self.recv_search_input.setText(state.get("search_text", ""))
 

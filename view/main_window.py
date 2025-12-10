@@ -25,17 +25,30 @@ class MainWindow(QMainWindow):
 
     setting_save_requested = pyqtSignal(dict)
 
-    def __init__(self) -> None:
-        """MainWindow를 초기화하고 UI 및 설정을 로드합니다."""
+    def __init__(self, app_config=None) -> None:
+        """
+        MainWindow를 초기화하고 UI 및 설정을 로드합니다.
+
+        Args:
+            app_config: AppConfig 인스턴스. None이면 기본 경로 사용 (하위 호환성)
+        """
         super().__init__()
 
-        # 설정 관리자 초기화
-        self.settings = SettingsManager()
+        # AppConfig 저장
+        self.app_config = app_config
 
-        # 테마 관리자 초기화 (인스턴스 기반)
-        self.theme_manager = ThemeManager()
+        # 설정 관리자 초기화 (AppConfig 전달)
+        self.settings = SettingsManager(app_config)
 
-        # 언어 관리자 초기화 및 설정에서 언어 로드
+        # 테마 관리자 초기화 (AppConfig 전달)
+        self.theme_manager = ThemeManager(app_config)
+
+        # 언어 관리자 초기화 및 설정에서 언어 로드 (AppConfig 전달)
+        # Note: lang_manager는 싱글톤이므로 첫 초기화 시에만 app_config 전달
+        if app_config is not None:
+            from view.tools.lang_manager import LangManager
+            LangManager(app_config)
+
         lang = self.settings.get('settings.language', 'en')
         lang_manager.set_language(lang)
         lang_manager.language_changed.connect(self.on_language_changed)
@@ -153,7 +166,7 @@ class MainWindow(QMainWindow):
              current_index = self.left_section.port_tabs.currentIndex()
              current_widget = self.left_section.port_tabs.widget(current_index)
              if isinstance(current_widget, PortPanel):
-                 current_widget.received_area.on_clear_rx_log_clicked()
+                 current_widget.received_area.on_clear_recv_log_clicked()
 
     def switch_theme(self, theme_name: str) -> None:
         """

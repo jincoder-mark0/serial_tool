@@ -20,10 +20,16 @@ class ThemeManager:
         "Darwin": ("Menlo", 9)  # macOS
     }
 
-    def __init__(self):
-        """ThemeManager를 초기화하고 플랫폼별 기본 폰트를 설정합니다."""
+    def __init__(self, app_config=None):
+        """
+        ThemeManager를 초기화하고 플랫폼별 기본 폰트를 설정합니다.
+
+        Args:
+            app_config: AppConfig 인스턴스. None이면 기본 경로 사용 (하위 호환성)
+        """
         self._current_theme = "dark"
         self._app = None
+        self._app_config = app_config
 
         # 플랫폼 확인
         system = platform.system()
@@ -46,16 +52,23 @@ class ThemeManager:
         Returns:
             str: 결합된 QSS 문자열.
         """
-        common_path = "resources/themes/common.qss"
-        theme_files = {
-            "dark": "resources/themes/dark_theme.qss",
-            "light": "resources/themes/light_theme.qss"
-        }
+        if self._app_config is not None:
+            # AppConfig가 제공되었으면 그것을 사용
+            common_path = self._app_config.get_theme_file('common')
+            theme_path = self._app_config.get_theme_file(theme_name)
+        else:
+            # 하위 호환성: 기존 경로 사용
+            common_path = "resources/themes/common.qss"
+            theme_files = {
+                "dark": "resources/themes/dark_theme.qss",
+                "light": "resources/themes/light_theme.qss"
+            }
+            theme_path = theme_files.get(theme_name)
 
         qss_content = ""
 
         # 1. 공통 QSS 로드
-        if os.path.exists(common_path):
+        if common_path and os.path.exists(common_path):
             try:
                 with open(common_path, "r", encoding="utf-8") as f:
                     qss_content += f.read() + "\n"
@@ -65,15 +78,14 @@ class ThemeManager:
             logger.warning(f"Common theme file not found: {common_path}")
 
         # 2. 특정 테마 QSS 로드
-        qss_path = theme_files.get(theme_name)
-        if qss_path and os.path.exists(qss_path):
+        if theme_path and os.path.exists(theme_path):
             try:
-                with open(qss_path, "r", encoding="utf-8") as f:
+                with open(theme_path, "r", encoding="utf-8") as f:
                     qss_content += f.read()
             except Exception as e:
                 logger.error(f"Error loading theme {theme_name}: {e}")
         else:
-            logger.warning(f"Theme file not found: {qss_path}")
+            logger.warning(f"Theme file not found: {theme_path}")
 
         # 3. 폴백 스타일시트 (파일 로드 실패 시)
         if not qss_content.strip():
@@ -321,21 +333,29 @@ class ThemeManager:
         Returns:
             QIcon: 테마에 맞는 QIcon 객체.
         """
-        # 테마에 따른 접미사 결정
-        # 다크 테마 -> 밝은 아이콘 필요 -> _dark 접미사 (또는 _white)
-        # 라이트 테마 -> 어두운 아이콘 필요 -> _light 접미사 (또는 _black)
-        # 여기서는 파일명 규칙을 {name}_{theme}.svg로 가정하고,
-        # theme 값은 현재 테마 이름("dark", "light")을 그대로 사용
+        if self._app_config is not None:
+            # AppConfig가 제공되었으면 그것을 사용
+            icon_path = self._app_config.get_icon_path(name, self._current_theme)
 
-        icon_path = f"resources/icons/{name}_{self._current_theme}.svg"
+            if not os.path.exists(icon_path):
+                # 폴백: 테마 접미사 없이 시도
+                fallback_path = self._app_config.get_icon_path(name)
+                if os.path.exists(fallback_path):
+                    return QIcon(str(fallback_path))
+                return QIcon()
 
-        if not os.path.exists(icon_path):
-            # 폴백: 테마 접미사 없이 시도
-            fallback_path = f"resources/icons/{name}.svg"
-            if os.path.exists(fallback_path):
-                return QIcon(fallback_path)
-            # 파일이 없으면 빈 아이콘 반환
-            return QIcon()
+            return QIcon(str(icon_path))
+        else:
+            # 하위 호환성: 기존 경로 사용
+            icon_path = f"resources/icons/{name}_{self._current_theme}.svg"
 
-        return QIcon(icon_path)
+            if not os.path.exists(icon_path):
+                # 폴백: 테마 접미사 없이 시도
+                fallback_path = f"resources/icons/{name}.svg"
+                if os.path.exists(fallback_path):
+                    return QIcon(fallback_path)
+                # 파일이 없으면 빈 아이콘 반환
+                return QIcon()
+
+            return QIcon(icon_path)
 

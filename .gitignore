@@ -150,7 +150,7 @@ Thumbs.db
 # ETC
 *.bak
 *복사본*
-*repomix*
+repomix-output.xml
 
 # Ignore folder (practice/test files)
 ignore/

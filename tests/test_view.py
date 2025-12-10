@@ -122,7 +122,7 @@ class ViewTestWindow(QMainWindow):
         button_layout.addWidget(btn_many)
 
         btn_clear = QPushButton("Clear")
-        btn_clear.clicked.connect(self.received_area.on_clear_rx_log_clicked)
+        btn_clear.clicked.connect(self.received_area.on_clear_recv_log_clicked)
         button_layout.addWidget(btn_clear)
 
         layout.addLayout(button_layout)

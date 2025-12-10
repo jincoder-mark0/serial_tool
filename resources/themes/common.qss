@@ -199,3 +199,9 @@ QLineEdit.fixed-font {
     font-size: 9pt;
 }
 
+/* Section Title - Similar to QGroupBox::title */
+QLabel[class="section-title"] {
+    font-weight: bold;
+    padding: 0 5px;
+    margin-bottom: 2px;
+}

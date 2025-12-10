@@ -17,6 +17,8 @@ class StatusAreaWidget(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
+        self.status_log_txt = None
+        self.status_log_title = None
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
@@ -28,25 +30,26 @@ class StatusAreaWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
 
-        self.log_lbl = QLabel(lang_manager.get_text("status_lbl_log"))
-        # log_lbl.setStyleSheet("font-weight: bold; font-size: 10px;")
+        self.status_log_title = QLabel(lang_manager.get_text("status_title"))
+        self.status_log_title.setProperty("class", "section-title")  # 섹션 타이틀 스타일 적용
+        # status_log_title.setStyleSheet("font-weight: bold; font-size: 10px;")
 
-        self.log_txt = QTextEdit()
-        self.log_txt.setReadOnly(True)
-        self.log_txt.setMaximumHeight(100) # 높이 제한
-        self.log_txt.setToolTip(lang_manager.get_text("status_txt_log_tooltip"))
-        self.log_txt.setPlaceholderText(lang_manager.get_text("status_txt_log_placeholder"))
-        self.log_txt.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
+        self.status_log_txt = QTextEdit()
+        self.status_log_txt.setReadOnly(True)
+        self.status_log_txt.setMaximumHeight(100) # 높이 제한
+        self.status_log_txt.setToolTip(lang_manager.get_text("status_txt_log_tooltip"))
+        self.status_log_txt.setPlaceholderText(lang_manager.get_text("status_txt_log_placeholder"))
+        self.status_log_txt.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
 
-        layout.addWidget(self.log_lbl)
-        layout.addWidget(self.log_txt)
+        layout.addWidget(self.status_log_title)
+        layout.addWidget(self.status_log_txt)
         self.setLayout(layout)
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.log_lbl.setText(lang_manager.get_text("status_lbl_log"))
-        self.log_txt.setToolTip(lang_manager.get_text("status_txt_log_tooltip"))
-        self.log_txt.setPlaceholderText(lang_manager.get_text("status_txt_log_placeholder"))
+        self.status_log_title.setText(lang_manager.get_text("status_title"))
+        self.status_log_txt.setToolTip(lang_manager.get_text("status_txt_log_tooltip"))
+        self.status_log_txt.setPlaceholderText(lang_manager.get_text("status_txt_log_placeholder"))
 
     def log(self, message: str, level: str = "INFO") -> None:
         """
@@ -67,8 +70,8 @@ class StatusAreaWidget(QWidget):
 
         # 색상 적용을 위한 HTML 포맷팅
         formatted_msg = f'<span style="color:gray;">[{timestamp}]</span> <span style="color:{color};">[{level}]</span> {message}'
-        self.log_txt.append(formatted_msg)
+        self.status_log_txt.append(formatted_msg)
 
     def clear(self) -> None:
         """로그를 초기화합니다."""
-        self.log_txt.clear()
+        self.status_log_txt.clear()

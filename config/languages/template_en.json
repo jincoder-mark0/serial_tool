@@ -147,12 +147,12 @@
   "recv_chk_timestamp_tooltip": "TODO: recv_chk_timestamp_tooltip",
   "recv_input_search_placeholder": "TODO: recv_input_search_placeholder",
   "recv_input_search_tooltip": "TODO: recv_input_search_tooltip",
-  "recv_lbl_log": "TODO: recv_lbl_log",
+  "recv_title": "TODO: recv_title",
   "recv_txt_log_placeholder": "TODO: recv_txt_log_placeholder",
   // ============================================
   // Status Area Widget (widgets/status_area.py),
   // ============================================
-  "status_lbl_log": "TODO: status_lbl_log",
+  "status_title": "TODO: status_title",
   "status_txt_log_placeholder": "TODO: status_txt_log_placeholder",
   "status_txt_log_tooltip": "TODO: status_txt_log_tooltip",
   // ============================================
@@ -218,7 +218,7 @@
   "right_macro_panel_tooltip": "TODO: right_macro_panel_tooltip",
   "right_packet_inspector_tooltip": "TODO: right_packet_inspector_tooltip",
   "right_tab_macro_list": "TODO: right_tab_macro_list",
-  "right_tab_inspector": "TODO: right_tab_inspector",
+  "right_tab_packet": "TODO: right_tab_packet",
   "right_tooltip_macro_list": "TODO: right_tooltip_macro_list",
-  "right_tooltip_inspector": "TODO: right_tooltip_inspector"
+  "right_tooltip_packet": "TODO: right_tooltip_packet"
 }

@@ -55,10 +55,10 @@ def test_received_area_translation(app, qtbot):
     qtbot.addWidget(widget)
 
     lang_manager.set_language('en')
-    assert widget.clear_rx_log_btn.text() == "Clear"
+    assert widget.recv_clear_log_btn.text() == "Clear"
 
     lang_manager.set_language('ko')
-    assert widget.clear_rx_log_btn.text() == "지우기"
+    assert widget.recv_clear_log_btn.text() == "지우기"
 
 def test_packet_inspector_translation(app, qtbot):
     widget = PacketInspectorWidget()
@@ -87,10 +87,10 @@ def test_status_area_translation(app, qtbot):
     qtbot.addWidget(widget)
 
     lang_manager.set_language('en')
-    assert widget.log_lbl.text() == "Status Log"
+    assert widget.status_log_title.text() == "Status Log"
 
     lang_manager.set_language('ko')
-    assert widget.log_lbl.text() == "상태 로그"
+    assert widget.status_log_title.text() == "상태 로그"
 
 def test_left_panel_translation(app, qtbot):
     widget = MainLeftSection()

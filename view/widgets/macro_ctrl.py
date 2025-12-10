@@ -112,7 +112,8 @@ class MacroCtrlWidget(QWidget):
 
         execution_layout.addWidget(self.cmd_repeat_start_btn, 1, 0, 1, 2)
         execution_layout.addWidget(self.cmd_repeat_stop_btn, 1, 2)
-        execution_layout.addWidget(self.cmd_repeat_count_lbl, 1, 3)
+        execution_layout.addWidget(self.cmd_repeat_pause_btn, 1, 3)
+        execution_layout.addWidget(self.cmd_repeat_count_lbl, 1, 4)
 
         self.execution_settings_grp.setLayout(execution_layout)
 

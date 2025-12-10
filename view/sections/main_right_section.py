@@ -38,21 +38,21 @@ class MainRightSection(QWidget):
         self.macro_panel.setToolTip(lang_manager.get_text("right_tooltip_macro_list"))
 
         self.packet_inspector = PacketInspectorPanel()
-        self.packet_inspector.setToolTip(lang_manager.get_text("right_tooltip_inspector"))
+        self.packet_inspector.setToolTip(lang_manager.get_text("right_tooltip_packet"))
 
         self.tabs.addTab(self.macro_panel, lang_manager.get_text("right_tab_macro_list"))
-        self.tabs.addTab(self.packet_inspector, lang_manager.get_text("right_tab_inspector"))
+        self.tabs.addTab(self.packet_inspector, lang_manager.get_text("right_tab_packet"))
 
         layout.addWidget(self.tabs)
         self.setLayout(layout)
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.macro_panel.setToolTip(lang_manager.get_text("right_macro_panel_tooltip"))
-        self.packet_inspector.setToolTip(lang_manager.get_text("right_packet_inspector_tooltip"))
+        self.macro_panel.setToolTip(lang_manager.get_text("right_tooltip_macro_list"))
+        self.packet_inspector.setToolTip(lang_manager.get_text("right_tooltip_packet"))
 
         self.tabs.setTabText(0, lang_manager.get_text("right_tab_macro_list"))
-        self.tabs.setTabText(1, lang_manager.get_text("right_tab_inspector"))
+        self.tabs.setTabText(1, lang_manager.get_text("right_tab_packet"))
 
     def save_state(self) -> None:
         """패널 상태를 저장합니다."""

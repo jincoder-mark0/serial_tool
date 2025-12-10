@@ -16,18 +16,30 @@ class LangManager(QObject):
     language_changed = pyqtSignal(str)
 
     _instance = None
+    _app_config = None
 
-    def __new__(cls):
+    def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(LangManager, cls).__new__(cls)
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self):
+    def __init__(self, app_config=None):
+        """
+        LangManager를 초기화합니다.
+
+        Args:
+            app_config: AppConfig 인스턴스. None이면 기본 경로 사용 (하위 호환성)
+        """
         if self._initialized:
             return
         super().__init__()
         self._initialized = True
+
+        # AppConfig 저장 (첫 초기화 시에만)
+        if app_config is not None:
+            LangManager._app_config = app_config
+
         self.current_language = 'en'
         self.resources: Dict[str, Dict[str, str]] = {}
         self.load_languages()
@@ -36,9 +48,14 @@ class LangManager(QObject):
         """
         config/languages 디렉토리에서 언어 파일(*.json)을 로드합니다.
         """
-        # 프로젝트 루트 경로 계산 (view/lang_manager.py 기준)
-        base_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
-        lang_dir = os.path.join(base_dir, 'config', 'languages')
+        if LangManager._app_config is not None:
+            # AppConfig가 제공되었으면 그것을 사용
+            lang_dir = LangManager._app_config.languages_dir
+        else:
+            # 하위 호환성: AppConfig가 없으면 기존 방식 사용
+            # view/tools/lang_manager.py -> view/tools -> view -> project_root
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            lang_dir = os.path.join(base_dir, 'config', 'languages')
 
         if not os.path.exists(lang_dir):
             logger.error(f"Language directory not found: {lang_dir}")

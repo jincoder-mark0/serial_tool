@@ -7,27 +7,36 @@ try:
 except ImportError:
     import json
 from pathlib import Path
-from typing import Dict, Any
-import os
+from typing import Dict, Any, Optional
 
 class SettingsManager:
     """
     애플리케이션 설정 관리자 클래스입니다.
-    config/settings.json에서 기본 설정을 로드하고, 사용자별 설정을 관리합니다.
+    AppConfig에서 제공하는 경로를 사용하여 설정을 로드하고 관리합니다.
     """
 
     _instance = None
     _initialized = False
+    _app_config = None
 
-    def __new__(cls):
+    def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(SettingsManager, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self):
-        """SettingsManager를 초기화하고 설정을 로드합니다."""
+    def __init__(self, app_config=None):
+        """
+        SettingsManager를 초기화하고 설정을 로드합니다.
+
+        Args:
+            app_config: AppConfig 인스턴스. None이면 기본 경로 사용 (하위 호환성)
+        """
         if self._initialized:
             return
+
+        # AppConfig 저장 (첫 초기화 시에만)
+        if app_config is not None:
+            SettingsManager._app_config = app_config
 
         self.settings: Dict[str, Any] = {}
         self.config_path = self._get_config_path()
@@ -37,22 +46,27 @@ class SettingsManager:
         self.load_settings()
         self._initialized = True
 
-    @staticmethod
-    def _get_config_path() -> Path:
+    def _get_config_path(self) -> Path:
         """
         기본 설정 파일의 경로를 반환합니다.
 
         Returns:
             Path: config/settings.json 파일의 Path 객체.
         """
-        if hasattr(os, '_MEIPASS'):
-            # PyInstaller 번들 환경
-            base_path = Path(os._MEIPASS)
+        if SettingsManager._app_config is not None:
+            # AppConfig가 제공되었으면 그것을 사용
+            return SettingsManager._app_config.settings_file
         else:
-            # 개발 모드 환경
-            base_path = Path(__file__).parent.parent
+            # 하위 호환성: AppConfig가 없으면 기존 방식 사용
+            import os
+            if hasattr(os, '_MEIPASS'):
+                # PyInstaller 번들 환경
+                base_path = Path(os._MEIPASS)
+            else:
+                # 개발 모드 환경
+                base_path = Path(__file__).parent.parent
 
-        return base_path / 'config' / 'settings.json'
+            return base_path / 'config' / 'settings.json'
 
     def _get_user_settings_path(self) -> Path:
         """
@@ -78,6 +92,7 @@ class SettingsManager:
             self.settings = self._get_fallback_settings()
             # 기본 설정으로 파일 생성
             self.save_settings()
+
 
     def _merge_settings(self, user_settings: Dict[str, Any]) -> None:
         """

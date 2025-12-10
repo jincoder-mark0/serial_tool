@@ -29,7 +29,7 @@ class PortPresenter(QObject):
 
         # 설정에서 max_lines 읽어서 적용
         settings = SettingsManager()
-        max_lines = settings.get('settings.rx_max_lines', 2000)
+        max_lines = settings.get('settings.recv_max_lines', 2000)
         if self.current_port_panel and hasattr(self.current_port_panel, 'received_area'):
             self.current_port_panel.received_area.set_max_lines(max_lines)
 

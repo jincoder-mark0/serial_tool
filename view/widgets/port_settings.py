@@ -32,8 +32,6 @@ class PortSettingsWidget(QGroupBox):
         self.stopbits_lbl = None
         self.parity_lbl = None
         self.datasize_lbl = None
-        self.rts_check = None
-        self.dtr_check = None
         self.flow_combo = None
         self.stopbits_combo = None
         self.parity_combo = None
@@ -105,7 +103,7 @@ class PortSettingsWidget(QGroupBox):
 
         main_layout.addLayout(row1_layout)
 
-        # 2행: Data | Parity | Stop | Flow | DTR | RTS
+        # 2행: Data | Parity | Stop | Flow
         row2_layout = QHBoxLayout()
         row2_layout.setSpacing(5)
 
@@ -134,12 +132,6 @@ class PortSettingsWidget(QGroupBox):
         self.flow_combo.setToolTip(lang_manager.get_text("port_combo_flow_tooltip"))
         self.flow_combo.setMinimumWidth(70)
 
-        # 제어 신호
-        self.dtr_check = QCheckBox("DTR")
-        self.dtr_check.setChecked(True)
-        self.rts_check = QCheckBox("RTS")
-        self.rts_check.setChecked(True)
-
         self.datasize_lbl = QLabel(lang_manager.get_text("port_lbl_datasize"))
         self.parity_lbl = QLabel(lang_manager.get_text("port_lbl_parity"))
         self.stopbits_lbl = QLabel(lang_manager.get_text("port_lbl_stop"))
@@ -153,8 +145,6 @@ class PortSettingsWidget(QGroupBox):
         row2_layout.addWidget(self.stopbits_combo)
         row2_layout.addWidget(self.flow_lbl)
         row2_layout.addWidget(self.flow_combo)
-        row2_layout.addWidget(self.dtr_check)
-        row2_layout.addWidget(self.rts_check)
         row2_layout.addStretch()
 
         main_layout.addLayout(row2_layout)
@@ -202,8 +192,6 @@ class PortSettingsWidget(QGroupBox):
                 "parity": self.parity_combo.currentText(),
                 "stopbits": float(self.stopbits_combo.currentText()),
                 "flow": self.flow_combo.currentText(),
-                "dtr": self.dtr_check.isChecked(),
-                "rts": self.rts_check.isChecked()
             }
             self.port_open_requested.emit(config)
             # self.set_connection_state(PortState.CONNECTED)
@@ -298,8 +286,6 @@ class PortSettingsWidget(QGroupBox):
             "parity": self.parity_combo.currentText(),
             "stopbits": self.stopbits_combo.currentText(),
             "flow": self.flow_combo.currentText(),
-            "dtr": self.dtr_check.isChecked(),
-            "rts": self.rts_check.isChecked()
         }
         return state
 
@@ -325,6 +311,5 @@ class PortSettingsWidget(QGroupBox):
         self.parity_combo.setCurrentText(state.get("parity", "N"))
         self.stopbits_combo.setCurrentText(str(state.get("stopbits", "1")))
         self.flow_combo.setCurrentText(state.get("flow", "None"))
-        self.dtr_check.setChecked(state.get("dtr", True))
-        self.rts_check.setChecked(state.get("rts", True))
+
 

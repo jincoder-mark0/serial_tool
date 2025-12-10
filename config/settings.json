@@ -8,7 +8,7 @@
     "proportional_font_size": 9,
     "fixed_font_family": "Consolas",
     "fixed_font_size": 9,
-    "right_panel_visible": false,
+    "right_panel_visible": true,
     "cmd_prefix": "",
     "cmd_suffix": "",
     "port_baudrate": 115200,
@@ -16,11 +16,11 @@
     "port_scan_interval": 5000
   },
   "ui": {
-    "window_width": 907,
+    "window_width": 977,
     "window_height": 899,
-    "window_x": 414,
-    "window_y": 78,
-    "splitter_state": "AAAA/wAAAAEAAAACAAADgQAAAZAB/////wEAAAABAA=="
+    "window_x": 474,
+    "window_y": 10,
+    "splitter_state": "AAAA/wAAAAEAAAACAAACMgAAAZAB/////wEAAAABAA=="
   },
   "ports": {
     "default_config": {
@@ -40,8 +40,6 @@
           "parity": "N",
           "stopbits": "1",
           "flow": "None",
-          "dtr": true,
-          "rts": true
         },
         "received_area": {
           "hex_mode": false,

@@ -79,8 +79,8 @@ QPushButton#add_cmd_btn { qproperty-icon: url(resources/icons/add_white.svg); }
 QPushButton#del_cmd_btn { qproperty-icon: url(resources/icons/delete_white.svg); }
 QPushButton#up_cmd_btn { qproperty-icon: url(resources/icons/up_white.svg); }
 QPushButton#down_cmd_btn { qproperty-icon: url(resources/icons/down_white.svg); }
-QPushButton#rx_search_prev_btn { qproperty-icon: url(resources/icons/find_prev_white.svg); }
-QPushButton#rx_search_next_btn { qproperty-icon: url(resources/icons/find_next_white.svg); }
+QPushButton#recv_search_prev_btn { qproperty-icon: url(resources/icons/find_prev_white.svg); }
+QPushButton#recv_search_next_btn { qproperty-icon: url(resources/icons/find_next_white.svg); }
 
 /* QLineEdit, QTextEdit */
 QLineEdit, QTextEdit, QPlainTextEdit {
@@ -185,7 +185,8 @@ QGroupBox {
     border-color: #404040;
 }
 
-QGroupBox::title {
+QGroupBox::title,
+QLabel[class="section-title"] {
     color: #4CAF50;
 }
 
