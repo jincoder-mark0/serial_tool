@@ -170,10 +170,9 @@ class MainWindow(QMainWindow):
     def clear_log(self) -> None:
         """현재 활성화된 탭의 로그를 지웁니다."""
         if hasattr(self, 'left_section'):
-             current_index = self.left_section.port_tabs.currentIndex()
-             current_widget = self.left_section.port_tabs.widget(current_index)
-             if isinstance(current_widget, PortPanel):
-                 current_widget.received_area.on_clear_recv_log_clicked()
+            current_index = self.left_section.port_tabs.currentIndex()
+            current_widget = self.left_section.port_tabs.widget(current_index)
+            current_widget.received_area.on_clear_recv_log_clicked()
 
     def switch_theme(self, theme_name: str) -> None:
         """

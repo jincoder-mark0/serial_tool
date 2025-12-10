@@ -7,7 +7,7 @@ try:
 except ImportError:
     import json
 from pathlib import Path
-from typing import Dict, Any, Optional
+from typing import Dict, Any
 
 class SettingsManager:
     """
@@ -39,13 +39,14 @@ class SettingsManager:
             SettingsManager._app_config = app_config
 
         self.settings: Dict[str, Any] = {}
-        self.config_path = self._get_config_path()
+        self.config_path = self._get_config_path
         self.user_settings_path = self._get_user_settings_path()
 
         # 설정 로드
         self.load_settings()
         self._initialized = True
 
+    @property
     def _get_config_path(self) -> Path:
         """
         기본 설정 파일의 경로를 반환합니다.

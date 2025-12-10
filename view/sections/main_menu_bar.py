@@ -1,6 +1,5 @@
 from PyQt5.QtWidgets import QMenuBar, QAction
 from PyQt5.QtCore import pyqtSignal
-from pygments.lexers.sql import language_re
 
 from view.tools.lang_manager import lang_manager
 

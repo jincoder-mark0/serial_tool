@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton,
-    QLabel, QGroupBox, QCheckBox
+    QLabel, QGroupBox
 )
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIntValidator
