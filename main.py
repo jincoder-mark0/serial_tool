@@ -14,6 +14,8 @@ from config import AppConfig
 from view.main_window import MainWindow
 from presenter.main_presenter import MainPresenter
 
+from core.logger import logger
+
 def setup_logging() -> None:
     """
     로깅 설정을 초기화합니다.
@@ -35,6 +37,10 @@ def main() -> None:
 
     # 애플리케이션 설정 초기화
     app_config = AppConfig()
+
+    # 핵심 모듈에 설정 주입
+    logger.configure(app_config)
+    ColorManager(app_config) # 싱글톤 초기화
 
     # 경로 검증
     path_status = app_config.validate_paths()

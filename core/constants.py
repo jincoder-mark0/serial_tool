@@ -51,3 +51,27 @@ DEFAULT_LOG_MAX_LINES: int = 2000
 
 # 로그 삭제 청크 크기 (Trim 시 제거할 비율)
 TRIM_CHUNK_RATIO: float = 0.2  # 20%
+
+# ==========================================
+# Performance & Timings
+# ==========================================
+WORKER_IDLE_WAIT_MS: int = 1      # 데이터 없을 때 대기 시간 (CPU 방어)
+WORKER_BUSY_WAIT_US: int = 100    # 데이터 처리 중 짧은 대기 시간
+UI_REFRESH_INTERVAL_MS: int = 50  # 로그 뷰 갱신 주기
+
+# ==========================================
+# UI Limits & Defaults
+# ==========================================
+MAX_PACKET_SIZE: int = 4096
+MIN_SCAN_INTERVAL_MS: int = 1000
+MAX_SCAN_INTERVAL_MS: int = 60000
+DEFAULT_MACRO_DELAY_MS: int = 1000
+
+# ==========================================
+# Colors (For Text Logs)
+# ==========================================
+LOG_COLOR_TIMESTAMP: str = "#9E9E9E"
+LOG_COLOR_INFO: str = "gray"
+LOG_COLOR_ERROR: str = "#F44336"
+LOG_COLOR_WARN: str = "#FF9800"
+LOG_COLOR_SUCCESS: str = "#4CAF50"

@@ -53,6 +53,9 @@ class AppConfig:
         # 아이콘 경로
         self.icons_dir = self.resources_dir / 'icons'
 
+        # 로그 경로
+        self.logs_dir = self.base_dir / 'logs'
+
     def get_language_file(self, lang_code: str) -> Path:
         """
         언어 코드에 해당하는 언어 파일 경로를 반환합니다.
@@ -108,7 +111,8 @@ class AppConfig:
             'settings_file': self.settings_file.exists(),
             'languages_dir': self.languages_dir.exists(),
             'themes_dir': self.themes_dir.exists(),
-            'icons_dir': self.icons_dir.exists()
+            'icons_dir': self.icons_dir.exists(),
+            'logs_dir': self.logs_dir.exists()
         }
 
     def __repr__(self) -> str:

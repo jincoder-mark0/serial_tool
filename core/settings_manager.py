@@ -1,6 +1,7 @@
 """
 설정 관리자 (Settings Manager)
 애플리케이션 설정을 로드하고 저장합니다.
+AppConfig를 통해 경로를 관리하며, 싱글톤 패턴을 따릅니다.
 """
 try:
     import commentjson as json
@@ -40,7 +41,9 @@ class SettingsManager:
             SettingsManager._app_config = app_config
 
         self.settings: Dict[str, Any] = {}
+        # 프로퍼티를 통해 경로 접근
         self.config_path = self._get_config_path
+        # 개발 모드에서는 설정 파일과 사용자 설정 파일이 동일
         self.user_settings_path = self._get_user_settings_path()
 
         # 설정 로드
@@ -65,7 +68,7 @@ class SettingsManager:
                 # PyInstaller 번들 환경
                 base_path = Path(os._MEIPASS)
             else:
-                # 개발 모드 환경
+                # 개발 모드 환경 (core/ -> project_root/)
                 base_path = Path(__file__).parent.parent
 
             return base_path / 'config' / 'settings.json'
@@ -73,18 +76,17 @@ class SettingsManager:
     def _get_user_settings_path(self) -> Path:
         """
         사용자 설정 파일의 경로를 반환합니다.
-        개발 모드에서는 config/settings.json을 직접 사용합니다.
+        (현재는 기본 설정 파일과 동일한 경로를 사용합니다)
 
         Returns:
             Path: 사용자 설정 파일의 Path 객체.
         """
-        # 개발 모드: config/settings.json을 직접 사용
         return self.config_path
 
     def load_settings(self) -> None:
         """
         설정을 로드합니다.
-        config/settings.json 파일을 읽어옵니다.
+        파일이 없거나 손상된 경우 기본값(Fallback)을 사용하고 파일을 재생성합니다.
         """
         try:
             with open(self.config_path, 'r', encoding='utf-8') as f:
@@ -117,6 +119,10 @@ class SettingsManager:
         현재 설정을 config/settings.json 파일에 저장합니다.
         """
         try:
+            # 상위 디렉토리가 없으면 생성 (안전장치)
+            if not self.config_path.parent.exists():
+                self.config_path.parent.mkdir(parents=True, exist_ok=True)
+
             with open(self.config_path, 'w', encoding='utf-8') as f:
                 json.dump(self.settings, f, indent=2, ensure_ascii=False)
         except IOError as e:
@@ -127,7 +133,7 @@ class SettingsManager:
         점(.) 표기법을 사용하여 설정값을 가져옵니다.
 
         Args:
-            key_path (str): 설정 키 경로 (예: 'settings.proportional_font_size').
+            key_path (str): 설정 키 경로 (예: 'ui.theme').
             default (Any, optional): 키가 없을 경우 반환할 기본값. 기본값은 None.
 
         Returns:

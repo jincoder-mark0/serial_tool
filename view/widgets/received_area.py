@@ -6,10 +6,16 @@ from PyQt5.QtCore import QTimer, Qt
 from PyQt5.QtGui import QTextCursor, QTextDocument
 from typing import Optional
 import datetime
-from view.managers.color_manager import ColorRulesManager
-from view.managers.lang_manager import lang_manager
+from view.managers.color_manager import color_manager   # 전역 매니저 사용
+from view.managers.lang_manager import lang_manager     # 전역 매니저 사용
 
-from core.constants import DEFAULT_LOG_MAX_LINES, TRIM_CHUNK_RATIO
+from core.constants import (
+    DEFAULT_LOG_MAX_LINES,
+    TRIM_CHUNK_RATIO,
+    UI_REFRESH_INTERVAL_MS,
+    LOG_COLOR_TIMESTAMP
+)
+
 class ReceivedAreaWidget(QWidget):
     """
     수신된 시리얼 데이터를 표시하는 위젯 클래스입니다.
@@ -46,16 +52,16 @@ class ReceivedAreaWidget(QWidget):
         self.trim_chunk_size: int = int(self.max_lines * TRIM_CHUNK_RATIO)
 
         # 색상 규칙 관리자
-        self.color_manager = ColorRulesManager()
+        self.color_manager = color_manager
 
         # UI Setup
         self.init_ui()
 
-        # Batch Rendering Timer (성능 최적화)
-        self.batch_timer: QTimer = QTimer()
-        self.batch_timer.setInterval(50) # 50ms 간격
-        self.batch_timer.timeout.connect(self.flush_batch)
-        self.batch_timer.start()
+        # UI Update Timer (성능 최적화)
+        self.ui_update_timer: QTimer = QTimer()
+        self.ui_update_timer.setInterval(UI_REFRESH_INTERVAL_MS) # 50ms 간격
+        self.ui_update_timer.timeout.connect(self.flush_batch)
+        self.ui_update_timer.start()
 
         # 언어 변경 연결
         lang_manager.language_changed.connect(self.retranslate_ui)
@@ -227,7 +233,7 @@ class ReceivedAreaWidget(QWidget):
         # 타임스탬프 추가
         if self.timestamp_enabled:
             ts = datetime.datetime.now().strftime("[%H:%M:%S]")
-            text = f'<span style="color:#9E9E9E;">{ts}</span> {text}'
+            text = f'<span style="color:{LOG_COLOR_TIMESTAMP};">{ts}</span> {text}'
 
         # 색상 규칙 적용 (텍스트 모드일 때만)
         if not self.hex_mode:

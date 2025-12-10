@@ -3,7 +3,7 @@ from typing import Optional
 from view.managers.lang_manager import lang_manager
 
 from view.panels.port_panel import PortPanel
-from view.panels.manual_ctrl_panel import ManualControlPanel
+from view.panels.manual_ctrl_panel import ManualCtrlPanel
 from view.panels.port_tab_panel import PortTabPanel
 from core.settings_manager import SettingsManager
 
@@ -38,7 +38,7 @@ class MainLeftSection(QWidget):
         self.port_tabs.tab_added.connect(self._on_tab_added)
 
         # 수동 제어 패널 (현재 포트에 대한 전역 제어)
-        self.manual_ctrl = ManualControlPanel()
+        self.manual_ctrl = ManualCtrlPanel()
 
         layout.addWidget(self.port_tabs, 1) # 탭이 남은 공간 차지
         layout.addWidget(self.manual_ctrl) # 수동 제어는 하단에 위치

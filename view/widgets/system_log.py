@@ -3,6 +3,14 @@ from typing import Optional
 import datetime
 from view.managers.lang_manager import lang_manager
 
+from core.constants import (
+    LOG_COLOR_INFO,
+    LOG_COLOR_ERROR,
+    LOG_COLOR_WARN,
+    LOG_COLOR_SUCCESS,
+    LOG_COLOR_TIMESTAMP
+)
+
 class SystemLogWidget(QWidget):
     """
     시스템 상태 메시지 및 에러 로그를 표시하는 위젯 클래스입니다.
@@ -60,16 +68,18 @@ class SystemLogWidget(QWidget):
             level (str): 로그 레벨 (INFO, ERROR, WARN, SUCCESS). 기본값은 "INFO".
         """
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
-        color = "black"
-        if level == "ERROR":
-            color = "red"
-        elif level == "WARN":
-            color = "orange"
-        elif level == "SUCCESS":
-            color = "green"
+
+        level_colors = {
+            "INFO": LOG_COLOR_INFO,
+            "ERROR": LOG_COLOR_ERROR,
+            "WARN": LOG_COLOR_WARN,
+            "SUCCESS": LOG_COLOR_SUCCESS
+        }
+        color = level_colors.get(level, LOG_COLOR_INFO)
+
 
         # 색상 적용을 위한 HTML 포맷팅
-        formatted_msg = f'<span style="color:gray;">[{timestamp}]</span> <span style="color:{color};">[{level}]</span> {message}'
+        formatted_msg = f'<span style="color:{LOG_COLOR_TIMESTAMP};">[{timestamp}]</span> <span style="color:{color};">[{level}]</span> {message}'
         self.status_log_txt.append(formatted_msg)
 
     def clear(self) -> None:

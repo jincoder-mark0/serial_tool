@@ -87,7 +87,7 @@ class ThreadSafeQueue:
 class RingBuffer:
     """
     고정 크기 링 버퍼(Circular Buffer) 클래스입니다.
-    바이트 데이터를 효율적으로 저장하고 읽어오며, 오버플로우 시 오래된 데이터를 덮어씁니다.
+    memoryview를 사용하여 제로 카피(Zero-copy)에 가까운 쓰기 성능을 제공합니다.
     """
 
     def __init__(self, size: int = RING_BUFFER_SIZE):
@@ -98,15 +98,19 @@ class RingBuffer:
             size (int): 버퍼 크기 (바이트 단위). 기본값은 상수로 정의됨.
         """
         self._size = size
+        # 실제 데이터 저장소 (bytearray)
         self._buffer = bytearray(size)
+        # 슬라이싱 최적화를 위한 memoryview
+        self._mv = memoryview(self._buffer)
+        
         self._head = 0  # 쓰기 포인터
-        self._tail = 0  # 읽기 포인터
-        self._stored_bytes = 0 # 현재 데이터 양
+        self._tail = 0  # 읽기 포인터 (이 구현에서는 덮어쓰기 시 tail 이동)
+        self._stored_bytes = 0 
         self._lock = threading.Lock()
 
     def write(self, data: bytes) -> int:
         """
-        데이터를 버퍼에 씁니다. 버퍼가 가득 차면 오래된 데이터를 덮어씁니다.
+        데이터를 버퍼에 씁니다. (memoryview 활용 최적화)
 
         Args:
             data (bytes): 쓸 데이터.
@@ -119,31 +123,33 @@ class RingBuffer:
             return 0
 
         with self._lock:
-            # 데이터가 버퍼 크기보다 크면 뒷부분만 남김
+            # 입력 데이터가 버퍼 전체보다 크면 뒷부분만 남김
             if data_len > self._size:
                 data = data[-self._size:]
                 data_len = self._size
 
-            # 1. 버퍼 끝까지의 여유 공간 계산
+            # 1. 버퍼 끝까지의 여유 공간
             space_at_end = self._size - self._head
-
-            # 2. 복사할 데이터 길이 계산
+            
+            # 2. 첫 번째 청크 길이 계산
             chunk1_len = min(data_len, space_at_end)
+            
+            # 3. 데이터 쓰기 (memoryview 슬라이스 대입 - 복사 발생 최소화)
+            # data가 bytes인 경우 buffer에 복사되지만, 
+            # bytearray concatenation보다 훨씬 빠름
+            self._mv[self._head : self._head + chunk1_len] = data[:chunk1_len]
+
+            # 4. 랩어라운드(Wrap-around) 처리
             chunk2_len = data_len - chunk1_len
-
-            # 3. 데이터 복사 (chunk1)
-            self._buffer[self._head : self._head + chunk1_len] = data[:chunk1_len]
-
-            # 4. 데이터 복사 (chunk2 - 랩어라운드)
             if chunk2_len > 0:
-                self._buffer[0 : chunk2_len] = data[chunk1_len:]
+                self._mv[0 : chunk2_len] = data[chunk1_len:]
 
             # 5. 포인터 업데이트
             self._head = (self._head + data_len) % self._size
-
-            # 6. Count 및 Tail 업데이트 (덮어쓰기 감지)
+            
+            # 6. 저장된 바이트 수 및 Tail 업데이트
             if self._stored_bytes + data_len > self._size:
-                # 오버플로우 발생: Tail을 Head 뒤로 이동
+                # 오버플로우: Tail을 밀어냄
                 overlap = (self._stored_bytes + data_len) - self._size
                 self._tail = (self._tail + overlap) % self._size
                 self._stored_bytes = self._size
@@ -154,7 +160,7 @@ class RingBuffer:
 
     def read(self, count: int) -> bytes:
         """
-        버퍼에서 데이터를 읽어옵니다 (소비합니다).
+        버퍼에서 데이터를 읽어옵니다. (bytes 객체로 반환)
 
         Args:
             count (int): 읽을 바이트 수.
@@ -166,23 +172,24 @@ class RingBuffer:
             if self._stored_bytes == 0:
                 return b""
 
-            read_stored_bytes = min(count, self._stored_bytes)
-
-            # 1. 버퍼 끝까지 읽을 수 있는 양
+            read_count = min(count, self._stored_bytes)
+            
             space_at_end = self._size - self._tail
-            chunk1_len = min(read_stored_bytes, space_at_end)
-            chunk2_len = read_stored_bytes - chunk1_len
+            chunk1_len = min(read_count, space_at_end)
+            
+            # memoryview 슬라이싱 후 bytes로 변환 (Consumer를 위해)
+            # tobytes()는 복사를 생성하지만 API 호환성을 위해 필요
+            if chunk1_len == read_count:
+                result = self._mv[self._tail : self._tail + chunk1_len].tobytes()
+            else:
+                chunk2_len = read_count - chunk1_len
+                result = (self._mv[self._tail : self._tail + chunk1_len].tobytes() + 
+                          self._mv[0 : chunk2_len].tobytes())
 
-            # 2. 데이터 읽기
-            result = self._buffer[self._tail : self._tail + chunk1_len]
-            if chunk2_len > 0:
-                result += self._buffer[0 : chunk2_len]
+            self._tail = (self._tail + read_count) % self._size
+            self._stored_bytes -= read_count
 
-            # 3. 포인터 업데이트
-            self._tail = (self._tail + read_stored_bytes) % self._size
-            self._stored_bytes -= read_stored_bytes
-
-            return bytes(result)
+            return result
 
     def clear(self) -> None:
         """버퍼를 비웁니다."""

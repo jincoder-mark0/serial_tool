@@ -1,20 +1,29 @@
 """
-색상 규칙 관리
+색상 규칙 관리자 (Color Manager)
 ReceivedArea에서 사용하는 패턴 매칭 색상 규칙을 관리합니다.
+AppConfig를 통해 설정 파일 경로를 관리하며, 싱글톤 패턴을 따릅니다.
 """
+import os
+import re
 from dataclasses import dataclass
 from typing import List
-import re
 from pathlib import Path
-import os
 
 try:
     import commentjson as json
 except ImportError:
     import json
 
+# 상수 임포트 (하드코딩 제거)
+from core.constants import (
+    LOG_COLOR_SUCCESS,
+    LOG_COLOR_ERROR,
+    LOG_COLOR_WARN,
+    LOG_COLOR_INFO  # PROMPT용으로 대체 사용하거나 별도 정의 가능
+)
+
 @dataclass
-class ColorManager:
+class ColorRule:
     """단일 색상 규칙 데이터 클래스입니다."""
     name: str           # 규칙 이름 (예: "AT_OK")
     pattern: str        # 정규식 패턴 또는 문자열
@@ -22,26 +31,44 @@ class ColorManager:
     is_regex: bool = True  # 정규식 사용 여부
     enabled: bool = True   # 규칙 활성화 여부
 
-class ColorRulesManager:
+class ColorManager:
     """
-    색상 규칙 관리자 클래스입니다.
+    색상 규칙 관리자 클래스입니다 (Singleton).
     패턴 매칭을 통해 텍스트에 색상을 입히는 규칙들을 관리합니다.
     """
 
-    # 기본 규칙 (Implementation_Specification.md 섹션 11.3.1 기준)
+    _instance = None
+    _app_config = None
+    _initialized = False
+
+    def __new__(cls, *args, **kwargs):
+        if cls._instance is None:
+            cls._instance = super(ColorManager, cls).__new__(cls)
+        return cls._instance
+
+    # 기본 규칙 정의 (상수 활용)
     DEFAULT_COLOR_RULES = [
-        ColorManager("AT_OK", r'\bOK\b', '#4CAF50'),
-        ColorManager("AT_ERROR", r'\bERROR\b', '#F44336'),
-        ColorManager("URC", r'(\+\w+:)', '#FFEB3B'),
-        ColorManager("PROMPT", r'^>', '#00BCD4'),
+        ColorRule("AT_OK", r'\bOK\b', LOG_COLOR_SUCCESS),     # 녹색
+        ColorRule("AT_ERROR", r'\bERROR\b', LOG_COLOR_ERROR), # 빨강
+        ColorRule("URC", r'(\+\w+:)', LOG_COLOR_WARN),        # 노랑 (경고색 활용)
+        ColorRule("PROMPT", r'^>', '#00BCD4'),                # 청록 (특수 색상 유지)
     ]
 
-    def __init__(self) -> None:
+    def __init__(self, app_config=None) -> None:
         """
-        ColorRulesManager를 초기화합니다.
-        color_rules.json 파일이 있으면 로드하고, 없으면 기본 규칙을 생성하여 저장합니다.
+        ColorManager를 초기화합니다.
+
+        Args:
+            app_config: AppConfig 인스턴스. 경로 설정을 위해 사용됩니다.
         """
-        self.rules: List[ColorManager] = []
+        if self._initialized:
+            return
+
+        # AppConfig 설정 (첫 초기화 시 주입)
+        if app_config is not None:
+            ColorManager._app_config = app_config
+
+        self.rules: List[ColorRule] = []
         self.config_path = self._get_config_path()
 
         # 설정 파일 로드 시도, 실패 시 기본 규칙 사용
@@ -49,9 +76,12 @@ class ColorRulesManager:
             self.load_from_json(str(self.config_path))
         else:
             self.rules = self.DEFAULT_COLOR_RULES.copy()
-            # 설정 디렉토리 생성 및 기본 규칙 저장
-            self.config_path.parent.mkdir(parents=True, exist_ok=True)
+            # 설정 디렉토리가 없으면 생성 (AppConfig가 보장하지만 안전장치)
+            if not self.config_path.parent.exists():
+                self.config_path.parent.mkdir(parents=True, exist_ok=True)
             self.save_to_json(str(self.config_path))
+
+        self._initialized = True
 
     def apply_rules(self, text: str) -> str:
         """
@@ -79,23 +109,26 @@ class ColorRulesManager:
             color (str): HTML 색상 코드 (예: '#FF0000').
             is_regex (bool, optional): 정규식 패턴 여부. 기본값은 True.
         """
-        self.rules.append(ColorManager(name, pattern, color, is_regex))
+        self.rules.append(ColorRule(name, pattern, color, is_regex))
 
     def remove_rule(self, name: str) -> None:
         """
-        이름으로 색상 규칙을 제거합니다.
+        사용자 정의 색상 규칙을 추가합니다.
 
         Args:
-            name (str): 제거할 규칙의 이름.
+            name (str): 규칙 이름.
+            pattern (str): 매칭 패턴 (정규식 또는 일반 문자열).
+            color (str): HTML 색상 코드 (예: '#FF0000').
+            is_regex (bool, optional): 정규식 패턴 여부. 기본값은 True.
         """
         self.rules = [r for r in self.rules if r.name != name]
 
     def toggle_rule(self, name: str) -> None:
         """
-        규칙의 활성화 상태를 토글합니다.
+        현재 규칙들을 JSON 파일로 저장합니다.
 
         Args:
-            name (str): 토글할 규칙의 이름.
+            filepath (str): 저장할 파일 경로.
         """
         for rule in self.rules:
             if rule.name == name:
@@ -103,12 +136,7 @@ class ColorRulesManager:
                 break
 
     def save_to_json(self, filepath: str) -> None:
-        """
-        현재 규칙들을 JSON 파일로 저장합니다.
-
-        Args:
-            filepath (str): 저장할 파일 경로.
-        """
+        """현재 규칙들을 JSON 파일로 저장합니다."""
         rules_data = [
             {
                 'name': r.name,
@@ -120,11 +148,13 @@ class ColorRulesManager:
             for r in self.rules
         ]
 
-        # 구조 개선을 위해 color_rules 키로 래핑
         data = {'color_rules': rules_data}
 
-        with open(filepath, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+        try:
+            with open(filepath, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+        except IOError as e:
+            print(f"Error saving color rules: {e}")
 
     def load_from_json(self, filepath: str) -> None:
         """
@@ -138,14 +168,14 @@ class ColorRulesManager:
             with open(filepath, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
-            # 두 가지 형식 지원: 직접 배열 또는 "color_rules" 키로 래핑
+            # 호환성: "color_rules" 키가 없으면 리스트 자체로 간주
             if isinstance(data, dict) and 'color_rules' in data:
                 rules_data = data['color_rules']
             else:
                 rules_data = data
 
             self.rules = [
-                ColorManager(
+                ColorRule(
                     r['name'],
                     r['pattern'],
                     r['color'],
@@ -156,7 +186,7 @@ class ColorRulesManager:
             ]
         except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
             # 파일이 없거나 잘못된 경우 기본 규칙 사용
-            print(f"색상 규칙 로드 실패 ({filepath}): {e}")
+            self._logger.error(f"Failed to load color rules ({filepath}): {e}")
             self.rules = self.DEFAULT_COLOR_RULES.copy()
 
     @staticmethod
@@ -167,19 +197,22 @@ class ColorRulesManager:
         Returns:
             Path: config/color_rules.json 파일의 Path 객체.
         """
+        if ColorManager._app_config is not None:
+            return ColorManager._app_config.config_dir / 'color_rules.json'
 
-        # 애플리케이션 루트 디렉토리 확인
+        # Fallback: 개발 환경 상대 경로
+        # view/managers/ -> view/ -> root
         if hasattr(os, '_MEIPASS'):
             # PyInstaller 번들 환경
             base_path = Path(os._MEIPASS)
         else:
             # 개발 모드 환경
-            base_path = Path(__file__).parent.parent
+            base_path = Path(__file__).parent.parent.parent
 
         return base_path / 'config' / 'color_rules.json'
 
     @staticmethod
-    def _apply_single_rule(text: str, rule: ColorManager) -> str:
+    def _apply_single_rule(text: str, rule: ColorRule) -> str:
         """
         단일 색상 규칙을 텍스트에 적용합니다.
 
@@ -205,3 +238,6 @@ class ColorRulesManager:
                 rule.pattern,
                 f'<span style="color:{rule.color};">{rule.pattern}</span>'
             )
+
+# 전역 인스턴스 (Import하여 사용)
+color_manager = ColorManager()

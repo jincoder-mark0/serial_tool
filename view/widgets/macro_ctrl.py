@@ -6,6 +6,8 @@ from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Optional
 from view.managers.lang_manager import lang_manager
 
+from core.constants import DEFAULT_MACRO_DELAY_MS
+
 class MacroCtrlWidget(QWidget):
     """
     Command List 실행을 제어하는 위젯 클래스입니다.
@@ -75,7 +77,7 @@ class MacroCtrlWidget(QWidget):
         self.interval_lbl = QLabel(lang_manager.get_text("macro_ctrl_lbl_interval"))
         execution_layout.addWidget(self.interval_lbl, 0, 0)
 
-        self.repeat_delay_line_edit = QLineEdit("1000")
+        self.repeat_delay_line_edit = QLineEdit(str(DEFAULT_MACRO_DELAY_MS))
         self.repeat_delay_line_edit.setFixedWidth(50)
         self.repeat_delay_line_edit.setAlignment(Qt.AlignRight)
         execution_layout.addWidget(self.repeat_delay_line_edit, 1, 1)
@@ -147,7 +149,7 @@ class MacroCtrlWidget(QWidget):
         try:
             delay = int(self.repeat_delay_line_edit.text())
         except ValueError:
-            delay = 1000
+            delay = DEFAULT_MACRO_DELAY_MS
         max_runs = self.repeat_count_spin.value()
         self.macro_repeat_start_requested.emit(delay, max_runs)
 
@@ -227,6 +229,5 @@ class MacroCtrlWidget(QWidget):
         if not state:
             return
 
-        self.repeat_delay_line_edit.setText(state.get("delay", "1000"))
+        self.repeat_delay_line_edit.setText(state.get("delay", str(DEFAULT_MACRO_DELAY_MS)))
         self.repeat_count_spin.setValue(state.get("max_runs", 0))
-

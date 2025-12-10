@@ -1,0 +1,1765 @@
+지금 당장 적용해야 할 것 (Action Items)
+
+당장 SPI 드라이버를 구현하지 않더라도, 구조만 미리 잡아두면 됩니다.
+
+
+
+파일명 변경: model/serial_worker.py → model/connection_worker.py (이름만 바꿔도 생각이 확장됩니다).
+
+인터페이스 정의: core/interfaces.py를 만들고 ITransport 클래스를 정의하세요.
+
+Serial 래핑: 현재 작성 중인 Serial 코드를 SerialTransport 클래스로 감싸서 ITransport를 상속받게 하세요.
+
+Worker 수정: Worker가 serial.Serial 객체를 직접 생성하지 않고, ITransport 구현체를 인자로 받도록 수정하세요.
+
+이 작은 리팩토링이 나중에 **"SPI 지원 기능 추가"**라는 거대한 작업을 **"SPI Transport 클래스 하나 추가"**라는 간단한 작업으로 만들어 줄 것입니다.
+
+진행하세요
+
+제안하신 리팩토링은 프로젝트의 확장성(Scalability)을 위해 매우 중요한 단계입니다. "구현(Implementation)"과 "인터페이스(Interface)"를 분리함으로써, 향후 SPI, I2C, CAN 등 어떤 프로토콜이 추가되더라도 Worker 로직을 건드리지 않고 확장할 수 있게 됩니다.
+
+요청하신 대로 4단계 액션 아이템을 코드로 구현하여 정리해 드립니다.
+
+1. 인터페이스 정의 (core/interfaces.py 생성)
+가장 먼저 모든 통신 드라이버가 지켜야 할 규약(Contract)을 정의합니다.
+
+Python
+
+# core/interfaces.py
+from abc import ABC, abstractmethod
+from typing import Optional
+
+class ITransport(ABC):
+    """
+    모든 통신 방식(Serial, SPI, I2C 등)이 구현해야 할 기본 인터페이스입니다.
+    """
+
+    @abstractmethod
+    def open(self) -> bool:
+        """연결을 엽니다."""
+        pass
+
+    @abstractmethod
+    def close(self) -> None:
+        """연결을 닫습니다."""
+        pass
+
+    @abstractmethod
+    def is_open(self) -> bool:
+        """연결 상태를 확인합니다."""
+        pass
+
+    @abstractmethod
+    def read(self, size: int) -> bytes:
+        """
+        데이터를 읽습니다.
+        Args:
+            size (int): 읽을 최대 바이트 수
+        Returns:
+            bytes: 읽은 데이터
+        """
+        pass
+
+    @abstractmethod
+    def write(self, data: bytes) -> None:
+        """
+        데이터를 씁니다.
+        Args:
+            data (bytes): 보낼 데이터
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def in_waiting(self) -> int:
+        """읽기 대기 중인 바이트 수를 반환합니다."""
+        pass
+    
+    # 시리얼 전용 기능은 선택적 구현 또는 별도 인터페이스로 분리 가능하나,
+    # 편의상 기본적으로 메서드를 두고 필요 없으면 pass 처리합니다.
+    def set_dtr(self, state: bool) -> None:
+        pass
+
+    def set_rts(self, state: bool) -> None:
+        pass
+2. Serial 래핑 (model/transports.py 생성)
+기존 serial.Serial을 감싸서 ITransport를 따르도록 만듭니다. 이렇게 하면 pyserial에 대한 의존성이 이 파일 안으로 격리됩니다.
+
+Python
+
+# model/transports.py
+import serial
+from typing import Dict, Any
+from core.interfaces import ITransport
+
+class SerialTransport(ITransport):
+    """PySerial을 감싸는 구체적인 Transport 구현체입니다."""
+
+    def __init__(self, port: str, baudrate: int, config: Dict[str, Any] = None):
+        self.port = port
+        self.baudrate = baudrate
+        self.config = config or {}
+        self._serial: serial.Serial = None
+
+    def open(self) -> bool:
+        try:
+            self._serial = serial.Serial(
+                port=self.port,
+                baudrate=self.baudrate,
+                bytesize=self.config.get('bytesize', serial.EIGHTBITS),
+                parity=self.config.get('parity', serial.PARITY_NONE),
+                stopbits=self.config.get('stopbits', serial.STOPBITS_ONE),
+                timeout=0,  # Non-blocking
+                xonxoff=False,
+                rtscts=self.config.get('flowctrl', False) == 'RTS/CTS',
+                dsrdtr=False
+            )
+            return self._serial.is_open
+        except serial.SerialException as e:
+            raise e # Worker에서 처리하도록 예외 전파
+
+    def close(self) -> None:
+        if self._serial and self._serial.is_open:
+            self._serial.close()
+        self._serial = None
+
+    def is_open(self) -> bool:
+        return self._serial is not None and self._serial.is_open
+
+    def read(self, size: int) -> bytes:
+        if self.is_open():
+            return self._serial.read(size)
+        return b""
+
+    def write(self, data: bytes) -> None:
+        if self.is_open():
+            self._serial.write(data)
+
+    @property
+    def in_waiting(self) -> int:
+        if self.is_open():
+            return self._serial.in_waiting
+        return 0
+
+    def set_dtr(self, state: bool) -> None:
+        if self.is_open():
+            self._serial.dtr = state
+
+    def set_rts(self, state: bool) -> None:
+        if self.is_open():
+            self._serial.rts = state
+3. Worker 수정 (model/connection_worker.py)
+파일명 변경: model/serial_worker.py → model/connection_worker.py
+
+이제 Worker는 serial 모듈을 전혀 모릅니다. 오직 ITransport만 알고 일합니다.
+
+Python
+
+# model/connection_worker.py (구 serial_worker.py)
+import time
+from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QMutexLocker, QObject
+from typing import Optional
+from core.interfaces import ITransport  # 인터페이스 의존
+from core.constants import (
+    DEFAULT_READ_CHUNK_SIZE,
+    BATCH_SIZE_THRESHOLD,
+    BATCH_TIMEOUT_MS
+)
+
+class ConnectionWorker(QThread): # 이름 변경: SerialWorker -> ConnectionWorker
+    """
+    통신 I/O를 처리하는 범용 워커 스레드입니다.
+    ITransport 인터페이스를 사용하여 하드웨어 독립적으로 동작합니다.
+    """
+
+    data_received = pyqtSignal(bytes)
+    error_occurred = pyqtSignal(str)
+    connection_opened = pyqtSignal(str) # 이름 변경: port_opened -> connection_opened
+    connection_closed = pyqtSignal(str) # 이름 변경: port_closed -> connection_closed
+
+    def __init__(self, transport: ITransport, connection_name: str, parent: Optional[QObject] = None) -> None:
+        """
+        Args:
+            transport (ITransport): 실제 통신을 담당할 객체 (SerialTransport, SpiTransport 등)
+            connection_name (str): 식별용 이름 (예: 'COM1', 'SPI0')
+        """
+        super().__init__(parent)
+        self.transport = transport
+        self.connection_name = connection_name
+        
+        self._is_running = False
+        self._mutex = QMutex()
+
+    def run(self) -> None:
+        try:
+            # 1. Transport 열기
+            if self.transport.open():
+                with QMutexLocker(self._mutex):
+                    self._is_running = True
+                
+                self.connection_opened.emit(self.connection_name)
+
+                # 배치 버퍼 초기화
+                batch_buffer = bytearray()
+                last_emit_time = time.time() * 1000
+
+                # 2. 루프 시작 (Transport 추상화 사용)
+                while self.is_running():
+                    try:
+                        # [변경] self.serial_port.in_waiting -> self.transport.in_waiting
+                        if self.transport.in_waiting > 0:
+                            # [변경] self.serial_port.read -> self.transport.read
+                            chunk = self.transport.read(DEFAULT_READ_CHUNK_SIZE)
+                            if chunk:
+                                batch_buffer.extend(chunk)
+
+                        # ... (배치 처리 로직은 기존과 동일) ...
+                        current_time = time.time() * 1000
+                        time_diff = current_time - last_emit_time
+
+                        if len(batch_buffer) > 0:
+                            if len(batch_buffer) >= BATCH_SIZE_THRESHOLD or time_diff >= BATCH_TIMEOUT_MS:
+                                self.data_received.emit(bytes(batch_buffer))
+                                batch_buffer.clear()
+                                last_emit_time = current_time
+
+                        if len(batch_buffer) == 0:
+                            self.msleep(1)
+                        else:
+                            self.usleep(100)
+
+                    except Exception as e:
+                        self.error_occurred.emit(f"IO Error: {str(e)}")
+                        break
+            else:
+                self.error_occurred.emit("Failed to open connection")
+
+        except Exception as e:
+            self.error_occurred.emit(f"Connection Error: {str(e)}")
+        finally:
+            self.close_connection()
+
+    def is_running(self) -> bool:
+        with QMutexLocker(self._mutex):
+            return self._is_running
+
+    def stop(self) -> None:
+        with QMutexLocker(self._mutex):
+            self._is_running = False
+        self.wait()
+
+    def close_connection(self) -> None:
+        # [변경] 직접 close 호출 대신 Transport에게 위임
+        if self.transport.is_open():
+            try:
+                self.transport.close()
+                self.connection_closed.emit(self.connection_name)
+            except Exception as e:
+                self.error_occurred.emit(f"Close Error: {str(e)}")
+
+    def send_data(self, data: bytes) -> bool:
+        # [변경] Transport에게 위임
+        if self.transport.is_open():
+            try:
+                self.transport.write(data)
+                return True
+            except Exception as e:
+                self.error_occurred.emit(f"Write Error: {str(e)}")
+        return False
+
+    def set_dtr(self, state: bool) -> None:
+        self.transport.set_dtr(state)
+
+    def set_rts(self, state: bool) -> None:
+        self.transport.set_rts(state)
+4. Controller 수정 (model/port_controller.py)
+이제 Controller가 "어떤 Transport를 사용할지" 결정하여 Worker에게 주입(Dependency Injection)해줍니다.
+
+Python
+
+# model/port_controller.py
+from PyQt5.QtCore import QObject, pyqtSignal
+from typing import Optional
+from model.connection_worker import ConnectionWorker # 변경된 이름 import
+from model.transports import SerialTransport         # 구체적인 Transport import
+from core.utils import ThreadSafeQueue
+from core.constants import TX_QUEUE_SIZE, DEFAULT_BAUDRATE
+
+class PortController(QObject):
+    # ... (기존 시그널 유지) ...
+
+    def open_port(self, port_name: str, baudrate: int, **kwargs) -> bool:
+        """
+        시리얼 포트를 엽니다. (내부적으로 SerialTransport 주입)
+        """
+        if self.is_open:
+            self.error_occurred.emit("Port is already open.")
+            return False
+
+        self._port_name = port_name
+        self._baudrate = baudrate
+
+        # 1. Transport 객체 생성 (여기서 갈아끼우면 SPI 등 지원 가능)
+        # 나중에 if type == 'SPI': transport = SpiTransport(...) 로 확장 가능
+        transport = SerialTransport(port_name, baudrate, config=kwargs)
+
+        # 2. Worker에 Transport 주입
+        self.worker = ConnectionWorker(transport, port_name)
+
+        # 3. 시그널 연결 (이름 변경 반영)
+        self.worker.connection_opened.connect(self.port_opened)
+        self.worker.connection_closed.connect(self.port_closed)
+        self.worker.error_occurred.connect(self.error_occurred)
+        self.worker.data_received.connect(self.data_received)
+
+        self.worker.start()
+        return True
+    
+    # ... (나머지 메서드는 Worker 메서드 이름 변경에 맞춰 self.worker.xxx 호출) ...
+요약 및 기대 효과
+파일명 변경: serial_worker.py → connection_worker.py로 변경하여 "시리얼 전용"이라는 인식을 깼습니다.
+
+추상화: ITransport 인터페이스를 도입하여 Worker 로직과 하드웨어 제어 로직을 분리했습니다.
+
+확장성: 나중에 SPI를 지원하고 싶다면, model/transports.py에 SpiTransport(ITransport) 클래스 하나만 추가하고 Controller에서 그것을 선택해서 넘겨주기만 하면 됩니다.
+
+이 리팩토링을 바로 적용하시면 아키텍처가 훨씬 견고해집니다. 진행하시겠습니까?
+
+네, 제안된 리팩토링을 바로 적용하겠습니다. 이 작업은 **"구현(Serial)과 인터페이스(Transport)의 분리"**를 통해 시스템을 유연하게 만듭니다.
+
+1. core/interfaces.py 생성
+통신 드라이버가 지켜야 할 규약을 정의합니다.
+
+Python
+
+"""
+통신 인터페이스 정의 모듈
+모든 통신 드라이버(Serial, SPI, I2C 등)가 구현해야 할 기본 인터페이스입니다.
+"""
+from abc import ABC, abstractmethod
+
+class ITransport(ABC):
+    """
+    모든 통신 방식이 구현해야 할 추상 기본 클래스입니다.
+    """
+
+    @abstractmethod
+    def open(self) -> bool:
+        """연결을 엽니다."""
+        pass
+
+    @abstractmethod
+    def close(self) -> None:
+        """연결을 닫습니다."""
+        pass
+
+    @abstractmethod
+    def is_open(self) -> bool:
+        """연결 상태를 확인합니다."""
+        pass
+
+    @abstractmethod
+    def read(self, size: int) -> bytes:
+        """
+        데이터를 읽습니다.
+        Args:
+            size (int): 읽을 최대 바이트 수
+        Returns:
+            bytes: 읽은 데이터
+        """
+        pass
+
+    @abstractmethod
+    def write(self, data: bytes) -> None:
+        """
+        데이터를 씁니다.
+        Args:
+            data (bytes): 보낼 데이터
+        """
+        pass
+
+    @property
+    @abstractmethod
+    def in_waiting(self) -> int:
+        """읽기 대기 중인 바이트 수를 반환합니다."""
+        pass
+
+    # 시리얼 제어 신호 (선택적 구현)
+    def set_dtr(self, state: bool) -> None:
+        pass
+
+    def set_rts(self, state: bool) -> None:
+        pass
+2. model/transports.py 생성
+기존 pyserial 로직을 이 클래스로 캡슐화합니다.
+
+Python
+
+"""
+구체적인 통신 드라이버 구현체들을 정의합니다.
+"""
+import serial
+from typing import Dict, Any, Optional
+from core.interfaces import ITransport
+
+class SerialTransport(ITransport):
+    """PySerial을 감싸는 ITransport 구현체입니다."""
+
+    def __init__(self, port: str, baudrate: int, config: Optional[Dict[str, Any]] = None):
+        self.port = port
+        self.baudrate = baudrate
+        self.config = config or {}
+        self._serial: Optional[serial.Serial] = None
+
+    def open(self) -> bool:
+        try:
+            # 설정값 파싱 (기본값 설정)
+            bytesize = self.config.get('bytesize', serial.EIGHTBITS)
+            parity = self.config.get('parity', serial.PARITY_NONE)
+            stopbits = self.config.get('stopbits', serial.STOPBITS_ONE)
+            flowctrl = self.config.get('flowctrl', 'None')
+            rtscts = (flowctrl == 'RTS/CTS')
+            
+            self._serial = serial.Serial(
+                port=self.port,
+                baudrate=self.baudrate,
+                bytesize=bytesize,
+                parity=parity,
+                stopbits=stopbits,
+                timeout=0,  # Non-blocking I/O
+                xonxoff=False,
+                rtscts=rtscts,
+                dsrdtr=False
+            )
+            return self._serial.is_open
+        except serial.SerialException as e:
+            # 상위 레벨(Worker)에서 에러를 처리하도록 전파하거나 False 반환
+            raise e
+
+    def close(self) -> None:
+        if self._serial and self._serial.is_open:
+            self._serial.close()
+        self._serial = None
+
+    def is_open(self) -> bool:
+        return self._serial is not None and self._serial.is_open
+
+    def read(self, size: int) -> bytes:
+        if self.is_open():
+            try:
+                return self._serial.read(size)
+            except Exception:
+                return b""
+        return b""
+
+    def write(self, data: bytes) -> None:
+        if self.is_open():
+            self._serial.write(data)
+
+    @property
+    def in_waiting(self) -> int:
+        if self.is_open():
+            try:
+                return self._serial.in_waiting
+            except Exception:
+                return 0
+        return 0
+
+    def set_dtr(self, state: bool) -> None:
+        if self.is_open():
+            self._serial.dtr = state
+
+    def set_rts(self, state: bool) -> None:
+        if self.is_open():
+            self._serial.rts = state
+3. model/connection_worker.py (구 model/serial_worker.py 대체)
+기존 serial_worker.py를 삭제하고 이 파일을 생성하거나 이름을 변경하세요. 이 Worker는 이제 serial을 모릅니다.
+
+Python
+
+"""
+통신 I/O 워커 모듈입니다.
+ITransport 인터페이스를 사용하여 하드웨어 독립적으로 동작합니다.
+"""
+
+import time
+from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QMutexLocker, QObject
+from typing import Optional
+from core.interfaces import ITransport
+from core.constants import (
+    DEFAULT_READ_CHUNK_SIZE,
+    BATCH_SIZE_THRESHOLD,
+    BATCH_TIMEOUT_MS
+)
+
+class ConnectionWorker(QThread):
+    """
+    ITransport 구현체를 사용하여 데이터를 송수신하는 워커 스레드입니다.
+    """
+
+    # 시그널 정의 (범용적인 이름 사용)
+    data_received = pyqtSignal(bytes)
+    error_occurred = pyqtSignal(str)
+    connection_opened = pyqtSignal(str)
+    connection_closed = pyqtSignal(str)
+
+    def __init__(self, transport: ITransport, connection_name: str, parent: Optional[QObject] = None) -> None:
+        """
+        Args:
+            transport: 실제 통신을 담당할 객체 (SerialTransport 등)
+            connection_name: 식별 이름 (예: 'COM1')
+        """
+        super().__init__(parent)
+        self.transport = transport
+        self.connection_name = connection_name
+        
+        self._is_running = False
+        self._mutex = QMutex()
+
+    def run(self) -> None:
+        """스레드 실행 루프"""
+        try:
+            # 1. Transport 열기
+            if self.transport.open():
+                with QMutexLocker(self._mutex):
+                    self._is_running = True
+                
+                self.connection_opened.emit(self.connection_name)
+
+                # 배치 처리를 위한 버퍼
+                batch_buffer = bytearray()
+                last_emit_time = time.time() * 1000
+
+                while self.is_running():
+                    try:
+                        # 2. 데이터 읽기 (Transport 추상화 사용)
+                        if self.transport.in_waiting > 0:
+                            chunk = self.transport.read(DEFAULT_READ_CHUNK_SIZE)
+                            if chunk:
+                                batch_buffer.extend(chunk)
+
+                        # 3. 배치 전송 로직
+                        current_time = time.time() * 1000
+                        time_diff = current_time - last_emit_time
+
+                        if len(batch_buffer) > 0:
+                            if len(batch_buffer) >= BATCH_SIZE_THRESHOLD or time_diff >= BATCH_TIMEOUT_MS:
+                                self.data_received.emit(bytes(batch_buffer))
+                                batch_buffer.clear()
+                                last_emit_time = current_time
+
+                        # CPU 부하 방지
+                        if len(batch_buffer) == 0:
+                            self.msleep(1)
+                        else:
+                            self.usleep(100)
+
+                    except Exception as e:
+                        self.error_occurred.emit(f"IO Error: {str(e)}")
+                        break
+            else:
+                self.error_occurred.emit("Failed to open connection")
+
+        except Exception as e:
+            self.error_occurred.emit(f"Connection Error: {str(e)}")
+        finally:
+            self.close_connection()
+
+    def is_running(self) -> bool:
+        with QMutexLocker(self._mutex):
+            return self._is_running
+
+    def stop(self) -> None:
+        with QMutexLocker(self._mutex):
+            self._is_running = False
+        self.wait()
+
+    def close_connection(self) -> None:
+        """연결을 닫습니다."""
+        if self.transport.is_open():
+            try:
+                self.transport.close()
+                self.connection_closed.emit(self.connection_name)
+            except Exception as e:
+                self.error_occurred.emit(f"Close Error: {str(e)}")
+
+    def send_data(self, data: bytes) -> bool:
+        """데이터를 전송합니다 (Thread-safe delegate)."""
+        # 주의: write가 블로킹일 경우 별도 큐를 사용하는 것이 좋으나,
+        # 현재 구조에서는 직접 호출합니다. (pyserial write는 보통 빠름)
+        if self.transport.is_open():
+            try:
+                self.transport.write(data)
+                return True
+            except Exception as e:
+                self.error_occurred.emit(f"Write Error: {str(e)}")
+        return False
+
+    # 하드웨어 제어 메서드 위임
+    def set_dtr(self, state: bool) -> None:
+        self.transport.set_dtr(state)
+
+    def set_rts(self, state: bool) -> None:
+        self.transport.set_rts(state)
+4. model/port_controller.py 수정
+이제 Controller가 SerialTransport를 생성하여 ConnectionWorker에게 주입합니다.
+
+Python
+
+"""
+포트 생명주기 및 설정 관리 클래스.
+ConnectionWorker와 UI 사이의 브리지 역할을 수행합니다.
+"""
+from PyQt5.QtCore import QObject, pyqtSignal
+from typing import Optional, Dict, Any
+
+# 변경된 모듈 임포트
+from model.connection_worker import ConnectionWorker
+from model.transports import SerialTransport
+from core.constants import DEFAULT_BAUDRATE
+
+class PortController(QObject):
+    # 외부(Presenter)와 통신하는 시그널 (이름 유지)
+    port_opened = pyqtSignal(str)
+    port_closed = pyqtSignal(str)
+    error_occurred = pyqtSignal(str)
+    data_received = pyqtSignal(bytes)
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.worker: Optional[ConnectionWorker] = None
+        self._port_name = ""
+        self._baudrate = DEFAULT_BAUDRATE
+
+    @property
+    def is_open(self) -> bool:
+        return self.worker is not None and self.worker.isRunning()
+
+    def open_port(self, port_name: str, baudrate: int, **kwargs) -> bool:
+        """
+        시리얼 포트를 엽니다.
+        내부적으로 SerialTransport를 생성하여 Worker에 주입합니다.
+        """
+        if self.is_open:
+            self.error_occurred.emit("Port is already open.")
+            return False
+
+        self._port_name = port_name
+        self._baudrate = baudrate
+
+        # 1. Transport 객체 생성 (여기서 프로토콜 결정 가능)
+        # 예: if protocol == 'SPI': transport = SpiTransport(...)
+        transport = SerialTransport(port_name, baudrate, config=kwargs)
+
+        # 2. Worker에 Transport 주입 (의존성 주입)
+        self.worker = ConnectionWorker(transport, port_name)
+
+        # 3. 시그널 매핑 (Worker 이벤트 -> Controller 시그널)
+        self.worker.connection_opened.connect(self.port_opened)
+        self.worker.connection_closed.connect(self.port_closed)
+        self.worker.error_occurred.connect(self.error_occurred)
+        self.worker.data_received.connect(self.data_received)
+
+        self.worker.start()
+        return True
+
+    def close_port(self) -> None:
+        if self.worker:
+            self.worker.stop()
+            self.worker = None
+
+    def send_data(self, data: bytes) -> None:
+        if self.is_open and self.worker:
+            self.worker.send_data(data)
+        else:
+            self.error_occurred.emit("Port is not open.")
+
+    def set_dtr(self, state: bool) -> None:
+        if self.is_open and self.worker:
+            self.worker.set_dtr(state)
+
+    def set_rts(self, state: bool) -> None:
+        if self.is_open and self.worker:
+            self.worker.set_rts(state)
+적용 가이드
+파일 삭제: model/serial_worker.py를 삭제하세요.
+
+파일 생성: 위 코드로 core/interfaces.py, model/transports.py, model/connection_worker.py를 생성하세요.
+
+파일 수정: model/port_controller.py를 위 코드로 덮어쓰세요.
+
+Presenter 수정: PortPresenter에서 PortController.open_port를 호출할 때 config 딕셔너리를 풀어서 전달해야 합니다. (**config 사용)
+
+예시 (presenter/port_presenter.py 수정 필요):
+
+Python
+
+# 기존
+# self.port_controller.open_port(port, baudrate)
+
+# 수정 (kwargs 전달)
+# PortSettingsWidget에서 config 딕셔너리를 만들어 보낸다고 가정
+# config = {'port': 'COM1', 'baudrate': 115200, 'parity': 'N', ...}
+self.port_controller.open_port(
+    config['port'], 
+    config['baudrate'], 
+    **config  # 나머지 설정(parity, stopbits 등) 전달
+)
+네, QSmartListView (QListView 기반)는 대량의 로그를 처리할 때 QTextEdit보다 성능상 훨씬 유리합니다.
+
+요청하신 대로 1) QSmartListView에 검색 탐색(이전/다음) 기능을 추가하고, 2) SystemLogWidget에 적용하는 코드를 작성해 드리겠습니다.
+
+1. view/custom_widgets/smart_list_view.py 수정
+find_next와 find_prev 메서드를 추가하여 현재 선택된 행을 기준으로 데이터를 검색하고 이동하는 로직을 구현합니다.
+
+Python
+
+from PyQt5.QtWidgets import QListView, QAbstractItemView, QStyle, QStyledItemDelegate
+from PyQt5.QtCore import Qt, QAbstractListModel, QModelIndex, QVariant, QSize, QRegExp
+from PyQt5.QtGui import QColor, QTextDocument, QAbstractTextDocumentLayout, QTextCharFormat
+
+from typing import List, Any, Optional
+
+from core.settings_manager import SettingsManager
+from core.constants import DEFAULT_LOG_MAX_LINES, TRIM_CHUNK_RATIO, LOG_COLOR_TIMESTAMP
+
+# ... (LogModel, LogDelegate 클래스는 기존 코드 유지) ...
+
+class QSmartListView(QListView):
+    """
+    QListView를 확장하여 로그 뷰어 기능을 캡슐화한 클래스입니다.
+    검색 탐색(Next/Prev) 기능이 추가되었습니다.
+    """
+    def __init__(self, parent=None):
+        super().__init__(parent)
+        
+        # 모델 및 델리게이트 설정
+        self.log_model = LogModel()
+        self.setModel(self.log_model)
+        
+        self.delegate = LogDelegate(self)
+        self.setItemDelegate(self.delegate)
+        
+        # 뷰 설정
+        self.setProperty("class", "fixed-font")
+        self.setSelectionMode(QAbstractItemView.ExtendedSelection)
+        self.setUniformItemSizes(False)
+        self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
+        
+        self._newline_char = "\n"
+
+    # ... (set_newline_char, append_log, add_logs_batch, set_max_lines, clear, is_at_bottom 등 기존 메서드 유지) ...
+
+    def set_search_pattern(self, text: str):
+        """검색어 하이라이트 설정 (기존 메서드)"""
+        if not text:
+            self.delegate.set_search_pattern(None)
+        else:
+            pattern = QRegExp(text, Qt.CaseInsensitive)
+            if not pattern.isValid():
+                pattern = QRegExp(QRegExp.escape(text), Qt.CaseInsensitive)
+            self.delegate.set_search_pattern(pattern)
+        self.viewport().update()
+
+    # --- [추가됨] 검색 탐색 기능 ---
+
+    def find_next(self, text: str) -> bool:
+        """
+        다음 검색 결과를 찾아 해당 행으로 이동합니다.
+        """
+        if not text: return False
+        
+        pattern = self._create_pattern(text)
+        current_row = self.currentIndex().row()
+        start_row = current_row + 1 if current_row >= 0 else 0
+        total_rows = self.log_model.rowCount()
+
+        # 1. 현재 위치 다음부터 끝까지 검색
+        for row in range(start_row, total_rows):
+            if self._match_row(row, pattern):
+                self._select_and_scroll(row)
+                return True
+        
+        # 2. 처음부터 현재 위치까지 검색 (Wrap around)
+        for row in range(0, start_row):
+            if self._match_row(row, pattern):
+                self._select_and_scroll(row)
+                return True
+                
+        return False
+
+    def find_prev(self, text: str) -> bool:
+        """
+        이전 검색 결과를 찾아 해당 행으로 이동합니다.
+        """
+        if not text: return False
+
+        pattern = self._create_pattern(text)
+        current_row = self.currentIndex().row()
+        total_rows = self.log_model.rowCount()
+        start_row = current_row - 1 if current_row >= 0 else total_rows - 1
+
+        # 1. 현재 위치 이전부터 처음까지 역순 검색
+        for row in range(start_row, -1, -1):
+            if self._match_row(row, pattern):
+                self._select_and_scroll(row)
+                return True
+
+        # 2. 끝에서부터 현재 위치까지 역순 검색 (Wrap around)
+        for row in range(total_rows - 1, start_row, -1):
+            if self._match_row(row, pattern):
+                self._select_and_scroll(row)
+                return True
+
+        return False
+
+    def _create_pattern(self, text: str) -> QRegExp:
+        """검색용 정규식 객체 생성"""
+        pattern = QRegExp(text, Qt.CaseInsensitive)
+        if not pattern.isValid():
+            pattern = QRegExp(QRegExp.escape(text), Qt.CaseInsensitive)
+        return pattern
+
+    def _match_row(self, row: int, pattern: QRegExp) -> bool:
+        """해당 행의 데이터가 패턴과 일치하는지 확인"""
+        # 모델의 원본 데이터(HTML 포함)에서 검색
+        # 성능을 위해 stripHtml을 하지 않고 원본에서 검색합니다. 
+        # (필요 시 정규식으로 태그 제외 가능)
+        text = self.log_model.data(self.log_model.index(row, 0))
+        return pattern.indexIn(text) != -1
+
+    def _select_and_scroll(self, row: int):
+        """해당 행을 선택하고 화면 중앙으로 스크롤"""
+        index = self.log_model.index(row, 0)
+        self.setCurrentIndex(index)
+        self.scrollTo(index, QAbstractItemView.PositionAtCenter)
+2. view/widgets/received_area.py 적용
+이제 ReceivedAreaWidget에서 QSmartListView의 확장된 기능을 사용하도록 연결합니다.
+
+Python
+
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QCheckBox, QLabel, QLineEdit
+from typing import Optional
+import datetime
+from view.custom_widgets.smart_list_view import QSmartListView  # 변경됨
+from view.managers.lang_manager import lang_manager
+
+class ReceivedAreaWidget(QWidget):
+    # ... (기본 초기화 코드는 동일) ...
+
+    def init_ui(self) -> None:
+        # ... (생략) ...
+
+        # 2. 로그 뷰 영역 (QSmartListView로 교체)
+        self.rx_log_list = QSmartListView()  # 이름 변경: rx_log_txt -> rx_log_list
+        self.rx_log_list.set_max_lines(DEFAULT_LOG_MAX_LINES)
+        
+        # ... (레이아웃 배치) ...
+        layout.addWidget(self.rx_log_list)
+        self.setLayout(layout)
+
+    def on_rx_search_next_clicked(self) -> None:
+        """다음 찾기 버튼"""
+        text = self.rx_search_input.text()
+        if text:
+            # 하이라이트 설정
+            self.rx_log_list.set_search_pattern(text)
+            # 다음 항목으로 이동
+            self.rx_log_list.find_next(text)
+
+    def on_rx_search_prev_clicked(self) -> None:
+        """이전 찾기 버튼"""
+        text = self.rx_search_input.text()
+        if text:
+            self.rx_log_list.set_search_pattern(text)
+            self.rx_log_list.find_prev(text)
+
+    def append_data(self, data: bytes) -> None:
+        """데이터 추가"""
+        if self.is_paused: return
+
+        # ... (데이터 디코딩 및 포맷팅 로직) ...
+        
+        # QSmartListView API 사용
+        # 타임스탬프가 필요하면 인자로 전달, 아니면 None
+        ts = datetime.datetime.now().strftime("[%H:%M:%S]") if self.timestamp_enabled else None
+        
+        self.rx_log_list.append_log(text, timestamp=ts)
+
+    def on_clear_rx_log_clicked(self) -> None:
+        self.rx_log_list.clear()
+    
+    # ... (나머지 메서드) ...
+3. view/widgets/system_log.py 적용
+SystemLogWidget에도 QSmartListView를 적용하여 일관된 룩앤필과 성능을 확보할 수 있습니다.
+
+Python
+
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel
+from typing import Optional
+import datetime
+from view.managers.lang_manager import lang_manager
+# QSmartListView Import
+from view.custom_widgets.smart_list_view import QSmartListView
+
+class SystemLogWidget(QWidget):
+    """
+    시스템 상태 메시지 및 에러 로그를 표시하는 위젯 클래스입니다.
+    QSmartListView를 사용하여 성능을 최적화했습니다.
+    """
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(parent)
+        self.status_log_list = None # 이름 변경
+        self.status_log_title = None
+        self.init_ui()
+        lang_manager.language_changed.connect(self.retranslate_ui)
+
+    def init_ui(self) -> None:
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
+
+        self.status_log_title = QLabel(lang_manager.get_text("status_title"))
+        self.status_log_title.setProperty("class", "section-title")
+
+        # QTextEdit -> QSmartListView 교체
+        self.status_log_list = QSmartListView()
+        self.status_log_list.set_max_lines(500) # 시스템 로그는 라인 수 제한을 적게 둠
+        self.status_log_list.setMaximumHeight(100)
+        self.status_log_list.setToolTip(lang_manager.get_text("status_txt_log_tooltip"))
+        
+        # QListView는 setPlaceholderText가 없으므로 생략하거나, 
+        # 필요하다면 paintEvent 오버라이딩으로 구현해야 함. 
+        # 여기서는 툴팁으로 대체.
+
+        layout.addWidget(self.status_log_title)
+        layout.addWidget(self.status_log_list)
+        self.setLayout(layout)
+
+    def log(self, message: str, level: str = "INFO") -> None:
+        """
+        상태 메시지를 로그에 추가합니다.
+        QSmartListView의 HTML 렌더링 기능을 활용합니다.
+        """
+        color = "white" # 다크 테마 기본값 가정, 필요시 테마 매니저 연동
+        if level == "ERROR":
+            color = "#F44336" # Red
+        elif level == "WARN":
+            color = "#FF9800" # Orange
+        elif level == "SUCCESS":
+            color = "#4CAF50" # Green
+        elif level == "INFO":
+            color = "#2196F3" # Blue
+
+        # HTML 포맷팅 (LogDelegate가 렌더링함)
+        formatted_msg = f'<span style="color:{color};">[{level}]</span> {message}'
+        
+        # 타임스탬프는 QSmartListView의 기능 활용
+        timestamp = datetime.datetime.now().strftime("%H:%M:%S")
+        
+        self.status_log_list.append_log(formatted_msg, timestamp=timestamp)
+
+    def clear(self) -> None:
+        self.status_log_list.clear()
+
+    def retranslate_ui(self) -> None:
+        self.status_log_title.setText(lang_manager.get_text("status_title"))
+        self.status_log_list.setToolTip(lang_manager.get_text("status_txt_log_tooltip"))
+요약
+QSmartListView 확장: find_next, find_prev 메서드를 추가하여 검색 기능을 내장했습니다.
+
+SystemLogWidget 적용: QTextEdit 대신 QSmartListView를 사용하여 대량의 시스템 로그가 쌓여도 성능 저하가 없도록 개선하고, 타임스탬프와 컬러 처리를 append_log 메서드로 일원화했습니다.
+
+제안된 설계에 따라 PortSettingsWidget을 리팩토링하고, 이에 필요한 언어 리소스를 추가한 en.json과 ko.json 파일 내용을 작성했습니다.
+
+1. view/widgets/port_settings.py
+QStackedWidget을 사용하여 프로토콜(Serial/SPI)에 따라 하단 설정 UI가 교체되도록 구현했습니다.
+
+Python
+
+from PyQt5.QtWidgets import (
+    QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton,
+    QLabel, QGroupBox, QStackedWidget
+)
+from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtGui import QIntValidator
+from view.managers.lang_manager import lang_manager
+from typing import Optional, List, Dict, Any
+from core.port_state import PortState
+from core.constants import VALID_BAUDRATES, DEFAULT_BAUDRATE
+
+class PortSettingsWidget(QGroupBox):
+    """
+    포트 설정 위젯.
+    프로토콜(Serial/SPI)에 따라 하단 설정 UI가 동적으로 변경됩니다.
+    """
+
+    # 시그널 정의
+    port_open_requested = pyqtSignal(dict)  # config dict (protocol 키 포함)
+    port_close_requested = pyqtSignal()
+    port_scan_requested = pyqtSignal()
+    connection_changed = pyqtSignal(bool)
+
+    def __init__(self, parent: Optional[QWidget] = None) -> None:
+        super().__init__(lang_manager.get_text("port_grp_settings"), parent)
+        
+        # 공통 UI 요소
+        self.protocol_lbl = None
+        self.protocol_combo = None
+        self.port_lbl = None
+        self.port_combo = None
+        self.scan_btn = None
+        self.connect_btn = None
+        
+        # 하단 레이아웃 스택
+        self.settings_stack = None
+        
+        # Serial 위젯
+        self.serial_widgets = {}
+        
+        # SPI 위젯
+        self.spi_widgets = {}
+
+        self.init_ui()
+
+        # 언어 변경 연결
+        lang_manager.language_changed.connect(self.retranslate_ui)
+
+    def init_ui(self) -> None:
+        """UI 초기화 및 레이아웃 구성"""
+        main_layout = QVBoxLayout()
+        main_layout.setContentsMargins(5, 5, 5, 5)
+        main_layout.setSpacing(5)
+
+        # ---------------------------------------------------------
+        # 1. 상단 행 (Top Row): Protocol | Port | Scan | Open
+        # ---------------------------------------------------------
+        top_layout = QHBoxLayout()
+        top_layout.setSpacing(5)
+
+        # 프로토콜 선택 (Serial / SPI)
+        self.protocol_lbl = QLabel(lang_manager.get_text("port_lbl_protocol"))
+        self.protocol_combo = QComboBox()
+        self.protocol_combo.addItems(["Serial", "SPI"])
+        self.protocol_combo.setToolTip(lang_manager.get_text("port_combo_protocol_tooltip"))
+        self.protocol_combo.currentIndexChanged.connect(self.on_protocol_changed)
+        
+        # 포트 선택
+        self.port_lbl = QLabel(lang_manager.get_text("port_lbl_port"))
+        self.port_combo = QComboBox()
+        self.port_combo.setMinimumWidth(100)
+        self.port_combo.setToolTip(lang_manager.get_text("port_combo_port_tooltip"))
+
+        # 스캔 버튼
+        self.scan_btn = QPushButton(lang_manager.get_text("port_btn_scan"))
+        self.scan_btn.setFixedWidth(50)
+        self.scan_btn.setToolTip(lang_manager.get_text("port_btn_scan_tooltip"))
+        self.scan_btn.clicked.connect(self.on_port_scan_clicked)
+
+        # 연결 버튼
+        self.connect_btn = QPushButton(lang_manager.get_text("port_btn_connect"))
+        self.connect_btn.setCheckable(True)
+        self.connect_btn.setFixedWidth(70)
+        self.connect_btn.setToolTip(lang_manager.get_text("port_btn_connect_tooltip"))
+        self.connect_btn.clicked.connect(self.on_connect_clicked)
+        self.set_connection_state(PortState.DISCONNECTED)
+
+        top_layout.addWidget(self.protocol_lbl)
+        top_layout.addWidget(self.protocol_combo)
+        top_layout.addWidget(self.port_lbl)
+        top_layout.addWidget(self.port_combo, 1) # Stretch
+        top_layout.addWidget(self.scan_btn)
+        top_layout.addWidget(self.connect_btn)
+
+        main_layout.addLayout(top_layout)
+
+        # ---------------------------------------------------------
+        # 2. 하단 행 (Bottom Row): Stacked Widget (Serial vs SPI)
+        # ---------------------------------------------------------
+        self.settings_stack = QStackedWidget()
+        
+        # Page 0: Serial Settings
+        self.settings_stack.addWidget(self._create_serial_settings_widget())
+        
+        # Page 1: SPI Settings
+        self.settings_stack.addWidget(self._create_spi_settings_widget())
+
+        main_layout.addWidget(self.settings_stack)
+        self.setLayout(main_layout)
+
+    def _create_serial_settings_widget(self) -> QWidget:
+        """시리얼 설정 위젯 생성"""
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(5)
+
+        # Baudrate
+        self.serial_widgets['baud_lbl'] = QLabel(lang_manager.get_text("port_lbl_baudrate"))
+        self.serial_widgets['baud_combo'] = QComboBox()
+        self.serial_widgets['baud_combo'].setEditable(True)
+        self.serial_widgets['baud_combo'].addItems([str(b) for b in VALID_BAUDRATES])
+        self.serial_widgets['baud_combo'].setCurrentText(str(DEFAULT_BAUDRATE))
+        self.serial_widgets['baud_combo'].setValidator(QIntValidator(50, 4000000))
+        self.serial_widgets['baud_combo'].setMinimumWidth(80)
+        self.serial_widgets['baud_combo'].setToolTip(lang_manager.get_text("port_combo_baudrate_tooltip"))
+
+        # Data Bits
+        self.serial_widgets['data_lbl'] = QLabel(lang_manager.get_text("port_lbl_bytesize"))
+        self.serial_widgets['data_combo'] = QComboBox()
+        self.serial_widgets['data_combo'].addItems(["5", "6", "7", "8"])
+        self.serial_widgets['data_combo'].setCurrentText("8")
+        self.serial_widgets['data_combo'].setFixedWidth(40)
+        self.serial_widgets['data_combo'].setToolTip(lang_manager.get_text("port_combo_bytesize_tooltip"))
+
+        # Parity
+        self.serial_widgets['parity_lbl'] = QLabel(lang_manager.get_text("port_lbl_parity"))
+        self.serial_widgets['parity_combo'] = QComboBox()
+        self.serial_widgets['parity_combo'].addItems(["N", "E", "O", "M", "S"])
+        self.serial_widgets['parity_combo'].setFixedWidth(40)
+        self.serial_widgets['parity_combo'].setToolTip(lang_manager.get_text("port_combo_parity_tooltip"))
+
+        # Stop Bits
+        self.serial_widgets['stop_lbl'] = QLabel(lang_manager.get_text("port_lbl_stop"))
+        self.serial_widgets['stop_combo'] = QComboBox()
+        self.serial_widgets['stop_combo'].addItems(["1", "1.5", "2"])
+        self.serial_widgets['stop_combo'].setFixedWidth(45)
+        self.serial_widgets['stop_combo'].setToolTip(lang_manager.get_text("port_combo_stopbits_tooltip"))
+
+        # Flow Control
+        self.serial_widgets['flow_lbl'] = QLabel(lang_manager.get_text("port_lbl_flow"))
+        self.serial_widgets['flow_combo'] = QComboBox()
+        self.serial_widgets['flow_combo'].addItems(["None", "RTS/CTS", "XON/XOFF"])
+        self.serial_widgets['flow_combo'].setMinimumWidth(70)
+        self.serial_widgets['flow_combo'].setToolTip(lang_manager.get_text("port_combo_flow_tooltip"))
+
+        # 배치
+        layout.addWidget(self.serial_widgets['baud_lbl'])
+        layout.addWidget(self.serial_widgets['baud_combo'])
+        layout.addWidget(self.serial_widgets['data_lbl'])
+        layout.addWidget(self.serial_widgets['data_combo'])
+        layout.addWidget(self.serial_widgets['parity_lbl'])
+        layout.addWidget(self.serial_widgets['parity_combo'])
+        layout.addWidget(self.serial_widgets['stop_lbl'])
+        layout.addWidget(self.serial_widgets['stop_combo'])
+        layout.addWidget(self.serial_widgets['flow_lbl'])
+        layout.addWidget(self.serial_widgets['flow_combo'])
+        layout.addStretch()
+
+        return widget
+
+    def _create_spi_settings_widget(self) -> QWidget:
+        """SPI 설정 위젯 생성"""
+        widget = QWidget()
+        layout = QHBoxLayout(widget)
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(10)
+
+        # Speed (Frequency)
+        self.spi_widgets['speed_lbl'] = QLabel(lang_manager.get_text("port_lbl_speed"))
+        self.spi_widgets['speed_combo'] = QComboBox()
+        self.spi_widgets['speed_combo'].setEditable(True)
+        # 일반적인 SPI 속도 예시
+        self.spi_widgets['speed_combo'].addItems(["1000000", "500000", "100000", "50000"]) 
+        self.spi_widgets['speed_combo'].setValidator(QIntValidator(1000, 20000000))
+        self.spi_widgets['speed_combo'].setToolTip(lang_manager.get_text("port_combo_speed_tooltip"))
+
+        # Mode (0, 1, 2, 3)
+        self.spi_widgets['mode_lbl'] = QLabel(lang_manager.get_text("port_lbl_mode"))
+        self.spi_widgets['mode_combo'] = QComboBox()
+        self.spi_widgets['mode_combo'].addItems(["0", "1", "2", "3"])
+        self.spi_widgets['mode_combo'].setToolTip(lang_manager.get_text("port_combo_mode_tooltip"))
+
+        layout.addWidget(self.spi_widgets['speed_lbl'])
+        layout.addWidget(self.spi_widgets['speed_combo'])
+        layout.addWidget(self.spi_widgets['mode_lbl'])
+        layout.addWidget(self.spi_widgets['mode_combo'])
+        layout.addStretch()
+
+        return widget
+
+    def on_protocol_changed(self, index: int) -> None:
+        """프로토콜 변경 시 하단 레이아웃 변경"""
+        self.settings_stack.setCurrentIndex(index)
+
+    def on_connect_clicked(self) -> None:
+        """연결 버튼 클릭 처리"""
+        if self.connect_btn.isChecked():
+            # 연결 요청 (프로토콜에 따라 설정값 분기)
+            protocol = self.protocol_combo.currentText()
+            config = {"protocol": protocol, "port": self.port_combo.currentText()}
+
+            if protocol == "Serial":
+                config.update({
+                    "baudrate": int(self.serial_widgets['baud_combo'].currentText()),
+                    "bytesize": int(self.serial_widgets['data_combo'].currentText()),
+                    "parity": self.serial_widgets['parity_combo'].currentText(),
+                    "stopbits": float(self.serial_widgets['stop_combo'].currentText()),
+                    "flowctrl": self.serial_widgets['flow_combo'].currentText(),
+                })
+            elif protocol == "SPI":
+                config.update({
+                    "speed": int(self.spi_widgets['speed_combo'].currentText()),
+                    "mode": int(self.spi_widgets['mode_combo'].currentText()),
+                })
+
+            self.port_open_requested.emit(config)
+            self.connect_btn.setText(lang_manager.get_text("port_btn_disconnect"))
+        else:
+            self.port_close_requested.emit()
+
+    def on_port_scan_clicked(self) -> None:
+        self.port_scan_requested.emit()
+
+    def set_port_list(self, ports: List[str]) -> None:
+        current_port = self.port_combo.currentText()
+        self.port_combo.clear()
+        self.port_combo.addItems(ports)
+        if current_port in ports:
+            self.port_combo.setCurrentText(current_port)
+
+    def set_connection_state(self, state: PortState) -> None:
+        """연결 상태에 따른 UI 업데이트"""
+        self.connect_btn.setProperty("state", state.value)
+        self.connect_btn.style().unpolish(self.connect_btn)
+        self.connect_btn.style().polish(self.connect_btn)
+
+        connected = (state == PortState.CONNECTED)
+        
+        # 버튼 텍스트 업데이트
+        if state == PortState.CONNECTED:
+            self.connect_btn.setText(lang_manager.get_text("port_btn_disconnect"))
+            self.connect_btn.setChecked(True)
+        elif state == PortState.DISCONNECTED:
+            self.connect_btn.setText(lang_manager.get_text("port_btn_connect"))
+            self.connect_btn.setChecked(False)
+        elif state == PortState.ERROR:
+            self.connect_btn.setText(lang_manager.get_text("port_btn_reconnect"))
+            self.connect_btn.setChecked(False)
+
+        # 설정 위젯 활성화/비활성화
+        self.protocol_combo.setEnabled(not connected)
+        self.port_combo.setEnabled(not connected)
+        self.scan_btn.setEnabled(not connected)
+        self.settings_stack.setEnabled(not connected)
+
+        self.connection_changed.emit(connected)
+
+    def toggle_connection(self) -> None:
+        self.connect_btn.click()
+
+    def is_connected(self) -> bool:
+        return self.connect_btn.property("state") == PortState.CONNECTED.value
+
+    def retranslate_ui(self) -> None:
+        """언어 변경 처리"""
+        self.setTitle(lang_manager.get_text("port_grp_settings"))
+        self.protocol_lbl.setText(lang_manager.get_text("port_lbl_protocol"))
+        self.protocol_combo.setToolTip(lang_manager.get_text("port_combo_protocol_tooltip"))
+        self.port_lbl.setText(lang_manager.get_text("port_lbl_port"))
+        self.port_combo.setToolTip(lang_manager.get_text("port_combo_port_tooltip"))
+        self.scan_btn.setText(lang_manager.get_text("port_btn_scan"))
+        self.scan_btn.setToolTip(lang_manager.get_text("port_btn_scan_tooltip"))
+        self.connect_btn.setToolTip(lang_manager.get_text("port_btn_connect_tooltip"))
+        
+        # 상태에 따라 버튼 텍스트 갱신
+        current_state = PortState(self.connect_btn.property("state"))
+        if current_state == PortState.DISCONNECTED:
+            self.connect_btn.setText(lang_manager.get_text("port_btn_connect"))
+        
+        # Serial Label 갱신
+        self.serial_widgets['baud_lbl'].setText(lang_manager.get_text("port_lbl_baudrate"))
+        self.serial_widgets['baud_combo'].setToolTip(lang_manager.get_text("port_combo_baudrate_tooltip"))
+        self.serial_widgets['data_lbl'].setText(lang_manager.get_text("port_lbl_bytesize"))
+        self.serial_widgets['data_combo'].setToolTip(lang_manager.get_text("port_combo_bytesize_tooltip"))
+        self.serial_widgets['parity_lbl'].setText(lang_manager.get_text("port_lbl_parity"))
+        self.serial_widgets['parity_combo'].setToolTip(lang_manager.get_text("port_combo_parity_tooltip"))
+        self.serial_widgets['stop_lbl'].setText(lang_manager.get_text("port_lbl_stop"))
+        self.serial_widgets['stop_combo'].setToolTip(lang_manager.get_text("port_combo_stopbits_tooltip"))
+        self.serial_widgets['flow_lbl'].setText(lang_manager.get_text("port_lbl_flow"))
+        self.serial_widgets['flow_combo'].setToolTip(lang_manager.get_text("port_combo_flow_tooltip"))
+        
+        # SPI Label 갱신
+        self.spi_widgets['speed_lbl'].setText(lang_manager.get_text("port_lbl_speed"))
+        self.spi_widgets['speed_combo'].setToolTip(lang_manager.get_text("port_combo_speed_tooltip"))
+        self.spi_widgets['mode_lbl'].setText(lang_manager.get_text("port_lbl_mode"))
+        self.spi_widgets['mode_combo'].setToolTip(lang_manager.get_text("port_combo_mode_tooltip"))
+
+    def save_state(self) -> dict:
+        state = {
+            "protocol": self.protocol_combo.currentText(),
+            "port": self.port_combo.currentText(),
+            "serial": {
+                "baudrate": self.serial_widgets['baud_combo'].currentText(),
+                "bytesize": self.serial_widgets['data_combo'].currentText(),
+                "parity": self.serial_widgets['parity_combo'].currentText(),
+                "stopbits": self.serial_widgets['stop_combo'].currentText(),
+                "flowctrl": self.serial_widgets['flow_combo'].currentText(),
+            },
+            "spi": {
+                "speed": self.spi_widgets['speed_combo'].currentText(),
+                "mode": self.spi_widgets['mode_combo'].currentText(),
+            }
+        }
+        return state
+
+    def load_state(self, state: dict) -> None:
+        if not state: return
+        
+        self.protocol_combo.setCurrentText(state.get("protocol", "Serial"))
+        
+        port = state.get("port", "")
+        if port:
+            if self.port_combo.findText(port) == -1:
+                self.port_combo.addItem(port)
+            self.port_combo.setCurrentText(port)
+
+        serial_state = state.get("serial", {})
+        self.serial_widgets['baud_combo'].setCurrentText(str(serial_state.get("baudrate", "115200")))
+        self.serial_widgets['data_combo'].setCurrentText(str(serial_state.get("bytesize", "8")))
+        self.serial_widgets['parity_combo'].setCurrentText(serial_state.get("parity", "N"))
+        self.serial_widgets['stop_combo'].setCurrentText(str(serial_state.get("stopbits", "1")))
+        self.serial_widgets['flow_combo'].setCurrentText(serial_state.get("flowctrl", "None"))
+
+        spi_state = state.get("spi", {})
+        self.spi_widgets['speed_combo'].setCurrentText(str(spi_state.get("speed", "1000000")))
+        self.spi_widgets['mode_combo'].setCurrentText(str(spi_state.get("mode", "0")))
+2. config/languages/en.json
+새로운 프로토콜 및 SPI 관련 키를 추가했습니다.
+
+JSON
+
+{
+    "main_title": "Serial Tool",
+    "macro_ctrl_btn_load_script": "Load",
+    "macro_ctrl_btn_load_script_tooltip": "Load command script from file",
+    "macro_ctrl_btn_save_script": "Save",
+    "macro_ctrl_btn_save_script_tooltip": "Save command script to file",
+    "macro_ctrl_btn_repeat_start": "Start Repeat",
+    "macro_ctrl_btn_repeat_start_tooltip": "Start repeat execution",
+    "macro_ctrl_btn_repeat_stop": "Stop Repeat",
+    "macro_ctrl_btn_repeat_stop_tooltip": "Stop repeat execution",
+    "macro_ctrl_btn_repeat_pause": "Pause Repeat",
+    "macro_ctrl_btn_repeat_pause_tooltip": "Pause repeat execution",
+    "macro_ctrl_grp_execution": "Execution Control",
+    "macro_ctrl_input_prefix_tooltip": "Prefix to add before command",
+    "macro_ctrl_spin_repeat_tooltip": "Number of times to repeat",
+    "macro_ctrl_input_suffix_tooltip": "Suffix to add after command",
+    "macro_ctrl_lbl_interval": "Interval (ms)",
+    "macro_ctrl_lbl_prefix": "Prefix",
+    "macro_ctrl_lbl_repeat_max": "Repeat",
+    "macro_ctrl_lbl_suffix": "Suffix",
+    "macro_list_btn_add_row_tooltip": "Add new command",
+    "macro_list_btn_del_row_tooltip": "Delete selected command",
+    "macro_list_btn_down_row_tooltip": "Move command down",
+    "macro_list_btn_send": "Send",
+    "macro_list_btn_up_row_tooltip": "Move command up",
+    "macro_list_chk_select_all": "All",
+    "macro_list_chk_select_all_tooltip": "Select/Deselect all commands",
+    "macro_list_col_command": "Command",
+    "macro_list_col_delay": "Delay(ms)",
+    "macro_list_col_hex": "HEX",
+    "macro_list_col_prefix": "Prefix",
+    "macro_list_col_send": "Send",
+    "macro_list_col_suffix": "Suffix",
+    "macro_list_table_cmd": "Macro List",
+    "macro_list_dialog_title_open": "Open Command Script",
+    "macro_list_dialog_title_save": "Save Command Script",
+    "file_prog_btn_cancel": "Cancel",
+    "file_prog_lbl_eta_placeholder": "ETA: --:--",
+    "file_prog_lbl_status_completed": "Completed",
+    "file_prog_lbl_status_failed": "Failed",
+    "file_prog_lbl_status_ready": "Ready",
+    "file_prog_lbl_status_sending": "Sending",
+    "main_menu_about": "About",
+    "main_menu_exit": "Exit",
+    "main_menu_exit_tooltip": "Exit application",
+    "main_menu_file": "File",
+    "main_menu_font": "Font",
+    "main_menu_font_tooltip": "Font settings",
+    "main_menu_help": "Help",
+    "main_menu_lang_en": "English",
+    "main_menu_lang_ko": "한국어",
+    "main_menu_lang": "Language",
+    "main_menu_new_tab": "New Tab",
+    "main_menu_new_tab_tooltip": "Create new tab",
+    "main_menu_preferences": "Preferences",
+    "main_menu_theme": "Theme",
+    "main_menu_theme_dark": "Dark",
+    "main_menu_theme_light": "Light",
+    "main_menu_tools": "Tools",
+    "main_menu_view": "View",
+    "main_menu_open_port": "Open Port",
+    "main_menu_close_tab": "Close Tab",
+    "main_menu_save_log": "Save Log",
+    "main_menu_toggle_right_panel": "Show Right Panel",
+    "toolbar_open": "Open",
+    "toolbar_close": "Close",
+    "toolbar_clear": "Clear",
+    "toolbar_save_log": "Save Log",
+    "toolbar_settings": "Settings",
+    "main_status_msg_ready": "Ready",
+    "manual_ctrl_btn_clear": "Clear",
+    "manual_ctrl_btn_clear_tooltip": "Clear received data",
+    "manual_ctrl_btn_save_log": "Save Log",
+    "manual_ctrl_btn_save_log_tooltip": "Save log to file",
+    "manual_ctrl_btn_select_file": "Select File",
+    "manual_ctrl_btn_send": "Send",
+    "manual_ctrl_btn_send_file": "Send File",
+    "manual_ctrl_chk_dtr": "DTR",
+    "manual_ctrl_chk_dtr_tooltip": "Data Terminal Ready signal",
+    "manual_ctrl_chk_enter": "Add Enter",
+    "manual_ctrl_chk_hex": "HEX",
+    "manual_ctrl_chk_hex_tooltip": "Send as HEX format",
+    "manual_ctrl_chk_prefix": "Prefix",
+    "manual_ctrl_chk_rts": "RTS",
+    "manual_ctrl_chk_rts_tooltip": "Request To Send signal",
+    "manual_ctrl_chk_suffix": "Suffix",
+    "manual_ctrl_dialog_file_filter_all": "All Files",
+    "manual_ctrl_dialog_file_filter_txt": "Text Files",
+    "manual_ctrl_dialog_save_log_title": "Save Log",
+    "manual_ctrl_dialog_select_file": "Select File to Send",
+    "manual_ctrl_grp_control": "Control Options",
+    "manual_ctrl_grp_file": "File Transfer",
+    "manual_ctrl_grp_format": "Format",
+    "manual_ctrl_grp_manual": "Manual Send",
+    "manual_ctrl_input_cmd_placeholder": "Enter command (Ctrl+Enter to send)...",
+    "manual_ctrl_lbl_file_path_no_file": "No file selected",
+    "inspector_col_field": "Field",
+    "inspector_col_value": "Value",
+    "inspector_grp_title": "Packet Inspector",
+    "port_btn_connect": "Open",
+    "port_btn_connect_tooltip": "Open serial port",
+    "port_btn_reconnect": "Reconnect",
+    "port_btn_disconnect": "Close",
+    "port_btn_scan": "Scan",
+    "port_btn_scan_tooltip": "Scan available ports",
+    "port_combo_baudrate_tooltip": "Select baudrate rate",
+    "port_combo_bytesize_tooltip": "Select data bits",
+    "port_combo_flow_tooltip": "Select flow control",
+    "port_combo_parity_tooltip": "Select parity bit",
+    "port_combo_port_tooltip": "Select serial port",
+    "port_combo_stopbits_tooltip": "Select stop bits",
+    "port_combo_tooltip": "Select serial port",
+    "port_grp_settings": "Port Settings",
+    "port_lbl_protocol": "Protocol",
+    "port_lbl_speed": "Speed (Hz)",
+    "port_lbl_mode": "Mode",
+    "port_combo_protocol_tooltip": "Select communication protocol",
+    "port_combo_speed_tooltip": "Select SPI clock speed",
+    "port_combo_mode_tooltip": "Select SPI mode (CPOL/CPHA)",
+    "port_lbl_baudrate": "Baud",
+    "port_lbl_bytesize": "Data",
+    "port_lbl_flow": "Flow",
+    "port_lbl_parity": "Parity",
+    "port_lbl_port": "Port",
+    "port_lbl_stop": "Stop",
+    "status_grp_title": "Status",
+    "rx_btn_clear": "Clear",
+    "rx_btn_clear_tooltip": "Clear received log",
+    "rx_btn_search_next_tooltip": "Find next",
+    "rx_btn_search_prev_tooltip": "Find previous",
+    "rx_btn_save": "Save",
+    "rx_btn_save_tooltip": "Save log to file",
+    "rx_chk_hex": "HEX",
+    "rx_chk_hex_tooltip": "Display as HEX format",
+    "rx_chk_pause": "Pause",
+    "rx_chk_pause_tooltip": "Pause receiving",
+    "rx_chk_timestamp": "Timestamp",
+    "rx_chk_timestamp_tooltip": "Show timestamp",
+    "rx_input_search_placeholder": "Search...",
+    "rx_input_search_tooltip": "Search in received data",
+    "rx_title": "RX Log",
+    "rx_txt_log_tooltip": "Received data will be displayed here...",
+    "rx_txt_log_placeholder": "Received data will be displayed here...",
+    "status_title": "Status Log",
+    "status_txt_log_placeholder": "System status messages will appear here...",
+    "status_txt_log_tooltip": "System status and error messages",
+    "about_btn_close": "Close",
+    "about_lbl_app_name": "Serial Tool",
+    "about_lbl_copyright": "© 2024 All rights reserved",
+    "about_lbl_description": "A versatile serial communication tool",
+    "about_lbl_version": "Version 1.0.0",
+    "about_title": "About Serial Tool",
+    "font_btn_reset": "Reset to Default",
+    "font_btn_reset_tooltip": "Reset fonts to system default",
+    "font_grp_fixed": "Fixed-width Font (for code/data)",
+    "font_grp_fixed_tooltip": "Font used for code and data display",
+    "font_grp_proportional": "Proportional Font (for UI)",
+    "font_grp_proportional_tooltip": "Font used for general UI elements",
+    "font_lbl_font": "Font",
+    "font_lbl_preview": "Preview",
+    "font_lbl_size": "Size",
+    "font_title_settings": "Font Settings",
+    "pref_btn_apply": "Apply",
+    "pref_btn_browse": "Browse...",
+    "pref_btn_cancel": "Cancel",
+    "pref_btn_ok": "OK",
+    "pref_dialog_title_select_dir": "Select Directory",
+    "pref_grp_cmd_format": "Command Format",
+    "pref_grp_default": "Default Settings",
+    "pref_grp_logging": "File Logging",
+    "pref_grp_ui": "UI Appearance",
+    "pref_lbl_baudrate": "Default Baud Rate",
+    "pref_lbl_font_size": "Font Size",
+    "pref_lbl_language": "Language",
+    "pref_lbl_log_path": "Log Path",
+    "pref_lbl_max_lines": "Max Lines",
+    "pref_lbl_newline": "Newline",
+    "pref_lbl_prefix": "Default Prefix",
+    "pref_lbl_scan": "Scan Interval",
+    "pref_lbl_suffix": "Default Suffix",
+    "pref_lbl_theme": "Theme",
+    "pref_tab_command": "Command",
+    "pref_tab_general": "General",
+    "pref_tab_logging": "Logging",
+    "pref_tab_serial": "Serial",
+    "pref_tab_packet": "Packet",
+    "pref_title": "Preferences",
+    "left_tooltip_port_tab": "Port configuration",
+    "right_tab_macro_list": "Macro List",
+    "right_tab_packet": "Packet Inspector",
+    "right_tooltip_macro_list": "Macro list panel",
+    "right_tooltip_packet": "Packet inspector panel",
+    "pref_grp_parser_type": "Parser Type",
+    "pref_parser_type_auto": "Auto Detect",
+    "pref_parser_type_at": "AT Parser",
+    "pref_parser_type_delimiter": "Delimiter Parser",
+    "pref_parser_type_fixed": "Fixed Length Parser",
+    "pref_parser_type_raw": "Raw Parser",
+    "pref_grp_delimiter": "Delimiter Settings",
+    "pref_lbl_delimiter_list": "Delimiters",
+    "pref_btn_add_delimiter": "Add",
+    "pref_btn_del_delimiter": "Remove",
+    "pref_grp_fixed_length": "Fixed Length",
+    "pref_lbl_packet_length": "Packet Length (bytes)",
+    "pref_grp_at_colors": "AT Color Rules",
+    "pref_chk_at_ok": "OK Pattern",
+    "pref_chk_at_error": "ERROR Pattern",
+    "pref_chk_at_urc": "URC Pattern",
+    "pref_chk_at_prompt": "Prompt Pattern",
+    "pref_grp_inspector_options": "Inspector Options",
+    "pref_lbl_buffer_size": "Buffer Size (packets)",
+    "pref_chk_realtime_tracking": "Real-time Tracking",
+    "pref_chk_auto_scroll": "Auto Scroll"
+}
+3. config/languages/ko.json
+새로운 프로토콜 및 SPI 관련 키를 추가했습니다.
+
+JSON
+
+{
+    "main_title": "시리얼 도구",
+    "macro_ctrl_btn_load_script": "불러오기",
+    "macro_ctrl_btn_load_script_tooltip": "파일에서 명령 스크립트 불러오기",
+    "macro_ctrl_btn_save_script": "저장",
+    "macro_ctrl_btn_save_script_tooltip": "명령 스크립트를 파일로 저장",
+    "macro_ctrl_btn_repeat_start": "반복 시작",
+    "macro_ctrl_btn_repeat_start_tooltip": "반복 실행 시작",
+    "macro_ctrl_btn_repeat_stop": "반복 중지",
+    "macro_ctrl_btn_repeat_stop_tooltip": "반복 실행 중지",
+    "macro_ctrl_btn_repeat_pause": "반복 일시정지",
+    "macro_ctrl_btn_repeat_pause_tooltip": "반복 실행 일시정지",
+    "macro_ctrl_grp_execution": "실행 제어",
+    "macro_ctrl_input_prefix_tooltip": "명령 앞에 추가할 접두사",
+    "macro_ctrl_spin_repeat_tooltip": "반복 횟수",
+    "macro_ctrl_input_suffix_tooltip": "명령 뒤에 추가할 접미사",
+    "macro_ctrl_lbl_interval": "간격 (ms)",
+    "macro_ctrl_lbl_prefix": "접두사",
+    "macro_ctrl_lbl_repeat_max": "반복",
+    "macro_ctrl_lbl_suffix": "접미사",
+    "macro_list_btn_add_row_tooltip": "새 명령 추가",
+    "macro_list_btn_del_row_tooltip": "선택한 명령 삭제",
+    "macro_list_btn_down_row_tooltip": "명령 아래로 이동",
+    "macro_list_btn_send": "전송",
+    "macro_list_btn_up_row_tooltip": "명령 위로 이동",
+    "macro_list_chk_select_all": "전체",
+    "macro_list_chk_select_all_tooltip": "모든 명령 선택/해제",
+    "macro_list_col_command": "명령",
+    "macro_list_col_delay": "지연(ms)",
+    "macro_list_col_hex": "HEX",
+    "macro_list_col_prefix": "접두사",
+    "macro_list_col_send": "전송",
+    "macro_list_col_suffix": "접미사",
+    "macro_list_table_cmd": "명령 리스트",
+    "macro_list_dialog_title_open": "명령 스크립트 열기",
+    "macro_list_dialog_title_save": "명령 스크립트 저장",
+    "file_prog_btn_cancel": "취소",
+    "file_prog_lbl_eta_placeholder": "예상 시간: --:--",
+    "file_prog_lbl_status_completed": "완료",
+    "file_prog_lbl_status_failed": "실패",
+    "file_prog_lbl_status_ready": "준비",
+    "file_prog_lbl_status_sending": "전송 중",
+    "main_menu_about": "정보",
+    "main_menu_exit": "종료",
+    "main_menu_exit_tooltip": "애플리케이션 종료",
+    "main_menu_file": "파일",
+    "main_menu_font": "폰트",
+    "main_menu_font_tooltip": "폰트 설정",
+    "main_menu_help": "도움말",
+    "main_menu_lang_en": "English",
+    "main_menu_lang_ko": "한국어",
+    "main_menu_lang": "언어",
+    "main_menu_new_tab": "새 탭",
+    "main_menu_new_tab_tooltip": "새 탭 만들기",
+    "main_menu_preferences": "설정",
+    "main_menu_theme": "테마",
+    "main_menu_theme_dark": "다크",
+    "main_menu_theme_light": "라이트",
+    "main_menu_tools": "도구",
+    "main_menu_view": "보기",
+    "main_menu_open_port": "포트 열기",
+    "main_menu_close_tab": "탭 닫기",
+    "main_menu_save_log": "로그 저장",
+    "main_menu_toggle_right_panel": "우측 패널 표시",
+    "toolbar_open": "열기",
+    "toolbar_close": "닫기",
+    "toolbar_clear": "지우기",
+    "toolbar_save_log": "로그 저장",
+    "toolbar_settings": "설정",
+    "main_status_msg_ready": "준비",
+    "manual_ctrl_btn_clear": "지우기",
+    "manual_ctrl_btn_clear_tooltip": "수신 데이터 지우기",
+    "manual_ctrl_btn_save_log": "로그 저장",
+    "manual_ctrl_btn_save_log_tooltip": "로그를 파일로 저장",
+    "manual_ctrl_btn_select_file": "파일 선택",
+    "manual_ctrl_btn_send": "전송",
+    "manual_ctrl_btn_send_file": "파일 전송",
+    "manual_ctrl_chk_dtr": "DTR",
+    "manual_ctrl_chk_dtr_tooltip": "데이터 단말기 준비 신호",
+    "manual_ctrl_chk_enter": "엔터 추가",
+    "manual_ctrl_chk_hex": "HEX",
+    "manual_ctrl_chk_hex_tooltip": "HEX 형식으로 전송",
+    "manual_ctrl_chk_prefix": "접두사",
+    "manual_ctrl_chk_rts": "RTS",
+    "manual_ctrl_chk_rts_tooltip": "송신 요청 신호",
+    "manual_ctrl_chk_suffix": "접미사",
+    "manual_ctrl_dialog_file_filter_all": "모든 파일",
+    "manual_ctrl_dialog_file_filter_txt": "텍스트 파일",
+    "manual_ctrl_dialog_save_log_title": "로그 저장",
+    "manual_ctrl_dialog_select_file": "전송할 파일 선택",
+    "manual_ctrl_grp_control": "제어 옵션",
+    "manual_ctrl_grp_file": "파일 전송",
+    "manual_ctrl_grp_format": "형식",
+    "manual_ctrl_grp_manual": "수동 전송",
+    "manual_ctrl_input_cmd_placeholder": "명령 입력 (Ctrl+Enter 전송)...",
+    "manual_ctrl_lbl_file_path_no_file": "선택된 파일 없음",
+    "inspector_col_field": "필드",
+    "inspector_col_value": "값",
+    "inspector_grp_title": "패킷 분석기",
+    "port_btn_connect": "열기",
+    "port_btn_connect_tooltip": "시리얼 포트 열기",
+    "port_btn_reconnect": "재연결",
+    "port_btn_disconnect": "닫기",
+    "port_btn_scan": "검색",
+    "port_btn_scan_tooltip": "사용 가능한 포트 검색",
+    "port_combo_baudrate_tooltip": "보드레이트 선택",
+    "port_combo_bytesize_tooltip": "데이터 비트 선택",
+    "port_combo_flow_tooltip": "흐름 제어 선택",
+    "port_combo_parity_tooltip": "패리티 비트 선택",
+    "port_combo_port_tooltip": "시리얼 포트 선택",
+    "port_combo_stopbits_tooltip": "정지 비트 선택",
+    "port_combo_tooltip": "시리얼 포트 선택",
+    "port_grp_settings": "포트 설정",
+    "port_lbl_protocol": "프로토콜",
+    "port_lbl_speed": "속도 (Hz)",
+    "port_lbl_mode": "모드",
+    "port_combo_protocol_tooltip": "통신 프로토콜 선택",
+    "port_combo_speed_tooltip": "SPI 클럭 속도 선택",
+    "port_combo_mode_tooltip": "SPI 모드 (CPOL/CPHA) 선택",
+    "port_lbl_baudrate": "보드레이트",
+    "port_lbl_bytesize": "데이터",
+    "port_lbl_flow": "흐름",
+    "port_lbl_parity": "패리티",
+    "port_lbl_port": "포트",
+    "port_lbl_stop": "정지",
+    "status_grp_title": "상태",
+    "rx_btn_clear": "지우기",
+    "rx_btn_clear_tooltip": "수신 로그 지우기",
+    "rx_btn_search_next_tooltip": "다음 찾기",
+    "rx_btn_search_prev_tooltip": "이전 찾기",
+    "rx_btn_save": "저장",
+    "rx_btn_save_tooltip": "로그를 파일로 저장",
+    "rx_chk_hex": "HEX",
+    "rx_chk_hex_tooltip": "HEX 형식으로 표시",
+    "rx_chk_pause": "일시 정지",
+    "rx_chk_pause_tooltip": "수신 일시 정지",
+    "rx_chk_timestamp": "타임스탬프",
+    "rx_chk_timestamp_tooltip": "타임스탬프 표시",
+    "rx_input_search_placeholder": "검색...",
+    "rx_input_search_tooltip": "수신 데이터에서 검색",
+    "rx_title": "RX 로그",
+    "rx_txt_log_tooltip": "수신 데이터가 여기에 표시됩니다...",
+    "rx_txt_log_placeholder": "수신 데이터가 여기에 표시됩니다...",
+    "status_title": "상태 로그",
+    "status_txt_log_placeholder": "시스템 상태 메시지가 여기에 표시됩니다...",
+    "status_txt_log_tooltip": "시스템 상태 및 오류 메시지",
+    "about_btn_close": "닫기",
+    "about_lbl_app_name": "시리얼 도구",
+    "about_lbl_copyright": "© 2024 All rights reserved",
+    "about_lbl_description": "다목적 시리얼 통신 도구",
+    "about_lbl_version": "버전 1.0.0",
+    "about_title": "시리얼 도구 정보",
+    "font_btn_reset": "기본값으로 재설정",
+    "font_btn_reset_tooltip": "폰트를 시스템 기본값으로 재설정",
+    "font_grp_fixed": "고정폭 폰트 (코드/데이터용)",
+    "font_grp_fixed_tooltip": "코드 및 데이터 표시에 사용되는 폰트",
+    "font_grp_proportional": "가변폭 폰트 (UI용)",
+    "font_grp_proportional_tooltip": "일반 UI 요소에 사용되는 폰트",
+    "font_lbl_font": "폰트",
+    "font_lbl_preview": "미리보기",
+    "font_lbl_size": "크기",
+    "font_title_settings": "폰트 설정",
+    "pref_btn_apply": "적용",
+    "pref_btn_browse": "찾아보기...",
+    "pref_btn_cancel": "취소",
+    "pref_btn_ok": "확인",
+    "pref_dialog_title_select_dir": "디렉토리 선택",
+    "pref_grp_cmd_format": "명령 형식",
+    "pref_grp_default": "기본 설정",
+    "pref_grp_logging": "파일 로깅",
+    "pref_grp_ui": "UI 외관",
+    "pref_lbl_baudrate": "기본 보드레이트",
+    "pref_lbl_font_size": "폰트 크기",
+    "pref_lbl_language": "언어",
+    "pref_lbl_log_path": "로그 경로",
+    "pref_lbl_max_lines": "최대 라인 수",
+    "pref_lbl_newline": "줄바꿈",
+    "pref_lbl_prefix": "기본 접두사",
+    "pref_lbl_scan": "검색 간격",
+    "pref_lbl_suffix": "기본 접미사",
+    "pref_lbl_theme": "테마",
+    "pref_tab_command": "명령",
+    "pref_tab_general": "일반",
+    "pref_tab_logging": "로깅",
+    "pref_tab_serial": "시리얼",
+    "pref_tab_packet": "패킷",
+    "pref_title": "설정",
+    "left_tooltip_port_tab": "포트 구성",
+    "right_tab_macro_list": "명령 리스트",
+    "right_tab_packet": "분석기",
+    "right_tooltip_macro_list": "명령 리스트 패널",
+    "right_tooltip_packet": "패킷 분석기 패널",
+    "pref_grp_parser_type": "파서 유형",
+    "pref_parser_type_auto": "자동 감지",
+    "pref_parser_type_at": "AT 파서",
+    "pref_parser_type_delimiter": "구분자 파서",
+    "pref_parser_type_fixed": "고정 길이 파서",
+    "pref_parser_type_raw": "원시 파서",
+    "pref_grp_delimiter": "구분자 설정",
+    "pref_lbl_delimiter_list": "구분자 목록",
+    "pref_btn_add_delimiter": "추가",
+    "pref_btn_del_delimiter": "제거",
+    "pref_grp_fixed_length": "고정 길이",
+    "pref_lbl_packet_length": "패킷 길이 (바이트)",
+    "pref_grp_at_colors": "AT 색상 규칙",
+    "pref_chk_at_ok": "OK 패턴",
+    "pref_chk_at_error": "ERROR 패턴",
+    "pref_chk_at_urc": "URC 패턴",
+    "pref_chk_at_prompt": "프롬프트 패턴",
+    "pref_grp_inspector_options": "분석기 옵션",
+    "pref_lbl_buffer_size": "버퍼 크기 (패킷)",
+    "pref_chk_realtime_tracking": "실시간 추적",
+    "pref_chk_auto_scroll": "자동 스크롤"
+}

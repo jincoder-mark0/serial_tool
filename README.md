@@ -86,14 +86,17 @@ python main.py
 ```
 serial_tool2/
 ├── main.py                 # 애플리케이션 진입점
+├── config.py               # 애플리케이션 설정
 ├── version.py              # 버전 정보
 ├── requirements.txt        # 의존성 목록
 │
 ├── core/                   # 핵심 유틸리티
+│   ├── constants.py        # 상수 정의
+│   ├── event_bus.py        # 이벤트 버스
 │   ├── logger.py           # 로깅 시스템 (Singleton)
+│   ├── port_state.py       # 포트 상태 관리
 │   ├── settings_manager.py # 설정 관리 (Singleton)
-│   ├── ring_buffer.py      # 링 버퍼
-│   └── event_bus.py        # 이벤트 버스
+│   └── utils.py            # 유틸리티 함수
 │
 ├── model/                  # 비즈니스 로직
 │   ├── serial_worker.py    # 시리얼 통신 워커
@@ -101,45 +104,48 @@ serial_tool2/
 │
 ├── presenter/              # MVP Presenter 계층
 │   ├── main_presenter.py   # 메인 프레젠터
-│   └── [sub_presenters]    # 서브 프레젠터들
+│   └── port_presenter.py   # 포트 프레젠터
 │
 ├── view/                   # UI 계층
 │   ├── main_window.py      # 메인 윈도우
-│   ├── lang_manager.py # 다국어 관리
-│   ├── theme_manager.py    # 테마 관리
-│   ├── color_rules.py      # 로그 색상 규칙
 │   │
-│   ├── pyqt_customs/       # PyQt5 커스텀 위젯
-│   │   ├── smart_number_edit.py
+│   ├── manager/              # 관리자 계층
+│   │   ├── color_manager.py      # 로그 색상 규칙
+│   │   ├── lang_manager.py # 다국어 관리
+│   │   └── theme_manager.py    # 테마 관리
+│   │
+│   ├── custom_widgets/       # PyQt5 커스텀 위젯
+│   │   ├── smart_number_edit.py # 스마트 숫자 편집 위젯
+│   │   └── smart_text_edit.py # 스마트 텍스트 편집 위젯
 │   │
 │   ├── sections/           # 섹션 (대 분할)
-│   │   ├── main_left_section.py
-│   │   ├── main_right_section.py
-│   │   ├── main_menu_bar.py
-│   │   ├── main_status_bar.py
-│   │   └── main_tool_bar.py
+│   │   ├── main_left_section.py # 메인 왼쪽 섹션
+│   │   ├── main_menu_bar.py # 메인 메뉴 바
+│   │   ├── main_right_section.py # 메인 오른쪽 섹션
+│   │   ├── main_status_bar.py # 메인 상태 바
+│   │   └── main_tool_bar.py # 메인 도구 바
 │   │
 │   ├── panels/             # 패널 (중 단위)
-│   │   ├── port_panel.py
-│   │   ├── port_tab_panel.py
-│   │   ├── macro_panel.py
-│   │   ├── manual_ctrl_panel.py
-│   │   └── packet_inspector_panel.py
+│   │   ├── macro_panel.py # 매크로 패널
+│   │   ├── manual_ctrl_panel.py # 수동 제어 패널
+│   │   ├── packet_inspector_panel.py # 패킷 인스펙터 패널
+│   │   ├── port_panel.py # 포트 패널
+│   │   └── port_tab_panel.py # 포트 탭 패널
 │   │
 │   ├── widgets/            # 위젯 (소 단위)
-│   │   ├── port_settings.py
-│   │   ├── received_area.py
-│   │   ├── manual_ctrl.py
-│   │   ├── macro_list.py
-│   │   ├── macro_control.py
-│   │   ├── file_progress.py
-│   │   ├── packet_inspector.py
-│   │   ├── status.py
-│   │   └── system_log_widget.py
+│   │   ├── file_progress.py  # 파일 진행률 위젯
+│   │   ├── manual_ctrl.py    # 수동 제어 위젯
+│   │   ├── macro_list.py     # 매크로 리스트 위젯
+│   │   ├── packet_inspector.py # 패킷 인스펙터 위젯
+│   │   ├── port_settings.py  # 포트 설정 위젯
+│   │   ├── port_stats.py     # 포트 통계 위젯
+│   │   ├── received_area.py  # 수신 영역 위젯
+│   │   └── system_log.py     # 시스템 로그 위젯
 │   │
 │   ├── dialogs/            # 대화상자
-│   │   ├── font_settings_dialog.py
-│   │   └── preferences_dialog.py
+│   │   ├── about_dialog.py # 정보 대화상자
+│   │   ├── font_settings_dialog.py # 폰트 설정 대화상자
+│   │   └── preferences_dialog.py # 설정 대화상자
 │   │
 │   └── doc/                # View 계층 문서
 │       └── implementation_plan.md  # View 구현 계획

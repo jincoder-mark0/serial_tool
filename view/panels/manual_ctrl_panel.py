@@ -2,7 +2,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from typing import Optional
 from view.widgets.manual_ctrl import ManualCtrlWidget
 
-class ManualControlPanel(QWidget):
+class ManualCtrlPanel(QWidget):
     """
     ManualCtrlWidget을 감싸는 패널 클래스입니다.
     Section -> Panel -> Widget 계층 구조를 준수하기 위해 사용됩니다.

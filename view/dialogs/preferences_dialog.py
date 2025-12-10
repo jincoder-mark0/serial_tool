@@ -8,8 +8,14 @@ from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Dict, Any, Optional
 import os
 from view.managers.lang_manager import lang_manager
-from core.constants import VALID_BAUDRATES, DEFAULT_LOG_MAX_LINES
 
+from core.constants import (
+    VALID_BAUDRATES,
+    DEFAULT_LOG_MAX_LINES,
+    MIN_SCAN_INTERVAL_MS,
+    MAX_SCAN_INTERVAL_MS,
+    MAX_PACKET_SIZE
+)
 class PreferencesDialog(QDialog):
     """
     설정 관리 대화상자
@@ -108,7 +114,7 @@ class PreferencesDialog(QDialog):
         self.port_newline_combo.setEditable(True)
 
         self.port_scan_interval_spin = QSpinBox()
-        self.port_scan_interval_spin.setRange(1000, 60000)
+        self.port_scan_interval_spin.setRange(MIN_SCAN_INTERVAL_MS, MAX_SCAN_INTERVAL_MS)
         self.port_scan_interval_spin.setSingleStep(1000)
         self.port_scan_interval_spin.setSuffix(" ms")
 
@@ -238,7 +244,7 @@ class PreferencesDialog(QDialog):
         fixed_length_layout = QFormLayout()
 
         self.packet_length_spin = QSpinBox()
-        self.packet_length_spin.setRange(1, 4096)
+        self.packet_length_spin.setRange(1, MAX_PACKET_SIZE)
         self.packet_length_spin.setValue(64)
 
         fixed_length_layout.addRow(lang_manager.get_text("pref_lbl_packet_length"), self.packet_length_spin)
