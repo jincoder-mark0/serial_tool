@@ -1,13 +1,11 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QFileDialog, QMessageBox
 from PyQt5.QtCore import pyqtSignal
 import commentjson
-from typing import Optional
+from typing import Optional, Dict, Any, List
 
 from view.widgets.macro_list import MacroListWidget
 from view.widgets.macro_ctrl import MacroCtrlWidget
 from view.managers.lang_manager import lang_manager
-
-from core.settings_manager import SettingsManager
 
 class MacroPanel(QWidget):
     """
@@ -15,18 +13,18 @@ class MacroPanel(QWidget):
     커맨드 리스트 관리 및 실행 기능을 제공하는 패널 클래스입니다.
     """
 
-    repeat_start_requested = pyqtSignal(list) # indices
+    repeat_start_requested = pyqtSignal(list)  # indices
     repeat_stop_requested = pyqtSignal()
+    state_changed = pyqtSignal()  # 데이터 변경 알림 시그널
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
-        MacroListPanel을 초기화합니다.
+        MacroPanel을 초기화합니다.
 
         Args:
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
-        self.settings = None
         self.marco_ctrl = None
         self.macro_list = None
         self._loading = False
@@ -41,21 +39,16 @@ class MacroPanel(QWidget):
         self.macro_list = MacroListWidget()
         self.marco_ctrl = MacroCtrlWidget()
 
-        # 설정 관리자 (Settings Manager)
-        self.settings = SettingsManager()
-
         # 시그널 연결
         self.marco_ctrl.macro_repeat_start_requested.connect(self.on_repeat_start_requested)
-        self.marco_ctrl.macro_repeat_stop_requested.connect(self.on_repeat_stop_requested) # Stop signal is same for now
+        self.marco_ctrl.macro_repeat_stop_requested.connect(self.on_repeat_stop_requested)
 
         self.marco_ctrl.script_save_requested.connect(self.save_script_to_file)
         self.marco_ctrl.script_load_requested.connect(self.load_script_from_file)
 
-        # 데이터 변경 시 자동 저장
-        # 사용자가 입력할 때마다 파일 쓰기가 발생하여 성능 저하를 유발
-        # self.macro_list.macro_list_changed.connect(self.save_state)
-        # self.marco_ctrl.repeat_delay_line_edit.textChanged.connect(self.save_state)
-        # self.marco_ctrl.repeat_count_spin.valueChanged.connect(self.save_state)
+        # 데이터 변경 시 상위(Presenter/MainWindow)에 알림
+        self.macro_list.macro_list_changed.connect(self.state_changed.emit)
+        # 필요한 경우 Control 위젯의 변경 사항도 연결 가능
 
         layout.addWidget(self.macro_list)
         layout.addWidget(self.marco_ctrl)
@@ -63,38 +56,41 @@ class MacroPanel(QWidget):
         self.setLayout(layout)
 
         # 초기 데이터 로드 (위젯 생성 후)
-        self.load_state()
+        # self.load_state()
 
-    def load_state(self) -> None:
-        """설정에서 상태를 로드합니다."""
+    def load_state(self, state: Dict[str, Any]) -> None:
+        """
+        외부에서 전달받은 상태 딕셔너리를 UI에 적용합니다.
+
+        Args:
+            state (Dict[str, Any]): 저장된 패널 상태 데이터.
+        """
         self._loading = True
         try:
             # 커맨드 리스트 로드
-            commands = self.settings.get("macro_list.commands", [])
+            commands = state.get("commands", [])
             if commands:
                 self.macro_list.load_state(commands)
 
             # 컨트롤 설정 로드
-            control_state = self.settings.get("macro_list.control_state", {})
+            control_state = state.get("control_state", {})
             if control_state:
                 self.marco_ctrl.load_state(control_state)
         finally:
             self._loading = False
 
-    def save_state(self) -> None:
-        """현재 상태를 설정에 저장합니다."""
-        if self._loading:
-            return
+    def save_state(self) -> Dict[str, Any]:
+        """
+        현재 패널의 상태를 딕셔너리로 반환합니다.
+        파일에 직접 저장하지 않습니다.
 
-        # 커맨드 리스트 저장
-        commands = self.macro_list.save_state()
-        self.settings.set("macro_list.commands", commands)
-
-        # 컨트롤 설정 저장
-        control_state = self.marco_ctrl.save_state()
-        self.settings.set("macro_list.control_state", control_state)
-
-        self.settings.save_settings()
+        Returns:
+            Dict[str, Any]: 현재 패널 상태 데이터.
+        """
+        return {
+            "commands": self.macro_list.save_state(),
+            "control_state": self.marco_ctrl.save_state()
+        }
 
     def on_repeat_start_requested(self, delay: int, max_runs: int) -> None:
         """
@@ -119,7 +115,7 @@ class MacroPanel(QWidget):
 
     def set_running_state(self, running: bool) -> None:
         """
-        실행 상태를 전파합니다.
+        실행 상태를 UI에 반영합니다.
 
         Args:
             running (bool): 실행 중 여부.
@@ -129,17 +125,19 @@ class MacroPanel(QWidget):
         self.marco_ctrl.set_running_state(running)
 
     def save_script_to_file(self) -> None:
-        """현재 커맨드 리스트와 설정을 파일로 저장합니다."""
+        """현재 커맨드 리스트와 설정을 JSON 파일로 내보냅니다."""
         filter_str = "JSON Files (*.json);;All Files (*)"
-        path, _ = QFileDialog.getSaveFileName(self, lang_manager.get_text("macro_list_dialog_title_save"), "", filter_str)
+        path, _ = QFileDialog.getSaveFileName(
+            self,
+            lang_manager.get_text("macro_list_dialog_title_save"),
+            "",
+            filter_str
+        )
 
         if not path:
             return
 
-        data = {
-            "commands": self.macro_list.save_state(),
-            "control_state": self.marco_ctrl.save_state()
-        }
+        data = self.save_state()
 
         try:
             with open(path, 'w', encoding='utf-8') as f:
@@ -148,9 +146,14 @@ class MacroPanel(QWidget):
             QMessageBox.critical(self, "Error", f"Failed to save script: {str(e)}")
 
     def load_script_from_file(self) -> None:
-        """파일에서 커맨드 리스트와 설정을 로드합니다."""
+        """JSON 파일에서 커맨드 리스트와 설정을 불러옵니다."""
         filter_str = "JSON Files (*.json);;All Files (*)"
-        path, _ = QFileDialog.getOpenFileName(self, lang_manager.get_text("macro_list_dialog_title_open"), "", filter_str)
+        path, _ = QFileDialog.getOpenFileName(
+            self,
+            lang_manager.get_text("macro_list_dialog_title_open"),
+            "",
+            filter_str
+        )
 
         if not path:
             return
@@ -159,11 +162,8 @@ class MacroPanel(QWidget):
             with open(path, 'r', encoding='utf-8') as f:
                 data = commentjson.load(f)
 
-            if "commands" in data:
-                self.macro_list.load_state(data["commands"])
-
-            if "control_state" in data:
-                self.marco_ctrl.load_state(data["control_state"])
+            # 파일에서 로드한 데이터를 UI에 적용
+            self.load_state(data)
 
         except Exception as e:
             QMessageBox.critical(self, "Error", f"Failed to load script: {str(e)}")

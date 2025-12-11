@@ -3,12 +3,12 @@
 ConnectionWorker와 UI 사이의 브리지 역할을 수행합니다.
 """
 from PyQt5.QtCore import QObject, pyqtSignal
-from typing import Optional, Dict, Any
+from typing import Optional
 
 # 변경된 모듈 임포트
 from model.connection_worker import ConnectionWorker
 from model.transports import SerialTransport
-from core.constants import DEFAULT_BAUDRATE
+from app_constants import DEFAULT_BAUDRATE
 
 class PortController(QObject):
     # 외부(Presenter)와 통신하는 시그널 (이름 유지)

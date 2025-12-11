@@ -10,6 +10,7 @@
 - **멀티포트 관리**: 최대 16개 포트 동시 오픈 및 독립 제어
 - **고속 데이터 처리**: 2MB/s 연속 스트림, 초당 10K 라인 로그 처리
 - **자동화 엔진**: Macro List 기반 스크립트 실행, Repeat 스케줄러
+- **송수신 제어**: Local Echo, RX Newline 처리
 - **파일 송수신**: Chunk 기반 전송, 진행률 표시, 취소/재시도
 - **확장성**: EventBus 기반 플러그인 시스템
 - **MVP 패턴 준수**: View-Presenter-Model 계층 분리 및 Signal 기반 통신
@@ -44,7 +45,7 @@
 serial_tool2/
 ├── config.py                # 중앙 경로 관리 (AppConfig) [완료]
 ├── core/                    # 핵심 유틸리티 및 인프라
-│   ├── interfaces.py       # ITransport 인터페이스 
+│   ├── interfaces.py       # ITransport 인터페이스
 │   ├── event_bus.py        # EventBus (Pub/Sub)
 │   ├── utils.py            # RingBuffer, ThreadSafeQueue
 │   ├── logger.py           # 로깅 시스템 [완료]
@@ -60,10 +61,10 @@ serial_tool2/
 │   └── file_transfer.py    # 파일 전송 엔진
 ├── view/                    # UI 계층
 │   ├── main_window.py      # 메인 윈도우 [완료]
-│   ├── tools/              # View 도구 [완료]
+│   ├── managers/           # View 매니저 [완료]
 │   │   ├── theme_manager.py    # 테마 관리 [완료]
 │   │   ├── lang_manager.py     # 언어 관리 [완료]
-│   │   └── color_rules.py      # 로그 색상 규칙 [완료]
+│   │   └── color_manager.py    # 로그 색상 규칙 [완료]
 │   ├── sections/           # 섹션 (화면 분할) [완료]
 │   │   ├── __init__.py          # Package init [완료]
 │   │   ├── main_left_section.py  # 좌측 섹션 [완료]
@@ -86,11 +87,13 @@ serial_tool2/
 │   │   ├── macro_list.py          # 매크로 리스트 [완료]
 │   │   ├── macro_ctrl.py          # 매크로 제어 [완료]
 │   │   ├── packet_inspector.py    # 패킷 인스펙터 [완료]
-│   │   ├── system_log_widget.py         # 상태 표시 영역 [완료]
+│   │   ├── system_log.py         # 상태 표시 영역 [완료]
+│   │   ├── port_stats.py          # 포트 통계 [완료]
 │   │   └── file_progress.py       # 파일 전송 진행 [완료]
-│   ├── pyqt_customs/       # PyQt5 커스텀 위젯 [완료]
+│   ├── custom_widgets/     # PyQt5 커스텀 위젯 [완료]
 │   │   ├── smart_list_view.py # 고성능 로그 뷰어 [완료]
-│   │   └── smart_number_edit.py   # HEX 입력 필드 [완료]
+│   │   ├── smart_number_edit.py   # HEX 입력 필드 [완료]
+│   │   └── smart_plain_text_edit.py # 스마트 텍스트 에디터 [완료]
 │   └── dialogs/            # 대화상자 [완료]
 │       ├── __init__.py          # Package init [완료]
 │       ├── about_dialog.py        # 정보 대화상자 [완료]
@@ -131,8 +134,8 @@ serial_tool2/
 **RingBuffer 구현**
 - 크기: 512KB (설정 가능)
 - 고속 데이터 수신 처리
-- 오버플로우 시 자동 덮어쓰기
-- 스레드 안전성 보장
+- 오버플로우 시 오래된 데이터를 덮어쓰며, `memoryview`를 사용하여 복사를 최소화합니다.
+- 고속 데이터 수신 처리 및 스레드 안전성 보장.
 
 **ThreadSafeQueue 구현**
 - TX 큐 관리 (최대 128 chunks)
@@ -143,6 +146,7 @@ serial_tool2/
 
 #### [진행 필요] `core/event_bus.py`
 **EventBus 아키텍처**
+- **기능**: 컴포넌트 간 결합도를 낮추기 위한 Pub/Sub 시스템.
 - Publish/Subscribe 패턴
 - 표준 이벤트 타입 정의
   - `PORT_OPENED`, `PORT_CLOSED`, `DATA_RECEIVED`, `DATA_SENT`
@@ -150,10 +154,11 @@ serial_tool2/
   - `FILE_TRANSFER_STARTED`, `FILE_TRANSFER_PROGRESS`, `FILE_TRANSFER_COMPLETED`
 - 플러그인 연동 인터페이스
 - 이벤트 필터링 및 우선순위
+- PyQt Signal/Slot을 활용한 스레드 안전한 이벤트 디스패치.
 
 #### [진행 필요] `core/logger.py`
 **로깅 계층 (Logging Layers)**
-- **UI Log**: `QTextEdit` (메모리), 실시간 표시
+- **UI Log**: `QSmartListView` (메모리), 실시간 표시
 - **File Log**: `RotatingFileHandler` (10MB x 5개), `logs/app_YYYY-MM-DD.log`
 - **Performance Log**: CSV 형식 (`logs/perf_YYYY-MM-DD.csv`), 지표(Rx/Tx 속도, 버퍼 점유율)
 
@@ -172,30 +177,22 @@ serial_tool2/
 - **SerialTransport**: PySerial을 래핑하여 ITransport 구현
 
 #### [진행 필요] `model/packet_parser.py`
-**패킷 파서 시스템 (Packet Parser System)**
-- **Factory Pattern**: `ATParser`, `DelimiterParser`, `FixedLengthParser`, `HexParser`
-- **Strategy**: `ParserFactory`를 통해 포트별 파서 인스턴스 생성
+**패킷 파서 시스템**
+- **IPacketParser**: 파싱 인터페이스 (`parse(buffer) -> List[Packet]`)
+- **Implementations**:
+    - `ATParser`: `\r\n` 구분 및 OK/ERROR 응답 처리
+    - `RawParser`: 바이너리 데이터를 그대로 패스
+    - `DelimiterParser`, `FixedLengthParser`, `HexParser` 추가
+- **ParserFactory**: 설정(`AT`, `Hex` 등)에 따라 적절한 파서 인스턴스 생성 (전략 패턴)
 - **Performance**: 1ms 이하 파싱 지연 목표
 
 #### [진행 필요] `model/connection_worker.py`
 - **ConnectionWorker**:
 - **Non-blocking I/O**: `timeout=0` + 반복 읽기 최적화
-- **RingBuffer Integration**: `bytearray` 기반 고속 버퍼링
+- **RingBuffer Integration**: 고속 송/수신 데이터 버퍼링
 - **Signals**: `rx_data(bytes)`, `tx_complete(int)`, `port_error(str)`, `data_received`, `error_occurred`, `connection_opened/closed`
-- 하드웨어에 독립적인 통신 루프 구현
+- `ITransport`를 주입받아 하드웨어 독립적인 I/O 루프 수행.
 - Controller로부터 Transport 객체를 주입받아 동작 (Dependency Injection)
-    
-#### [진행 필요] `model/serial_worker.py`
-**SerialWorker(QThread) 구현**
-- Non-blocking I/O 루프
-- RingBuffer 연동 (수신 데이터)
-- ThreadSafeQueue 연동 (송신 데이터)
-- 시그널 발행
-  - `data_received(bytes)`
-  - `data_sent(int)`
-  - `error_occurred(str)`
-  - `port_closed()`
-- 안전 종료 시퀀스 (타임아웃 3초)
 
 **성능 목표**
 - 수신 처리량: 2MB/s
@@ -204,6 +201,8 @@ serial_tool2/
 
 #### [진행 필요] `model/port_controller.py`
 **포트 라이프사이클 관리**
+- **역할**: `SerialTransport`와 `ConnectionWorker`의 생명주기 관리
+- **EventBus 통합**: 수신된 데이터를 직접 시그널로 보내는 대신, `EventBus`에 `port.rx_data` 이벤트를 발행하여 디커플링
 - 상태 머신: `DISCONNECTED` ↔ `CONNECTING` ↔ `CONNECTED` ↔ `ERROR`
 - 역할: Worker 스레드 관리 및 Transport 객체 생성/주입
 - 설정 변경 처리 (baudrate, parity 등)
@@ -225,6 +224,14 @@ serial_tool2/
 - 타임아웃 설정 (기본 5초)
 - 매칭 실패 시 재시도 정책
 
+#### [진행 필요] `model/macro_runner.py`
+**매크로 실행 엔진**
+- **구조**: 매크로 실행을 담당하는 **상태 머신** (QObject).
+- **State Machine**: `Idle` → `Running` → `Paused` → `Stopped`
+- **Step Execution**: Send → Expect Match (Regex) → Delay → Next/Jump/Repeat
+- **Auto Run**: `AutoTxScheduler` (Global Interval + Loop Count)
+- **Signals**: `step_started`, `step_completed`, `macro_finished`
+
 #### [진행 필요] `model/macro_entry.py`
 **MacroEntry DTO**
 ```python
@@ -243,13 +250,6 @@ class MacroEntry:
 **JSON 직렬화**
 - 스크립트 저장/로드
 - 검증 규칙 (필수 필드, 타입 체크)
-
-#### [진행 필요] `model/macro_runner.py`
-**Macro List 실행 엔진 (MacroRunner)**
-- **State Machine**: `Idle` → `Running` → `Paused` → `Stopped`
-- **Step Execution**: Send → Expect Match (Regex) → Delay → Next/Jump/Repeat
-- **Auto Run**: `AutoTxScheduler` (Global Interval + Loop Count)
-- **Signals**: `step_started`, `step_completed`, `macro_finished`
 
 #### [진행 필요] `model/file_transfer.py`
 **FileTransferEngine(QRunnable)**
@@ -281,19 +281,21 @@ class MacroEntry:
   - 스레드 정리
 
 #### [진행 필요] `presenter/port_presenter.py`
-**포트 제어 로직**
+**포트 제어**
+- `PortSettingsWidget` <-> `PortController` 연결
 - 포트 열기/닫기
   - View 시그널 수신 (`port_open_requested`)
-  - PortController 호출
   - 상태 업데이트 (`port_opened`, `port_closed`)
 - 설정 변경 처리
   - baudrate, parity 등 변경 시 포트 재시작
 - 데이터 송수신
   - View → Model: TX 데이터 전달
   - Model → View: RX 데이터 표시
+- 연결 상태 변화에 따라 UI 업데이트
 
 #### [진행 필요] `presenter/macro_presenter.py`
 **Macro List 제어**
+- `MacroPanel` <-> `MacroRunner` 연결
 - 스크립트 저장/로드
   - JSON 파일 I/O
   - MacroEntry 직렬화/역직렬화
@@ -305,6 +307,7 @@ class MacroEntry:
 
 #### [진행 필요] `presenter/file_presenter.py`
 **파일 전송 제어**
+- `ManualCtrlWidget`(파일 탭) <-> `FileTransferEngine` 연결
 - 파일 선택 처리
 - FileTransferEngine 시작
 - 진행률 업데이트
@@ -317,14 +320,14 @@ class MacroEntry:
 #### [진행 필요] `presenter/event_router.py`
 **EventRouter (View-Model Decoupling)**
 - **Role**: View 이벤트를 Domain 메서드로 라우팅, Domain 시그널을 View 업데이트로 변환
-- **Benefit**: View와 Model 간의 직접 의존성 제거 (Layered MVP 준수)
+- **Benefit**: View와 Model 간의 직접 의존성 제거 (Strict Layered MVP 준수)
 
 ---
 
 ### 5. Performance Strategy (성능 최적화 전략)
 
-#### 1. Rx Data Pipeline
-- **RingBuffer**: `bytearray` 사용으로 메모리 할당 최소화 (O(1))
+#### 1. Tx/Rx Data Pipeline
+- **RingBuffer**: 메모리 할당 최소화 (O(1))
 - **Non-blocking I/O**: `serial.read()` 타임아웃 0ms 설정 및 루프 최적화
 
 #### 2. UI Rendering (RxLogView)

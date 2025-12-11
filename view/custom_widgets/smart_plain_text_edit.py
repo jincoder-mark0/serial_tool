@@ -2,7 +2,7 @@
 QSmartTextEdit - 라인 번호가 표시되는 스마트 텍스트 에디터
 """
 from PyQt5.QtWidgets import QWidget, QPlainTextEdit, QTextEdit, QHBoxLayout
-from PyQt5.QtCore import Qt, QRect
+from PyQt5.QtCore import Qt, QRect, pyqtProperty
 from PyQt5.QtGui import QPainter, QColor, QTextFormat, QPaintEvent, QResizeEvent
 
 
@@ -29,6 +29,11 @@ class QSmartTextEdit(QPlainTextEdit):
     def __init__(self, parent=None):
         super().__init__(parent)
 
+        # 기본 색상 설정 (다크 테마 기준)
+        self._line_number_bg_color = QColor(53, 53, 53)
+        self._line_number_color = QColor(128, 128, 128)
+        self._current_line_color = QColor(60, 60, 60)
+
         # 라인 번호 영역 생성
         self.line_number_area = LineNumberArea(self)
 
@@ -40,6 +45,34 @@ class QSmartTextEdit(QPlainTextEdit):
         # 초기 설정
         self.update_line_number_area_width(0)
         self.highlight_current_line()
+
+    # ----------------------------------------------------------------------
+    # Properties for QSS Styling
+    # ----------------------------------------------------------------------
+    def get_line_number_bg_color(self):
+        return self._line_number_bg_color
+
+    def set_line_number_bg_color(self, color):
+        self._line_number_bg_color = QColor(color)
+        self.line_number_area.update()
+
+    def get_line_number_color(self):
+        return self._line_number_color
+
+    def set_line_number_color(self, color):
+        self._line_number_color = QColor(color)
+        self.line_number_area.update()
+
+    def get_current_line_color(self):
+        return self._current_line_color
+
+    def set_current_line_color(self, color):
+        self._current_line_color = QColor(color)
+        self.highlight_current_line()
+
+    lineNumberBackgroundColor = pyqtProperty(QColor, get_line_number_bg_color, set_line_number_bg_color)
+    lineNumberColor = pyqtProperty(QColor, get_line_number_color, set_line_number_color)
+    currentLineColor = pyqtProperty(QColor, get_current_line_color, set_current_line_color)
 
     def line_number_area_width(self):
         """라인 번호 영역의 너비를 계산합니다."""
@@ -80,8 +113,8 @@ class QSmartTextEdit(QPlainTextEdit):
         """라인 번호를 그립니다."""
         painter = QPainter(self.line_number_area)
 
-        # 배경색 (테마에 따라 조정 가능)
-        painter.fillRect(event.rect(), QColor(53, 53, 53))  # 다크 테마 기본
+        # 배경색 (프로퍼티 사용)
+        painter.fillRect(event.rect(), self._line_number_bg_color)
 
         # 현재 보이는 블록 찾기
         block = self.firstVisibleBlock()
@@ -93,7 +126,7 @@ class QSmartTextEdit(QPlainTextEdit):
         while block.isValid() and top <= event.rect().bottom():
             if block.isVisible() and bottom >= event.rect().top():
                 number = str(block_number + 1)
-                painter.setPen(QColor(128, 128, 128))  # 회색
+                painter.setPen(self._line_number_color)  # 프로퍼티 사용
                 painter.drawText(
                     0, top,
                     self.line_number_area.width() - 4,
@@ -114,9 +147,8 @@ class QSmartTextEdit(QPlainTextEdit):
         if not self.isReadOnly():
             selection = QTextEdit.ExtraSelection()
 
-            # 현재 라인 배경색 (약간 밝게)
-            line_color = QColor(60, 60, 60)  # 다크 테마 기본
-            selection.format.setBackground(line_color)
+            # 현재 라인 배경색 (프로퍼티 사용)
+            selection.format.setBackground(self._current_line_color)
             selection.format.setProperty(QTextFormat.FullWidthSelection, True)
             selection.cursor = self.textCursor()
             selection.cursor.clearSelection()

@@ -1,10 +1,10 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTextEdit, QLabel
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel
 from typing import Optional
 import datetime
 from view.managers.lang_manager import lang_manager
 from view.custom_widgets.smart_list_view import QSmartListView
 
-from core.constants import (
+from app_constants import (
     LOG_COLOR_INFO,
     LOG_COLOR_ERROR,
     LOG_COLOR_WARN,
@@ -45,7 +45,7 @@ class SystemLogWidget(QWidget):
         # self.system_log_list = QTextEdit()
         self.system_log_list = QSmartListView()
         self.system_log_list.setReadOnly(True)
-        self.system_log_list.setMaximumHeight(100) # 높이 제한
+        self.system_log_list.setFixedHeight(100) # 높이 고정
         self.system_log_list.setToolTip(lang_manager.get_text("system_list_log_tooltip"))
         self.system_log_list.setPlaceholderText(lang_manager.get_text("system_list_log_placeholder"))
         self.system_log_list.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
@@ -79,10 +79,10 @@ class SystemLogWidget(QWidget):
 
         # HTML 포맷팅 (LogDelegate가 렌더링함)
         formatted_msg = f'<span style="color:{color};">[{level}]</span> {message}'
-        
+
         # 타임스탬프는 QSmartListView의 기능 활용
         timestamp = datetime.datetime.now().strftime("%H:%M:%S")
-        
+
         self.system_log_list.append(formatted_msg, timestamp=timestamp)
 
     def clear(self) -> None:
