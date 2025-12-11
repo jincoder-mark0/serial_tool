@@ -53,7 +53,8 @@
           "hex_mode": false,
           "timestamp": false,
           "is_paused": false,
-          "search_text": ""
+          "search_text": "",
+          "filter_enabled": false
         }
       }
     ]
@@ -114,6 +115,14 @@
         "command": "",
         "suffix": true,
         "hex_mode": false,
+        "delay": "100"
+      },
+      {
+        "enabled": true,
+        "prefix": false,
+        "command": "",
+        "suffix": true,
+        "hex_mode": true,
         "delay": "100"
       },
       {

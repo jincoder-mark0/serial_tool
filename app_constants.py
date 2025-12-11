@@ -66,6 +66,7 @@ MAX_PACKET_SIZE: int = 4096
 MIN_SCAN_INTERVAL_MS: int = 1000
 MAX_SCAN_INTERVAL_MS: int = 60000
 DEFAULT_MACRO_DELAY_MS: int = 1000
+MAX_CMD_HISTORY_SIZE: int = 50    # 수동 명령 히스토리 최대 크기
 
 # ==========================================
 # Colors (For Text Logs)

@@ -32,6 +32,7 @@ class MacroListWidget(QWidget):
         self.del_row_btn = None
         self.add_row_btn = None
         self.select_all_chk = None
+        self._send_enabled = False # Send 버튼 활성화 상태 추적
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
@@ -228,8 +229,9 @@ class MacroListWidget(QWidget):
             commands (List[Dict[str, Any]]): 커맨드 데이터 리스트.
         """
         self.macro_table_model.removeRows(0, self.macro_table_model.rowCount())
-        for cmd in commands:
-            self._append_row(
+        for i, cmd in enumerate(commands):
+            self._insert_row(
+                i,
                 cmd.get("command", ""),
                 cmd.get("prefix", True),
                 cmd.get("hex_mode", False),
@@ -241,10 +243,10 @@ class MacroListWidget(QWidget):
 
     def add_dummy_row(self, cmd: str, hex_mode: bool, suffix: bool, delay: str) -> None:
         """테스트용 더미 데이터를 추가합니다."""
-        self._append_row(cmd, True, hex_mode, suffix, delay)
+        self._insert_row(self.macro_table_model.rowCount(), cmd, True, hex_mode, suffix, delay)
 
     def add_macro_row(self) -> None:
-        """빈 행을 추가합니다. 선택된 행이 있으면 옵션 복사, 없으면 마지막 행 옵션 복사."""
+        """빈 행을 추가합니다. 선택된 행이 있으면 그 아래에 추가하고 옵션을 복사합니다."""
         # 기본값
         cmd = ""
         prefix = True
@@ -255,29 +257,40 @@ class MacroListWidget(QWidget):
 
         # 선택된 행 확인
         selected_rows = self.macro_table.selectionModel().selectedRows()
-        target_row = -1
+        copy_source_row = -1
+        insert_row_idx = -1
 
         if selected_rows:
-            target_row = selected_rows[-1].row()  # 마지막 선택된 행
-        elif self.macro_table_model.rowCount() > 0:
-            target_row = self.macro_table_model.rowCount() - 1  # 마지막 행
+            # 선택된 행 중 마지막 행을 기준으로 함
+            last_selected_row = selected_rows[-1].row()
+            copy_source_row = last_selected_row
+            insert_row_idx = last_selected_row + 1
+        else:
+            # 선택된 행이 없으면 맨 뒤에 추가
+            if self.macro_table_model.rowCount() > 0:
+                copy_source_row = self.macro_table_model.rowCount() - 1
+            insert_row_idx = self.macro_table_model.rowCount()
 
-        if target_row >= 0:
+        if copy_source_row >= 0:
             # 옵션 복사
-            enabled = self.macro_table_model.item(target_row, 0).checkState() == Qt.Checked
-            prefix = self.macro_table_model.item(target_row, 1).checkState() == Qt.Checked
-            cmd = ""
-            suffix = self.macro_table_model.item(target_row, 3).checkState() == Qt.Checked
-            hex_mode = self.macro_table_model.item(target_row, 4).checkState() == Qt.Checked
-            delay = self.macro_table_model.item(target_row, 5).text()
+            enabled = self.macro_table_model.item(copy_source_row, 0).checkState() == Qt.Checked
+            prefix = self.macro_table_model.item(copy_source_row, 1).checkState() == Qt.Checked
+            cmd = "" # 명령어는 복사하지 않음 (빈 칸)
+            suffix = self.macro_table_model.item(copy_source_row, 3).checkState() == Qt.Checked
+            hex_mode = self.macro_table_model.item(copy_source_row, 4).checkState() == Qt.Checked
+            delay = self.macro_table_model.item(copy_source_row, 5).text()
 
-        self._append_row(cmd, prefix, hex_mode, suffix, delay, enabled)
+        self._insert_row(insert_row_idx, cmd, prefix, hex_mode, suffix, delay, enabled)
 
-    def _append_row(self, cmd: str, prefix: bool, hex_mode: bool, suffix: bool, delay: str, enabled: bool = True) -> None:
+        # 추가된 행 선택
+        self.macro_table.selectRow(insert_row_idx)
+
+    def _insert_row(self, row_idx: int, cmd: str, prefix: bool, hex_mode: bool, suffix: bool, delay: str, enabled: bool = True) -> None:
         """
-        새로운 행을 모델에 추가합니다.
+        새로운 행을 모델의 특정 위치에 삽입합니다.
 
         Args:
+            row_idx (int): 삽입할 행 인덱스.
             cmd (str): 명령어.
             prefix (bool): 접두사 사용 여부.
             hex_mode (bool): HEX 모드 여부.
@@ -285,8 +298,6 @@ class MacroListWidget(QWidget):
             delay (str): 지연 시간.
             enabled (bool): 활성화 여부 (Select).
         """
-        row_idx = self.macro_table_model.rowCount()
-
         # 0: Select Checkbox
         item_select = QStandardItem()
         item_select.setCheckable(True)
@@ -321,13 +332,18 @@ class MacroListWidget(QWidget):
         item_send = QStandardItem("")
         item_send.setEditable(False)
 
-        self.macro_table_model.appendRow([item_select, item_prefix, item_cmd, item_suffix, item_hex, item_delay, item_send])
+        self.macro_table_model.insertRow(row_idx, [item_select, item_prefix, item_cmd, item_suffix, item_hex, item_delay, item_send])
 
         # Send 버튼 설정
         self._set_send_button(row_idx)
 
         # Select All 상태 업데이트
         self.update_select_all_state()
+
+    def _refresh_send_buttons(self) -> None:
+        """모든 행의 Send 버튼을 새로 설정(갱신)합니다. 행 인덱스 변경 시 필수."""
+        for row in range(self.macro_table_model.rowCount()):
+            self._set_send_button(row)
 
     def _set_send_button(self, row: int) -> None:
         """
@@ -343,8 +359,8 @@ class MacroListWidget(QWidget):
 
         btn = QPushButton(lang_manager.get_text("macro_list_btn_send"))
         btn.setCursor(Qt.PointingHandCursor)
-        # 초기 상태는 비활성화 (포트 연결 전)
-        btn.setEnabled(False)
+        # 현재 활성화 상태에 따라 설정
+        btn.setEnabled(self._send_enabled)
 
         # 버튼 클릭 시 행 인덱스를 Lambda로 캡처하여 시그널에 직접 연결
         btn.clicked.connect(lambda _, row_index=row: self.send_row_requested.emit(row_index))
@@ -361,6 +377,7 @@ class MacroListWidget(QWidget):
         Args:
             enabled (bool): 활성화 여부.
         """
+        self._send_enabled = enabled
         for row in range(self.macro_table_model.rowCount()):
             index = self.macro_table_model.index(row, 6)
             widget = self.macro_table.indexWidget(index)
@@ -375,6 +392,7 @@ class MacroListWidget(QWidget):
         rows = sorted(set(index.row() for index in self.macro_table.selectionModel().selectedRows()), reverse=True)
         for row in rows:
             self.macro_table_model.removeRow(row)
+        self._refresh_send_buttons()
         self.update_select_all_state()
 
     def move_up_selected_row(self) -> None:
@@ -386,6 +404,9 @@ class MacroListWidget(QWidget):
         # 위에서부터 순서대로 이동해야 인덱스가 꼬이지 않음
         for row in rows:
             self._move_row(row, row - 1)
+
+        # 버튼 갱신
+        self._refresh_send_buttons()
 
         # 선택 상태 복구
         self._restore_selection([row - 1 for row in rows])
@@ -400,6 +421,9 @@ class MacroListWidget(QWidget):
         for row in rows:
             self._move_row(row, row + 1)
 
+        # 버튼 갱신
+        self._refresh_send_buttons()
+
         # 선택 상태 복구
         self._restore_selection([row + 1 for row in rows])
 
@@ -412,38 +436,17 @@ class MacroListWidget(QWidget):
 
     def _move_row(self, source_row: int, dest_row: int) -> None:
         """
-        행을 이동하고 위젯(버튼)을 복구합니다.
+        행을 이동합니다. (데이터만 이동, 버튼은 호출자가 일괄 갱신)
 
         Args:
             source_row (int): 원본 행 인덱스.
             dest_row (int): 대상 행 인덱스.
         """
-        # 0. 이동 전 버튼 상태 저장
-        is_enabled = False
-        index = self.macro_table_model.index(source_row, 6)
-        widget = self.macro_table.indexWidget(index)
-        if widget:
-            btn = widget.findChild(QPushButton)
-            if btn:
-                is_enabled = btn.isEnabled()
-
         # 1. 데이터 가져오기
         items = self.macro_table_model.takeRow(source_row)
 
         # 2. 새 위치에 삽입
         self.macro_table_model.insertRow(dest_row, items)
-
-        # 3. 위젯(버튼) 복구
-        # 이동 시 기존 위젯은 삭제되므로 새로 생성해야 함
-        self._set_send_button(dest_row)
-
-        # 4. 버튼 상태 복원
-        new_index = self.macro_table_model.index(dest_row, 6)
-        new_widget = self.macro_table.indexWidget(new_index)
-        if new_widget:
-            new_btn = new_widget.findChild(QPushButton)
-            if new_btn:
-                new_btn.setEnabled(is_enabled)
 
     def get_selected_indices(self) -> List[int]:
         """

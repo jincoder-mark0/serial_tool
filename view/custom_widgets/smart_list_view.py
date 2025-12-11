@@ -9,7 +9,8 @@ from typing import List, Any, Optional
 
 from PyQt5.QtWidgets import QListView, QAbstractItemView, QStyle, QStyledItemDelegate
 from PyQt5.QtCore import (
-    Qt, QAbstractListModel, QModelIndex, QVariant, QSize, QRegExp, pyqtSlot
+    Qt, QAbstractListModel, QModelIndex, QVariant, QSize, QRegExp, pyqtSlot,
+    QSortFilterProxyModel
 )
 from PyQt5.QtGui import (
     QColor, QTextDocument, QAbstractTextDocumentLayout, QTextCharFormat, QPainter
@@ -21,7 +22,7 @@ class QSmartListView(QListView):
     """
     QListView를 확장하여 로그 뷰어 기능을 캡슐화한 클래스입니다.
     설정값(Newline 등)은 외부에서 주입받습니다.
-    검색 탐색(Next/Prev)
+    검색 탐색(Next/Prev) 및 필터링 기능을 제공합니다.
     """
     def __init__(self, parent=None):
         """
@@ -32,9 +33,17 @@ class QSmartListView(QListView):
         """
         super().__init__(parent)
 
-        # 모델 및 델리게이트 설정
+        # 모델 설정
         self.log_model = LogModel()
-        self.setModel(self.log_model)
+
+        # 프록시 모델 설정 (필터링 지원)
+        self.proxy_model = QSortFilterProxyModel(self)
+        self.proxy_model.setSourceModel(self.log_model)
+        self.proxy_model.setFilterCaseSensitivity(Qt.CaseInsensitive)
+        # 전체 열에 대해 필터링 (로그는 0번 컬럼 하나임)
+        self.proxy_model.setFilterKeyColumn(0)
+
+        self.setModel(self.proxy_model)
 
         self.delegate = LogDelegate(self)
         self.setItemDelegate(self.delegate)
@@ -48,6 +57,8 @@ class QSmartListView(QListView):
         # 설정 관리자
         self._newline_char = "\n"
         self._placeholder_text = ""
+        self._filter_enabled = False
+        self._current_pattern = None
 
         self.setObjectName("SmartListView")
 
@@ -87,7 +98,6 @@ class QSmartListView(QListView):
             text = f'<span style="color:{LOG_COLOR_TIMESTAMP};">{timestamp}</span> {text}'
 
         # 3. 모델에 추가 (단일 항목이지만 리스트로 전달)
-        # Note: 대량 추가 시에는 외부에서 리스트로 모아서 append_batch를 호출하는 메서드를 추가하는 것이 좋음
         self.log_model.add_logs([text])
 
         # 4. 자동 스크롤 (맨 아래에 있을 때만)
@@ -108,12 +118,14 @@ class QSmartListView(QListView):
     @pyqtSlot(str)
     def set_search_pattern(self, text: str) -> None:
         """
-        검색어를 설정합니다. 정규식으로 컴파일하여 델리게이트에 전달합니다.
+        검색어를 설정합니다. 정규식으로 컴파일하여 델리게이트에 전달하고,
+        필터 모드일 경우 프록시 모델의 필터도 업데이트합니다.
 
         Args:
             text (str): 검색할 문자열 (정규식 지원).
         """
         if not text:
+            self._current_pattern = None
             self.delegate.set_search_pattern(None)
         else:
             # 1. 정규식으로 시도
@@ -123,9 +135,28 @@ class QSmartListView(QListView):
             if not pattern.isValid():
                 pattern = QRegExp(QRegExp.escape(text), Qt.CaseInsensitive)
 
+            self._current_pattern = pattern
             self.delegate.set_search_pattern(pattern)
 
+        self._update_filter()
         self.viewport().update() # 화면 갱신
+
+    def set_filter_mode(self, enabled: bool) -> None:
+        """
+        검색어 필터링 모드를 설정합니다.
+
+        Args:
+            enabled (bool): True면 검색어가 포함된 라인만 표시.
+        """
+        self._filter_enabled = enabled
+        self._update_filter()
+
+    def _update_filter(self) -> None:
+        """현재 패턴과 필터 모드에 따라 프록시 모델 필터를 업데이트합니다."""
+        if self._filter_enabled and self._current_pattern:
+            self.proxy_model.setFilterRegExp(self._current_pattern)
+        else:
+            self.proxy_model.setFilterRegExp("") # 필터 해제
 
     def set_max_lines(self, max_lines: int) -> None:
         """
@@ -154,6 +185,7 @@ class QSmartListView(QListView):
     def find_next(self, text: str) -> bool:
         """
         다음 검색 결과를 찾아 해당 행으로 이동합니다. (Wrap around 지원)
+        현재 보이는(필터링된) 항목 내에서 검색합니다.
 
         Args:
             text (str): 검색할 문자열.
@@ -165,8 +197,10 @@ class QSmartListView(QListView):
 
         pattern = self._create_pattern(text)
         current_row = self.currentIndex().row()
+        # 현재 모델(프록시)의 행 수 사용
+        total_rows = self.model().rowCount()
+
         start_row = current_row + 1 if current_row >= 0 else 0
-        total_rows = self.log_model.rowCount()
 
         # 1. 현재 위치 다음부터 끝까지 검색
         for row in range(start_row, total_rows):
@@ -185,6 +219,7 @@ class QSmartListView(QListView):
     def find_prev(self, text: str) -> bool:
         """
         이전 검색 결과를 찾아 해당 행으로 이동합니다. (Wrap around 지원)
+        현재 보이는(필터링된) 항목 내에서 검색합니다.
 
         Args:
             text (str): 검색할 문자열.
@@ -196,7 +231,9 @@ class QSmartListView(QListView):
 
         pattern = self._create_pattern(text)
         current_row = self.currentIndex().row()
-        total_rows = self.log_model.rowCount()
+        # 현재 모델(프록시)의 행 수 사용
+        total_rows = self.model().rowCount()
+
         start_row = current_row - 1 if current_row >= 0 else total_rows - 1
 
         # 1. 현재 위치 이전부터 처음까지 역순 검색
@@ -247,6 +284,7 @@ class QSmartListView(QListView):
     def _match_row(self, row: int, pattern: QRegExp) -> bool:
         """
         특정 행의 데이터가 검색 패턴과 일치하는지 확인합니다.
+        현재 모델(프록시)의 데이터를 기준으로 확인합니다.
 
         Args:
             row (int): 행 인덱스.
@@ -255,10 +293,9 @@ class QSmartListView(QListView):
         Returns:
             bool: 일치하면 True.
         """
-        # 모델의 원본 데이터(HTML 포함)에서 검색
-        # 성능을 위해 stripHtml을 하지 않고 원본에서 검색합니다.
-        # (필요 시 정규식으로 태그 제외 가능)
-        text = self.log_model.data(self.log_model.index(row, 0))
+        # 현재 모델(프록시)에서 데이터 가져오기
+        index = self.model().index(row, 0)
+        text = self.model().data(index)
         return pattern.indexIn(text) != -1
 
     def _select_and_scroll(self, row: int) -> None:
@@ -268,8 +305,8 @@ class QSmartListView(QListView):
         Args:
             row (int): 이동할 행 인덱스.
         """
-        """해당 행을 선택하고 화면 중앙으로 스크롤"""
-        index = self.log_model.index(row, 0)
+        # 현재 모델(프록시)의 인덱스 사용
+        index = self.model().index(row, 0)
         self.setCurrentIndex(index)
         self.scrollTo(index, QAbstractItemView.PositionAtCenter)
 

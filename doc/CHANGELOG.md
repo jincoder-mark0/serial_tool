@@ -2,6 +2,42 @@
 
 ## [미배포] (Unreleased)
 
+### 기능 개선 및 버그 수정 (2025-12-11)
+
+#### 추가 사항 (Added)
+- **MacroListWidget 컨텍스트 메뉴**
+  - 우클릭 메뉴 추가: Add, Delete, Up, Down 기능 제공
+  - 키보드 단축키 외에 마우스 조작 편의성 향상
+  - **MacroListWidget 추가 기능 개선**
+  - 매크로 추가 시 선택된 행 바로 아래에 삽입되도록 변경 (기존: 항상 맨 뒤 추가)
+- **ManualControlWidget 히스토리 기능**
+  - 최근 전송된 명령어 50개 기억 (MRU 방식)
+  - 전송 버튼 상단에 히스토리 탐색(▲, ▼) 버튼 추가
+  - Ctrl+Up/Down 키로도 히스토리 탐색 가능
+
+#### 변경 사항 (Changed)
+- **에러 핸들링 및 로깅 개선**
+  - `PortPresenter` 및 `MacroPanel`에서 `print` 문을 `logger`와 `QMessageBox`로 대체
+  - 포트 미선택 시 Warning, 에러 발생 시 Critical 팝업 표시
+  - 에러 상황을 로그 파일에 기록하여 디버깅 용이성 확보
+
+- **PortSettingsWidget 로직 복원**
+  - `get_current_config` 메서드 추가 및 `PortPresenter` 연동
+  - 누락되었던 `on_protocol_changed`, `on_connect_clicked`, `on_port_scan_clicked` 메서드 복원
+  - 포트 설정 및 연결 로직 정상화
+
+- **RingBuffer 최적화**
+  - `core/utils.py`: `memoryview` 슬라이싱을 사용하여 `write` 메서드 성능 개선
+  - 불필요한 데이터 복사 최소화
+
+#### 수정 사항 (Fixed)
+- **QSmartListView 테두리 스타일**
+  - `QSmartListView`에 객체 이름(`SmartListView`) 부여
+  - `common.qss`, `dark_theme.qss`, `light_theme.qss`에서 ID 선택자(`#SmartListView`)를 사용하여 테두리 스타일 적용
+  - `QGroupBox` 스타일과의 간섭 제거로 올바른 테두리 표시
+
+---
+
 ### View 계층 완성, 중앙 경로 관리, 아키텍처 및 리팩토링 (2025-12-10)
 #### 리팩토링 (Refactoring)
 - **통신 계층 추상화 (Transport Abstraction)**

@@ -4,9 +4,10 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QKeyEvent
-from typing import Optional
+from typing import Optional, List
 from view.managers.lang_manager import lang_manager
 from view.custom_widgets.smart_plain_text_edit import QSmartTextEdit
+from app_constants import MAX_CMD_HISTORY_SIZE
 
 class ManualCtrlWidget(QWidget):
     """
@@ -38,6 +39,8 @@ class ManualCtrlWidget(QWidget):
         self.transfer_file_path_lbl = None
         self.file_transfer_grp = None
         self.send_manual_cmd_btn = None
+        self.history_up_btn = None
+        self.history_down_btn = None
         self.manual_cmd_input = None
         self.manual_send_grp = None
         self.save_manual_log_btn = None
@@ -48,6 +51,11 @@ class ManualCtrlWidget(QWidget):
         self.prefix_chk = None
         self.hex_chk = None
         self.manual_options_grp = None
+
+        # History State
+        self.command_history: List[str] = []
+        self.history_index: int = -1 # -1: New command (not in history)
+
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
@@ -110,14 +118,33 @@ class ManualCtrlWidget(QWidget):
         self.manual_cmd_input.setMaximumHeight(80)  # 최대 높이 제한
         # Ctrl+Enter로 전송하도록 keyPressEvent 오버라이드
 
+        # 버튼 레이아웃 (세로 정렬: Up, Down, Send)
+        btn_layout = QVBoxLayout()
+        btn_layout.setSpacing(2)
+        btn_layout.setContentsMargins(0, 0, 0, 0)
+
+        self.history_up_btn = QPushButton("▲")
+        self.history_up_btn.setToolTip(lang_manager.get_text("manual_ctrl_btn_history_up_tooltip"))
+        self.history_up_btn.setFixedSize(40, 20)
+        self.history_up_btn.clicked.connect(self.on_history_up_clicked)
+
+        self.history_down_btn = QPushButton("▼")
+        self.history_down_btn.setToolTip(lang_manager.get_text("manual_ctrl_btn_history_down_tooltip"))
+        self.history_down_btn.setFixedSize(40, 20)
+        self.history_down_btn.clicked.connect(self.on_history_down_clicked)
+
         self.send_manual_cmd_btn = QPushButton(lang_manager.get_text("manual_ctrl_btn_send"))
         self.send_manual_cmd_btn.setCursor(Qt.PointingHandCursor)
-        # 스타일은 QSS에서 처리 권장 (강조색)
         self.send_manual_cmd_btn.setProperty("class", "accent")
+        self.send_manual_cmd_btn.setFixedSize(40, 30) # 높이 조정
         self.send_manual_cmd_btn.clicked.connect(self.on_send_manual_cmd_clicked)
 
+        btn_layout.addWidget(self.history_up_btn)
+        btn_layout.addWidget(self.history_down_btn)
+        btn_layout.addWidget(self.send_manual_cmd_btn)
+
         send_layout.addWidget(self.manual_cmd_input, 1)
-        send_layout.addWidget(self.send_manual_cmd_btn)
+        send_layout.addLayout(btn_layout)
 
         self.manual_send_grp.setLayout(send_layout)
 
@@ -168,6 +195,8 @@ class ManualCtrlWidget(QWidget):
 
         self.manual_send_grp.setTitle(lang_manager.get_text("manual_ctrl_grp_manual"))
         self.send_manual_cmd_btn.setText(lang_manager.get_text("manual_ctrl_btn_send"))
+        self.history_up_btn.setToolTip(lang_manager.get_text("manual_ctrl_btn_history_up_tooltip"))
+        self.history_down_btn.setToolTip(lang_manager.get_text("manual_ctrl_btn_history_down_tooltip"))
         self.manual_cmd_input.setPlaceholderText(lang_manager.get_text("manual_ctrl_input_cmd_placeholder"))
 
         self.file_transfer_grp.setTitle(lang_manager.get_text("manual_ctrl_grp_file"))
@@ -183,6 +212,7 @@ class ManualCtrlWidget(QWidget):
         QTextEdit의 키 입력 이벤트를 처리합니다.
         Ctrl+Enter: 전송
         Enter: 새 줄 추가
+        Up/Down: 히스토리 탐색 (Ctrl 누른 상태에서)
         """
         if event.key() == Qt.Key_Return or event.key() == Qt.Key_Enter:
             if event.modifiers() == Qt.ControlModifier:
@@ -191,6 +221,10 @@ class ManualCtrlWidget(QWidget):
             else:
                 # Enter: 새 줄 추가
                 QPlainTextEdit.keyPressEvent(self.manual_cmd_input, event)
+        elif event.key() == Qt.Key_Up and event.modifiers() == Qt.ControlModifier:
+            self.on_history_up_clicked()
+        elif event.key() == Qt.Key_Down and event.modifiers() == Qt.ControlModifier:
+            self.on_history_down_clicked()
         else:
             # 다른 키는 기본 동작
             QPlainTextEdit.keyPressEvent(self.manual_cmd_input, event)
@@ -205,6 +239,9 @@ class ManualCtrlWidget(QWidget):
         """전송 버튼 클릭 시 호출됩니다."""
         text = self.manual_cmd_input.toPlainText()  # QTextEdit는 toPlainText() 사용
         if text:
+            # 히스토리에 추가
+            self.add_to_history(text)
+
             # View는 원본 입력과 체크박스 상태만 전달
             # prefix/suffix 처리는 Presenter에서 수행
             self.manual_cmd_send_requested.emit(
@@ -213,8 +250,62 @@ class ManualCtrlWidget(QWidget):
                 self.prefix_chk.isChecked(),
                 self.suffix_chk.isChecked()
             )
-            # 입력 후 지우지 않음 (히스토리 기능이 없으므로 유지하는 편이 나음)
+            # 입력 후 지우지 않음 (히스토리 기능이 없으므로 유지하는 편이 나음 -> 히스토리 있으니 지워도 되지만, 보통 남겨두는게 편함)
             # self.manual_cmd_input.clear()
+
+    def add_to_history(self, cmd: str) -> None:
+        """명령어를 히스토리에 추가합니다 (MRU)."""
+        # 중복 제거 (이미 있으면 제거 후 맨 뒤로 이동)
+        if cmd in self.command_history:
+            self.command_history.remove(cmd)
+
+        self.command_history.append(cmd)
+
+        # 최대 크기 제한
+        if len(self.command_history) > MAX_CMD_HISTORY_SIZE:
+            self.command_history.pop(0) # 가장 오래된 항목 제거
+
+        # 인덱스 초기화 (새 명령 입력 시 히스토리 탐색 중단)
+        self.history_index = -1
+
+    def on_history_up_clicked(self) -> None:
+        """이전 히스토리로 이동합니다."""
+        if not self.command_history:
+            return
+
+        if self.history_index == -1:
+            # 현재 입력 중인 상태에서 위로 누르면 가장 최근(마지막) 명령
+            self.history_index = len(self.command_history) - 1
+        elif self.history_index > 0:
+            self.history_index -= 1
+
+        self._update_input_from_history()
+
+    def on_history_down_clicked(self) -> None:
+        """다음 히스토리로 이동합니다."""
+        if not self.command_history:
+            return
+
+        if self.history_index == -1:
+            return # 이미 최신 상태
+
+        if self.history_index < len(self.command_history) - 1:
+            self.history_index += 1
+            self._update_input_from_history()
+        else:
+            # 마지막 항목에서 아래로 누르면 입력창 비우기 (새 명령 모드)
+            self.history_index = -1
+            self.manual_cmd_input.clear()
+
+    def _update_input_from_history(self) -> None:
+        """현재 history_index에 해당하는 명령어를 입력창에 표시합니다."""
+        if 0 <= self.history_index < len(self.command_history):
+            cmd = self.command_history[self.history_index]
+            self.manual_cmd_input.setPlainText(cmd)
+            # 커서를 끝으로 이동
+            cursor = self.manual_cmd_input.textCursor()
+            cursor.movePosition(cursor.End)
+            self.manual_cmd_input.setTextCursor(cursor)
 
     def on_select_transfer_file_clicked(self) -> None:
         """파일 선택 버튼 클릭 시 호출됩니다."""
@@ -251,6 +342,8 @@ class ManualCtrlWidget(QWidget):
         self.send_transfer_file_btn.setEnabled(enabled)
         self.rts_chk.setEnabled(enabled)
         self.dtr_chk.setEnabled(enabled)
+        self.history_up_btn.setEnabled(enabled)
+        self.history_down_btn.setEnabled(enabled)
 
         self.clear_manual_options_btn.setEnabled(True)
         self.save_manual_log_btn.setEnabled(True)
@@ -270,6 +363,7 @@ class ManualCtrlWidget(QWidget):
             "suffix_chk": self.suffix_chk.isChecked(),
             "rts_chk": self.rts_chk.isChecked(),
             "dtr_chk": self.dtr_chk.isChecked(),
+            "command_history": self.command_history # 히스토리 저장
         }
         return state
 
@@ -289,3 +383,4 @@ class ManualCtrlWidget(QWidget):
         self.rts_chk.setChecked(state.get("rts_chk", False))
         self.dtr_chk.setChecked(state.get("dtr_chk", False))
         self.manual_cmd_input.setPlainText(state.get("input_text", ""))  # QTextEdit는 setPlainText() 사용
+        self.command_history = state.get("command_history", [])

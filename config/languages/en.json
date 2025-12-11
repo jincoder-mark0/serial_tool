@@ -74,6 +74,8 @@
     "manual_ctrl_btn_save_log_tooltip": "Save log to file",
     "manual_ctrl_btn_select_file": "Select File",
     "manual_ctrl_btn_send": "Send",
+    "manual_ctrl_btn_history_up_tooltip": "Previous command",
+    "manual_ctrl_btn_history_down_tooltip": "Next command",
     "manual_ctrl_btn_send_file": "Send File",
     "manual_ctrl_chk_dtr": "DTR",
     "manual_ctrl_chk_dtr_tooltip": "Data Terminal Ready signal",

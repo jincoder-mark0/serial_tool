@@ -74,6 +74,8 @@
     "manual_ctrl_btn_save_log_tooltip": "로그를 파일로 저장",
     "manual_ctrl_btn_select_file": "파일 선택",
     "manual_ctrl_btn_send": "전송",
+    "manual_ctrl_btn_history_up_tooltip": "이전 명령어",
+    "manual_ctrl_btn_history_down_tooltip": "다음 명령어",
     "manual_ctrl_btn_send_file": "파일 전송",
     "manual_ctrl_chk_dtr": "DTR",
     "manual_ctrl_chk_dtr_tooltip": "데이터 단말기 준비 신호",

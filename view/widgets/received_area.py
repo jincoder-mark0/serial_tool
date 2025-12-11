@@ -8,7 +8,7 @@ QSmartListView를 기반으로 하여 대량의 데이터 처리 성능을 최�
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QCheckBox, QLabel, QLineEdit
+    QPushButton, QCheckBox, QLabel, QLineEdit, QFileDialog
 )
 from PyQt5.QtCore import QTimer, pyqtSlot, Qt
 from typing import Optional
@@ -51,6 +51,7 @@ class ReceivedAreaWidget(QWidget):
         self.rx_pause_chk = None
         self.rx_timestamp_chk = None
         self.rx_hex_chk = None
+        self.rx_filter_chk = None  # Filter Checkbox
         self.rx_log_title = None
         self.rx_log_list = None
 
@@ -58,6 +59,7 @@ class ReceivedAreaWidget(QWidget):
         self.hex_mode: bool = False
         self.is_paused: bool = False
         self.timestamp_enabled: bool = False
+        self.filter_enabled: bool = False # Filter State
         self.ui_update_buffer: list[str] = []
         self.max_lines: int = DEFAULT_LOG_MAX_LINES
 
@@ -127,6 +129,10 @@ class ReceivedAreaWidget(QWidget):
         self.rx_save_log_btn.clicked.connect(self.on_save_log_clicked)
 
         # Options
+        self.rx_filter_chk = QCheckBox(lang_manager.get_text("rx_chk_filter"))
+        self.rx_filter_chk.setToolTip(lang_manager.get_text("rx_chk_filter_tooltip"))
+        self.rx_filter_chk.stateChanged.connect(self.on_rx_filter_changed)
+
         self.rx_hex_chk = QCheckBox(lang_manager.get_text("rx_chk_hex"))
         self.rx_hex_chk.setToolTip(lang_manager.get_text("rx_chk_hex_tooltip"))
         self.rx_hex_chk.stateChanged.connect(self.on_rx_hex_mode_changed)
@@ -157,6 +163,7 @@ class ReceivedAreaWidget(QWidget):
         toolbar_layout.addWidget(self.rx_search_input)
         toolbar_layout.addWidget(self.rx_search_prev_btn)
         toolbar_layout.addWidget(self.rx_search_next_btn)
+        toolbar_layout.addWidget(self.rx_filter_chk) # Filter Checkbox
         toolbar_layout.addWidget(self.rx_hex_chk)
         toolbar_layout.addWidget(self.rx_timestamp_chk)
         toolbar_layout.addWidget(self.rx_pause_chk)
@@ -180,6 +187,8 @@ class ReceivedAreaWidget(QWidget):
         self.rx_search_next_btn.setToolTip(lang_manager.get_text("rx_btn_search_next_tooltip"))
 
         # Checkboxes
+        self.rx_filter_chk.setText(lang_manager.get_text("rx_chk_filter"))
+        self.rx_filter_chk.setToolTip(lang_manager.get_text("rx_chk_filter_tooltip"))
         self.rx_hex_chk.setText(lang_manager.get_text("rx_chk_hex"))
         self.rx_hex_chk.setToolTip(lang_manager.get_text("rx_chk_hex_tooltip"))
         self.rx_timestamp_chk.setText(lang_manager.get_text("rx_chk_timestamp"))
@@ -303,6 +312,17 @@ class ReceivedAreaWidget(QWidget):
                 logger.error(f"Error saving log: {e}")
 
     @pyqtSlot(int)
+    def on_rx_filter_changed(self, state: int) -> None:
+        """
+        필터 모드 토글을 처리합니다.
+
+        Args:
+            state (int): 체크박스 상태.
+        """
+        self.filter_enabled = (state == Qt.Checked)
+        self.rx_log_list.set_filter_mode(self.filter_enabled)
+
+    @pyqtSlot(int)
     def on_rx_hex_mode_changed(self, state: int) -> None:
         """
         HEX 모드 토글을 처리합니다.
@@ -350,13 +370,14 @@ class ReceivedAreaWidget(QWidget):
         현재 위젯의 UI 상태를 딕셔너리로 반환합니다 (설정 저장용).
 
         Returns:
-            dict: {hex_mode, timestamp, is_paused, search_text}
+            dict: {hex_mode, timestamp, is_paused, search_text, filter_enabled}
         """
         state = {
             "hex_mode": self.hex_mode,
             "timestamp": self.timestamp_enabled,
             "is_paused": self.is_paused,
-            "search_text": self.rx_search_input.text()
+            "search_text": self.rx_search_input.text(),
+            "filter_enabled": self.filter_enabled
         }
         return state
 
@@ -374,6 +395,7 @@ class ReceivedAreaWidget(QWidget):
         self.rx_hex_chk.setChecked(state.get("hex_mode", False))
         self.rx_timestamp_chk.setChecked(state.get("timestamp", False))
         self.rx_pause_chk.setChecked(state.get("is_paused", False))
+        self.rx_filter_chk.setChecked(state.get("filter_enabled", False))
         self.rx_search_input.setText(state.get("search_text", ""))
 
     def closeEvent(self, event) -> None:
