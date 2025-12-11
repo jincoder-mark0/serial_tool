@@ -28,27 +28,27 @@ class MainWindow(QMainWindow):
     """
 
     close_requested = pyqtSignal()
-    setting_save_requested = pyqtSignal(dict)
+    settings_save_requested = pyqtSignal(dict)
 
-    def __init__(self, app_config=None) -> None:
+    def __init__(self, resource_path=None) -> None:
         """
         MainWindow를 초기화하고 UI 및 설정을 로드합니다.
 
         Args:
-            app_config: AppConfig 인스턴스.
+            resource_path: ResourcePath 인스턴스.
         """
         super().__init__()
 
         # 설정 및 매니저 초기화
-        self.app_config = app_config
+        self.resource_path = resource_path
 
-        self.settings = SettingsManager(app_config)
-        self.theme_manager = ThemeManager(app_config)
+        self.settings = SettingsManager(resource_path)
+        self.theme_manager = ThemeManager(resource_path)
 
-        # 싱글톤이므로 첫 초기화 시에만 app_config 전달
-        if app_config is not None:
-            LangManager(app_config)
-            ColorManager(app_config)
+        # 싱글톤이므로 첫 초기화 시에만 resource_path 전달
+        if resource_path is not None:
+            LangManager(resource_path)
+            ColorManager(resource_path)
 
         # 초기 언어 설정
         lang = self.settings.get('settings.language', 'en')
@@ -212,7 +212,7 @@ class MainWindow(QMainWindow):
 
     def _connect_menu_signals(self) -> None:
         """메뉴바 시그널을 슬롯에 연결합니다."""
-        self.menu_bar.new_tab_requested.connect(self.left_section.add_new_port_tab)
+        self.menu_bar.tab_new_requested.connect(self.left_section.add_new_port_tab)
         self.menu_bar.exit_requested.connect(self.close)
         self.menu_bar.theme_changed.connect(self.switch_theme)
         self.menu_bar.font_settings_requested.connect(self.open_font_settings_dialog)
@@ -220,9 +220,9 @@ class MainWindow(QMainWindow):
         self.menu_bar.preferences_requested.connect(self.open_preferences_dialog)
         self.menu_bar.about_requested.connect(self.open_about_dialog)
 
-        self.menu_bar.open_port_requested.connect(self.left_section.open_current_port)
-        self.menu_bar.close_tab_requested.connect(self.left_section.close_current_tab)
-        self.menu_bar.save_log_requested.connect(self.save_log)
+        self.menu_bar.port_open_requested.connect(self.left_section.open_current_port)
+        self.menu_bar.tab_close_requested.connect(self.left_section.close_current_tab)
+        self.menu_bar.log_save_requested.connect(self.save_log)
         self.menu_bar.toggle_right_panel_requested.connect(self.toggle_right_panel)
 
     def _connect_toolbar_signals(self) -> None:
@@ -230,7 +230,7 @@ class MainWindow(QMainWindow):
         self.main_toolbar.open_requested.connect(self.left_section.open_current_port)
         self.main_toolbar.close_requested.connect(self.left_section.close_current_port)
         self.main_toolbar.clear_requested.connect(self.clear_log)
-        self.main_toolbar.save_log_requested.connect(self.save_log)
+        self.main_toolbar.log_save_requested.connect(self.save_log)
         self.main_toolbar.settings_requested.connect(self.open_preferences_dialog)
 
     def save_log(self) -> None:
@@ -295,7 +295,7 @@ class MainWindow(QMainWindow):
 
     def on_settings_change_requested(self, settings: dict) -> None:
         """설정 변경 요청을 Presenter로 전달합니다."""
-        self.setting_save_requested.emit(settings)
+        self.settings_save_requested.emit(settings)
 
     def on_language_changed(self, lang_code: str) -> None:
         """

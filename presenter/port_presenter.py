@@ -40,14 +40,14 @@ class PortPresenter(QObject):
 
         # View 시그널 연결 (현재 포트 패널의 설정 위젯에서)
         if self.current_port_panel:
-            self.current_port_panel.port_settings_widgets.port_scan_requested.connect(self.scan_ports)
+            self.current_port_panel.port_settings_widget.port_scan_requested.connect(self.scan_ports)
             # 참고: connect_btn은 자체 핸들러가 있지만, 여기서 직접 연결하여 오버라이드합니다.
             # 기존 핸들러 연결 해제
             try:
-                self.current_port_panel.port_settings_widgets.connect_btn.clicked.disconnect()
+                self.current_port_panel.port_settings_widget.connect_btn.clicked.disconnect()
             except:
                 pass
-            self.current_port_panel.port_settings_widgets.connect_btn.clicked.connect(self.handle_connect_click)
+            self.current_port_panel.port_settings_widget.connect_btn.clicked.connect(self.handle_connect_click)
 
         # Model 시그널 연결
         self.port_controller.port_opened.connect(self.on_port_opened)
@@ -59,14 +59,14 @@ class PortPresenter(QObject):
         index = self.left_panel.port_tabs.currentIndex()
         if index >= 0:
             widget = self.left_panel.port_tabs.widget(index)
-            if hasattr(widget, 'port_settings_widgets'):
+            if hasattr(widget, 'port_settings_widget'):
                 self.current_port_panel = widget
 
     def scan_ports(self) -> None:
         """사용 가능한 시리얼 포트를 스캔하여 UI에 표시합니다."""
         ports = [port.device for port in serial.tools.list_ports.comports()]
         if self.current_port_panel:
-            self.current_port_panel.port_settings_widgets.set_port_list(ports)
+            self.current_port_panel.port_settings_widget.set_port_list(ports)
 
     def handle_connect_click(self) -> None:
         """
@@ -80,7 +80,7 @@ class PortPresenter(QObject):
             self.port_controller.close_port()
         else:
             # PortSettingsWidget에서 현재 설정 가져오기
-            config = self.current_port_panel.port_settings_widgets.get_current_config()
+            config = self.current_port_panel.port_settings_widget.get_current_config()
             port = config.get('port')
 
             if port:
@@ -98,7 +98,7 @@ class PortPresenter(QObject):
             port_name (str): 열린 포트의 이름.
         """
         if self.current_port_panel:
-            self.current_port_panel.port_settings_widgets.set_connected(True)
+            self.current_port_panel.port_settings_widget.set_connected(True)
             # 탭 제목 업데이트
             index = self.left_panel.port_tabs.currentIndex()
             self.left_panel.update_tab_title(index, port_name)
@@ -112,7 +112,7 @@ class PortPresenter(QObject):
             port_name (str): 닫힌 포트의 이름.
         """
         if self.current_port_panel:
-            self.current_port_panel.port_settings_widgets.set_connected(False)
+            self.current_port_panel.port_settings_widget.set_connected(False)
             # 탭 제목 업데이트
             index = self.left_panel.port_tabs.currentIndex()
             self.left_panel.update_tab_title(index, "-")
@@ -130,4 +130,4 @@ class PortPresenter(QObject):
 
         # 열기/닫기 중 에러 발생 시 UI 동기화 보장
         if not self.port_controller.is_open and self.current_port_panel:
-            self.current_port_panel.port_settings_widgets.set_connected(False)
+            self.current_port_panel.port_settings_widget.set_connected(False)

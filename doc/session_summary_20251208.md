@@ -371,17 +371,38 @@ if lang_manager.text_matches_key(self.file_path_lbl.text(), "key"):
 | `search_next_btn` | `find_next_btn` | `search_next_btn` |
 
 **수정 내용**:
+
 ```css
 /* Dark Theme */
-QPushButton#add_cmd_btn { qproperty-icon: url(resources/icons/add_white.svg); }
-QPushButton#del_cmd_btn { qproperty-icon: url(resources/icons/delete_white.svg); }
-QPushButton#up_cmd_btn { qproperty-icon: url(resources/icons/up_white.svg); }
-QPushButton#down_cmd_btn { qproperty-icon: url(resources/icons/down_white.svg); }
-QPushButton#search_prev_btn { qproperty-icon: url(resources/icons/find_prev_white.svg); }
-QPushButton#search_next_btn { qproperty-icon: url(resources/icons/find_next_white.svg); }
+QPushButton#add_cmd_btn {
+    qproperty-icon: url(../resources/icons/dark/add_dark.svg);
+}
+
+QPushButton#del_cmd_btn {
+    qproperty-icon: url(../resources/icons/dark/delete_dark.svg);
+}
+
+QPushButton#up_cmd_btn {
+    qproperty-icon: url(../resources/icons/dark/up_dark.svg);
+}
+
+QPushButton#down_cmd_btn {
+    qproperty-icon: url(../resources/icons/dark/down_dark.svg);
+}
+
+QPushButton#search_prev_btn {
+    qproperty-icon: url(../resources/icons/dark/find_prev_dark.svg);
+}
+
+QPushButton#search_next_btn {
+    qproperty-icon: url(../resources/icons/dark/find_next_dark.svg);
+}
 
 /* Light Theme */
-QPushButton#add_cmd_btn { qproperty-icon: url(resources/icons/add_black.svg); }
+QPushButton#add_cmd_btn {
+    qproperty-icon: url(../resources/icons/dark/add_dark.svg);
+}
+
 /* ... (동일한 패턴) */
 ```
 

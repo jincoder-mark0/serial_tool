@@ -84,23 +84,25 @@ python main.py
 ## 프로젝트 구조
 
 ```
-serial_tool2/
-├── app_main.py             # 애플리케이션 진입점
-├── app_config.py           # 애플리케이션 설정
-├── app_version.py          # 버전 정보
+serial_tool/
+├── main.py                 # 애플리케이션 진입점
+├── path.py                 # 경로 관리
+├── constants.py            # 상수 정의
+├── version.py              # 버전 정보
 ├── requirements.txt        # 의존성 목록
 │
 ├── core/                   # 핵심 유틸리티
-│   ├── constants.py        # 상수 정의
 │   ├── event_bus.py        # 이벤트 버스
+│   ├── interface.py        # 인터페이스 정의
 │   ├── logger.py           # 로깅 시스템 (Singleton)
 │   ├── port_state.py       # 포트 상태 관리
 │   ├── settings_manager.py # 설정 관리 (Singleton)
 │   └── utils.py            # 유틸리티 함수
 │
 ├── model/                  # 비즈니스 로직
-│   ├── serial_worker.py    # 시리얼 통신 워커
-│   └── port_controller.py  # 포트 제어
+│   ├── connection_worker.py # 연결 워커
+│   ├── port_controller.py  # 포트 제어
+│   └── transports.py       # 전송 관리
 │
 ├── presenter/              # MVP Presenter 계층
 │   ├── main_presenter.py   # 메인 프레젠터
@@ -114,9 +116,10 @@ serial_tool2/
 │   │   ├── lang_manager.py # 다국어 관리
 │   │   └── theme_manager.py    # 테마 관리
 │   │
-│   ├── custom_widgets/       # PyQt5 커스텀 위젯
+│   ├── custom_qt/       # PyQt5 커스텀 위젯
 │   │   ├── smart_number_edit.py # 스마트 숫자 편집 위젯
-│   │   └── smart_text_edit.py # 스마트 텍스트 편집 위젯
+│   │   ├── smart_list_view.py # 스마트 리스트 뷰 위젯
+│   │   └── smart_plain_text_edit.py # 스마트 plain 텍스트 편집 위젯
 │   │
 │   ├── sections/           # 섹션 (대 분할)
 │   │   ├── main_left_section.py # 메인 왼쪽 섹션
@@ -139,7 +142,7 @@ serial_tool2/
 │   │   ├── packet_inspector.py # 패킷 인스펙터 위젯
 │   │   ├── port_settings.py  # 포트 설정 위젯
 │   │   ├── port_stats.py     # 포트 통계 위젯
-│   │   ├── received_area.py  # 수신 영역 위젯
+│   │   ├── rx_log.py         # 수신 로그 위젯
 │   │   └── system_log.py     # 시스템 로그 위젯
 │   │
 │   ├── dialogs/            # 대화상자
@@ -152,6 +155,7 @@ serial_tool2/
 │
 ├── config/                 # 설정 파일
 │   ├── settings.json       # 앱 설정 (논리 그룹: serial, command, logging, ui)
+│   ├── color_rules.json    # 로그 색상 규칙
 │   └── languages/          # 다국어 리소스
 │       ├── ko.json         # 한국어
 │       └── en.json         # 영어
@@ -169,9 +173,12 @@ serial_tool2/
 │   ├── changelog.md                     # 변경 이력
 │   └── session_summary_YYYYMMDD.md      # 작업 세션 요약
 │
-├── guide/                  # 개발 가이드
-│   ├── code_style_guide.md # 코드 스타일 가이드
-│   └── naming_convention.md # 명명 규칙 (언어 키, 변수명 등)
+├── .agent/                 # 개발 가이드
+│   └── rules/                # 규칙
+│       ├── code_style_guide.md # 코드 스타일 가이드
+│       ├── comment_guide.md # 주석 가이드
+│       ├── git_guide.md # git 가이드
+│       └── naming_convention.md # 명명 규칙 (언어 키, 변수명 등)
 │
 ├── tools/                  # 유틸리티 도구
 │   └── manage_lang_keys.py # 언어 키 관리 도구
@@ -191,10 +198,10 @@ serial_tool2/
 ### MVP 패턴
 
 ```
-┌─────────────┐         ┌──────────────┐         ┌─────────────┐
-│    View     │◄───────►│  Presenter   │◄───────►│    Model    │
-│ (UI 전용)    │  Signal  │ (비즈니스 로직)│   Data   │ (데이터/통신)│
-└─────────────┘         └──────────────┘         └─────────────┘
+┌─────────────┐         ┌────────────────┐         ┌──────────────┐
+│    View     │◄───────►│    Presenter   │◄───────►│     Model    │
+│ (UI 전용)   │  Signal │ (비즈니스 로직)│   Data  │ (데이터/통신)│
+└─────────────┘         └────────────────┘         └──────────────┘
 ```
 
 **설계 원칙**:

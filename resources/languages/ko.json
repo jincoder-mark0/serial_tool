@@ -94,7 +94,7 @@
     "manual_ctrl_grp_file": "파일 전송",
     "manual_ctrl_grp_format": "형식",
     "manual_ctrl_grp_manual": "수동 전송",
-    "manual_ctrl_input_cmd_placeholder": "명령 입력 (Ctrl+Enter 전송)...",
+    "manual_ctrl_txt_cmd_placeholder": "명령 입력 (Ctrl+Enter 전송)...",
     "manual_ctrl_lbl_file_path_no_file": "선택된 파일 없음",
     "inspector_col_field": "필드",
     "inspector_col_value": "값",

@@ -1,7 +1,7 @@
 {
   "version": "1.0",
   "settings": {
-    "theme": "dark",
+    "theme": "light",
     "language": "ko",
     "rx_max_lines": 3000,
     "proportional_font_family": "Segoe UI",
@@ -17,11 +17,11 @@
     "port_scan_interval": 5000
   },
   "ui": {
-    "window_width": 1374,
+    "window_width": 1462,
     "window_height": 1018,
     "window_x": 60,
     "window_y": 14,
-    "splitter_state": "AAAA/wAAAAEAAAACAAADvwAAAZAB/////wEAAAABAA=="
+    "splitter_state": "AAAA/wAAAAEAAAACAAADvwAAAlwB/////wEAAAABAA=="
   },
   "ports": {
     "default_config": {
@@ -34,7 +34,7 @@
     "tabs": [
       {
         "custom_name": "Port",
-        "port_settings_widgets": {
+        "port_settings_widget": {
           "protocol": "Serial",
           "port": "COM1",
           "serial": {

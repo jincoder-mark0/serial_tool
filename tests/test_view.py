@@ -10,7 +10,7 @@ from PyQt5.QtWidgets import QPushButton, QHBoxLayout
 
 import os
 
-from view.widgets.received_area import ReceivedAreaWidget
+from view.widgets.rx_log import RxLogWidget
 from view.widgets.manual_ctrl import ManualCtrlWidget
 from view.widgets.macro_list import MacroListWidget
 from view.widgets.system_log import SystemLogWidget
@@ -98,7 +98,7 @@ class ViewTestWindow(QMainWindow):
         layout = QVBoxLayout(widget)
 
         # ReceivedArea 인스턴스
-        self.received_area = ReceivedAreaWidget()
+        self.received_area = RxLogWidget()
         layout.addWidget(self.received_area)
 
         # 테스트 버튼 (Test buttons)

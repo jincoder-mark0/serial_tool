@@ -45,7 +45,7 @@ QTabBar::tab:hover {
 }
 
 QTabBar::close-button {
-    image: url(resources/icons/close_white.svg);
+    image: url(resources/icons/dark/close_dark.svg);
 }
 
 QTabBar::close-button:hover {
@@ -75,12 +75,12 @@ QPushButton:disabled {
     border-color: #303030;
 }
 
-QPushButton#add_row_btn { qproperty-icon: url(resources/icons/add_white.svg); }
-QPushButton#del_row_btn { qproperty-icon: url(resources/icons/delete_white.svg); }
-QPushButton#up_row_btn { qproperty-icon: url(resources/icons/up_white.svg); }
-QPushButton#down_row_btn { qproperty-icon: url(resources/icons/down_white.svg); }
-QPushButton#rx_search_prev_btn { qproperty-icon: url(resources/icons/find_prev_white.svg); }
-QPushButton#rx_search_next_btn { qproperty-icon: url(resources/icons/find_next_white.svg); }
+QPushButton#add_row_btn { qproperty-icon: url(resources/icons/dark/add_dark.svg); }
+QPushButton#del_row_btn { qproperty-icon: url(resources/icons/dark/delete_dark.svg); }
+QPushButton#up_row_btn { qproperty-icon: url(resources/icons/dark/up_dark.svg); }
+QPushButton#down_row_btn { qproperty-icon: url(resources/icons/dark/down_dark.svg); }
+QPushButton#rx_search_prev_btn { qproperty-icon: url(resources/icons/dark/find_prev_dark.svg); }
+QPushButton#rx_search_next_btn { qproperty-icon: url(resources/icons/dark/find_next_dark.svg); }
 
 /* QLineEdit, QTextEdit */
 QLineEdit, QTextEdit, QPlainTextEdit {
@@ -110,7 +110,7 @@ QComboBox:hover {
 }
 
 QComboBox::down-arrow {
-    image: url(resources/icons/arrow_down_white.svg);
+    image: url(resources/icons/dark/arrow_down_dark.svg);
 }
 
 QComboBox QAbstractItemView {

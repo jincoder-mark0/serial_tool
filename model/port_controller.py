@@ -8,7 +8,7 @@ from typing import Optional
 # 변경된 모듈 임포트
 from model.connection_worker import ConnectionWorker
 from model.transports import SerialTransport
-from app_constants import DEFAULT_BAUDRATE
+from constants import DEFAULT_BAUDRATE
 
 class PortController(QObject):
     # 외부(Presenter)와 통신하는 시그널 (이름 유지)

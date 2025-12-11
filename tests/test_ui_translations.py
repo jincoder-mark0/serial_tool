@@ -6,7 +6,7 @@ from PyQt5.QtWidgets import QApplication
 from view.managers.lang_manager import lang_manager
 from view.widgets.manual_ctrl import ManualCtrlWidget
 from view.widgets.macro_list import MacroListWidget
-from view.widgets.received_area import ReceivedAreaWidget
+from view.widgets.rx_log import RxLogWidget
 from view.widgets.packet_inspector import PacketInspectorWidget
 from view.widgets.file_progress import FileProgressWidget
 from view.widgets.system_log import SystemLogWidget
@@ -51,7 +51,7 @@ def test_macro_list_translation(app, qtbot):
     assert macro_list_widget.add_row_btn.toolTip() == "새 명령 추가"
 
 def test_received_area_translation(app, qtbot):
-    received_area_widget = ReceivedAreaWidget()
+    received_area_widget = RxLogWidget()
     qtbot.addWidget(received_area_widget)
 
     lang_manager.set_language('en')

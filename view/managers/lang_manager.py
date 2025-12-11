@@ -17,7 +17,7 @@ class LangManager(QObject):
     language_changed = pyqtSignal(str)
 
     _instance = None
-    _app_config = None
+    _resource_path = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
@@ -25,38 +25,43 @@ class LangManager(QObject):
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, app_config=None):
+    def __init__(self, resource_path=None):
         """
         LangManager를 초기화합니다.
 
         Args:
-            app_config: AppConfig 인스턴스. None이면 기본 경로 사용 (하위 호환성)
+            resource_path: ResourcePath 인스턴스. None이면 기본 경로 사용 (하위 호환성)
         """
+        # ResourcePath가 전달되면 항상 업데이트하고 리로드
+        if resource_path is not None:
+            LangManager._resource_path = resource_path
+            self.load_languages()
+
         if self._initialized:
             return
+
         super().__init__()
         self._initialized = True
 
-        # AppConfig 저장 (첫 초기화 시에만)
-        if app_config is not None:
-            LangManager._app_config = app_config
-
         self.current_language = 'en'
         self.resources: Dict[str, Dict[str, str]] = {}
-        self.load_languages()
+
+        # ResourcePath가 없는 경우(최초 import 시), Fallback 경로로 로드 시도
+        if resource_path is None:
+            self.load_languages()
 
     def load_languages(self) -> None:
         """
         언어 파일(*.json)을 로드합니다.
         """
-        if LangManager._app_config is not None:
-            # AppConfig가 제공되었으면 그것을 사용
-            lang_dir = LangManager._app_config.languages_dir
+        if LangManager._resource_path is not None:
+            # ResourcePath가 제공되었으면 그것을 사용
+            lang_dir = LangManager._resource_path.languages_dir
         else:
-            # 하위 호환성: AppConfig가 없으면 기존 방식 사용
+            # 하위 호환성: ResourcePath가 없으면 기존 방식 사용 (Fallback)
             # view/managers/lang_manager.py -> view/managers -> view -> project_root
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            lang_dir = os.path.join(base_dir, 'config', 'languages')
+            lang_dir = os.path.join(base_dir, 'resources', 'languages')
 
         if not os.path.exists(lang_dir):
             logger.error(f"Language directory not found: {lang_dir}")

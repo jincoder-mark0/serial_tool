@@ -6,7 +6,7 @@ class MainToolBar(QToolBar):
     open_requested = pyqtSignal()
     close_requested = pyqtSignal()
     clear_requested = pyqtSignal()
-    save_log_requested = pyqtSignal()
+    log_save_requested = pyqtSignal()
     settings_requested = pyqtSignal()
 
     def __init__(self, parent=None):
@@ -41,7 +41,7 @@ class MainToolBar(QToolBar):
 
         # Save Log
         self.save_log_action = QAction(lang_manager.get_text("toolbar_save_log"), self)
-        self.save_log_action.triggered.connect(self.save_log_requested.emit)
+        self.save_log_action.triggered.connect(self.log_save_requested.emit)
         self.addAction(self.save_log_action)
 
         # Settings

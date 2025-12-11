@@ -353,7 +353,7 @@ class MacroEntry:
 
 #### [완료] 위젯
 - `PortSettingsWidget`: 컴팩트 2줄 레이아웃, 연결 상태 관리
-- `ReceivedAreaWidget`: 로그 뷰, 색상 규칙, 타임스탬프, Trim, 검색
+- `RxLogWidget`: 로그 뷰, 색상 규칙, 타임스탬프, Trim, 검색
 - `ManualControlWidget`: 수동 전송, 파일 선택, Prefix/Suffix
 - `MacroListWidget`: Prefix/Suffix, 3단계 체크박스, 행별 Send 버튼
 - `MacroCtrlWidget`: 스크립트 저장/로드, Repeat 실행

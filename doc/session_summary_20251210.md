@@ -29,7 +29,7 @@
 
 #### ReceivedArea 동적 설정
 - **max_lines 동적 적용**:
-  - `ReceivedAreaWidget.set_max_lines(max_lines)` 메서드 추가
+  - `RxLogWidget.set_max_lines(max_lines)` 메서드 추가
   - `MainPresenter.on_settings_change_requested()`: 설정 변경 시 모든 ReceivedArea 업데이트
   - `PortPresenter`: 초기화 시 설정에서 max_lines 읽어서 적용
 
@@ -167,7 +167,7 @@
   - Dark: `#4CAF50` (녹색)
   - Light: `#2196F3` (파란색)
 - **적용 위젯**:
-  - `ReceivedAreaWidget.recv_log_title`
+  - `RxLogWidget.recv_log_title`
   - `StatusAreaWidget.status_log_title`
 
 #### QSmartTextEdit 스타일 추가
@@ -212,7 +212,7 @@
 - **검색 기능 내장**:
   - 리스트 뷰 내부에서 정규식 기반의 `find_next`, `find_prev` 메서드 구현.
   - 검색 결과 하이라이트 및 자동 스크롤 기능 포함.
-- **적용**: `ReceivedAreaWidget` 및 `SystemLogWidget`의 로그 뷰어를 `QSmartListView`로 교체 완료.
+- **적용**: `RxLogWidget` 및 `SystemLogWidget`의 로그 뷰어를 `QSmartListView`로 교체 완료.
 
 ---
 
@@ -265,7 +265,7 @@
   - 왼쪽 패널 크기 유지 로직 개선
 - **System Log 높이 고정**:
   - `SystemLogWidget`의 `system_log_list` 높이를 100px로 고정 (`setFixedHeight`)
-  - 윈도우 리사이즈 시 `ReceivedAreaWidget`만 크기가 변하도록 수정
+  - 윈도우 리사이즈 시 `RxLogWidget`만 크기가 변하도록 수정
 
 #### QSS 및 테마 업데이트
 - **QSmartListView 스타일 추가**:

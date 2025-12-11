@@ -6,7 +6,7 @@ from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Optional
 from view.managers.lang_manager import lang_manager
 
-from app_constants import DEFAULT_MACRO_DELAY_MS
+from constants import DEFAULT_MACRO_DELAY_MS
 
 class MacroCtrlWidget(QWidget):
     """

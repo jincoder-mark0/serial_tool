@@ -20,16 +20,16 @@ class ThemeManager:
         "Darwin": ("Menlo", 9)  # macOS
     }
 
-    def __init__(self, app_config=None):
+    def __init__(self, resource_path=None):
         """
         ThemeManager를 초기화하고 플랫폼별 기본 폰트를 설정합니다.
 
         Args:
-            app_config: AppConfig 인스턴스. None이면 기본 경로 사용 (하위 호환성)
+            resource_path: ResourcePath 인스턴스. None이면 기본 경로 사용 (하위 호환성)
         """
         self._current_theme = "dark"
         self._app = None
-        self._app_config = app_config
+        self._resource_path = resource_path
 
         # 플랫폼 확인
         system = platform.system()
@@ -52,10 +52,10 @@ class ThemeManager:
         Returns:
             str: 결합된 QSS 문자열.
         """
-        if self._app_config is not None:
+        if self._resource_path is not None:
             # AppConfig가 제공되었으면 그것을 사용
-            common_path = self._app_config.get_theme_file('common')
-            theme_path = self._app_config.get_theme_file(theme_name)
+            common_path = self._resource_path.get_theme_file('common')
+            theme_path = self._resource_path.get_theme_file(theme_name)
         else:
             # 하위 호환성: 기존 경로 사용
             common_path = "resources/themes/common.qss"
@@ -333,13 +333,13 @@ class ThemeManager:
         Returns:
             QIcon: 테마에 맞는 QIcon 객체.
         """
-        if self._app_config is not None:
+        if self._resource_path is not None:
             # AppConfig가 제공되었으면 그것을 사용
-            icon_path = self._app_config.get_icon_path(name, self._current_theme)
+            icon_path = self._resource_path.get_icon_path(name, self._current_theme)
 
             if not os.path.exists(icon_path):
                 # 폴백: 테마 접미사 없이 시도
-                fallback_path = self._app_config.get_icon_path(name)
+                fallback_path = self._resource_path.get_icon_path(name)
                 if os.path.exists(fallback_path):
                     return QIcon(str(fallback_path))
                 return QIcon()

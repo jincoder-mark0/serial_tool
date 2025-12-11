@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 import os
 from view.managers.lang_manager import lang_manager
 
-from app_constants import (
+from constants import (
     VALID_BAUDRATES,
     DEFAULT_LOG_MAX_LINES,
     MIN_SCAN_INTERVAL_MS,
@@ -167,7 +167,7 @@ class PreferencesDialog(QDialog):
         file_layout = QFormLayout()
 
         path_layout = QHBoxLayout()
-        self.log_path_edit = QLabel("Default Path")
+        self.log_path_edit = QLabel("Default ResourcePath")
         self.log_path_edit.setFrameStyle(QLabel.Sunken | QLabel.Panel)
         self.browse_btn = QPushButton(lang_manager.get_text("pref_btn_browse"))
         self.browse_btn.clicked.connect(self.browse_log_path)

@@ -6,8 +6,8 @@ from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QKeyEvent
 from typing import Optional, List
 from view.managers.lang_manager import lang_manager
-from view.custom_widgets.smart_plain_text_edit import QSmartTextEdit
-from app_constants import MAX_CMD_HISTORY_SIZE
+from view.custom_qt.smart_plain_text_edit import QSmartTextEdit
+from constants import MAX_CMD_HISTORY_SIZE
 
 class ManualCtrlWidget(QWidget):
     """
@@ -41,7 +41,7 @@ class ManualCtrlWidget(QWidget):
         self.send_manual_cmd_btn = None
         self.history_up_btn = None
         self.history_down_btn = None
-        self.manual_cmd_input = None
+        self.manual_cmd_txt = None
         self.manual_send_grp = None
         self.save_manual_log_btn = None
         self.clear_manual_options_btn = None
@@ -112,10 +112,10 @@ class ManualCtrlWidget(QWidget):
         send_layout.setContentsMargins(2, 2, 2, 2)
         send_layout.setSpacing(5)
 
-        self.manual_cmd_input = QSmartTextEdit()  # 라인 번호 지원 에디터
-        self.manual_cmd_input.setPlaceholderText(lang_manager.get_text("manual_ctrl_input_cmd_placeholder"))
-        self.manual_cmd_input.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
-        self.manual_cmd_input.setMaximumHeight(80)  # 최대 높이 제한
+        self.manual_cmd_txt = QSmartTextEdit()  # 라인 번호 지원 에디터
+        self.manual_cmd_txt.setPlaceholderText(lang_manager.get_text("manual_ctrl_txt_cmd_placeholder"))
+        self.manual_cmd_txt.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
+        self.manual_cmd_txt.setMaximumHeight(80)  # 최대 높이 제한
         # Ctrl+Enter로 전송하도록 keyPressEvent 오버라이드
 
         # 버튼 레이아웃 (세로 정렬: Up, Down, Send)
@@ -143,7 +143,7 @@ class ManualCtrlWidget(QWidget):
         btn_layout.addWidget(self.history_down_btn)
         btn_layout.addWidget(self.send_manual_cmd_btn)
 
-        send_layout.addWidget(self.manual_cmd_input, 1)
+        send_layout.addWidget(self.manual_cmd_txt, 1)
         send_layout.addLayout(btn_layout)
 
         self.manual_send_grp.setLayout(send_layout)
@@ -180,7 +180,7 @@ class ManualCtrlWidget(QWidget):
         self.set_controls_enabled(False)
 
         # QTextEdit에 keyPressEvent 연결
-        self.manual_cmd_input.keyPressEvent = self._cmd_input_key_press_event
+        self.manual_cmd_txt.keyPressEvent = self._cmd_input_key_press_event
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
@@ -197,7 +197,7 @@ class ManualCtrlWidget(QWidget):
         self.send_manual_cmd_btn.setText(lang_manager.get_text("manual_ctrl_btn_send"))
         self.history_up_btn.setToolTip(lang_manager.get_text("manual_ctrl_btn_history_up_tooltip"))
         self.history_down_btn.setToolTip(lang_manager.get_text("manual_ctrl_btn_history_down_tooltip"))
-        self.manual_cmd_input.setPlaceholderText(lang_manager.get_text("manual_ctrl_input_cmd_placeholder"))
+        self.manual_cmd_txt.setPlaceholderText(lang_manager.get_text("manual_ctrl_txt_cmd_placeholder"))
 
         self.file_transfer_grp.setTitle(lang_manager.get_text("manual_ctrl_grp_file"))
         # 파일이 선택되지 않은 상태인지 확인
@@ -220,14 +220,14 @@ class ManualCtrlWidget(QWidget):
                 self.on_send_manual_cmd_clicked()
             else:
                 # Enter: 새 줄 추가
-                QPlainTextEdit.keyPressEvent(self.manual_cmd_input, event)
+                QPlainTextEdit.keyPressEvent(self.manual_cmd_txt, event)
         elif event.key() == Qt.Key_Up and event.modifiers() == Qt.ControlModifier:
             self.on_history_up_clicked()
         elif event.key() == Qt.Key_Down and event.modifiers() == Qt.ControlModifier:
             self.on_history_down_clicked()
         else:
             # 다른 키는 기본 동작
-            QPlainTextEdit.keyPressEvent(self.manual_cmd_input, event)
+            QPlainTextEdit.keyPressEvent(self.manual_cmd_txt, event)
 
     def on_hex_mode_changed(self, state: int) -> None:
         """HEX 모드 변경 시 처리 (QTextEdit는 hex 모드 미지원)"""
@@ -237,7 +237,7 @@ class ManualCtrlWidget(QWidget):
 
     def on_send_manual_cmd_clicked(self) -> None:
         """전송 버튼 클릭 시 호출됩니다."""
-        text = self.manual_cmd_input.toPlainText()  # QTextEdit는 toPlainText() 사용
+        text = self.manual_cmd_txt.toPlainText()  # QTextEdit는 toPlainText() 사용
         if text:
             # 히스토리에 추가
             self.add_to_history(text)
@@ -251,7 +251,7 @@ class ManualCtrlWidget(QWidget):
                 self.suffix_chk.isChecked()
             )
             # 입력 후 지우지 않음 (히스토리 기능이 없으므로 유지하는 편이 나음 -> 히스토리 있으니 지워도 되지만, 보통 남겨두는게 편함)
-            # self.manual_cmd_input.clear()
+            # self.manual_cmd_txt.clear()
 
     def add_to_history(self, cmd: str) -> None:
         """명령어를 히스토리에 추가합니다 (MRU)."""
@@ -295,17 +295,17 @@ class ManualCtrlWidget(QWidget):
         else:
             # 마지막 항목에서 아래로 누르면 입력창 비우기 (새 명령 모드)
             self.history_index = -1
-            self.manual_cmd_input.clear()
+            self.manual_cmd_txt.clear()
 
     def _update_input_from_history(self) -> None:
         """현재 history_index에 해당하는 명령어를 입력창에 표시합니다."""
         if 0 <= self.history_index < len(self.command_history):
             cmd = self.command_history[self.history_index]
-            self.manual_cmd_input.setPlainText(cmd)
+            self.manual_cmd_txt.setPlainText(cmd)
             # 커서를 끝으로 이동
-            cursor = self.manual_cmd_input.textCursor()
+            cursor = self.manual_cmd_txt.textCursor()
             cursor.movePosition(cursor.End)
-            self.manual_cmd_input.setTextCursor(cursor)
+            self.manual_cmd_txt.setTextCursor(cursor)
 
     def on_select_transfer_file_clicked(self) -> None:
         """파일 선택 버튼 클릭 시 호출됩니다."""
@@ -357,7 +357,7 @@ class ManualCtrlWidget(QWidget):
             dict: 위젯 상태.
         """
         state = {
-            "input_text": self.manual_cmd_input.toPlainText(),  # QTextEdit는 toPlainText() 사용
+            "input_text": self.manual_cmd_txt.toPlainText(),  # QTextEdit는 toPlainText() 사용
             "hex_mode": self.hex_chk.isChecked(),
             "prefix_chk": self.prefix_chk.isChecked(),
             "suffix_chk": self.suffix_chk.isChecked(),
@@ -382,5 +382,5 @@ class ManualCtrlWidget(QWidget):
         self.suffix_chk.setChecked(state.get("suffix_chk", False))
         self.rts_chk.setChecked(state.get("rts_chk", False))
         self.dtr_chk.setChecked(state.get("dtr_chk", False))
-        self.manual_cmd_input.setPlainText(state.get("input_text", ""))  # QTextEdit는 setPlainText() 사용
+        self.manual_cmd_txt.setPlainText(state.get("input_text", ""))  # QTextEdit는 setPlainText() 사용
         self.command_history = state.get("command_history", [])

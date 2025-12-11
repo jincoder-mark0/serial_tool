@@ -9,7 +9,7 @@ except ImportError:
     import json
 from pathlib import Path
 from typing import Dict, Any
-from app_constants import DEFAULT_BAUDRATE, DEFAULT_LOG_MAX_LINES
+from constants import DEFAULT_BAUDRATE, DEFAULT_LOG_MAX_LINES
 from core.logger import logger
 
 class SettingsManager:
@@ -20,26 +20,26 @@ class SettingsManager:
 
     _instance = None
     _initialized = False
-    _app_config = None
+    _resource_path = None
 
     def __new__(cls, *args, **kwargs):
         if cls._instance is None:
             cls._instance = super(SettingsManager, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self, app_config=None):
+    def __init__(self, resource_path=None):
         """
         SettingsManager를 초기화하고 설정을 로드합니다.
 
         Args:
-            app_config: AppConfig 인스턴스. None이면 기본 경로 사용 (하위 호환성)
+            resource_path: ResourcePath 인스턴스. None이면 기본 경로 사용 (하위 호환성)
         """
         if self._initialized:
             return
 
-        # AppConfig 저장 (첫 초기화 시에만)
-        if app_config is not None:
-            SettingsManager._app_config = app_config
+        # ResourcePath 저장 (첫 초기화 시에만)
+        if resource_path is not None:
+            SettingsManager._resource_path = resource_path
 
         self.settings: Dict[str, Any] = {}
         # 프로퍼티를 통해 경로 접근
@@ -57,11 +57,11 @@ class SettingsManager:
         기본 설정 파일의 경로를 반환합니다.
 
         Returns:
-            Path: config/settings.json 파일의 Path 객체.
+            Path: config/settings.json 파일의 ResourcePath 객체.
         """
-        if SettingsManager._app_config is not None:
+        if SettingsManager._resource_path is not None:
             # AppConfig가 제공되었으면 그것을 사용
-            return SettingsManager._app_config.settings_file
+            return SettingsManager._resource_path.settings_file
         else:
             # 하위 호환성: AppConfig가 없으면 기존 방식 사용
             import os
@@ -80,7 +80,7 @@ class SettingsManager:
         (현재는 기본 설정 파일과 동일한 경로를 사용합니다)
 
         Returns:
-            Path: 사용자 설정 파일의 Path 객체.
+            Path: 사용자 설정 파일의 ResourcePath 객체.
         """
         return self.config_path
 

@@ -11,7 +11,7 @@
   - `scan_requested` → `port_scan_requested` (일관성 확보)
 - **테스트 코드 업데이트**:
   - `tests/test_view.py` 및 `tests/test_ui_translations.py`에서 변경된 위젯 이름 및 시그널 반영
-  - `ReceivedArea` → `ReceivedAreaWidget` 등 클래스명 변경 사항 적용
+  - `ReceivedArea` → `RxLogWidget` 등 클래스명 변경 사항 적용
 
 ### 2. 버그 수정 및 안정성 개선
 - **MainWindow 초기화 오류 수정**:

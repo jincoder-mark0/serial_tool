@@ -13,9 +13,9 @@ class MainStatusBar(QStatusBar):
     def init_ui(self) -> None:
         """상태바 초기화"""
         self.showMessage(lang_manager.get_text("main_status_msg_ready"))
-        self.init_widgets()
+        self.init_widget()
 
-    def init_widgets(self):
+    def init_widget(self):
         # 1. Port Label
         self.port_lbl = QLabel("Port: -- ○")
         self.addPermanentWidget(self.port_lbl)

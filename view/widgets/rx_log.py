@@ -1,5 +1,5 @@
 """
-ReceivedAreaWidget 모듈
+RxLogWidget 모듈
 
 시리얼 포트 등 외부로부터 수신된 데이터를 표시하고 관리하는 메인 위젯을 정의합니다.
 QSmartListView를 기반으로 하여 대량의 데이터 처리 성능을 최적화하였으며,
@@ -16,23 +16,23 @@ import datetime
 from view.managers.color_manager import color_manager   # 전역 매니저 사용
 from view.managers.lang_manager import lang_manager     # 전역 매니저 사용
 
-from view.custom_widgets.smart_list_view import QSmartListView
+from view.custom_qt.smart_list_view import QSmartListView
 
-from app_constants import (
+from constants import (
     DEFAULT_LOG_MAX_LINES,
     UI_REFRESH_INTERVAL_MS,
     LOG_COLOR_TIMESTAMP
 )
 from core.logger import logger
 
-class ReceivedAreaWidget(QWidget):
+class RxLogWidget(QWidget):
     """
     수신된 시리얼 데이터를 표시하는 위젯 클래스입니다.
     텍스트/HEX 모드 전환, 일시 정지, 타임스탬프 표시, 로그 저장 및 지우기 기능을 제공합니다.
     """
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
-        ReceivedAreaWidget를 초기화합니다.
+        RxLogWidget를 초기화합니다.
 
         Args:
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
@@ -228,15 +228,22 @@ class ReceivedAreaWidget(QWidget):
             except Exception:
                 text = str(data)
 
-        # 2. 타임스탬프 추가
+        # 2. 타임스탬프 생성
+        ts = ""
         if self.timestamp_enabled:
             ts = datetime.datetime.now().strftime("[%H:%M:%S]")
-            # 타임스탬프 색상 적용 (상수 활용)
-            text = f'<span style="color:{LOG_COLOR_TIMESTAMP};">{ts}</span> {text}'
 
-        # 3. 색상 규칙 적용 (텍스트 모드일 때만)
+        # 3. 색상 규칙 적용 및 조합
         if not self.hex_mode:
+            # 텍스트 모드: 타임스탬프 포함하여 전체 규칙 적용
+            if ts:
+                text = f"{ts} {text}"
             text = self.color_manager.apply_rules(text)
+        else:
+            # HEX 모드: 타임스탬프만 수동으로 색상 적용 (HEX 데이터는 규칙 제외)
+            if ts:
+                ts_color = self.color_manager.get_rule_color("TIMESTAMP")
+                text = f'<span style="color:{ts_color};">{ts}</span> {text}'
 
         # 4. 버퍼에 추가 (Lock 불필요: Python GIL 및 단일 GUI 스레드 환경)
         self.ui_update_buffer.append(text)
@@ -255,7 +262,7 @@ class ReceivedAreaWidget(QWidget):
 
         # QSmartListView의 배치 추가 메서드 호출
         # (내부적으로 최대 라인 수 제한 및 자동 스크롤 로직이 수행됨)
-        self.rx_log_list.add_logs_batch(lines_to_add)
+        self.rx_log_list.append_batch(lines_to_add)
 
     # -------------------------------------------------------------------------
     # 사용자 액션 처리 (검색, 옵션, 버튼)

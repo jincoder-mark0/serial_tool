@@ -2,14 +2,9 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel
 from typing import Optional
 import datetime
 from view.managers.lang_manager import lang_manager
-from view.custom_widgets.smart_list_view import QSmartListView
+from view.custom_qt.smart_list_view import QSmartListView
 
-from app_constants import (
-    LOG_COLOR_INFO,
-    LOG_COLOR_ERROR,
-    LOG_COLOR_WARN,
-    LOG_COLOR_SUCCESS
-)
+
 
 class SystemLogWidget(QWidget):
     """
@@ -68,22 +63,20 @@ class SystemLogWidget(QWidget):
             message (str): 표시할 메시지.
             level (str): 로그 레벨 (INFO, ERROR, WARN, SUCCESS). 기본값은 "INFO".
         """
-        level_colors = {
-            "INFO": LOG_COLOR_INFO,
-            "ERROR": LOG_COLOR_ERROR,
-            "WARN": LOG_COLOR_WARN,
-            "SUCCESS": LOG_COLOR_SUCCESS
-        }
-        color = level_colors.get(level, LOG_COLOR_INFO)
+        # 1. 메시지 포맷팅: [LEVEL] Message
+        text = f"[{level}] {message}"
 
+        # 2. 타임스탬프 추가
+        timestamp = datetime.datetime.now().strftime("[%H:%M:%S]")
+        full_text = f"{timestamp} {text}"
 
-        # HTML 포맷팅 (LogDelegate가 렌더링함)
-        formatted_msg = f'<span style="color:{color};">[{level}]</span> {message}'
+        # 3. 색상 규칙 적용 (ColorManager 활용)
+        # ColorManager에 SYS_INFO, TIMESTAMP 등의 규칙이 정의되어 있어야 함
+        from view.managers.color_manager import color_manager
+        full_text = color_manager.apply_rules(full_text)
 
-        # 타임스탬프는 QSmartListView의 기능 활용
-        timestamp = datetime.datetime.now().strftime("%H:%M:%S")
-
-        self.system_log_list.append(formatted_msg, timestamp=timestamp)
+        # 4. 뷰에 추가
+        self.system_log_list.append(full_text)
 
     def clear(self) -> None:
         """로그를 초기화합니다."""

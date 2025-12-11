@@ -15,10 +15,13 @@ except ImportError:
     import json
 
 # 상수 임포트 (하드코딩 제거)
-from app_constants import (
+from constants import (
     LOG_COLOR_SUCCESS,
     LOG_COLOR_ERROR,
-    LOG_COLOR_WARN  # PROMPT용으로 대체 사용하거나 별도 정의 가능
+    LOG_COLOR_WARN,
+    LOG_COLOR_PROMPT,
+    LOG_COLOR_INFO,
+    LOG_COLOR_TIMESTAMP,
 )
 
 @dataclass
@@ -37,7 +40,7 @@ class ColorManager:
     """
 
     _instance = None
-    _app_config = None
+    _resource_path = None
     _initialized = False
 
     def __new__(cls, *args, **kwargs):
@@ -47,25 +50,36 @@ class ColorManager:
 
     # 기본 규칙 정의 (상수 활용)
     DEFAULT_COLOR_RULES = [
-        ColorRule("AT_OK", r'\bOK\b', LOG_COLOR_SUCCESS),     # 녹색
-        ColorRule("AT_ERROR", r'\bERROR\b', LOG_COLOR_ERROR), # 빨강
-        ColorRule("URC", r'(\+\w+:)', LOG_COLOR_WARN),        # 노랑 (경고색 활용)
-        ColorRule("PROMPT", r'^>', '#00BCD4'),                # 청록 (특수 색상 유지)
+        ColorRule("AT_OK", r'\bOK\b', LOG_COLOR_SUCCESS),
+        ColorRule("AT_ERROR", r'\bERROR\b', LOG_COLOR_ERROR),
+        ColorRule("URC", r'(\+\w+:)', LOG_COLOR_WARN),
+        ColorRule("PROMPT", r'^>', LOG_COLOR_PROMPT),
+        # 시스템 로그 규칙
+        ColorRule("SYS_INFO", r'\[INFO\]', LOG_COLOR_INFO),
+        ColorRule("SYS_ERROR", r'\[ERROR\]', LOG_COLOR_ERROR),
+        ColorRule("SYS_WARN", r'\[WARN\]', LOG_COLOR_WARN),
+        ColorRule("SYS_SUCCESS", r'\[SUCCESS\]', LOG_COLOR_SUCCESS),
+        # 타임스탬프 규칙
+        ColorRule("TIMESTAMP", r'\[\d{2}:\d{2}:\d{2}\]', LOG_COLOR_TIMESTAMP),
     ]
 
-    def __init__(self, app_config=None) -> None:
+    def __init__(self, resource_path=None) -> None:
         """
         ColorManager를 초기화합니다.
 
         Args:
-            app_config: AppConfig 인스턴스. 경로 설정을 위해 사용됩니다.
+            resource_path: ResourcePath 인스턴스. 경로 설정을 위해 사용됩니다.
         """
+        # ResourcePath 설정 (항상 업데이트 허용)
+        if resource_path is not None:
+            ColorManager._resource_path = resource_path
+            # 경로 업데이트 시 설정 다시 로드
+            self.config_path = self._get_config_path()
+            if self.config_path.exists():
+                self.load_from_json(str(self.config_path))
+
         if self._initialized:
             return
-
-        # AppConfig 설정 (첫 초기화 시 주입)
-        if app_config is not None:
-            ColorManager._app_config = app_config
 
         self.rules: List[ColorRule] = []
         self.config_path = self._get_config_path()
@@ -75,12 +89,27 @@ class ColorManager:
             self.load_from_json(str(self.config_path))
         else:
             self.rules = self.DEFAULT_COLOR_RULES.copy()
-            # 설정 디렉토리가 없으면 생성 (AppConfig가 보장하지만 안전장치)
+            # 설정 디렉토리가 없으면 생성 (ResourcePath가 보장하지만 안전장치)
             if not self.config_path.parent.exists():
                 self.config_path.parent.mkdir(parents=True, exist_ok=True)
             self.save_to_json(str(self.config_path))
 
         self._initialized = True
+
+    def get_rule_color(self, rule_name: str) -> str:
+        """
+        특정 규칙의 색상 코드를 반환합니다.
+
+        Args:
+            rule_name (str): 규칙 이름 (예: 'TIMESTAMP').
+
+        Returns:
+            str: HTML 색상 코드. 규칙이 없으면 기본값(검정) 반환.
+        """
+        for rule in self.rules:
+            if rule.name == rule_name:
+                return rule.color
+        return "#000000"
 
     def apply_rules(self, text: str) -> str:
         """
@@ -185,19 +214,19 @@ class ColorManager:
             ]
         except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
             # 파일이 없거나 잘못된 경우 기본 규칙 사용
-            self._logger.error(f"Failed to load color rules ({filepath}): {e}")
+            logger.error(f"Failed to load color rules ({filepath}): {e}")
             self.rules = self.DEFAULT_COLOR_RULES.copy()
 
     @staticmethod
-    def _get_config_path() -> 'Path':
+    def _get_config_path() -> 'ResourcePath':
         """
         색상 규칙 설정 파일의 경로를 반환합니다.
 
         Returns:
-            Path: config/color_rules.json 파일의 Path 객체.
+            Path: config/color_rules.json 파일의 ResourcePath 객체.
         """
-        if ColorManager._app_config is not None:
-            return ColorManager._app_config.config_dir / 'color_rules.json'
+        if ColorManager._resource_path is not None:
+            return ColorManager._resource_path.config_dir / 'color_rules.json'
 
         # Fallback: 개발 환경 상대 경로
         # view/managers/ -> view/ -> root
@@ -208,7 +237,7 @@ class ColorManager:
             # 개발 모드 환경
             base_path = Path(__file__).parent.parent.parent
 
-        return base_path / 'config' / 'color_rules.json'
+        return base_path / 'resources' / 'configs' / 'color_rules.json'
 
     @staticmethod
     def _apply_single_rule(text: str, rule: ColorRule) -> str:

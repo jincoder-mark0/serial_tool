@@ -31,15 +31,15 @@ class Logger:
         self.logger.addHandler(console_handler)
 
         # Default file handler setup (Fallback)
-        # configure() 메서드를 통해 AppConfig 경로로 재설정 가능
+        # configure() 메서드를 통해 ResourcePath 경로로 재설정 가능
         self._setup_file_handler("logs")
 
         self._initialized = True
 
-    def configure(self, app_config):
-        """AppConfig를 사용하여 로거를 재설정합니다."""
-        if app_config and hasattr(app_config, 'logs_dir'):
-            self._setup_file_handler(str(app_config.logs_dir))
+    def configure(self, resource_path):
+        """ResourcePath 사용하여 로거를 재설정합니다."""
+        if resource_path and hasattr(resource_path, 'logs_dir'):
+            self._setup_file_handler(str(resource_path.logs_dir))
 
     def _setup_file_handler(self, log_dir_path):
         """파일 핸들러를 설정합니다."""

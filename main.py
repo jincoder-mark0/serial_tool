@@ -9,8 +9,8 @@ import logging
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt
 
-from app_version import __version__
-from app_config import AppConfig
+from version import __version__
+from resource_path import ResourcePath
 from view.main_window import MainWindow
 from presenter.main_presenter import MainPresenter
 
@@ -36,18 +36,18 @@ def main() -> None:
     logging.info(f"Starting Serial Tool v{__version__}")
 
     # 애플리케이션 설정 초기화
-    app_config = AppConfig()
+    resource_path = ResourcePath()
 
     # 핵심 모듈에 설정 주입
-    logger.configure(app_config)
+    logger.configure(resource_path)
 
     # 경로 검증
-    path_status = app_config.validate_paths()
+    path_status = resource_path.validate_paths()
     for path_name, exists in path_status.items():
         if not exists:
             logging.warning(f"Path not found: {path_name}")
 
-    logging.info(f"Base directory: {app_config.base_dir}")
+    logging.info(f"Base directory: {resource_path.base_dir}")
 
     # 고해상도(High DPI) 스케일링 설정
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
@@ -55,8 +55,8 @@ def main() -> None:
 
     app = QApplication(sys.argv)
 
-    # MainWindow 초기화 (app_config 전달)
-    window = MainWindow(app_config=app_config)
+    # MainWindow 초기화 (resource_path 전달)
+    window = MainWindow(resource_path=resource_path)
 
     # MainPresenter 초기화 (View와 Model 연결)
     presenter = MainPresenter(window)

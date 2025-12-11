@@ -75,7 +75,7 @@
 
 - **QSS 스타일 개선**
   - `section-title` 클래스 추가: QGroupBox::title과 유사한 스타일
-  - `ReceivedAreaWidget.recv_log_title`, `StatusAreaWidget.status_log_title`에 적용
+  - `RxLogWidget.recv_log_title`, `StatusAreaWidget.status_log_title`에 적용
   - Dark/Light 테마별 색상 지정 (녹색/파란색)
   - `QSmartTextEdit` 스타일 추가 (공통, 다크, 라이트 테마)
 
@@ -102,7 +102,7 @@
   - `MainRightSection`에 하위 패널들의 상태를 집계하는 로직을 추가했습니다.
 
 - **네이밍 일관성 개선**
-  - `rx` → `recv`: ReceivedAreaWidget의 모든 변수 및 메서드명 변경
+  - `rx` → `recv`: RxLogWidget의 모든 변수 및 메서드명 변경
     - `on_clear_rx_log_clicked()` → `on_clear_recv_log_clicked()`
     - `rx_search_input` → `recv_search_input`
     - `rx_hex_chk` → `recv_hex_chk` 등
@@ -208,7 +208,7 @@
   - 버튼 텍스트 및 기능과 일치하도록 시그널 이름 직관화
 
 - **테스트 코드 최신화**
-  - `test_view.py`, `test_ui_translations.py`를 최신 위젯 클래스명(`ReceivedAreaWidget` 등) 및 시그널로 업데이트
+  - `test_view.py`, `test_ui_translations.py`를 최신 위젯 클래스명(`RxLogWidget` 등) 및 시그널로 업데이트
 
 - **네이밍 리팩토링 (Command -> Macro)**
   - `CommandListWidget` → `MacroListWidget`

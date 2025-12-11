@@ -8,16 +8,16 @@ class MainMenuBar(QMenuBar):
     메인 윈도우의 메뉴바를 관리하는 클래스입니다.
     """
     # Signals
-    new_tab_requested = pyqtSignal()
+    tab_new_requested = pyqtSignal()
     exit_requested = pyqtSignal()
     theme_changed = pyqtSignal(str)
     font_settings_requested = pyqtSignal()
     language_changed = pyqtSignal(str)
     preferences_requested = pyqtSignal()
     about_requested = pyqtSignal()
-    open_port_requested = pyqtSignal()
-    close_tab_requested = pyqtSignal()
-    save_log_requested = pyqtSignal()
+    port_open_requested = pyqtSignal()
+    tab_close_requested = pyqtSignal()
+    log_save_requested = pyqtSignal()
     toggle_right_panel_requested = pyqtSignal(bool)
 
     def __init__(self, parent=None):
@@ -37,22 +37,22 @@ class MainMenuBar(QMenuBar):
         new_tab_action = QAction(lang_manager.get_text("main_menu_new_tab"), self)
         new_tab_action.setShortcut("Ctrl+T")
         new_tab_action.setToolTip(lang_manager.get_text("main_menu_new_tab_tooltip"))
-        new_tab_action.triggered.connect(self.new_tab_requested.emit)
+        new_tab_action.triggered.connect(self.tab_new_requested.emit)
         file_menu.addAction(new_tab_action)
 
         open_port_action = QAction(lang_manager.get_text("main_menu_open_port"), self)
         open_port_action.setShortcut("Ctrl+O")
-        open_port_action.triggered.connect(self.open_port_requested.emit)
+        open_port_action.triggered.connect(self.port_open_requested.emit)
         file_menu.addAction(open_port_action)
 
         close_tab_action = QAction(lang_manager.get_text("main_menu_close_tab"), self)
         close_tab_action.setShortcut("Ctrl+W")
-        close_tab_action.triggered.connect(self.close_tab_requested.emit)
+        close_tab_action.triggered.connect(self.tab_close_requested.emit)
         file_menu.addAction(close_tab_action)
 
         save_log_action = QAction(lang_manager.get_text("main_menu_save_log"), self)
         save_log_action.setShortcut("Ctrl+Shift+S")
-        save_log_action.triggered.connect(self.save_log_requested.emit)
+        save_log_action.triggered.connect(self.log_save_requested.emit)
         file_menu.addAction(save_log_action)
 
         file_menu.addSeparator()

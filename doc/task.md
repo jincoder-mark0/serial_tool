@@ -166,7 +166,7 @@
     - [x] `QSmartListView` 구현 (`view/custom_widgets/smart_list_view.py`)
         - [x] QAbstractListModel 기반 로그 모델
         - [x] 검색(Find Next/Prev) 기능 구현
-    - [x] `ReceivedAreaWidget`에 QSmartListView 적용
+    - [x] `RxLogWidget`에 QSmartListView 적용
     - [x] `SystemLogWidget`에 QSmartListView 적용
 
 ## Phase 8: 플러그인 시스템 (계획됨)

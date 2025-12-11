@@ -36,7 +36,7 @@ class MainPresenter(QObject):
         )
 
         # 설정 저장 요청 시그널 연결
-        self.view.setting_save_requested.connect(self.on_settings_change_requested)
+        self.view.settings_save_requested.connect(self.on_settings_change_requested)
 
         # 종료 요청 시그널 연결
         self.view.close_requested.connect(self.on_close_requested)
@@ -187,12 +187,12 @@ class MainPresenter(QObject):
         if 'language' in new_settings:
             lang_manager.set_language(new_settings['language'])
 
-        # max_log_lines 설정 변경 시 모든 ReceivedAreaWidget에 적용
+        # max_log_lines 설정 변경 시 모든 RxLogWidget에 적용
         if 'max_log_lines' in new_settings:
             max_lines = new_settings['max_log_lines']
             try:
                 max_lines_int = int(max_lines)
-                # 모든 포트 패널의 ReceivedAreaWidget에 적용
+                # 모든 포트 패널의 RxLogWidget에 적용
                 for i in range(self.view.left_section.port_tabs.count()):
                     widget = self.view.left_section.port_tabs.widget(i)
                     if hasattr(widget, 'received_area_widget'):

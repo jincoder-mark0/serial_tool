@@ -16,7 +16,7 @@ from PyQt5.QtGui import (
     QColor, QTextDocument, QAbstractTextDocumentLayout, QTextCharFormat, QPainter
 )
 
-from app_constants import DEFAULT_LOG_MAX_LINES, TRIM_CHUNK_RATIO, LOG_COLOR_TIMESTAMP
+from constants import DEFAULT_LOG_MAX_LINES, TRIM_CHUNK_RATIO
 
 class QSmartListView(QListView):
     """
@@ -81,26 +81,21 @@ class QSmartListView(QListView):
         self._placeholder_text = text
         self.viewport().update()
 
-    def append(self, text: str, timestamp: Optional[str] = None) -> None:
+    def append(self, text: str) -> None:
         """
         로그 한 줄을 추가합니다.
 
         Args:
             text (str): 로그 내용.
-            timestamp (Optional[str]): 타임스탬프 문자열.
         """
         # 1. Newline 처리 (주입받은 설정 사용)
         if self._newline_char != "\n":
             text = text.replace(self._newline_char, "\n")
 
-        # 2. 타임스탬프 결합
-        if timestamp:
-            text = f'<span style="color:{LOG_COLOR_TIMESTAMP};">{timestamp}</span> {text}'
-
-        # 3. 모델에 추가 (단일 항목이지만 리스트로 전달)
+        # 2. 모델에 추가 (단일 항목이지만 리스트로 전달)
         self.log_model.add_logs([text])
 
-        # 4. 자동 스크롤 (맨 아래에 있을 때만)
+        # 3. 자동 스크롤 (맨 아래에 있을 때만)
         if self.is_at_bottom():
             self.scrollToBottom()
 
