@@ -117,7 +117,7 @@ QTableView QTableCornerButton::section {
 }
 
 /* QListView */
-QListView, QSmartListView {
+QListView, #SmartListView {
     border-width: 1px;
     border-style: solid;
 }

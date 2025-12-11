@@ -150,7 +150,7 @@ class Example:
 ```python
 # ❌ 잘못된 예시
 "port_baud_combo_tooltip"       # type이 name 뒤에 위치
-"port_settings_widgets"                 # type 누락 (port_grp_settings가 올바름)
+"port_settings"                 # type 누락 (port_grp_settings가 올바름)
 "inspector_field"               # type 누락 (inspector_col_field가 올바름)
 "save"                          # context와 type 누락
 "btn_save"                      # context 누락
@@ -323,4 +323,3 @@ self.status_log_list = QTextEdit()
 | UI 위젯 변수 | [용도]_[약어] | `send_btn`, `status_lbl` |
 
 **핵심 원칙**: 명확하고, 일관되며, 검색 가능한 이름을 사용하세요!
-

@@ -31,23 +31,25 @@ class QSmartListView(QListView):
             parent (QWidget, optional): 부모 위젯.
         """
         super().__init__(parent)
-        
+
         # 모델 및 델리게이트 설정
         self.log_model = LogModel()
         self.setModel(self.log_model)
-        
+
         self.delegate = LogDelegate(self)
         self.setItemDelegate(self.delegate)
-        
+
         # 뷰 설정
         self.setProperty("class", "fixed-font") # 고정폭 폰트
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
         self.setUniformItemSizes(False) # 행 높이가 다를 수 있음
         self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel) # 부드러운 스크롤
-        
+
         # 설정 관리자
         self._newline_char = "\n"
         self._placeholder_text = ""
+
+        self.setObjectName("SmartListView")
 
     def set_newline_char(self, char: str) -> None:
         """
@@ -79,15 +81,15 @@ class QSmartListView(QListView):
         # 1. Newline 처리 (주입받은 설정 사용)
         if self._newline_char != "\n":
             text = text.replace(self._newline_char, "\n")
-            
+
         # 2. 타임스탬프 결합
         if timestamp:
             text = f'<span style="color:{LOG_COLOR_TIMESTAMP};">{timestamp}</span> {text}'
-            
+
         # 3. 모델에 추가 (단일 항목이지만 리스트로 전달)
         # Note: 대량 추가 시에는 외부에서 리스트로 모아서 append_batch를 호출하는 메서드를 추가하는 것이 좋음
         self.log_model.add_logs([text])
-        
+
         # 4. 자동 스크롤 (맨 아래에 있을 때만)
         if self.is_at_bottom():
             self.scrollToBottom()
@@ -107,7 +109,7 @@ class QSmartListView(QListView):
     def set_search_pattern(self, text: str) -> None:
         """
         검색어를 설정합니다. 정규식으로 컴파일하여 델리게이트에 전달합니다.
-        
+
         Args:
             text (str): 검색할 문자열 (정규식 지원).
         """
@@ -116,13 +118,13 @@ class QSmartListView(QListView):
         else:
             # 1. 정규식으로 시도
             pattern = QRegExp(text, Qt.CaseInsensitive)
-            
+
             # 2. 유효하지 않은 정규식(예: '[')이라면 일반 텍스트로 검색 (Escape 처리)
             if not pattern.isValid():
                 pattern = QRegExp(QRegExp.escape(text), Qt.CaseInsensitive)
-                
+
             self.delegate.set_search_pattern(pattern)
-            
+
         self.viewport().update() # 화면 갱신
 
     def set_max_lines(self, max_lines: int) -> None:
@@ -160,7 +162,7 @@ class QSmartListView(QListView):
             bool: 찾았으면 True, 아니면 False.
         """
         if not text: return False
-        
+
         pattern = self._create_pattern(text)
         current_row = self.currentIndex().row()
         start_row = current_row + 1 if current_row >= 0 else 0
@@ -171,13 +173,13 @@ class QSmartListView(QListView):
             if self._match_row(row, pattern):
                 self._select_and_scroll(row)
                 return True
-        
+
         # 2. 처음부터 현재 위치까지 검색 (Wrap around)
         for row in range(0, start_row):
             if self._match_row(row, pattern):
                 self._select_and_scroll(row)
                 return True
-                
+
         return False
 
     def find_prev(self, text: str) -> bool:
@@ -210,12 +212,12 @@ class QSmartListView(QListView):
                 return True
 
         return False
-            
+
     def get_all_text(self) -> str:
         """
         모델에 있는 모든 로그 데이터를 가져와 하나의 문자열로 반환합니다.
         HTML 태그는 제거됩니다.
-        
+
         Returns:
             str: 개행 문자로 구분된 전체 로그 텍스트.
         """
@@ -223,7 +225,7 @@ class QSmartListView(QListView):
         lines = self.log_model.get_plain_text_logs()
         # 줄바꿈으로 연결하여 반환
         return "\n".join(lines)
-        
+
     def _create_pattern(self, text: str) -> QRegExp:
         """
         검색 문자열을 QRegExp 객체로 변환합니다.
@@ -254,7 +256,7 @@ class QSmartListView(QListView):
             bool: 일치하면 True.
         """
         # 모델의 원본 데이터(HTML 포함)에서 검색
-        # 성능을 위해 stripHtml을 하지 않고 원본에서 검색합니다. 
+        # 성능을 위해 stripHtml을 하지 않고 원본에서 검색합니다.
         # (필요 시 정규식으로 태그 제외 가능)
         text = self.log_model.data(self.log_model.index(row, 0))
         return pattern.indexIn(text) != -1
@@ -274,7 +276,7 @@ class QSmartListView(QListView):
     def setReadOnly(self, val: bool) -> None:
         """
         뷰의 읽기 전용 상태를 설정합니다.
-        
+
         Args:
             val (bool): True일 경우 편집 트리거를 비활성화합니다.
                        (로그 뷰어 특성상 텍스트 선택 및 복사는 여전히 가능합니다)
@@ -284,8 +286,8 @@ class QSmartListView(QListView):
             self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         else:
             # 기본 편집 트리거 복원 (더블 클릭, 키 입력 등)
-            self.setEditTriggers(QAbstractItemView.DoubleClicked | 
-                                 QAbstractItemView.EditKeyPressed | 
+            self.setEditTriggers(QAbstractItemView.DoubleClicked |
+                                 QAbstractItemView.EditKeyPressed |
                                  QAbstractItemView.SelectedClicked)
             # self.setSelectionMode(QAbstractItemView.ExtendedSelection) # 선택 가능 복원
 
@@ -302,7 +304,7 @@ class QSmartListView(QListView):
             bool: 읽기 전용이면 True.
         """
         return self.editTriggers() == QAbstractItemView.NoEditTriggers
-        
+
     def paintEvent(self, event) -> None:
         """
         화면을 그립니다. 데이터가 없을 경우 플레이스홀더를 표시합니다.
@@ -311,23 +313,23 @@ class QSmartListView(QListView):
             event (QPaintEvent): 페인트 이벤트.
         """
         super().paintEvent(event)
-        
+
         # 데이터가 없고 플레이스홀더 텍스트가 설정된 경우 그리기
         if self.model() and self.model().rowCount() == 0 and self._placeholder_text:
             painter = QPainter(self.viewport())
             painter.save()
-            
+
             # 텍스트 색상 설정 (테마의 PlaceholderText 색상 사용, 실패 시 회색)
             text_color = self.palette().placeholderText().color()
             if not text_color.isValid():
                 text_color = QColor(128, 128, 128)
-            
+
             painter.setPen(text_color)
-            
+
             # 화면 중앙에 텍스트 그리기
             rect = self.viewport().rect()
             painter.drawText(rect, Qt.AlignCenter | Qt.TextWordWrap, self._placeholder_text)
-            
+
             painter.restore()
 
 class LogModel(QAbstractListModel):
@@ -374,10 +376,10 @@ class LogModel(QAbstractListModel):
         """
         if not index.isValid() or not (0 <= index.row() < len(self._data)):
             return QVariant()
-        
+
         if role == Qt.DisplayRole:
             return self._data[index.row()]
-        
+
         return QVariant()
 
     def add_logs(self, lines: List[str]) -> None:
@@ -392,7 +394,7 @@ class LogModel(QAbstractListModel):
 
         begin_row = len(self._data)
         end_row = begin_row + len(lines) - 1
-        
+
         self.beginInsertRows(QModelIndex(), begin_row, end_row)
         self._data.extend(lines)
         self.endInsertRows()
@@ -428,19 +430,19 @@ class LogModel(QAbstractListModel):
     def get_plain_text_logs(self) -> List[str]:
         """
         저장된 모든 로그에서 HTML 태그를 제거하여 리스트로 반환합니다.
-        
+
         Returns:
             List[str]: 태그가 제거된 로그 문자열 리스트.
         """
         # HTML 태그 제거용 정규식 컴파일 (<...>)
         cleaner = re.compile('<.*?>')
-        
+
         plain_logs = []
         for line in self._data:
             # 정규식으로 태그 제거
             clean_text = re.sub(cleaner, '', line)
             plain_logs.append(clean_text)
-            
+
         return plain_logs
 
 class LogDelegate(QStyledItemDelegate):
@@ -458,8 +460,8 @@ class LogDelegate(QStyledItemDelegate):
         """
         super().__init__(parent)
         self.doc = QTextDocument()
-        self.search_pattern: Optional[QRegExp] = None 
-        
+        self.search_pattern: Optional[QRegExp] = None
+
         # 검색 결과 하이라이트 포맷 (노란색 배경)
         self.highlight_format = QTextCharFormat()
         self.highlight_format.setBackground(QColor("yellow"))
@@ -484,7 +486,7 @@ class LogDelegate(QStyledItemDelegate):
             index (QModelIndex): 모델 인덱스.
         """
         painter.save()
-        
+
         # 선택된 항목 배경 그리기
         if option.state & QStyle.State_Selected:
             painter.fillRect(option.rect, option.palette.highlight())
@@ -493,7 +495,7 @@ class LogDelegate(QStyledItemDelegate):
         text = index.data(Qt.DisplayRole)
         self.doc.setDefaultFont(option.font)
         self.doc.setHtml(text)
-        
+
         # [핵심] 정규식 객체를 사용하여 검색 및 하이라이트
         if self.search_pattern and not self.search_pattern.isEmpty():
             cursor = self.doc.find(self.search_pattern)
@@ -503,12 +505,12 @@ class LogDelegate(QStyledItemDelegate):
 
         # 그리기 위치 조정
         painter.translate(option.rect.left(), option.rect.top())
-        
+
         # 클리핑 설정 (셀 영역 밖으로 나가지 않도록)
         ctx = QAbstractTextDocumentLayout.PaintContext()
         # 선택된 텍스트의 글자색 처리 (QTextDocument는 기본적으로 HTML 색상 우선)
         # 필요하다면 ctx.palette를 조작할 수 있음
-        
+
         self.doc.documentLayout().draw(painter, ctx)
         painter.restore()
 

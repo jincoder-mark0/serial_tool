@@ -23,6 +23,7 @@ from app_constants import (
     UI_REFRESH_INTERVAL_MS,
     LOG_COLOR_TIMESTAMP
 )
+from core.logger import logger
 
 class ReceivedAreaWidget(QWidget):
     """
@@ -124,7 +125,7 @@ class ReceivedAreaWidget(QWidget):
         self.rx_save_log_btn = QPushButton(lang_manager.get_text("rx_btn_save"))
         self.rx_save_log_btn.setToolTip(lang_manager.get_text("rx_btn_save_tooltip"))
         self.rx_save_log_btn.clicked.connect(self.on_save_log_clicked)
-        
+
         # Options
         self.rx_hex_chk = QCheckBox(lang_manager.get_text("rx_chk_hex"))
         self.rx_hex_chk.setToolTip(lang_manager.get_text("rx_chk_hex_tooltip"))
@@ -198,7 +199,7 @@ class ReceivedAreaWidget(QWidget):
     def append_data(self, data: bytes) -> None:
         """
         수신된 바이트 데이터를 처리하여 버퍼에 추가합니다.
-        
+
         Args:
             data (bytes): 수신된 원본 바이트 데이터.
         """
@@ -207,7 +208,7 @@ class ReceivedAreaWidget(QWidget):
             return
 
         text: str = ""
-        
+
         # 1. 포맷 변환 (Hex / Text)
         if self.hex_mode:
             text = " ".join([f"{b:02X}" for b in data]) + " "
@@ -280,26 +281,26 @@ class ReceivedAreaWidget(QWidget):
     @pyqtSlot()
     def on_save_log_clicked(self) -> None:
         """현재 표시된 로그 데이터를 파일로 저장합니다."""
-        
+
         # 파일 저장 대화상자
         filename, _ = QFileDialog.getSaveFileName(
-            self, 
-            lang_manager.get_text("rx_btn_save"), 
-            "", 
+            self,
+            lang_manager.get_text("rx_btn_save"),
+            "",
             "Text Files (*.txt);;All Files (*)"
         )
-        
+
         if filename:
             try:
                 # QSmartListView에 새로 만든 메서드 호출
                 # HTML 태그가 제거된 순수 텍스트를 한 번에 가져옴
                 full_text = self.rx_log_list.get_all_text()
-                
+
                 with open(filename, 'w', encoding='utf-8') as f:
                     f.write(full_text)
-                    
+
             except Exception as e:
-                print(f"Error saving log: {e}")
+                logger.error(f"Error saving log: {e}")
 
     @pyqtSlot(int)
     def on_rx_hex_mode_changed(self, state: int) -> None:
@@ -337,7 +338,7 @@ class ReceivedAreaWidget(QWidget):
     def set_max_lines(self, max_lines: int) -> None:
         """
         표시할 최대 로그 라인 수를 설정합니다.
-        
+
         Args:
             max_lines (int): 최대 라인 수.
         """
@@ -347,7 +348,7 @@ class ReceivedAreaWidget(QWidget):
     def save_state(self) -> dict:
         """
         현재 위젯의 UI 상태를 딕셔너리로 반환합니다 (설정 저장용).
-        
+
         Returns:
             dict: {hex_mode, timestamp, is_paused, search_text}
         """
@@ -362,7 +363,7 @@ class ReceivedAreaWidget(QWidget):
     def load_state(self, state: dict) -> None:
         """
         저장된 상태 딕셔너리를 UI에 적용합니다.
-        
+
         Args:
             state (dict): 복원할 상태 정보.
         """

@@ -205,6 +205,12 @@ QLabel[class="section-title"] {
     color: #2196F3;
 }
 
+/* QGroupBox */
+QGroupBox,
+#SmartListView {
+    border-color: #c0c0c0;
+}
+
 /* QStatusBar */
 QStatusBar {
     background-color: #f0f0f0;

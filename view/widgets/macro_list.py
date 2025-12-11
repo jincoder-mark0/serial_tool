@@ -1,9 +1,9 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableView, QPushButton,
-    QHeaderView, QCheckBox
+    QHeaderView, QCheckBox, QMenu, QAction
 )
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtCore import Qt, pyqtSignal, QPoint
 from typing import Optional, List, Dict, Any
 from view.managers.lang_manager import lang_manager
 
@@ -93,6 +93,10 @@ class MacroListWidget(QWidget):
         self.macro_table.setModel(self.macro_table_model)
         self.macro_table.setToolTip(lang_manager.get_text("macro_list_table_cmd"))
 
+        # 컨텍스트 메뉴 설정
+        self.macro_table.setContextMenuPolicy(Qt.CustomContextMenu)
+        self.macro_table.customContextMenuRequested.connect(self.show_context_menu)
+
         # 스크롤바 정책 - 항상 표시
         self.macro_table.setVerticalScrollBarPolicy(Qt.ScrollBarAlwaysOn)
         self.macro_table.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
@@ -124,6 +128,30 @@ class MacroListWidget(QWidget):
         self.macro_table_model.rowsInserted.connect(lambda: self.macro_list_changed.emit())
         self.macro_table_model.rowsRemoved.connect(lambda: self.macro_list_changed.emit())
         self.macro_table_model.rowsMoved.connect(lambda: self.macro_list_changed.emit())
+
+    def show_context_menu(self, pos: QPoint) -> None:
+        """컨텍스트 메뉴를 표시합니다."""
+        menu = QMenu(self)
+
+        add_action = QAction(lang_manager.get_text("macro_list_btn_add_row_tooltip"), self)
+        add_action.triggered.connect(self.add_macro_row)
+        menu.addAction(add_action)
+
+        del_action = QAction(lang_manager.get_text("macro_list_btn_del_row_tooltip"), self)
+        del_action.triggered.connect(self.remove_selected_rows)
+        menu.addAction(del_action)
+
+        menu.addSeparator()
+
+        up_action = QAction(lang_manager.get_text("macro_list_btn_up_row_tooltip"), self)
+        up_action.triggered.connect(self.move_up_selected_row)
+        menu.addAction(up_action)
+
+        down_action = QAction(lang_manager.get_text("macro_list_btn_down_row_tooltip"), self)
+        down_action.triggered.connect(self.move_down_selected_row)
+        menu.addAction(down_action)
+
+        menu.exec_(self.macro_table.mapToGlobal(pos))
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""

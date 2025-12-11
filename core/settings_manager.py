@@ -10,6 +10,7 @@ except ImportError:
 from pathlib import Path
 from typing import Dict, Any
 from app_constants import DEFAULT_BAUDRATE, DEFAULT_LOG_MAX_LINES
+from core.logger import logger
 
 class SettingsManager:
     """
@@ -92,7 +93,7 @@ class SettingsManager:
             with open(self.config_path, 'r', encoding='utf-8') as f:
                 self.settings = json.load(f)
         except (FileNotFoundError, ValueError, Exception) as e:
-            print(f"설정 로드 실패: {e}")
+            logger.error(f"설정 로드 실패: {e}")
             self.settings = self._get_fallback_settings()
             # 기본 설정으로 파일 생성
             self.save_settings()
@@ -126,7 +127,7 @@ class SettingsManager:
             with open(self.config_path, 'w', encoding='utf-8') as f:
                 json.dump(self.settings, f, indent=2, ensure_ascii=False)
         except IOError as e:
-            print(f"설정 저장 실패: {e}")
+            logger.error(f"설정 저장 실패: {e}")
 
     def get(self, key_path: str, default: Any = None) -> Any:
         """

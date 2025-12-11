@@ -6,6 +6,7 @@ from typing import Optional, Dict, Any, List
 from view.widgets.macro_list import MacroListWidget
 from view.widgets.macro_ctrl import MacroCtrlWidget
 from view.managers.lang_manager import lang_manager
+from core.logger import logger
 
 class MacroPanel(QWidget):
     """
@@ -143,6 +144,7 @@ class MacroPanel(QWidget):
             with open(path, 'w', encoding='utf-8') as f:
                 commentjson.dump(data, f, indent=4)
         except Exception as e:
+            logger.error(f"Failed to save script: {str(e)}")
             QMessageBox.critical(self, "Error", f"Failed to save script: {str(e)}")
 
     def load_script_from_file(self) -> None:
@@ -166,4 +168,5 @@ class MacroPanel(QWidget):
             self.load_state(data)
 
         except Exception as e:
+            logger.error(f"Failed to load script: {str(e)}")
             QMessageBox.critical(self, "Error", f"Failed to load script: {str(e)}")

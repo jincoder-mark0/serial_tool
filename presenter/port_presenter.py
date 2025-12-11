@@ -1,9 +1,11 @@
 from PyQt5.QtCore import QObject
+from PyQt5.QtWidgets import QMessageBox
 import serial.tools.list_ports
 
 from view.sections.main_left_section import MainLeftSection
 from model.port_controller import PortController
 from core.settings_manager import SettingsManager
+from core.logger import logger
 
 class PortPresenter(QObject):
     """
@@ -77,23 +79,20 @@ class PortPresenter(QObject):
         if self.port_controller.is_open:
             self.port_controller.close_port()
         else:
-            port = self.current_port_panel.port_settings_widgets.port_combo.currentText()
-            try:
-                baudrate = int(self.current_port_panel.port_settings_widgets.baudrate_combo.currentText())
-            except ValueError:
-                print("Invalid baudrate")
-                return
+            # PortSettingsWidget에서 현재 설정 가져오기
+            config = self.current_port_panel.port_settings_widgets.get_current_config()
+            port = config.get('port')
 
             if port:
-                # TODO: PortSettingsWidget에서 config 딕셔너리를 만들어 보낸다.
-                config = {'port': 'COM1', 'baudrate': 115200, 'parity': 'N'}
+                baudrate = config.get('baudrate', 115200)
                 self.port_controller.open_port(
-                    config['port'], 
-                    config['baudrate'], 
-                    **config  # 나머지 설정(parity, stopbits 등) 전달
+                    port,
+                    baudrate,
+                    **config
                 )
             else:
-                print("No port selected")
+                logger.warning("No port selected")
+                QMessageBox.warning(self.left_panel, "Warning", "No port selected.")
 
     def on_port_opened(self, port_name: str) -> None:
         """
@@ -131,8 +130,9 @@ class PortPresenter(QObject):
         Args:
             message (str): 에러 메시지.
         """
-        # Note: 향후 MainWindow의 status_bar를 통해 에러 메시지 표시 예정
-        print(f"Port Error: {message}")
+        logger.error(f"Port Error: {message}")
+        QMessageBox.critical(self.left_panel, "Error", f"Port Error: {message}")
+
         # 열기/닫기 중 에러 발생 시 UI 동기화 보장
         if not self.port_controller.is_open and self.current_port_panel:
             self.current_port_panel.port_settings_widgets.set_connected(False)
