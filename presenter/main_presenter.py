@@ -38,6 +38,48 @@ class MainPresenter(QObject):
         # 설정 저장 요청 시그널 연결
         self.view.setting_save_requested.connect(self.on_settings_change_requested)
 
+        # 종료 요청 시그널 연결
+        self.view.close_requested.connect(self.on_close_requested)
+
+    def on_close_requested(self) -> None:
+        """
+        애플리케이션 종료 요청을 처리합니다.
+        윈도우 상태를 저장하고 리소스를 정리합니다.
+        """
+        # 1. 윈도우 상태 가져오기
+        state = self.view.get_window_state()
+        settings_manager = SettingsManager()
+
+        # 2. 설정 저장
+        # 2.1 윈도우 기본 설정
+        settings_manager.set('ui.window_width', state.get('ui.window_width'))
+        settings_manager.set('ui.window_height', state.get('ui.window_height'))
+        settings_manager.set('ui.window_x', state.get('ui.window_x'))
+        settings_manager.set('ui.window_y', state.get('ui.window_y'))
+        settings_manager.set('ui.splitter_state', state.get('ui.splitter_state'))
+        settings_manager.set('settings.right_panel_visible', state.get('settings.right_panel_visible'))
+
+        # 2.2 Left Section 상태
+        if 'manual_ctrl' in state:
+            settings_manager.set('manual_ctrl', state['manual_ctrl'])
+        if 'ports.tabs' in state:
+            settings_manager.set('ports.tabs', state['ports.tabs'])
+
+        # 2.3 Right Section 상태
+        if 'macro_list.commands' in state:
+            settings_manager.set('macro_list.commands', state['macro_list.commands'])
+        if 'macro_list.control_state' in state:
+            settings_manager.set('macro_list.control_state', state['macro_list.control_state'])
+
+        # 3. 파일 쓰기
+        settings_manager.save_settings()
+
+        # 4. 리소스 정리 (포트 닫기)
+        if self.port_controller.is_open:
+            self.port_controller.close_port()
+
+        logger.info("Application shutdown sequence completed.")
+
     def on_data_received(self, data: bytes) -> None:
         """
         수신된 시리얼 데이터를 처리합니다.

@@ -27,6 +27,7 @@ class MainWindow(QMainWindow):
     설정의 로드 및 저장을 조율합니다.
     """
 
+    close_requested = pyqtSignal()
     setting_save_requested = pyqtSignal(dict)
 
     def __init__(self, app_config=None) -> None:
@@ -167,37 +168,45 @@ class MainWindow(QMainWindow):
         }
         self.right_section.load_state(right_section_state)
 
-    def closeEvent(self, event) -> None:
+    def get_window_state(self) -> dict:
         """
-        종료 시 모든 상태를 수집하여 저장합니다.
-        View는 데이터를 '반환'만 하고, 저장은 여기서 수행합니다.
-        """
-        # 1. 윈도우 기본 설정 저장
-        self.settings.set('ui.window_width', self.width())
-        self.settings.set('ui.window_height', self.height())
-        self.settings.set('ui.window_x', self.x())
-        self.settings.set('ui.window_y', self.y())
-        self.settings.set('ui.splitter_state', self.splitter.saveState().toBase64().data().decode())
-        self.settings.set('settings.right_panel_visible', self.right_section.isVisible())
+        현재 윈도우의 모든 상태를 수집하여 반환합니다.
 
-        # 2. Left Section 상태 수집 및 저장
+        Returns:
+            dict: 윈도우 상태 딕셔너리
+        """
+        state = {}
+
+        # 1. 윈도우 기본 설정
+        state['ui.window_width'] = self.width()
+        state['ui.window_height'] = self.height()
+        state['ui.window_x'] = self.x()
+        state['ui.window_y'] = self.y()
+        state['ui.splitter_state'] = self.splitter.saveState().toBase64().data().decode()
+        state['settings.right_panel_visible'] = self.right_section.isVisible()
+
+        # 2. Left Section 상태
         left_state = self.left_section.save_state()
         if 'manual_ctrl' in left_state:
-            self.settings.set('manual_ctrl', left_state['manual_ctrl'])
+            state['manual_ctrl'] = left_state['manual_ctrl']
         if 'ports' in left_state:
-            self.settings.set('ports.tabs', left_state['ports'])
+            state['ports.tabs'] = left_state['ports']
 
-        # 3. Right Section 상태 수집 및 저장
+        # 3. Right Section 상태
         right_state = self.right_section.save_state()
         if 'macro_panel' in right_state:
             macro_data = right_state['macro_panel']
-            self.settings.set('macro_list.commands', macro_data.get('commands', []))
-            self.settings.set('macro_list.control_state', macro_data.get('control_state', {}))
+            state['macro_list.commands'] = macro_data.get('commands', [])
+            state['macro_list.control_state'] = macro_data.get('control_state', {})
 
-        # 4. 파일 쓰기
-        self.settings.save_settings()
+        return state
 
-        # 종료 이벤트 수락
+    def closeEvent(self, event) -> None:
+        """
+        종료 이벤트를 처리합니다.
+        Presenter에게 종료 요청을 알리고 이벤트를 수락합니다.
+        """
+        self.close_requested.emit()
         event.accept()
 
 

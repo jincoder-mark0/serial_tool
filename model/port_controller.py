@@ -27,21 +27,31 @@ class PortController(QObject):
     def is_open(self) -> bool:
         return self.worker is not None and self.worker.isRunning()
 
-    def open_port(self, port_name: str, baudrate: int, **kwargs) -> bool:
+    def open_port(self, config: dict) -> bool:
         """
         시리얼 포트를 엽니다.
         내부적으로 SerialTransport를 생성하여 Worker에 주입합니다.
+
+        Args:
+            config (dict): 포트 설정 딕셔너리.
         """
         if self.is_open:
             self.error_occurred.emit("Port is already open.")
             return False
+
+        port_name = config.get('port')
+        if not port_name:
+            self.error_occurred.emit("Port name is required.")
+            return False
+
+        baudrate = config.get('baudrate', DEFAULT_BAUDRATE)
 
         self._port_name = port_name
         self._baudrate = baudrate
 
         # 1. Transport 객체 생성 (여기서 프로토콜 결정 가능)
         # 예: if protocol == 'SPI': transport = SpiTransport(...)
-        transport = SerialTransport(port_name, baudrate, config=kwargs)
+        transport = SerialTransport(port_name, baudrate, config=config)
 
         # 2. Worker에 Transport 주입 (의존성 주입)
         self.worker = ConnectionWorker(transport, port_name)

@@ -15,6 +15,10 @@
   - 전송 버튼 상단에 히스토리 탐색(▲, ▼) 버튼 추가
   - Ctrl+Up/Down 키로도 히스토리 탐색 가능
 
+- **리팩토링 (Refactoring)**
+  - `PortController.open_port`: 개별 인자 대신 `config` 딕셔너리를 받도록 변경하여 확장성 확보
+  - `MainWindow` 종료 로직을 `MainPresenter`로 이동하여 역할 분리 (MVP 패턴 강화)
+
 #### 변경 사항 (Changed)
 - **에러 핸들링 및 로깅 개선**
   - `PortPresenter` 및 `MacroPanel`에서 `print` 문을 `logger`와 `QMessageBox`로 대체

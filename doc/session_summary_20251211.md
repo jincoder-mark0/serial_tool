@@ -26,6 +26,9 @@
 - **ManualControlWidget 히스토리**:
     - 최근 50개의 전송 명령어를 저장하고 불러올 수 있는 히스토리 기능을 구현했습니다.
     - UI에 히스토리 탐색 버튼(▲, ▼)을 추가하고, Ctrl+Up/Down 단축키를 지원합니다.
+- **코드 리팩토링**:
+    - `PortController.open_port` 메서드가 설정 딕셔너리(`config`)를 직접 받도록 수정하여, 향후 다양한 프로토콜 확장에 대비했습니다.
+    - `MainWindow`의 종료 처리 로직(설정 저장, 리소스 정리)을 `MainPresenter`로 이동하여 MVP 패턴을 강화했습니다.
 - **QSmartListView 스타일 수정**:
     - `QSmartListView`에 객체 이름(`SmartListView`)을 부여하고, QSS에서 ID 선택자를 사용하여 테두리 스타일을 적용했습니다.
     - `QGroupBox` 스타일과의 간섭을 제거하여 테두리가 정상적으로 표시되도록 수정했습니다.

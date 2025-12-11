@@ -84,12 +84,7 @@ class PortPresenter(QObject):
             port = config.get('port')
 
             if port:
-                baudrate = config.get('baudrate', 115200)
-                self.port_controller.open_port(
-                    port,
-                    baudrate,
-                    **config
-                )
+                self.port_controller.open_port(config)
             else:
                 logger.warning("No port selected")
                 QMessageBox.warning(self.left_panel, "Warning", "No port selected.")
