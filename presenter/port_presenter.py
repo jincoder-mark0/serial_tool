@@ -133,11 +133,12 @@ class PortPresenter(QObject):
     def connect_current_port(self) -> None:
         """현재 포트를 연결합니다 (단축키용)."""
         self.update_current_port_panel()
-        if self.current_port_panel and not self.port_controller.is_open:
+        if self.current_port_panel:
             config = self.current_port_panel.port_settings_widget.get_current_config()
-            if config.get('port'):
+            port_name = config.get('port')
+            if port_name and not self.port_controller.is_port_open(port_name):
                 self.port_controller.open_port(config)
-            else:
+            elif not port_name:
                 logger.warning("No port selected")
 
     def disconnect_current_port(self) -> None:

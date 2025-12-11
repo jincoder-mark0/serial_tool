@@ -38,6 +38,8 @@
 - **문서 업데이트**
   - `doc/task.md`: Phase 2.5 완료 상태 반영
 
+---
+
 ### 기능 개선 및 버그 수정 (2025-12-11)
 
 #### 추가 사항 (Added)
@@ -255,7 +257,7 @@
 
 - **doc/implementation_plan.md**
   - 최종 업데이트 날짜: 2025-12-10
-  - 프로젝트 구조 업데이트 (AppConfig, __init__.py, 파일명 수정)
+  - 프로젝트 구조 업데이트 (AppConfig, **init**.py, 파일명 수정)
 
 - **README.md**
   - 주요 기능 업데이트 (PortState, AppConfig, Package-level imports)

@@ -69,8 +69,9 @@ class MainPresenter(QObject):
         # 녹화 시그널 연결 (LogRecorder 통합)
         self._connect_recording_signals()
         
-        # 현재 녹화 중인 포트 이름
-        self._current_recording_port = None
+        # 탭 추가 시그널 연결 (새 탭의 녹화 시그널 연결용)
+        self.view.left_section.port_tabs.tab_added.connect(self._on_port_tab_added)
+
         
         # 현재 파일 전송 다이얼로그
         self._current_transfer_dialog = None
@@ -125,7 +126,7 @@ class MainPresenter(QObject):
         """
         # 녹화 중이면 LogRecorder에 먼저 기록 (데이터 누락 방지)
         # 해당 포트가 녹화 중인지 확인
-        if self._current_recording_port == port_name:
+        if log_recorder_manager.is_recording(port_name):
             log_recorder_manager.record(port_name, data)
         
         # 포트 이름으로 해당 탭 찾기
@@ -284,7 +285,7 @@ class MainPresenter(QObject):
         데이터 전송 시 TX 카운트를 증가시키고, 녹화 중이면 데이터를 기록합니다.
         """
         # 녹화 중이면 LogRecorder에 기록
-        if self._current_recording_port == port_name:
+        if log_recorder_manager.is_recording(port_name):
             log_recorder_manager.record(port_name, data)
             
         self.tx_byte_count += len(data)
@@ -337,13 +338,36 @@ class MainPresenter(QObject):
     # -------------------------------------------------------------------------
     def _connect_recording_signals(self) -> None:
         """모든 포트 패널의 녹화 시그널을 연결합니다."""
-        # 현재 탭의 RxLogWidget 시그널 연결
         for i in range(self.view.left_section.port_tabs.count()):
             widget = self.view.left_section.port_tabs.widget(i)
-            if hasattr(widget, 'received_area_widget'):
-                rx_widget = widget.received_area_widget
-                rx_widget.recording_started.connect(self._on_recording_started)
-                rx_widget.recording_stopped.connect(self._on_recording_stopped)
+            self._connect_single_port_recording(widget)
+
+    def _on_port_tab_added(self, panel) -> None:
+        """새 탭이 추가되었을 때 녹화 시그널을 연결합니다."""
+        self._connect_single_port_recording(panel)
+
+    def _connect_single_port_recording(self, panel) -> None:
+        """단일 포트 패널의 녹화 시그널을 연결합니다."""
+        if hasattr(panel, 'received_area_widget'):
+            rx_widget = panel.received_area_widget
+            # 중복 연결 방지를 위해 disconnect 시도 (실패해도 무방)
+            try:
+                rx_widget.recording_started.disconnect(self._on_recording_started)
+                rx_widget.recording_stopped.disconnect(self._on_recording_stopped)
+            except TypeError:
+                pass
+            
+            rx_widget.recording_started.connect(self._on_recording_started)
+            rx_widget.recording_stopped.connect(self._on_recording_stopped)
+
+    def _get_port_panel_from_sender(self):
+        """시그널을 보낸 RxLogWidget이 속한 PortPanel을 찾습니다."""
+        sender = self.sender()
+        for i in range(self.view.left_section.port_tabs.count()):
+            widget = self.view.left_section.port_tabs.widget(i)
+            if hasattr(widget, 'received_area_widget') and widget.received_area_widget == sender:
+                return widget
+        return None
 
     def _on_recording_started(self, filepath: str) -> None:
         """
@@ -352,29 +376,31 @@ class MainPresenter(QObject):
         Args:
             filepath: 녹화 파일 경로
         """
-        # 현재 포트 이름 가져오기
-        port_name = self.port_controller.current_port_name
+        panel = self._get_port_panel_from_sender()
+        if not panel:
+            return
+
+        port_name = panel.get_port_name()
         
         if not port_name:
             logger.warning("Cannot start recording: No port opened")
-            # UI 버튼 상태를 다시 '저장'으로 되돌려야 함 (구현 복잡도 증가로 생략하거나, 알림 필요)
-            # 여기서는 로그만 남기고, 실제로는 RxLogWidget이 이미 'REC' 상태로 변했을 수 있음.
-            # 완벽한 처리를 위해서는 RxLogWidget에 시그널을 보내 상태를 되돌려야 하지만,
-            # 현재 구조상 간단히 로그만 남김.
             return
 
         if log_recorder_manager.start_recording(port_name, filepath):
-            self._current_recording_port = port_name
             logger.info(f"Recording started: {port_name} -> {filepath}")
         else:
             logger.error(f"Failed to start recording: {filepath}")
 
     def _on_recording_stopped(self) -> None:
         """녹화 중단 처리"""
-        if self._current_recording_port:
-            log_recorder_manager.stop_recording(self._current_recording_port)
-            logger.info(f"Recording stopped: {self._current_recording_port}")
-            self._current_recording_port = None
+        panel = self._get_port_panel_from_sender()
+        if not panel:
+            return
+
+        port_name = panel.get_port_name()
+        if port_name and log_recorder_manager.is_recording(port_name):
+            log_recorder_manager.stop_recording(port_name)
+            logger.info(f"Recording stopped: {port_name}")
 
     # -------------------------------------------------------------------------
     # 파일 전송 (File Transfer)

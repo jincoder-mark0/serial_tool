@@ -21,7 +21,7 @@ from typing import Optional, Dict
 from queue import Queue, Empty
 from threading import Thread
 import os
-
+from core.logger import logger
 
 class LogRecorder:
     """
@@ -72,7 +72,7 @@ class LogRecorder:
             
             return True
         except Exception as e:
-            print(f"LogRecorder start failed: {e}")
+            logger.error(f"LogRecorder start failed: {e}")
             return False
     
     def stop(self) -> None:
@@ -111,7 +111,7 @@ class LogRecorder:
             except Empty:
                 continue
             except Exception as e:
-                print(f"LogRecorder write error: {e}")
+                logger.error(f"LogRecorder write error: {e}")
 
 
 class LogRecorderManager:
