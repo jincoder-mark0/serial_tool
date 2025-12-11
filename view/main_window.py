@@ -1,6 +1,7 @@
 from PyQt5.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QSplitter, QApplication
+    QMainWindow, QWidget, QVBoxLayout, QSplitter, QApplication, QShortcut
 )
+from PyQt5.QtGui import QKeySequence
 from PyQt5.QtCore import Qt, pyqtSignal, QByteArray
 
 from view.sections import (
@@ -29,6 +30,11 @@ class MainWindow(QMainWindow):
 
     close_requested = pyqtSignal()
     settings_save_requested = pyqtSignal(dict)
+
+    # 단축키 시그널
+    shortcut_connect_requested = pyqtSignal()
+    shortcut_disconnect_requested = pyqtSignal()
+    shortcut_clear_requested = pyqtSignal()
 
     def __init__(self, resource_path=None) -> None:
         """
@@ -76,6 +82,9 @@ class MainWindow(QMainWindow):
         # 윈도우 상태 및 각 섹션의 데이터 복원
         self._load_window_state()
 
+        # 단축키 초기화
+        self.init_shortcuts()
+
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
         central_widget = QWidget()
@@ -107,7 +116,22 @@ class MainWindow(QMainWindow):
 
         # 전역 상태바 설정 (위젯 사용)
         self.global_status_bar = MainStatusBar()
+        self.global_status_bar = MainStatusBar()
         self.setStatusBar(self.global_status_bar)
+
+    def init_shortcuts(self) -> None:
+        """전역 단축키를 초기화합니다."""
+        # F2: 연결 (Connect)
+        self.shortcut_connect = QShortcut(QKeySequence("F2"), self)
+        self.shortcut_connect.activated.connect(self.shortcut_connect_requested.emit)
+
+        # F3: 연결 해제 (Disconnect)
+        self.shortcut_disconnect = QShortcut(QKeySequence("F3"), self)
+        self.shortcut_disconnect.activated.connect(self.shortcut_disconnect_requested.emit)
+
+        # F5: 로그 지우기 (Clear Log)
+        self.shortcut_clear = QShortcut(QKeySequence("F5"), self)
+        self.shortcut_clear.activated.connect(self.shortcut_clear_requested.emit)
 
     def _apply_initial_settings(self) -> None:
         """초기 폰트, 테마, UI 상태를 적용합니다."""

@@ -131,3 +131,24 @@ class PortPresenter(QObject):
         # 열기/닫기 중 에러 발생 시 UI 동기화 보장
         if not self.port_controller.is_open and self.current_port_panel:
             self.current_port_panel.port_settings_widget.set_connected(False)
+
+    def connect_current_port(self) -> None:
+        """현재 포트를 연결합니다 (단축키용)."""
+        self.update_current_port_panel()
+        if self.current_port_panel and not self.port_controller.is_open:
+            config = self.current_port_panel.port_settings_widget.get_current_config()
+            if config.get('port'):
+                self.port_controller.open_port(config)
+            else:
+                logger.warning("No port selected")
+
+    def disconnect_current_port(self) -> None:
+        """현재 포트를 연결 해제합니다 (단축키용)."""
+        if self.port_controller.is_open:
+            self.port_controller.close_port()
+
+    def clear_log_current_port(self) -> None:
+        """현재 포트의 로그를 지웁니다 (단축키용)."""
+        self.update_current_port_panel()
+        if self.current_port_panel and hasattr(self.current_port_panel, 'received_area_widget'):
+            self.current_port_panel.received_area_widget.on_clear_rx_log_clicked()

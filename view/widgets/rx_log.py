@@ -2,13 +2,18 @@
 RxLogWidget 모듈
 
 시리얼 포트 등 외부로부터 수신된 데이터를 표시하고 관리하는 메인 위젯을 정의합니다.
+```python
+"""
+RxLogWidget 모듈
+
+시리얼 포트 등 외부로부터 수신된 데이터를 표시하고 관리하는 메인 위젯을 정의합니다.
 QSmartListView를 기반으로 하여 대량의 데이터 처리 성능을 최적화하였으며,
 검색, HEX 모드, 타임스탬프, 일시 정지 등의 편의 기능을 제공합니다.
 """
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QCheckBox, QLabel, QLineEdit, QFileDialog
+    QPushButton, QCheckBox, QLabel, QLineEdit, QFileDialog, QComboBox
 )
 from PyQt5.QtCore import QTimer, pyqtSlot, Qt
 from typing import Optional
@@ -52,6 +57,7 @@ class RxLogWidget(QWidget):
         self.rx_timestamp_chk = None
         self.rx_hex_chk = None
         self.rx_filter_chk = None  # Filter Checkbox
+        self.rx_newline_combo = None # Newline Combo
         self.rx_log_title = None
         self.rx_log_list = None
 
@@ -145,6 +151,15 @@ class RxLogWidget(QWidget):
         self.rx_pause_chk.setToolTip(lang_manager.get_text("rx_chk_pause_tooltip"))
         self.rx_pause_chk.stateChanged.connect(self.on_rx_pause_changed)
 
+        # Newline Combo
+        self.rx_newline_combo = QComboBox()
+        self.rx_newline_combo.setToolTip(lang_manager.get_text("rx_combo_newline_tooltip"))
+        self.rx_newline_combo.addItem(lang_manager.get_text("rx_newline_raw"), "Raw")
+        self.rx_newline_combo.addItem(lang_manager.get_text("rx_newline_lf"), "LF")
+        self.rx_newline_combo.addItem(lang_manager.get_text("rx_newline_cr"), "CR")
+        self.rx_newline_combo.addItem(lang_manager.get_text("rx_newline_crlf"), "CRLF")
+        self.rx_newline_combo.setFixedWidth(100)
+
 
 
         # 2. 로그 뷰 영역
@@ -164,6 +179,7 @@ class RxLogWidget(QWidget):
         toolbar_layout.addWidget(self.rx_search_prev_btn)
         toolbar_layout.addWidget(self.rx_search_next_btn)
         toolbar_layout.addWidget(self.rx_filter_chk) # Filter Checkbox
+        toolbar_layout.addWidget(self.rx_newline_combo) # Newline Combo
         toolbar_layout.addWidget(self.rx_hex_chk)
         toolbar_layout.addWidget(self.rx_timestamp_chk)
         toolbar_layout.addWidget(self.rx_pause_chk)
@@ -202,6 +218,15 @@ class RxLogWidget(QWidget):
         self.rx_save_log_btn.setText(lang_manager.get_text("rx_btn_save"))
         self.rx_save_log_btn.setToolTip(lang_manager.get_text("rx_btn_save_tooltip"))
 
+        # Newline Combo
+        current_idx = self.rx_newline_combo.currentIndex()
+        self.rx_newline_combo.setItemText(0, lang_manager.get_text("rx_newline_raw"))
+        self.rx_newline_combo.setItemText(1, lang_manager.get_text("rx_newline_lf"))
+        self.rx_newline_combo.setItemText(2, lang_manager.get_text("rx_newline_cr"))
+        self.rx_newline_combo.setItemText(3, lang_manager.get_text("rx_newline_crlf"))
+        self.rx_newline_combo.setToolTip(lang_manager.get_text("rx_combo_newline_tooltip"))
+        self.rx_newline_combo.setCurrentIndex(current_idx)
+
     # -------------------------------------------------------------------------
     # 데이터 처리 및 버퍼링
     # -------------------------------------------------------------------------
@@ -233,20 +258,72 @@ class RxLogWidget(QWidget):
         if self.timestamp_enabled:
             ts = datetime.datetime.now().strftime("[%H:%M:%S]")
 
-        # 3. 색상 규칙 적용 및 조합
-        if not self.hex_mode:
-            # 텍스트 모드: 타임스탬프 포함하여 전체 규칙 적용
-            if ts:
-                text = f"{ts} {text}"
-            text = self.color_manager.apply_rules(text)
-        else:
-            # HEX 모드: 타임스탬프만 수동으로 색상 적용 (HEX 데이터는 규칙 제외)
-            if ts:
-                ts_color = self.color_manager.get_rule_color("TIMESTAMP")
-                text = f'<span style="color:{ts_color};">{ts}</span> {text}'
+        # 3. Newline 처리 및 분할
+        lines = []
+        newline_mode = self.rx_newline_combo.currentData()
 
-        # 4. 버퍼에 추가 (Lock 불필요: Python GIL 및 단일 GUI 스레드 환경)
-        self.ui_update_buffer.append(text)
+        if self.hex_mode or newline_mode == "Raw":
+            lines.append(text)
+        else:
+            delimiter = "\n"
+            if newline_mode == "CR":
+                delimiter = "\r"
+            elif newline_mode == "CRLF":
+                delimiter = "\r\n"
+
+            # Split by delimiter, but keep the delimiter if it's not at the end
+            # This ensures that if a line ends with a delimiter, it's treated as a complete line
+            # and the next data starts a new line.
+            # For example, "abc\n" should be "abc" and then a new line.
+            # "abc\ndef" should be "abc", "def".
+            # "abc" should be "abc".
+
+            # Use a regex split to keep the delimiters if needed, or handle manually
+            # For simplicity, let's assume we want to split and each part is a line.
+            # If the last character is a delimiter, it means the line is complete.
+
+            parts = text.split(delimiter)
+            for i, part in enumerate(parts):
+                if part: # Only add non-empty parts
+                    lines.append(part)
+                # If it's not the last part, and the part was empty, it means there were consecutive delimiters
+                # or a delimiter at the start/end. We need to handle empty lines if they represent actual newlines.
+                # For now, let's just add non-empty parts.
+                # If the original text ended with a delimiter, the last part will be empty.
+                # We don't want to add an empty line for that.
+
+            # If the original text ended with a delimiter, split() will produce an empty string at the end.
+            # We should not add an empty line for this.
+            # Example: "line1\nline2\n".split('\n') -> ['line1', 'line2', '']
+            # Example: "line1\nline2".split('\n') -> ['line1', 'line2']
+            if text.endswith(delimiter) and lines and lines[-1] == "":
+                lines.pop() # Remove the trailing empty string if it was due to a delimiter at the end.
+
+            # If the text itself was just a delimiter, lines would be [''] or empty.
+            # If text is just "\n", parts is ['', ''], lines would be ['']. Pop removes it.
+            # If text is "a\n", parts is ['a', ''], lines would be ['a']. Pop removes ''.
+            # If text is "a", parts is ['a'], lines would be ['a']. No pop.
+            # This logic seems okay for simple line splitting.
+
+        # 4. 색상 규칙 적용 및 버퍼 추가
+        for line in lines:
+            # An empty line might occur if the input was just a newline or multiple newlines.
+            # We should still process it to potentially add a timestamp.
+
+            final_text = line
+
+            if not self.hex_mode:
+                # 텍스트 모드: 타임스탬프 포함하여 전체 규칙 적용
+                if ts:
+                    final_text = f"{ts} {final_text}"
+                final_text = self.color_manager.apply_rules(final_text)
+            else:
+                # HEX 모드: 타임스탬프만 수동으로 색상 적용
+                if ts:
+                    ts_color = self.color_manager.get_rule_color("TIMESTAMP")
+                    final_text = f'<span style="color:{ts_color};">{ts}</span> {final_text}'
+
+            self.ui_update_buffer.append(final_text)
 
     def flush_buffer(self) -> None:
         """
@@ -384,7 +461,8 @@ class RxLogWidget(QWidget):
             "timestamp": self.timestamp_enabled,
             "is_paused": self.is_paused,
             "search_text": self.rx_search_input.text(),
-            "filter_enabled": self.filter_enabled
+            "filter_enabled": self.filter_enabled,
+            "newline_mode": self.rx_newline_combo.currentData()
         }
         return state
 
@@ -405,8 +483,14 @@ class RxLogWidget(QWidget):
         self.rx_filter_chk.setChecked(state.get("filter_enabled", False))
         self.rx_search_input.setText(state.get("search_text", ""))
 
+        newline_mode = state.get("newline_mode", "Raw")
+        index = self.rx_newline_combo.findData(newline_mode)
+        if index >= 0:
+            self.rx_newline_combo.setCurrentIndex(index)
+
     def closeEvent(self, event) -> None:
         """위젯 종료 시 타이머를 안전하게 정지합니다."""
         if self.ui_update_timer.isActive():
             self.ui_update_timer.stop()
         super().closeEvent(event)
+```

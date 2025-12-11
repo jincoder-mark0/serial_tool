@@ -16,6 +16,7 @@ class PortController(QObject):
     port_closed = pyqtSignal(str)
     error_occurred = pyqtSignal(str)
     data_received = pyqtSignal(bytes)
+    data_sent = pyqtSignal(bytes)
 
     def __init__(self) -> None:
         super().__init__()
@@ -82,6 +83,7 @@ class PortController(QObject):
         """
         if self.is_open and self.worker:
             self.worker.send_data(data)
+            self.data_sent.emit(data)
         else:
             self.error_occurred.emit("Port is not open.")
 

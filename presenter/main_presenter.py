@@ -1,4 +1,4 @@
-from PyQt5.QtCore import QObject
+from PyQt5.QtCore import QObject, QTimer, QDateTime
 from view.main_window import MainWindow
 from model.port_controller import PortController
 from .port_presenter import PortPresenter
@@ -40,6 +40,24 @@ class MainPresenter(QObject):
 
         # 종료 요청 시그널 연결
         self.view.close_requested.connect(self.on_close_requested)
+
+        # 상태바 업데이트를 위한 변수 및 타이머
+        self.rx_byte_count = 0
+        self.tx_byte_count = 0
+        self.status_timer = QTimer()
+        self.status_timer.timeout.connect(self.update_status_bar)
+        self.status_timer.start(1000)
+
+        # 포트 컨트롤러 시그널 연결
+        self.port_controller.data_sent.connect(self.on_data_sent)
+        self.port_controller.port_opened.connect(self.on_port_opened)
+        self.port_controller.port_closed.connect(self.on_port_closed)
+        self.port_controller.error_occurred.connect(self.on_port_error)
+
+        # 단축키 시그널 연결
+        self.view.shortcut_connect_requested.connect(self.on_shortcut_connect)
+        self.view.shortcut_disconnect_requested.connect(self.on_shortcut_disconnect)
+        self.view.shortcut_clear_requested.connect(self.on_shortcut_clear)
 
     def on_close_requested(self) -> None:
         """
@@ -94,6 +112,9 @@ class MainPresenter(QObject):
             widget = self.view.left_section.port_tabs.widget(index)
             if hasattr(widget, 'received_area_widget'):
                 widget.received_area_widget.append_data(data)
+
+        # RX 카운트 증가
+        self.rx_byte_count += len(data)
 
     def on_manual_cmd_send_requested(self, text: str, hex_mode: bool, cmd_prefix: bool, cmd_suffix: bool, local_echo: bool) -> None:
         """
@@ -218,4 +239,57 @@ class MainPresenter(QObject):
         # 상태 메시지 표시
         if hasattr(self.view, 'global_status_bar'):
             self.view.global_status_bar.show_message("Settings updated", 2000)
+
+    def on_data_sent(self, data: bytes) -> None:
+        """데이터 전송 시 TX 카운트를 증가시킵니다."""
+        self.tx_byte_count += len(data)
+
+    def on_port_opened(self, port_name: str) -> None:
+        """포트 열림 시 상태바 업데이트"""
+        if hasattr(self.view, 'global_status_bar'):
+            self.view.global_status_bar.update_port_status(port_name, True)
+            self.view.global_status_bar.show_message(f"Connected to {port_name}", 3000)
+
+    def on_port_closed(self, port_name: str) -> None:
+        """포트 닫힘 시 상태바 업데이트"""
+        if hasattr(self.view, 'global_status_bar'):
+            self.view.global_status_bar.update_port_status(port_name, False)
+            self.view.global_status_bar.show_message(f"Disconnected from {port_name}", 3000)
+
+    def on_port_error(self, error_msg: str) -> None:
+        """포트 에러 시 상태바 업데이트"""
+        if hasattr(self.view, 'global_status_bar'):
+            self.view.global_status_bar.show_message(f"Error: {error_msg}", 5000)
+
+    def update_status_bar(self) -> None:
+        """1초마다 호출되어 상태바 정보를 갱신합니다."""
+        if not hasattr(self.view, 'global_status_bar'):
+            return
+
+        # 1. RX/TX 속도 업데이트
+        self.view.global_status_bar.update_rx_speed(self.rx_byte_count)
+        self.view.global_status_bar.update_tx_speed(self.tx_byte_count)
+
+        # 카운터 초기화
+        self.rx_byte_count = 0
+        self.tx_byte_count = 0
+
+        # 2. 시간 업데이트
+        current_time = QDateTime.currentDateTime().toString("HH:mm:ss")
+        self.view.global_status_bar.update_time(current_time)
+
+        # 3. 버퍼 상태 (임시: 실제 버퍼 크기를 알 수 있다면 연동)
+        # self.view.global_status_bar.update_buffer(buffer_percent)
+
+    def on_shortcut_connect(self) -> None:
+        """F2 단축키: 현재 포트 연결"""
+        self.port_presenter.connect_current_port()
+
+    def on_shortcut_disconnect(self) -> None:
+        """F3 단축키: 현재 포트 연결 해제"""
+        self.port_presenter.disconnect_current_port()
+
+    def on_shortcut_clear(self) -> None:
+        """F5 단축키: 로그 지우기"""
+        self.port_presenter.clear_log_current_port()
 
