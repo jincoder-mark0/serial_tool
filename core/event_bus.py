@@ -12,27 +12,16 @@ import logging
 
 class EventBus(QObject):
     """
-    애플리케이션 전역 이벤트 버스 클래스 (Singleton).
+    애플리케이션 전역 이벤트 버스 클래스.
     토픽(Topic) 기반으로 이벤트를 발행하고 구독
     """
-    
-    _instance = None
     
     # 내부 신호 전송용 시그널 (스레드 간 통신 브리지 역할)
     # 직접 연결하지 않고 publish/subscribe 메서드를 사용해야 합니다.
     _dispatch_signal = pyqtSignal(str, object)
 
-    def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
-            cls._instance = super(EventBus, cls).__new__(cls)
-        return cls._instance
-
     def __init__(self):
         """EventBus를 초기화합니다."""
-        # 싱글톤 초기화 체크
-        if hasattr(self, '_initialized') and self._initialized:
-            return
-            
         super().__init__()
         self._logger = logging.getLogger("EventBus")
         
@@ -41,8 +30,6 @@ class EventBus(QObject):
         
         # 내부 시그널을 디스패처 메서드에 연결
         self._dispatch_signal.connect(self._dispatch_event)
-        
-        self._initialized = True
 
     def publish(self, topic: str, data: Any = None) -> None:
         """
@@ -71,7 +58,6 @@ class EventBus(QObject):
         
         if callback not in self._subscribers[topic]:
             self._subscribers[topic].append(callback)
-            # self._logger.debug(f"Subscribed to '{topic}': {callback}")
 
     def unsubscribe(self, topic: str, callback: Callable[[Any], None]) -> None:
         """
@@ -104,3 +90,6 @@ class EventBus(QObject):
                     callback(data)
                 except Exception as e:
                     self._logger.error(f"Error processing event '{topic}': {e}", exc_info=True)
+
+# 전역 EventBus 인스턴스
+event_bus = EventBus()

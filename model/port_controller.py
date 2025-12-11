@@ -8,8 +8,9 @@ from typing import Optional
 # 변경된 모듈 임포트
 from model.connection_worker import ConnectionWorker
 from model.transports import SerialTransport
-from model.packet_parser import ParserFactory, IPacketParser, Packet
+from model.packet_parser import ParserFactory, IPacketParser, Packet, ParserType
 from constants import DEFAULT_BAUDRATE
+from core.event_bus import event_bus
 
 class PortController(QObject):
     # 외부(Presenter)와 통신하는 시그널
@@ -27,6 +28,9 @@ class PortController(QObject):
         self.workers: dict[str, ConnectionWorker] = {}
         # 포트 이름(str) -> IPacketParser 매핑
         self.parsers: dict[str, IPacketParser] = {}
+        
+        # EventBus 인스턴스
+        self.event_bus = event_bus
 
     @property
     def is_open(self) -> bool:
@@ -74,20 +78,20 @@ class PortController(QObject):
         worker = ConnectionWorker(transport, port_name)
 
         # 3. Parser 생성
-        parser_type = config.get('parser_type', 'Raw')
+        parser_type = config.get('parser_type', ParserType.RAW)
         parser_kwargs = {}
-        if parser_type == 'Delimiter':
+        if parser_type == ParserType.DELIMITER:
             parser_kwargs['delimiter'] = config.get('parser_delimiter', b'\n')
-        elif parser_type == 'FixedLength':
+        elif parser_type == ParserType.FIXED_LENGTH:
             parser_kwargs['length'] = config.get('parser_length', 10)
             
         self.parsers[port_name] = ParserFactory.create_parser(parser_type, **parser_kwargs)
 
         # 4. 시그널 매핑 (Worker 이벤트 -> Controller 시그널)
-        worker.connection_opened.connect(self.port_opened)
+        worker.connection_opened.connect(lambda p=port_name: [self.port_opened.emit(p), self.event_bus.publish("port.opened", p)])
         worker.connection_closed.connect(self.on_worker_closed)
         
-        worker.error_occurred.connect(lambda msg, p=port_name: self.error_occurred.emit(p, msg))
+        worker.error_occurred.connect(lambda msg, p=port_name: [self.error_occurred.emit(p, msg), self.event_bus.publish("port.error", {'port': p, 'message': msg})])
         
         # 데이터 수신 핸들러 연결 (Raw 데이터 및 패킷 파싱 처리)
         worker.data_received.connect(lambda data, p=port_name: self._handle_data_received(p, data))
@@ -100,6 +104,7 @@ class PortController(QObject):
         """데이터 수신 처리: Raw 시그널 발행 및 패킷 파싱"""
         # 1. Raw 데이터 시그널 발행
         self.data_received.emit(port_name, data)
+        self.event_bus.publish("port.data_received", {'port': port_name, 'data': data})
         
         # 2. 패킷 파싱 및 패킷 시그널 발행
         parser = self.parsers.get(port_name)
@@ -107,6 +112,7 @@ class PortController(QObject):
             packets = parser.parse(data)
             for packet in packets:
                 self.packet_received.emit(port_name, packet)
+                self.event_bus.publish("port.packet_received", {'port': port_name, 'packet': packet})
 
     def on_worker_closed(self, port_name: str) -> None:
         """Worker가 닫혔을 때 호출되는 내부 핸들러"""
@@ -115,6 +121,7 @@ class PortController(QObject):
         if port_name in self.parsers:
             del self.parsers[port_name]
         self.port_closed.emit(port_name)
+        self.event_bus.publish("port.closed", port_name)
 
     def close_port(self, port_name: Optional[str] = None) -> None:
         """
@@ -148,6 +155,24 @@ class PortController(QObject):
             if worker.isRunning():
                 worker.send_data(data)
                 self.data_sent.emit(port_name, data)
+
+    def send_data_to_port(self, port_name: str, data: bytes) -> bool:
+        """
+        특정 포트로 데이터를 전송합니다.
+
+        Args:
+            port_name (str): 대상 포트 이름
+            data (bytes): 전송할 데이터
+
+        Returns:
+            bool: 전송 성공 여부
+        """
+        worker = self.workers.get(port_name)
+        if worker and worker.isRunning():
+            worker.send_data(data)
+            self.data_sent.emit(port_name, data)
+            return True
+        return False
 
     def set_dtr(self, state: bool) -> None:
         """모든 포트의 DTR 설정"""

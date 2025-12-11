@@ -2,6 +2,65 @@
 
 ## [미배포] (Unreleased)
 
+### EventBus 싱글톤 수정 및 Presenter 계층 구조화 (2025-12-12)
+
+#### 추가 사항 (Added)
+
+- **EventRouter (이벤트 라우터)**
+  - `presenter/event_router.py`: EventBus 이벤트를 PyQt 시그널로 변환하는 라우터 클래스
+  - Port Events: `port_opened`, `port_closed`, `port_error`, `data_received`
+  - Macro Events: `macro_started`, `macro_finished`, `macro_progress`
+  - File Transfer Events: `file_transfer_progress`, `file_transfer_completed`
+  - 스레드 안전한 UI 업데이트 보장
+
+- **MacroPresenter (매크로 프레젠터)**
+  - `presenter/macro_presenter.py`: MacroPanel과 MacroRunner를 연결하는 Presenter
+  - 매크로 시작/정지, 단일 명령 전송 요청 처리
+  - MacroRunner 시그널과 UI 연동
+
+- **FilePresenter (파일 전송 프레젠터)**
+  - `presenter/file_presenter.py`: 파일 전송 로직을 전담하는 Presenter
+  - FileTransferEngine 관리 및 진행률 UI 업데이트
+  - 전송 완료/에러 상태 처리
+
+- **Core Refinement 테스트**
+  - `tests/test_core_refinement.py`: ExpectMatcher 및 ParserType 상수 테스트
+  - 문자열 매칭, 정규식 매칭, 버퍼 크기 제한, 파서 팩토리 생성 테스트
+
+#### 수정 사항 (Fixed)
+
+- **EventBus 싱글톤 패턴**
+  - `core/event_bus.py`: 전역 `event_bus` 인스턴스 도입
+  - `__new__` 메서드 제거, 모듈 레벨 싱글톤으로 단순화
+  - `PortController`, `MacroRunner`, `FileTransferEngine`, `EventRouter`에서 전역 인스턴스 사용
+
+- **PortController 시그널 복구**
+  - 실수로 제거된 시그널 정의 복구
+  - `port_opened`, `port_closed`, `error_occurred`, `data_received`, `data_sent`, `packet_received`
+
+- **MacroRunner 시그널 불일치 수정**
+  - `send_requested` 시그널 (4개 인자)과 `on_manual_cmd_send_requested` (5개 인자) 불일치 해결
+  - `on_macro_cmd_send_requested` 중간 핸들러 추가
+
+- **테스트 파라미터 수정**
+  - `ExpectMatcher` 테스트: `feed()` → `match()` 메서드명 수정
+  - `ExpectMatcher` 테스트: `timeout_ms` 파라미터 제거 (구현에 없음)
+  - `ParserType` 테스트: 상수값 수정 (`"raw"` → `"Raw"` 등)
+
+#### 변경 사항 (Changed)
+
+- **MainPresenter 리팩토링**
+  - `MacroPresenter`, `FilePresenter`, `EventRouter` 초기화 추가
+  - `EventRouter` 시그널을 통한 포트 이벤트 처리로 변경
+  - 파일 전송 로직을 `FilePresenter`로 위임
+
+- **Model 계층 EventBus 통합**
+  - `PortController`: 포트 상태 변경 시 EventBus 이벤트 발행
+  - `MacroRunner`: 매크로 생명주기 이벤트 발행
+  - `FileTransferEngine`: 파일 전송 진행률/완료 이벤트 발행
+
+---
+
 ### Core 및 Model 기능 강화 (2025-12-11 - 심야 세션)
 
 #### 추가 사항 (Added)
@@ -25,6 +84,24 @@
   - 별도 스레드에서 실행되어 UI 블로킹 방지
   - Baudrate 기반 적응형 청크 전송 및 진행률(Progress) 시그널링
   - 전송 취소 기능 지원
+
+#### 개선 사항 (Refinement & Hardening)
+
+- **GlobalErrorHandler 스레드 안전성 확보**
+  - `QObject` 상속 및 시그널/슬롯 패턴 적용
+  - 워커 스레드에서 발생한 예외도 메인 UI 스레드에서 안전하게 다이얼로그 표시
+
+- **ExpectMatcher 안정성 강화**
+  - `max_buffer_size` 도입으로 메모리 무한 증가 방지 (기본 1MB)
+  - 버퍼 초과 시 오래된 데이터 자동 삭제
+
+- **PortController 캡슐화 및 확장**
+  - `send_data_to_port` 메서드 추가로 특정 포트 대상 전송 지원
+  - `FileTransferEngine`이 내부 `workers`에 직접 접근하지 않도록 개선
+
+- **PacketParser 코드 품질 개선**
+  - `ParserType` 상수 클래스 도입으로 하드코딩 문자열 제거
+  - `ParserFactory` 및 `PortController`에서 상수 사용으로 유지보수성 향상
 
 ---
 

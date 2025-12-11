@@ -101,6 +101,15 @@
   - `model/file_transfer.py`에 `QRunnable` 기반의 파일 전송 엔진을 구현했습니다.
   - 별도 스레드에서 실행되어 UI 블로킹 없이 파일을 전송하며, Baudrate에 따른 적응형 청크 전송과 취소 기능을 지원합니다.
 
+### 2.8 재점검 및 보완 (Refinement & Hardening)
+
+- **스레드 안전성 및 메모리 보호**:
+  - `GlobalErrorHandler`를 리팩토링하여 UI 업데이트의 스레드 안전성을 확보했습니다.
+  - `ExpectMatcher`에 버퍼 크기 제한을 두어 메모리 누수를 방지했습니다.
+- **코드 품질 및 캡슐화**:
+  - `PortController`에 `send_data_to_port`를 추가하여 캡슐화를 강화했습니다.
+  - `PacketParser`에 상수를 도입하여 하드코딩을 제거했습니다.
+
 ### 2.6 버그 수정 (Bug Fixes)
 
 - **RxLogWidget**: 존재하지 않는 `add_logs_batch` 메서드 호출을 `append_batch`로 수정하여 대량 로그 처리 시 발생할 수 있는 오류를 해결했습니다.

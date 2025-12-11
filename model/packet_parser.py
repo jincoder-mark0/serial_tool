@@ -4,6 +4,13 @@ from dataclasses import dataclass
 import time
 import re
 
+class ParserType:
+    """파서 타입 상수 정의"""
+    RAW = "Raw"
+    AT = "AT"
+    DELIMITER = "Delimiter"
+    FIXED_LENGTH = "FixedLength"
+
 @dataclass
 class Packet:
     """파싱된 패킷 데이터"""
@@ -124,12 +131,12 @@ class ParserFactory:
     
     @staticmethod
     def create_parser(parser_type: str, **kwargs) -> IPacketParser:
-        if parser_type == "AT":
+        if parser_type == ParserType.AT:
             return ATParser()
-        elif parser_type == "Delimiter":
+        elif parser_type == ParserType.DELIMITER:
             delimiter = kwargs.get("delimiter", b'\n')
             return DelimiterParser(delimiter)
-        elif parser_type == "FixedLength":
+        elif parser_type == ParserType.FIXED_LENGTH:
             length = kwargs.get("length", 10)
             return FixedLengthParser(length)
         else:
@@ -139,9 +146,10 @@ class ExpectMatcher:
     """
     정규식 기반 응답 대기 및 매칭 클래스
     """
-    def __init__(self, pattern: str, is_regex: bool = False):
+    def __init__(self, pattern: str, is_regex: bool = False, max_buffer_size: int = 1024 * 1024):
         self.pattern = pattern
         self.is_regex = is_regex
+        self.max_buffer_size = max_buffer_size
         self._buffer = b""
         
         if is_regex:
@@ -160,6 +168,10 @@ class ExpectMatcher:
         데이터를 버퍼에 추가하고 매칭 여부를 확인합니다.
         """
         self._buffer += data
+        
+        # 버퍼 크기 제한 (메모리 보호)
+        if len(self._buffer) > self.max_buffer_size:
+            self._buffer = self._buffer[-self.max_buffer_size:]
         
         if self.is_regex:
             if self._regex.search(self._buffer):

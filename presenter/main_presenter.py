@@ -1,7 +1,11 @@
 from PyQt5.QtCore import QObject, QTimer, QDateTime
 from view.main_window import MainWindow
 from model.port_controller import PortController
+from model.macro_runner import MacroRunner
 from .port_presenter import PortPresenter
+from .macro_presenter import MacroPresenter
+from .file_presenter import FilePresenter
+from .event_router import EventRouter
 from core.settings_manager import SettingsManager
 from core.log_recorder import log_recorder_manager
 from view.managers.lang_manager import lang_manager
@@ -25,12 +29,26 @@ class MainPresenter(QObject):
 
         # 모델 초기화 (Initialize Models)
         self.port_controller = PortController()
+        self.macro_runner = MacroRunner()
+        self.event_router = EventRouter()
 
         # 하위 Presenter 초기화 (Initialize Sub-Presenters)
         self.port_presenter = PortPresenter(self.view.left_section, self.port_controller)
+        self.macro_presenter = MacroPresenter(self.view.right_section.macro_panel, self.macro_runner)
+        self.file_presenter = FilePresenter(self.port_controller)
 
-        # 데이터 수신 시그널을 로그 뷰에 연결
-        self.port_controller.data_received.connect(self.on_data_received)
+        # EventRouter 시그널 연결 (Model -> Presenter)
+        self.event_router.data_received.connect(self.on_data_received)
+        self.event_router.port_opened.connect(self.on_port_opened)
+        self.event_router.port_closed.connect(self.on_port_closed)
+        self.event_router.port_error.connect(self.on_port_error)
+        
+        # PortController 직접 연결 제거 (EventRouter로 대체)
+        # self.port_controller.data_received.connect(self.on_data_received)
+        self.port_controller.data_sent.connect(self.on_data_sent) # data_sent는 EventRouter에 없음 (추가 가능하지만 일단 유지)
+
+        # MacroRunner 전송 요청 연결 (4개 인자: text, hex, prefix, suffix)
+        self.macro_runner.send_requested.connect(self.on_macro_cmd_send_requested)
 
         # 수동 전송 시그널 연결
         self.view.left_section.manual_ctrl.manual_ctrl_widget.manual_cmd_send_requested.connect(
@@ -50,11 +68,11 @@ class MainPresenter(QObject):
         self.status_timer.timeout.connect(self.update_status_bar)
         self.status_timer.start(1000)
 
-        # 포트 컨트롤러 시그널 연결
-        self.port_controller.data_sent.connect(self.on_data_sent)
-        self.port_controller.port_opened.connect(self.on_port_opened)
-        self.port_controller.port_closed.connect(self.on_port_closed)
-        self.port_controller.error_occurred.connect(self.on_port_error)
+        # 포트 컨트롤러 시그널 연결 (일부는 EventRouter로 대체됨)
+        # self.port_controller.data_sent.connect(self.on_data_sent) # 위에서 연결함
+        # self.port_controller.port_opened.connect(self.on_port_opened)
+        # self.port_controller.port_closed.connect(self.on_port_closed)
+        # self.port_controller.error_occurred.connect(self.on_port_error)
 
         # 단축키 시그널 연결
         self.view.shortcut_connect_requested.connect(self.on_shortcut_connect)
@@ -62,7 +80,7 @@ class MainPresenter(QObject):
         self.view.shortcut_clear_requested.connect(self.on_shortcut_clear)
         
         # 파일 전송 다이얼로그 연결
-        self.view.file_transfer_dialog_opened.connect(self.on_file_transfer_dialog_opened)
+        self.view.file_transfer_dialog_opened.connect(self.file_presenter.on_file_transfer_dialog_opened)
 
         # 상태바 참조 저장 (반복적인 hasattr 확인 방지)
         self.global_status_bar = self.view.global_status_bar
@@ -74,8 +92,8 @@ class MainPresenter(QObject):
         self.view.left_section.port_tabs.tab_added.connect(self._on_port_tab_added)
 
         
-        # 현재 파일 전송 다이얼로그
-        self._current_transfer_dialog = None
+        # 현재 파일 전송 다이얼로그 (FilePresenter로 이동됨)
+        # self._current_transfer_dialog = None
 
         # 시스템 로그 참조
         self.system_log = self.view.left_section.system_log_widget
@@ -211,6 +229,13 @@ class MainPresenter(QObject):
                     # 실제 수신 데이터와 구분하려면 색상이나 태그를 달리 할 수 있음
                     # 하지만 RxLogWidget은 bytes를 받으므로 data를 그대로 전달
                     widget.received_area_widget.append_data(data)
+
+    def on_macro_cmd_send_requested(self, text: str, hex_mode: bool, cmd_prefix: bool, cmd_suffix: bool) -> None:
+        """
+        매크로에서 전송 요청을 처리합니다.
+        local_echo는 False로 처리합니다.
+        """
+        self.on_manual_cmd_send_requested(text, hex_mode, cmd_prefix, cmd_suffix, False)
 
     def on_settings_change_requested(self, new_settings: dict) -> None:
         """
@@ -415,107 +440,6 @@ class MainPresenter(QObject):
             logger.info(f"Recording stopped: {port_name}")
 
     # -------------------------------------------------------------------------
-    # 파일 전송 (File Transfer)
+    # 파일 전송 (File Transfer) - FilePresenter로 위임됨
     # -------------------------------------------------------------------------
-    def on_file_transfer_dialog_opened(self, dialog) -> None:
-        """
-        파일 전송 다이얼로그가 열렸을 때 호출됩니다.
-        다이얼로그의 시그널을 연결합니다.
-        
-        Args:
-            dialog (FileTransferDialog): 다이얼로그 인스턴스
-        """
-        self._current_transfer_dialog = dialog
-        dialog.send_requested.connect(self.on_file_send_requested)
-        dialog.cancel_requested.connect(self.on_file_transfer_cancel)
-        
-        # 전송 상태 변수 초기화
-        self._transfer_file = None
-        self._transfer_total_size = 0
-        self._transfer_sent_size = 0
-        self._transfer_timer = QTimer()
-        self._transfer_timer.timeout.connect(self._send_next_chunk)
-        
-    def on_file_send_requested(self, filepath: str) -> None:
-        """파일 전송 요청 처리"""
-        if not self.port_controller.is_open:
-            logger.warning("Port not open")
-            if self._current_transfer_dialog:
-                self._current_transfer_dialog.set_complete(False, "Port not open")
-            return
-            
-        try:
-            self._transfer_total_size = os.path.getsize(filepath)
-            self._transfer_sent_size = 0
-            self._transfer_file = open(filepath, 'rb')
-            self._transfer_start_time = QDateTime.currentMSecsSinceEpoch()
-            
-            # 전송 시작 (10ms 간격으로 청크 전송)
-            self._transfer_timer.start(10)
-            logger.info(f"File transfer started: {filepath} ({self._transfer_total_size} bytes)")
-            
-        except Exception as e:
-            logger.error(f"Failed to open file: {e}")
-            if self._current_transfer_dialog:
-                self._current_transfer_dialog.set_complete(False, str(e))
-                
-    def on_file_transfer_cancel(self) -> None:
-        """파일 전송 취소 처리"""
-        if self._transfer_timer.isActive():
-            self._transfer_timer.stop()
-            
-        if self._transfer_file:
-            self._transfer_file.close()
-            self._transfer_file = None
-            
-        logger.info("File transfer cancelled")
-        if self._current_transfer_dialog:
-            self._current_transfer_dialog.set_complete(False, "Cancelled")
-
-    def _send_next_chunk(self) -> None:
-        """파일 청크 전송 및 진행률 업데이트"""
-        if not self._transfer_file or not self.port_controller.is_open:
-            self.on_file_transfer_cancel()
-            return
-            
-        try:
-            chunk_size = 1024  # 1KB chunk
-            data = self._transfer_file.read(chunk_size)
-            
-            if not data:
-                # 전송 완료
-                self.on_file_transfer_cancel() # 리소스 정리
-                if self._current_transfer_dialog:
-                    self._current_transfer_dialog.set_complete(True, "Finished")
-                return
-                
-            # 데이터 전송
-            self.port_controller.send_data(data)
-            self._transfer_sent_size += len(data)
-            
-            # 진행률 업데이트
-            if self._current_transfer_dialog:
-                current_time = QDateTime.currentMSecsSinceEpoch()
-                elapsed_sec = (current_time - self._transfer_start_time) / 1000.0
-                
-                speed = 0.0
-                eta = 0.0
-                
-                if elapsed_sec > 0:
-                    speed = self._transfer_sent_size / elapsed_sec
-                    if speed > 0:
-                        remaining = self._transfer_total_size - self._transfer_sent_size
-                        eta = remaining / speed
-                        
-                self._current_transfer_dialog.update_progress(
-                    self._transfer_sent_size,
-                    self._transfer_total_size,
-                    speed,
-                    eta
-                )
-                
-        except Exception as e:
-            logger.error(f"File transfer error: {e}")
-            self.on_file_transfer_cancel()
-            if self._current_transfer_dialog:
-                self._current_transfer_dialog.set_complete(False, str(e))
+    # 기존 로직 제거됨

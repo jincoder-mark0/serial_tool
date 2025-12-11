@@ -2,6 +2,7 @@ import os
 import time
 from PyQt5.QtCore import QRunnable, QObject, pyqtSignal
 from model.port_controller import PortController
+from core.event_bus import event_bus
 
 class FileTransferSignals(QObject):
     """
@@ -24,6 +25,7 @@ class FileTransferEngine(QRunnable):
         self.file_path = file_path
         self.baudrate = baudrate
         self.signals = FileTransferSignals()
+        self.event_bus = event_bus
         self._is_cancelled = False
         
         # 설정값
@@ -53,23 +55,14 @@ class FileTransferEngine(QRunnable):
                         break # EOF
 
                     # 데이터 전송
-                    # PortController.send_data는 브로드캐스팅이지만, 
-                    # 여기서는 특정 포트로 보내는 기능이 필요할 수 있음.
-                    # 현재 PortController.send_data는 모든 포트로 보냄.
-                    # File Transfer는 보통 1:1이므로, PortController에 특정 포트 전송 기능이 있으면 좋음.
-                    # 하지만 현재 구조상 send_data는 broadcasting임.
-                    # 일단 send_data 사용 (모든 포트로 전송됨 - 주의 필요)
-                    # TODO: PortController에 send_data_to(port_name, data) 추가 고려
-                    
-                    # ConnectionWorker에 직접 접근하여 전송 (임시 방편)
-                    worker = self.port_controller.workers.get(self.port_name)
-                    if worker and worker.isRunning():
-                        worker.send_data(chunk)
-                    else:
-                        raise Exception(f"Port {self.port_name} is not open.")
+                    # PortController.send_data_to_port 사용
+                    success = self.port_controller.send_data_to_port(self.port_name, chunk)
+                    if not success:
+                        raise Exception(f"Port {self.port_name} is not open or unavailable.")
 
                     sent_bytes += len(chunk)
                     self.signals.progress_updated.emit(sent_bytes, total_size)
+                    self.event_bus.publish("file.progress", {'current': sent_bytes, 'total': total_size})
 
                     # 전송 속도 조절 (Flow Control이 없으므로 Baudrate 기반 지연)
                     # 1 byte = 10 bits (8N1)
@@ -80,9 +73,13 @@ class FileTransferEngine(QRunnable):
             if self._is_cancelled:
                 self.signals.error_occurred.emit("Transfer cancelled by user.")
                 self.signals.transfer_completed.emit(False)
+                self.event_bus.publish("file.completed", False)
             else:
                 self.signals.transfer_completed.emit(True)
+                self.event_bus.publish("file.completed", True)
 
         except Exception as e:
             self.signals.error_occurred.emit(str(e))
             self.signals.transfer_completed.emit(False)
+            self.event_bus.publish("file.error", str(e))
+            self.event_bus.publish("file.completed", False)

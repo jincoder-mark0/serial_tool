@@ -6,7 +6,7 @@
 - **Phase 2: 핵심 기능 (Serial 통신) (완료)**
 - **Phase 2.5: UI 기능 보완 (완료)**
 - **Phase 3: Core 유틸리티 (완료)**
-- **Phase 4: Model 계층 (진행 중)**
+- **Phase 4: Model 계층 (완료)**
 - **Phase 5: Presenter 계층 (아키텍처 개선)**
 - **Phase 6: 자동화 및 고급 기능 (계획됨)**
 - **Phase 7: 플러그인 시스템 (계획됨)**
@@ -139,7 +139,7 @@
   - [x] `sys.excepthook` 오버라이딩
   - [x] UI 에러 메시지 표시 연동
 
-## Phase 4: Model 계층 (진행 중)
+## Phase 4: Model 계층 (완료)
 
 - [x] `SerialTransport` 구현 (`model/transports.py`)
 - [x] `ConnectionWorker` 구현 (Transport 주입, QThread 루프)
@@ -167,6 +167,15 @@
   - [x] `IPacketParser` 인터페이스 및 `RxPacket` 데이터 클래스 정의
   - [x] `ATParser` 구현 (AT Command 파싱)
   - [x] `DelimiterParser`, `FixedLengthParser` 구현
+- [x] `FileTransferEngine` 구현 (`model/file_transfer.py`)
+  - [x] `QRunnable` 기반 전송 엔진
+  - [x] 청크 기반 전송 (적응형 크기)
+  - [x] 진행률 계산 및 취소 지원
+- [x] **Refinement & Hardening (보완)**
+  - [x] `GlobalErrorHandler` 스레드 안전성 확보
+  - [x] `ExpectMatcher` 버퍼 제한 구현
+  - [x] `PortController` 캡슐화 (`send_data_to_port`)
+  - [x] `PacketParser` 상수화 (`ParserType`)
 
 ## Phase 5: Presenter 계층 (아키텍처 개선)
 
@@ -183,19 +192,12 @@
 
 ## Phase 6: 자동화 및 고급 기능 (계획됨)
 
-- [ ] `MacroRunner` 구현 (커맨드 리스트 엔진)
-  - [ ] 상태 머신 (Idle/Running/Paused)
-  - [ ] 단계 실행 (Send -> Expect -> Delay)
-  - [ ] Auto Run 스케줄러 (Interval/Loops)
-- [x] `FileTransferEngine` 구현
-  - [x] 청크 기반 전송 (적응형 크기)
-  - [x] 진행률 계산 및 취소 지원
-  - [ ] Rx 파일 캡처 (`RxCaptureWriter`)
 - [ ] `AutoTxScheduler` 구현 (주기적 전송)
 - [ ] 성능 최적화
   - [ ] RxLogView를 위한 `BatchRenderer` 구현
   - [ ] `RingBuffer` 최적화 (bytearray)
   - [ ] 논블로킹 I/O 루프 최적화
+- [ ] Rx 파일 캡처 (`RxCaptureWriter`)
 
 ## Phase 7: 플러그인 시스템 (계획됨)
 

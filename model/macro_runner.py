@@ -2,6 +2,7 @@ from PyQt5.QtCore import QObject, pyqtSignal, QTimer
 from typing import List
 from model.macro_entry import MacroEntry
 from core.logger import logger
+from core.event_bus import event_bus
 
 class MacroRunner(QObject):
     """
@@ -35,6 +36,8 @@ class MacroRunner(QObject):
         self._loop_timer = QTimer()
         self._loop_timer.setSingleShot(True)
         self._loop_timer.timeout.connect(self._start_loop)
+        
+        self.event_bus = event_bus
 
     def load_macro(self, entries: List[MacroEntry]) -> None:
         """매크로 리스트 로드"""
@@ -52,6 +55,7 @@ class MacroRunner(QObject):
         self._current_loop = 0
         self._loop_interval_ms = interval_ms
         
+        self.event_bus.publish("macro.started")
         self._start_loop()
 
     def stop(self) -> None:
@@ -61,6 +65,7 @@ class MacroRunner(QObject):
         self._step_timer.stop()
         self._loop_timer.stop()
         self.macro_finished.emit()
+        self.event_bus.publish("macro.finished")
 
     def pause(self) -> None:
         """일시 정지"""
@@ -110,6 +115,7 @@ class MacroRunner(QObject):
 
         entry = self._entries[self._current_index]
         self.step_started.emit(self._current_index, entry)
+        # self.event_bus.publish("macro.step_started", {'index': self._current_index, 'entry': entry}) # Optional
 
         # 명령 전송
         try:
@@ -131,6 +137,7 @@ class MacroRunner(QObject):
         except Exception as e:
             logger.error(f"Macro execution error: {e}")
             self.error_occurred.emit(str(e))
+            self.event_bus.publish("macro.error", str(e))
             self.stop()
 
     def _on_step_success(self, entry: MacroEntry) -> None:
@@ -144,4 +151,5 @@ class MacroRunner(QObject):
     def _on_step_failure(self, error_msg: str) -> None:
         """스텝 실패 처리"""
         self.error_occurred.emit(error_msg)
+        self.event_bus.publish("macro.error", error_msg)
         self.stop()
