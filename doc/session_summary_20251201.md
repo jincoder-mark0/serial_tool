@@ -3,7 +3,7 @@
 ## 1. 세션 목표
 
 - UI 테마 시스템(Dark/Light) 및 SVG 아이콘 시스템 구현.
-- `PortSettingsWidget` 및 `CommandListWidget` 레이아웃 최적화.
+- `PortSettingsWidget` 및 `MacroListWidget` 레이아웃 최적화.
 - 프로젝트 디렉토리 구조 재정리 (`resources/` 분리).
 - 프로젝트 문서(`CHANGELOG.md`, `README.md` 등) 최신화 및 한글화.
 
@@ -15,12 +15,12 @@
   - 기존 세로 나열 방식에서 **컴팩트한 2줄 레이아웃**으로 변경하여 공간 효율성 극대화.
   - 1행: Port | Scan | Baud | Open
   - 2행: Data | Parity | Stop | Flow | DTR | RTS
-- **CommandListWidget**:
+- **MacroListWidget**:
   - **Prefix/Suffix** 컬럼 추가 (기존 Head/Tail 용어 변경).
   - **3단계 Select All 체크박스** 구현 (전체 선택/부분 선택/선택 안함).
   - 세로 스크롤바 항상 표시 정책 적용.
   - 각 행별 **Send** 버튼 추가.
-- **CommandControlWidget**:
+- **MacroCtrlWidget**:
   - 전역 명령 수정을 위한 **Prefix/Suffix 입력 필드** 추가.
   - 스크립트 저장/로드 및 자동 실행 설정(Delay, Max Runs) UI 구현.
 
@@ -79,7 +79,7 @@
 
 **Proportional Font (가변폭 폰트)**
 - **적용 대상**: 메뉴, 툴바, 상태바, 레이블, 버튼, 그룹박스, 탭 등 일반 UI 요소
-- **기본 폰트**: 
+- **기본 폰트**:
   - Windows: "Segoe UI" 9pt
   - Linux: "Ubuntu" 9pt
 - **특징**: 자연스러운 텍스트 표시, UI 요소에 최적화

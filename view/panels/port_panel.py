@@ -1,10 +1,11 @@
-from PyQt5.QtWidgets import QWidget, QVBoxLayout, QSplitter
-from PyQt5.QtCore import Qt, pyqtSignal
+from PyQt5.QtWidgets import QWidget, QVBoxLayout
+from PyQt5.QtCore import pyqtSignal
 from typing import Optional
 
 from view.widgets.port_settings import PortSettingsWidget
-from view.widgets.received_area import ReceivedAreaWidget
-from view.widgets.status_area import StatusAreaWidget
+from view.widgets.rx_log import RxLogWidget
+from view.widgets.system_log import SystemLogWidget
+from view.widgets.port_stats import PortStatsWidget
 
 class PortPanel(QWidget):
     """
@@ -23,11 +24,15 @@ class PortPanel(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
+        self.system_log_widget = None
+        self.received_area_widget = None
+        self.port_stats_widget = None
+        self.port_settings_widget = None
         self.custom_name = "Port"  # 커스텀 이름 (기본값)
         self.init_ui()
 
         # 포트 변경 시 탭 제목 업데이트
-        self.port_settings.port_combo.currentTextChanged.connect(self._on_port_changed)
+        self.port_settings_widget.port_combo.currentTextChanged.connect(self._on_port_changed)
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
@@ -36,21 +41,33 @@ class PortPanel(QWidget):
         layout.setSpacing(2)
 
         # 컴포넌트 생성
-        self.port_settings = PortSettingsWidget()
-        self.received_area = ReceivedAreaWidget()
-        self.status_area = StatusAreaWidget()
+        self.port_settings_widget = PortSettingsWidget()
+        self.port_stats_widget = PortStatsWidget()
+        self.received_area_widget = RxLogWidget()
+        self.system_log_widget = SystemLogWidget()
 
         # 레이아웃 구성
         # 상단: 설정 (Top: Settings)
-        layout.addWidget(self.port_settings)
+        layout.addWidget(self.port_settings_widget)
+
+        # 상태 패널 (Status Panel)
+        layout.addWidget(self.port_stats_widget)
 
         # 중간: 로그 (Middle: Log)
-        layout.addWidget(self.received_area, 1) # Stretch 1
+        layout.addWidget(self.received_area_widget, 1) # Stretch 1
 
         # 하단: 상태 로그 영역 (Bottom: Status Log Area)
-        layout.addWidget(self.status_area)
+        layout.addWidget(self.system_log_widget)
 
         self.setLayout(layout)
+
+    def toggle_connection(self) -> None:
+        """연결 상태를 토글합니다."""
+        self.port_settings_widget.toggle_connection()
+
+    def is_connected(self) -> bool:
+        """현재 연결 상태를 반환합니다."""
+        return self.port_settings_widget.is_connected()
 
     def _on_port_changed(self, port_name: str) -> None:
         """포트 변경 시 탭 제목을 업데이트합니다."""
@@ -82,7 +99,7 @@ class PortPanel(QWidget):
         Returns:
             str: 포트 이름.
         """
-        return self.port_settings.port_combo.currentText()
+        return self.port_settings_widget.port_combo.currentText()
 
     def get_tab_title(self) -> str:
         """
@@ -110,8 +127,8 @@ class PortPanel(QWidget):
         """
         return {
             "custom_name": self.custom_name,
-            "port_settings": self.port_settings.save_state(),
-            "received_area": self.received_area.save_state()
+            "port_settings_widget": self.port_settings_widget.save_state(),
+            "received_area_widget": self.received_area_widget.save_state()
         }
 
     def load_state(self, state: dict) -> None:
@@ -124,7 +141,7 @@ class PortPanel(QWidget):
         if not state:
             return
         self.custom_name = state.get("custom_name", "Port")
-        self.port_settings.load_state(state.get("port_settings", {}))
-        self.received_area.load_state(state.get("received_area", {}))
+        self.port_settings_widget.load_state(state.get("port_settings_widget", {}))
+        self.received_area_widget.load_state(state.get("received_area_widget", {}))
         self.update_tab_title()
 

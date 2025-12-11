@@ -8,7 +8,7 @@
 ### A. UI 개선
 - **아이콘 추가 및 스타일 수정**:
   - `ReceivedArea`의 검색 탐색 버튼(이전/다음)에 SVG 아이콘 적용 (`find_prev`, `find_next`)
-  - `CommandListWidget`의 버튼(`add`, `del`, `up`, `down`) objectName 불일치 수정하여 아이콘 정상 표시
+  - `MacroListWidget`의 버튼(`add`, `del`, `up`, `down`) objectName 불일치 수정하여 아이콘 정상 표시
   - 다크/라이트 테마 QSS 업데이트
 
 - **테마 버그 수정**:
@@ -22,8 +22,8 @@
   - 관련 언어 키(`manual_grp_format`, `manual_chk_prefix`, `manual_chk_suffix`) 추가 (한글/영어)
 
 - **스크립트 저장/로드 구현**:
-  - `CommandControlWidget`의 저장/로드 버튼을 `CommandListPanel`의 기능과 연결
-  - `CommandListPanel`에 `save_script_to_file`, `load_script_from_file` 메서드 구현
+  - `MacroCtrlWidget`의 저장/로드 버튼을 `MacroListPanel`의 기능과 연결
+  - `MacroListPanel`에 `save_script_to_file`, `load_script_from_file` 메서드 구현
   - 커맨드 리스트 데이터와 컨트롤 설정(지연 시간, 반복 횟수 등)을 JSON 파일로 일괄 저장/복원
   - `commentjson` 라이브러리 사용하여 JSON 가독성 확보
 

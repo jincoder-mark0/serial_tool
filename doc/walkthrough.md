@@ -10,7 +10,7 @@ This walkthrough covers the finalization of the View layer, including the implem
 - Fixed JSON structure issues.
 
 ### 2. Localization (`LanguageManager`)
-- Implemented `LanguageManager` in `view/language_manager.py`.
+- Implemented `LanguageManager` in `view/lang_manager.py`.
 - Supports dynamic language switching between English ('en') and Korean ('ko').
 - Provides a `language_changed` signal for UI updates.
 
@@ -22,8 +22,8 @@ This walkthrough covers the finalization of the View layer, including the implem
 - **PortSettingsWidget**: Added BaudRate validation.
 
 ### 4. Command List Persistence
-- **CommandListWidget**: Added `get_command_list()` and `set_command_list()` for data access.
-- **CommandListPanel**: Integrated with `SettingsManager` to automatically save changes to `settings.json` and load them on startup.
+- **MacroListWidget**: Added `get_command_list()` and `set_command_list()` for data access.
+- **MacroListPanel**: Integrated with `SettingsManager` to automatically save changes to `settings.json` and load them on startup.
 
 ### 5. Verification (`test_view.py`)
 - Added tabs for testing new components:

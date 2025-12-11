@@ -2,7 +2,7 @@
 언어 키 관리 도구
 
 이 스크립트는 다음 작업을 수행합니다:
-1. view 폴더의 모든 .py 파일에서 사용되는 language_manager.get_text() 호출을 분석
+1. view 폴더의 모든 .py 파일에서 사용되는 lang_manager.get_text() 호출을 분석
 2. 모듈별로 키를 그룹화
 3. 주석이 추가된 언어 템플릿 JSON 파일 생성
 4. 누락되거나 사용되지 않는 키 확인
@@ -15,7 +15,7 @@ except ImportError:
     import json
 from pathlib import Path
 from collections import defaultdict
-from typing import Dict, Set, List
+from typing import Dict, Set
 
 # view 폴더의 모든 .py 파일에서 get_text 호출을 찾고 모듈별로 그룹화
 def extract_keys_by_module() -> Dict[str, Set[str]]:
@@ -34,7 +34,7 @@ def extract_keys_by_module() -> Dict[str, Set[str]]:
         if '__pycache__' in str(py_file) or py_file.name == '__init__.py':
             continue
 
-        # 모듈 경로 생성 (예: widgets/manual_control, dialogs/font_settings)
+        # 모듈 경로 생성 (예: widgets/manual_ctrl, dialogs/font_settings)
         try:
             relative_path = py_file.relative_to(view_dir)
             module_path = str(relative_path.with_suffix('')).replace('\\', '/')
@@ -58,7 +58,7 @@ def get_module_display_name(module_path: str) -> str:
         # 단일 파일 (예: main_window)
         name = parts[0].replace('_', ' ').title()
     else:
-        # 중첩된 파일 (예: widgets/port_settings)
+        # 중첩된 파일 (예: widgets/port_settings_widget)
         category = parts[-2].rstrip('s').title()  # 'widgets' -> 'Widget'
         name = parts[-1].replace('_', ' ').title()
         name = f"{name} {category}"
@@ -88,11 +88,11 @@ def generate_template(keys_by_module: Dict[str, Set[str]], output_file: str, lan
     # 모듈을 알파벳순으로 정렬하되, 중요한 순서를 우선
     priority_order = ['main_window', 'widgets', 'panels', 'dialogs']
 
-    def get_sort_key(module_path):
+    def get_sort_key(path):
         for idx, priority in enumerate(priority_order):
-            if module_path.startswith(priority):
-                return (idx, module_path)
-        return (len(priority_order), module_path)
+            if path.startswith(priority):
+                return idx, path
+        return len(priority_order), path
 
     sorted_modules = sorted(keys_by_module.keys(), key=get_sort_key)
 
@@ -127,7 +127,7 @@ def generate_template(keys_by_module: Dict[str, Set[str]], output_file: str, lan
 
         if module_specific_keys:
             display_name = get_module_display_name(module_path)
-            # 파일 경로 추가 (예: widgets/port_settings.py)
+            # 파일 경로 추가 (예: widgets/port_settings_widget.py)
             file_path = f"{module_path}.py"
             lines.append('  // ============================================\n')
             lines.append(f'  // {display_name} ({file_path}),\n')

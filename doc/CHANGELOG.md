@@ -2,6 +2,294 @@
 
 ## [미배포] (Unreleased)
 
+### 기능 개선 및 버그 수정 (2025-12-11)
+
+#### 추가 사항 (Added)
+- **MacroListWidget 컨텍스트 메뉴**
+  - 우클릭 메뉴 추가: Add, Delete, Up, Down 기능 제공
+  - 키보드 단축키 외에 마우스 조작 편의성 향상
+  - **MacroListWidget 추가 기능 개선**
+  - 매크로 추가 시 선택된 행 바로 아래에 삽입되도록 변경 (기존: 항상 맨 뒤 추가)
+- **ManualControlWidget 히스토리 기능**
+  - 최근 전송된 명령어 50개 기억 (MRU 방식)
+  - 전송 버튼 상단에 히스토리 탐색(▲, ▼) 버튼 추가
+  - Ctrl+Up/Down 키로도 히스토리 탐색 가능
+
+- **리팩토링 (Refactoring)**
+  - `PortController.open_port`: 개별 인자 대신 `config` 딕셔너리를 받도록 변경하여 확장성 확보
+  - `MainWindow` 종료 로직을 `MainPresenter`로 이동하여 역할 분리 (MVP 패턴 강화)
+
+#### 변경 사항 (Changed)
+- **에러 핸들링 및 로깅 개선**
+  - `PortPresenter` 및 `MacroPanel`에서 `print` 문을 `logger`와 `QMessageBox`로 대체
+  - 포트 미선택 시 Warning, 에러 발생 시 Critical 팝업 표시
+  - 에러 상황을 로그 파일에 기록하여 디버깅 용이성 확보
+
+- **PortSettingsWidget 로직 복원**
+  - `get_current_config` 메서드 추가 및 `PortPresenter` 연동
+  - 누락되었던 `on_protocol_changed`, `on_connect_clicked`, `on_port_scan_clicked` 메서드 복원
+  - 포트 설정 및 연결 로직 정상화
+
+- **RingBuffer 최적화**
+  - `core/utils.py`: `memoryview` 슬라이싱을 사용하여 `write` 메서드 성능 개선
+  - 불필요한 데이터 복사 최소화
+
+#### 수정 사항 (Fixed)
+- **QSmartListView 테두리 스타일**
+  - `QSmartListView`에 객체 이름(`SmartListView`) 부여
+  - `common.qss`, `dark_theme.qss`, `light_theme.qss`에서 ID 선택자(`#SmartListView`)를 사용하여 테두리 스타일 적용
+  - `QGroupBox` 스타일과의 간섭 제거로 올바른 테두리 표시
+
+#### 추가 사항 (Added) - 오후 세션
+- **Local Echo (로컬 에코)**
+  - `ManualCtrlWidget`에 로컬 에코 체크박스 추가
+  - 송신 데이터를 수신창(`RxLogWidget`)에 표시하는 기능 구현
+- **시스템 로그 및 타임스탬프 색상 규칙**
+  - `ColorManager`에 `SYS_INFO`, `SYS_ERROR` 등 시스템 로그 규칙 추가
+  - `TIMESTAMP` 규칙 추가 및 `get_rule_color` 메서드 구현
+  - `SystemLogWidget` 및 `RxLogWidget`이 `ColorManager`를 통해 색상을 적용하도록 개선
+
+#### 변경 사항 (Changed) - 오후 세션
+- **경로 관리 리팩토링 (Path Management)**
+  - `ResourcePath` 클래스 도입으로 리소스 경로 관리 일원화
+  - `Paths` 클래스 대체 및 테마 아이콘 경로 처리 로직 개선
+  - 주요 모듈(`main.py`, `settings_manager.py` 등) 업데이트
+- **QSmartListView 리팩토링**
+  - 타임스탬프 색상 처리 로직을 제거하고 순수 뷰어 역할로 변경
+  - 색상 처리는 `RxLogWidget` 및 `SystemLogWidget`에서 수행
+
+#### 수정 사항 (Fixed) - 오후 세션
+- **RxLogWidget 버그 수정**
+  - 존재하지 않는 `add_logs_batch` 메서드 호출을 `append_batch`로 수정하여 대량 로그 처리 오류 해결
+
+---
+
+### View 계층 완성, 중앙 경로 관리, 아키텍처 및 리팩토링 (2025-12-10)
+#### 리팩토링 (Refactoring)
+- **통신 계층 추상화 (Transport Abstraction)**
+  - `core/interfaces.py`: 모든 통신 드라이버가 구현해야 할 `ITransport` 인터페이스 정의
+  - `model/transports.py`: PySerial을 감싸는 `SerialTransport` 구현체 작성
+  - **목적**: SPI, I2C 등 향후 프로토콜 확장을 위한 기반 마련
+
+#### 추가 사항 (Added)
+
+- **로그 검색 기능 강화**
+  - `QSmartListView` 내부에 검색 탐색(`find_next`, `find_prev`) 로직 구현
+  - 검색어 일치 항목 하이라이트 및 자동 스크롤 이동 기능 추가
+
+- **Parser 탭 구현 (PreferencesDialog)**
+  - Parser Type 선택: Auto Detect, AT Parser, Delimiter Parser, Fixed Length Parser, Raw Parser
+  - Delimiter 설정: 구분자 리스트 관리 (추가/삭제)
+  - Fixed Length 설정: 패킷 길이 지정 (1-4096 바이트)
+  - Inspector Options: 버퍼 크기, 실시간 추적, 자동 스크롤
+  - 22개의 새로운 언어 키 추가 (en.json, ko.json)
+
+- **중앙 집중식 경로 관리 (AppConfig)**
+  - `config.py`: 모든 리소스 경로를 중앙에서 관리하는 `AppConfig` 클래스 생성
+  - 개발 모드와 PyInstaller 번들 환경 자동 감지
+  - 경로 검증 메서드 (`validate_paths()`)
+  - `SettingsManager`, `LangManager`, `ThemeManager`에 AppConfig 통합
+
+- **Package-level Imports**
+  - `view/sections/__init__.py`: 섹션 클래스 export
+  - `view/dialogs/__init__.py`: 다이얼로그 클래스 export
+  - `main_window.py` import 구문 간결화
+
+- **QSS 스타일 개선**
+  - `section-title` 클래스 추가: QGroupBox::title과 유사한 스타일
+  - `RxLogWidget.recv_log_title`, `StatusAreaWidget.status_log_title`에 적용
+  - Dark/Light 테마별 색상 지정 (녹색/파란색)
+  - `QSmartTextEdit` 스타일 추가 (공통, 다크, 라이트 테마)
+
+- **수동 제어 (ManualCtrl) 개선**
+  - `QSmartTextEdit` 도입: 라인 번호가 표시되는 멀티라인 에디터
+  - 여러 줄 입력 지원 (Enter: 새 줄, Ctrl+Enter: 전송)
+  - 플레이스홀더 텍스트 업데이트 ("Ctrl+Enter to send")
+
+#### 버그 수정 (Fixed)
+- **UI 레이아웃**
+  - 우측 패널 토글 시 좌측 패널 크기가 변경되는 문제 수정
+  - 스플리터 스트레치 팩터 조정 (좌: 0, 우: 1) 및 패널 너비 저장/복원 로직 개선
+  - 윈도우 리사이즈 시 System Log 높이를 고정하고 Received Area만 늘어나도록 수정 (`setFixedHeight`)
+
+#### 변경 사항 (Changed)
+- **테마 및 스타일 (QSS)**
+  - `QSmartListView` 및 `QSmartTextEdit`에 다크/라이트 테마 완벽 지원
+  - `QSmartTextEdit`에 `Q_PROPERTY`를 추가하여 QSS에서 라인 번호 색상 제어 가능
+  - `common.qss`에 `QSmartListView` 기본 스타일 추가
+- **Strict MVP 아키텍처 적용**
+  - View 계층(`MacroPanel`, `MainLeftSection` 등)에서 `SettingsManager` 의존성을 완전히 제거했습니다.
+  - View는 이제 스스로 파일을 저장하지 않고, `save_state() -> dict`와 `load_state(dict)` 메서드를 통해 상태 데이터만 주고받습니다.
+  - 데이터의 영구 저장 및 복원 책임이 `MainWindow`(향후 `MainPresenter`)로 이관되어, UI와 비즈니스 로직(설정 관리)의 결합도가 낮아졌습니다.
+  - `MainRightSection`에 하위 패널들의 상태를 집계하는 로직을 추가했습니다.
+
+- **네이밍 일관성 개선**
+  - `rx` → `recv`: RxLogWidget의 모든 변수 및 메서드명 변경
+    - `on_clear_rx_log_clicked()` → `on_clear_recv_log_clicked()`
+    - `rx_search_input` → `recv_search_input`
+    - `rx_hex_chk` → `recv_hex_chk` 등
+  - `manual_control` → `manual_ctrl`:
+    - 파일명: `manual_control.py` → `manual_ctrl.py`
+    - 클래스명: `ManualControlWidget` → `ManualCtrlWidget`
+    - 설정 키: `"manual_control"` → `"manual_ctrl"`
+  - 언어 키 통일:
+    - `recv_lbl_log` → `recv_title`
+    - `status_lbl_log` → `system_title`
+    - `right_tab_inspector` → `right_tab_packet`
+    - `pref_tab_parser` → `pref_tab_packet`
+
+- **DTR/RTS 제거**
+  - `PortSettingsWidget`에서 DTR/RTS 체크박스 제거
+  - 포트 설정 2행 레이아웃 간소화 (Data | Parity | Stop | Flow)
+  - 설정 저장/로드 로직에서 DTR/RTS 제거
+
+- **파일 이동**
+  - `view/widgets/main_toolbar.py` → `view/sections/main_tool_bar.py`
+  - 섹션 관련 파일은 `sections/`에 통합
+
+#### 수정 사항 (Fixed)
+
+- **싱글톤 패턴 수정**
+  - `SettingsManager`, `LangManager`의 `__new__` 메서드에 `*args, **kwargs` 추가
+  - `TypeError: takes 1 positional argument but 2 were given` 오류 해결
+
+- **경로 계산 수정**
+  - `LangManager`의 하위 호환성 경로 계산 오류 수정
+  - `view/tools/lang_manager.py`에서 3단계 상위 디렉토리로 이동하도록 수정
+
+- **우측 패널 표시 상태 복원**
+  - `MainWindow.init_ui()`에서 설정값 읽어서 메뉴 체크 상태 복원
+  - `right_panel_visible` 설정 적용
+
+- **clear_log() 메서드 개선**
+  - `isinstance(current_widget, PortPanel)` 체크 제거
+  - PortPanel import 제거로 의존성 감소
+
+#### 아키텍처 개선 (Architecture)
+
+- **Worker 구조 개선**
+  - 파일명 변경: `model/serial_worker.py` → `model/connection_worker.py`
+  - 클래스명 변경: `SerialWorker` → `ConnectionWorker`
+  - **의존성 주입**: Worker가 특정 라이브러리(pyserial) 대신 `ITransport` 인터페이스에 의존하도록 변경
+  - `PortController`: `SerialTransport`를 생성하여 `ConnectionWorker`에 주입하는 구조로 변경
+
+- **ReceivedArea 동적 설정**
+  - `set_max_lines(max_lines)` 메서드 추가
+  - `MainPresenter`에서 설정 변경 시 모든 ReceivedArea 업데이트
+  - `PortPresenter`에서 초기화 시 설정값 적용
+
+- **PortState Enum 통합**
+  - `core/port_state.py`: `DISCONNECTED`, `CONNECTED`, `ERROR` 상태 정의
+  - `PortSettingsWidget.set_connection_state(PortState)` 구현
+  - QSS 동적 속성 (`QPushButton[state="..."]`) 활용
+
+- **SettingsManager 개선**
+  - `_get_config_path`를 `@property`로 변경
+  - AppConfig 통합으로 경로 관리 일원화
+
+- **고성능 로그 뷰어 도입 (`QSmartListView`)**
+  - 기존 `QTextEdit` 기반 로그 뷰를 `QListView` 기반의 `QSmartListView`로 교체
+  - 대량의 로그 데이터 처리 시 메모리 사용량 감소 및 렌더링 성능 대폭 향상
+  - `view/widgets/received_area.py` 및 `view/widgets/system_log.py`에 적용
+
+#### 문서 업데이트 (Documentation)
+
+- **doc/task.md**
+  - Phase 2 완료 항목 추가 (ReceivedArea, PortState, Parser 탭, AppConfig)
+  - Phase 3 상태를 "진행 중"으로 변경
+
+- **doc/implementation_plan.md**
+  - 최종 업데이트 날짜: 2025-12-10
+  - 프로젝트 구조 업데이트 (AppConfig, __init__.py, 파일명 수정)
+
+- **README.md**
+  - 주요 기능 업데이트 (PortState, AppConfig, Package-level imports)
+  - 용어 통일 (커맨드 → 매크로)
+
+---
+
+### 버그 수정 및 UI/UX 개선 (2025-12-09)
+
+#### 수정 사항 (Fixed)
+
+- **초기화 및 Import 오류 수정**
+  - `MainWindow` 초기화 시 `AttributeError` (left_section 미생성 상태에서 시그널 연결) 수정
+  - `PortController`에서 `SerialWorker` import 경로 오류 (`ModuleNotFoundError`) 수정
+  - 애플리케이션 실행 안정성 확보
+
+- **툴바 동작 로직 개선**
+  - 'Close' 버튼이 토글 방식으로 동작하여 닫힌 포트를 여는 문제 수정
+  - `close_current_port` 메서드 추가 및 `is_connected` 상태 확인 로직 도입
+  - 명시적인 닫기 동작 보장
+
+#### 변경 사항 (Changed)
+
+- **시그널 네이밍 일관성 강화**
+  - `MacroCtrlWidget`: `cmd_run_single` → `cmd_run_once`, `cmd_auto_start` → `cmd_repeat_start` 등
+  - `PortSettingsWidget`: `scan_requested` → `port_scan_requested`
+  - 버튼 텍스트 및 기능과 일치하도록 시그널 이름 직관화
+
+- **테스트 코드 최신화**
+  - `test_view.py`, `test_ui_translations.py`를 최신 위젯 클래스명(`RxLogWidget` 등) 및 시그널로 업데이트
+
+- **네이밍 리팩토링 (Command -> Macro)**
+  - `CommandListWidget` → `MacroListWidget`
+  - `CommandControlWidget` → `MacroControlWidget`
+  - `CommandListPanel` → `MacroPanel`
+  - 관련 파일명 및 변수명 일괄 변경 (`command_list.py` → `macro_list.py` 등)
+  - "Command" 용어의 모호성(시스템 명령 등) 해소 및 "Macro"로 명확화
+
+- **설정 키 구조 정리**
+  - `PreferencesDialog`에서 `port_baudrate`, `port_newline`, `port_scan_interval` 추가
+  - `main_presenter.py`에서 설정 키 매핑 업데이트
+  - 설정 로드/저장 로직 일관성 확보
+
+#### 추가 사항 (Added)
+
+- **동적 윈도우 리사이징**
+  - 우측 패널(Right Panel) 토글 시 윈도우 크기가 자동으로 조정되는 기능 구현
+  - 패널 숨김/표시 시 자연스러운 윈도우 크기 변화 제공
+  - 좌측 패널 크기 유지: 스플리터 크기 설정으로 좌측 패널이 변경되지 않도록 수정
+
+#### 아키텍처 개선 (Architecture)
+
+- **MVP 패턴 준수 강화**
+  - `PreferencesDialog`에서 `SettingsManager` 직접 접근 제거
+  - Presenter(`MainWindow`)를 통해 설정을 전달받아 사용하도록 변경
+  - `_get_setting()` 헬퍼 메서드 추가: 중첩된 설정 키 안전 접근
+  - View 계층이 Model 계층에 직접 접근하지 않도록 개선
+
+#### 완성도 개선 (Polish)
+
+- **언어 키 완성**
+  - `MainToolBar`: 모든 액션에 언어 키 적용 (`toolbar_open`, `toolbar_close` 등)
+  - `MainMenuBar`: 메뉴 액션에 언어 키 적용 (`main_menu_open_port`, `main_menu_close_tab` 등)
+  - `MacroCtrlWidget`: Pause 버튼 언어 키 추가 (`macro_ctrl_btn_repeat_pause`)
+  - `PreferencesDialog`: Newline 설정 언어 키 추가 (`pref_lbl_newline`)
+
+- **TODO 주석 정리**
+  - 모든 TODO 주석을 Note로 변경하고 향후 구현 계획 명시
+  - `macro_panel.py`: Repeat 파라미터 전달 방식 설명 추가
+  - `port_presenter.py`, `main_presenter.py`: 상태바 에러 표시 계획 명시
+  - `received_area.py`: 정규식 검색 지원 계획 명시
+
+- **테마 메뉴 개선**
+  - View -> Theme 메뉴에 현재 선택된 테마 체크 표시 추가
+  - `MainMenuBar.set_current_theme()` 메서드 추가
+  - 테마 전환 시 자동으로 체크 표시 업데이트
+
+- **우측 패널 토글 개선**
+  - 패널 숨김 시 왼쪽 패널 너비 저장
+  - 패널 표시 시 저장된 왼쪽 패널 너비 복원
+  - `_saved_left_width` 인스턴스 변수 추가
+
+- **QSS 스타일 확장**
+  - `warning` 클래스 추가 (노란색 버튼 스타일)
+  - Pause 버튼에 warning 스타일 적용
+
+
+---
+
 ### 언어 확장성 개선 및 아이콘 수정 (2025-12-08)
 
 #### 추가 사항 (Added)
@@ -23,16 +311,14 @@
 
 - **언어 비교 로직 개선**
   - `manual_control.py`, `main_status_bar.py`, `file_progress.py`에서 하드코딩된 언어별 비교 제거
-  - `== language_manager.get_text("key", "en") or == language_manager.get_text("key", "ko")` 패턴을
-  - `language_manager.text_matches_key(text, "key")` 호출로 변경
+  - `== lang_manager.get_text("key", "en") or == lang_manager.get_text("key", "ko")` 패턴을
+  - `lang_manager.text_matches_key(text, "key")` 호출로 변경
   - 일본어, 중국어 등 새 언어 추가 시 코드 수정 불필요
 
 #### 이점 (Benefits)
 
 - **확장성 향상**: 새 언어 추가 시 JSON 파일만 추가하면 자동 지원
 - **유지보수성 개선**: 언어별 하드코딩 제거로 코드 간소화
-- **UI 일관성**: 모든 아이콘 버튼이 테마에 맞게 정상 표시
-
 - **UI 일관성**: 모든 아이콘 버튼이 테마에 맞게 정상 표시
 
 ---
@@ -60,15 +346,17 @@
 
 #### 변경 사항 (Changed)
 
-- **PreferencesDialog 설정 로드 방식 개선**
-  - `load_settings` 메서드에서 `SettingsManager`를 직접 사용하여 설정값 로드
-  - 하드코딩된 기본값 및 외부에서 전달받던 `current_settings` 의존성 제거
-  - `global.theme`, `ui.font_size` 등 정확한 설정 키 경로 적용
+- **PreferencesDialog MVP 패턴 적용 및 리팩토링**
+  - `load_settings`: `SettingsManager` 직접 사용하여 의존성 제거
+  - `apply_settings`: 데이터 변환 로직(lower(), int() 등)을 View에서 제거하고 원본 데이터 전송
+  - `MainWindow`에 `preferences_save_requested` 시그널 추가하여 이벤트 전달
+  - `MainPresenter`에 `on_preferences_save_requested` 핸들러 구현하여 비즈니스 로직 처리
 
 #### 이점 (Benefits)
 
-- **데이터 일관성**: `SettingsManager`를 단일 진실 공급원(SSOT)으로 사용하여 데이터 불일치 방지
-- **유지보수성**: 설정 로드 로직이 중앙화된 관리자를 따르도록 개선
+- **아키텍처 준수**: View는 UI 로직만 담당하고, 데이터 검증 및 변환은 Presenter가 담당하여 MVP 패턴 강화
+- **데이터 일관성**: `SettingsManager`를 단일 진실 공급원(SSOT)으로 사용
+- **유지보수성**: 설정 로드/저장 로직이 명확하게 분리됨
 
 ### UI/UX 개선 및 버그 수정 (2025-12-08)
 
@@ -81,10 +369,10 @@
   - 자동 대문자 변환 기능
   - `ManualControlWidget` 입력 필드에 적용
 
-- **PortTabWidget 위젯**
-  - `view/widgets/port_tab_widget.py` 신규 생성
+- **PortTabPanel 위젯**
+  - `view/panels/port_tab_panel.py` 신규 생성 (기존 `PortTabWidget` 리네임)
   - 포트 탭 관리 로직 캡슐화 (추가/삭제/플러스 탭)
-  - `LeftSection`에서 `QTabWidget` 대신 `PortTabWidget` 사용
+  - `LeftSection`에서 `QTabWidget` 대신 `PortTabPanel` 사용
   - 코드 재사용성 및 유지보수성 향상
 
 - **테마별 SVG 아이콘 지원**
@@ -102,7 +390,7 @@
 
 #### 수정 사항 (Fixed)
 
-- **CommandListWidget Send 버튼 상태 버그**
+- **MacroListWidget Send 버튼 상태 버그**
   - 행 이동 시 Send 버튼 활성화 상태가 초기화되는 문제 수정
   - `_move_row` 메서드에서 이동 전 버튼 상태 저장 후 복원
 
@@ -270,7 +558,7 @@
   - 각 계층의 역할 명확화:
     - **Window**: 최상위 애플리케이션 셸 (`MainWindow`)
     - **Section**: 화면 구획 분할, Panel만 포함 (`LeftSection`, `RightSection`)
-    - **Panel**: 기능 단위 그룹, Widget만 포함 (`PortPanel`, `CommandListPanel`, `ManualControlPanel` 등)
+    - **Panel**: 기능 단위 그룹, Widget만 포함 (`PortPanel`, `MacroListPanel`, `ManualControlPanel` 등)
     - **Widget**: 실제 UI 요소 및 로직 (`PortSettingsWidget`, `ManualControlWidget` 등)
   - Presenter 계층 업데이트 (`port_presenter.py`, `main_presenter.py`)
 
@@ -288,7 +576,7 @@
   - 데이터 전송 시 포맷팅 옵션 적용 기능
 
 - **스크립트 저장/로드**
-  - Command List 및 실행 설정을 JSON 파일로 저장/로드하는 기능 구현 (`CommandListPanel`)
+  - Command List 및 실행 설정을 JSON 파일로 저장/로드하는 기능 구현 (`MacroListPanel`)
   - `save_script_to_file`, `load_script_from_file` 메서드 추가
 
 - **아이콘**
@@ -297,7 +585,7 @@
 #### 수정 사항 (Fixed)
 
 - **UI 아이콘 표시**
-  - `CommandListWidget` 버튼의 objectName 불일치 수정 (`btn_add` → `add_btn` 등)으로 아이콘 미표시 문제 해결
+  - `MacroListWidget` 버튼의 objectName 불일치 수정 (`btn_add` → `add_btn` 등)으로 아이콘 미표시 문제 해결
 - **테마 스타일**
   - 다크 테마에서 Placeholder 텍스트 색상 문제 수정 (`placeholder-text-color` 추가)
 
@@ -367,7 +655,7 @@
   - ManualControlWidget: 입력 텍스트, HEX 모드, RTS/DTR 상태 저장/복원
   - ReceivedArea: 검색어, HEX 모드, 타임스탬프, 일시정지 상태 저장/복원
   - CommandControl: 초기화 문제 수정 및 상태 저장/복원 안정화
-  - CommandListPanel: 초기화 순서 변경으로 load_state 오류 해결
+  - MacroListPanel: 초기화 순서 변경으로 load_state 오류 해결
 
 #### 수정 사항 (Fixed)
 
@@ -378,7 +666,7 @@
   - `on_language_changed` 및 `_save_window_state` 메서드 복구
 - **PortSettingsWidget**: 필수 메서드 복원 (`set_port_list`, `set_connected`)
 - **CommandControl**: SyntaxError 수정 (중복 코드 제거)
-- **CommandListPanel**: 초기화 순서 변경으로 상태 복원 시 오류 해결
+- **MacroListPanel**: 초기화 순서 변경으로 상태 복원 시 오류 해결
 - **탭 관리**:
   - 포트 탭 증식 문제 수정 (재시작 시 탭이 계속 추가되던 버그)
   - LeftPanel의 탭 추가 로직 개선
@@ -418,12 +706,12 @@
   - `PortSettingsWidget`: 컴팩트한 2줄 레이아웃
     - 1행: 포트 | 스캔 | 보레이트 | 열기
     - 2행: 데이터 | 패리티 | 정지 | 흐름 | DTR | RTS
-  - `CommandListWidget`:
+  - `MacroListWidget`:
     - Prefix/Suffix 컬럼 추가 (이전 Head/Tail에서 변경)
     - 3단계 Select All 체크박스 (선택 안함, 부분 선택, 전체 선택)
     - 세로 스크롤바 항상 표시
     - 행별 Send 버튼
-  - `CommandControlWidget`:
+  - `MacroCtrlWidget`:
     - 전역 명령 수정을 위한 Prefix/Suffix 입력 필드 추가
     - 스크립트 저장/로드 버튼
     - 자동 실행 설정 (지연시간, 최대 실행 횟수)
@@ -486,7 +774,7 @@
   - 입력창을 `QTextEdit`에서 `QLineEdit`으로 변경하여 높이 축소
   - Send 버튼 높이 조정 및 스타일 적용
   - Flow Control (RTS/DTR) 체크박스 추가
-- **CommandControlWidget 개선**:
+- **MacroCtrlWidget 개선**:
   - 레이아웃 정리 및 버튼 배치 최적화
   - Start Auto Run (녹색), Stop (붉은색) 버튼에 강조 스타일 적용
 - **MainWindow 개선**:
@@ -502,7 +790,7 @@
 
 - Layered MVP 아키텍처 확립
 - 모듈식 폴더 구조 생성:
-  - `view/panels/`: LeftPanel, RightPanel, PortPanel, CommandListPanel
+  - `view/panels/`: LeftPanel, RightPanel, PortPanel, MacroListPanel
   - `view/widgets/`: PortSettings, CommandList, CommandControl, ManualControl
   - `resources/themes/`: 테마 관리자 및 QSS 파일
   - `resources/icons/`: SVG 아이콘

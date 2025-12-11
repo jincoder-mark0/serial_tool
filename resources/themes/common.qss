@@ -116,6 +116,20 @@ QTableView QTableCornerButton::section {
     border: none;
 }
 
+/* QListView */
+QListView, #SmartListView {
+    border-width: 1px;
+    border-style: solid;
+}
+
+QListView QTableCornerButton::section, QSmartListView QTableCornerButton::section {
+    border: none;
+}
+
+QListView[readOnly="true"], QSmartListView[readOnly="true"] {
+    border: 1px;
+}
+
 /* QCheckBox */
 QCheckBox {
     spacing: 5px;
@@ -175,7 +189,7 @@ QToolBar QToolButton {
 }
 
 /* Custom Classes Fonts */
-QPushButton[class="accent"], QPushButton[class="danger"] {
+QPushButton[class="accent"], QPushButton[class="danger"], QPushButton[class="warning"] {
     font-weight: bold;
 }
 
@@ -194,8 +208,15 @@ QPushButton[class="accent"], QPushButton[class="danger"] {
 /* Apply Fixed Font to Text Data Widgets */
 QTextEdit.fixed-font,
 QPlainTextEdit.fixed-font,
-QLineEdit.fixed-font {
+QLineEdit.fixed-font,
+QSmartListView.fixed-font {
     font-family: "Consolas", "Monospace", "Courier New", monospace;
     font-size: 9pt;
 }
 
+/* Section Title - Similar to QGroupBox::title */
+QLabel[class="section-title"] {
+    font-weight: bold;
+    padding: 0 5px;
+    margin-bottom: 2px;
+}

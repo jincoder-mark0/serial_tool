@@ -10,10 +10,10 @@
   - 예: `port_btn_connect`, `manual_chk_hex`, `main_menu_file`
 - **전체 코드베이스 적용**:
   - `config/languages/en.json`, `ko.json` 업데이트 (192개 키)
-  - 모든 UI 컴포넌트에서 `language_manager.get_text()` 호출 수정
+  - 모든 UI 컴포넌트에서 `lang_manager.get_text()` 호출 수정
   - 주석 제거 및 JSON 구조 정리
 - **대상 파일**:
-  - **Widgets**: `manual_control.py`, `command_list.py`, `command_control.py`, `received_area.py`, `port_settings.py`, `status_area.py`, `file_progress_widget.py`, `packet_inspector.py`
+  - **Widgets**: `manual_control.py`, `command_list.py`, `command_control.py`, `received_area.py`, `port_settings.py`, `system_log_widget.py`, `file_progress_widget.py`, `packet_inspector.py`
   - **Panels**: `left_panel.py`, `right_panel.py`
   - **Dialogs**: `font_settings_dialog.py`, `about_dialog.py`, `preferences_dialog.py`
   - **Main**: `main_window.py` (MenuBar 및 StatusBar 분리)
@@ -27,7 +27,7 @@
   - 타임스탬프 자동 추가
 - **기존 코드 업데이트**:
   - `view/theme_manager.py`: print 문을 logger 호출로 교체
-  - `view/language_manager.py`: print 문을 logger 호출로 교체
+  - `view/lang_manager.py`: print 문을 logger 호출로 교체
 
 ### C. UI 개선 및 버그 수정
 - **About Dialog 수정**:

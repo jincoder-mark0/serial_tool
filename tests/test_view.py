@@ -3,28 +3,29 @@ View 컴포넌트 테스트 애플리케이션
 개별 위젯들을 독립적으로 테스트할 수 있습니다.
 """
 import sys
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget, QPushButton, QLabel, QHBoxLayout
-from PyQt5.QtCore import Qt, QTimer
+from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget
+from PyQt5.QtCore import QTimer
+from PyQt5.QtWidgets import QLabel, QTextEdit
+from PyQt5.QtWidgets import QPushButton, QHBoxLayout
 
 import os
+
+from view.widgets.rx_log import RxLogWidget
+from view.widgets.manual_ctrl import ManualCtrlWidget
+from view.widgets.macro_list import MacroListWidget
+from view.widgets.system_log import SystemLogWidget
+from view.panels.port_panel import PortPanel
+from view.managers.theme_manager import ThemeManager
+from view.managers.lang_manager import lang_manager
+from view.dialogs.preferences_dialog import PreferencesDialog
+from view.dialogs.about_dialog import AboutDialog
+from view.widgets.file_progress import FileProgressWidget
+from core.settings_manager import SettingsManager
 
 # 부모 디렉토리를 경로에 추가하여 모듈 import 가능하게 함
 current_dir = os.path.dirname(os.path.abspath(__file__))
 parent_dir = os.path.dirname(current_dir)
 sys.path.insert(0, parent_dir)
-
-from view.widgets.received_area import ReceivedArea
-from view.widgets.manual_control import ManualControlWidget
-from view.widgets.command_list import CommandListWidget
-from view.widgets.status_area import StatusArea
-from view.panels.port_panel import PortPanel
-from view.theme_manager import ThemeManager
-from view.language_manager import language_manager
-from view.dialogs.preferences_dialog import PreferencesDialog
-from view.dialogs.about_dialog import AboutDialog
-from view.widgets.file_progress_widget import FileProgressWidget
-from core.settings_manager import SettingsManager
-from PyQt5.QtWidgets import QPushButton, QHBoxLayout, QLabel, QTextEdit
 
 class ViewTestWindow(QMainWindow):
     """View 컴포넌트 테스트용 윈도우 클래스입니다."""
@@ -41,7 +42,7 @@ class ViewTestWindow(QMainWindow):
         self.init_ui()
 
         # 테마 적용 (Apply theme)
-        theme = self.settings.get('global.theme', 'dark')
+        theme = self.settings.get('settings.theme', 'dark')
         self.theme_manager = ThemeManager()
         self.theme_manager.apply_theme(QApplication.instance(), theme)
 
@@ -59,13 +60,13 @@ class ViewTestWindow(QMainWindow):
         tabs.addTab(self.create_received_area_test(), "ReceivedArea Test")
 
         # Test 2: ManualControl (입력, 파일 전송 테스트)
-        tabs.addTab(self.create_manual_control_test(), "ManualControl Test")
+        tabs.addTab(self.create_manual_ctrl_test(), "ManualControl Test")
 
         # Test 3: CommandList (커맨드 리스트 테스트)
-        tabs.addTab(self.create_command_list_test(), "CommandList Test")
+        tabs.addTab(self.create_macro_list_test(), "CommandList Test")
 
         # Test 4: StatusArea (상태 로그 테스트)
-        tabs.addTab(self.create_status_area_test(), "StatusArea Test")
+        tabs.addTab(self.create_system_log_widget_test(), "StatusArea Test")
 
         # Test 5: PortPanel (전체 패널 테스트)
         tabs.addTab(self.create_port_panel_test(), "PortPanel Test")
@@ -97,7 +98,7 @@ class ViewTestWindow(QMainWindow):
         layout = QVBoxLayout(widget)
 
         # ReceivedArea 인스턴스
-        self.received_area = ReceivedArea()
+        self.received_area = RxLogWidget()
         layout.addWidget(self.received_area)
 
         # 테스트 버튼 (Test buttons)
@@ -121,7 +122,7 @@ class ViewTestWindow(QMainWindow):
         button_layout.addWidget(btn_many)
 
         btn_clear = QPushButton("Clear")
-        btn_clear.clicked.connect(self.received_area.clear_log)
+        btn_clear.clicked.connect(self.received_area.on_clear_rx_log_clicked)
         button_layout.addWidget(btn_clear)
 
         layout.addLayout(button_layout)
@@ -137,7 +138,7 @@ class ViewTestWindow(QMainWindow):
         for i in range(100):
             self.received_area.append_data(f"Line {i+1}: Test data\r\n".encode())
 
-    def create_manual_control_test(self) -> QWidget:
+    def create_manual_ctrl_test(self) -> QWidget:
         """
         ManualControl 테스트 위젯을 생성합니다.
 
@@ -150,8 +151,8 @@ class ViewTestWindow(QMainWindow):
         layout = QVBoxLayout(widget)
 
         # ManualControl 인스턴스
-        self.manual_control = ManualControlWidget()
-        layout.addWidget(self.manual_control)
+        self.manual_ctrl = ManualCtrlWidget()
+        layout.addWidget(self.manual_ctrl)
 
         # 출력 영역 (Output area)
         self.manual_output = QTextEdit()
@@ -160,16 +161,16 @@ class ViewTestWindow(QMainWindow):
         layout.addWidget(self.manual_output)
 
         # 시그널 연결
-        self.manual_control.send_command_requested.connect(
-            lambda text, hex_mode, enter: self.manual_output.append(
-                f"Send: {text} (hex={hex_mode}, enter={enter})"
+        self.manual_ctrl.manual_cmd_send_requested.connect(
+            lambda text, hex_mode, prefix, suffix, local_echo: self.manual_output.append(
+                f"Send: {text} (hex={hex_mode}, prefix={prefix}, suffix={suffix}, echo={local_echo})"
             )
         )
-        self.manual_control.file_selected.connect(
+        self.manual_ctrl.transfer_file_selected.connect(
             lambda path: self.manual_output.append(f"File selected: {path}")
         )
-        self.manual_control.send_file_requested.connect(
-            lambda: self.manual_output.append("Send file requested")
+        self.manual_ctrl.transfer_file_send_requested.connect(
+            lambda path: self.manual_output.append(f"Send file requested: {path}")
         )
 
         # 정보 레이블
@@ -178,21 +179,20 @@ class ViewTestWindow(QMainWindow):
         layout.addWidget(info)
 
         # 제어 활성화/비활성화 테스트
-        from PyQt5.QtWidgets import QPushButton, QHBoxLayout
         btn_layout = QHBoxLayout()
         btn_enable = QPushButton("Enable Controls")
-        btn_enable.clicked.connect(lambda: self.manual_control.set_controls_enabled(True))
+        btn_enable.clicked.connect(lambda: self.manual_ctrl.set_controls_enabled(True))
         btn_layout.addWidget(btn_enable)
 
         btn_disable = QPushButton("Disable Controls")
-        btn_disable.clicked.connect(lambda: self.manual_control.set_controls_enabled(False))
+        btn_disable.clicked.connect(lambda: self.manual_ctrl.set_controls_enabled(False))
         btn_layout.addWidget(btn_disable)
 
         layout.addLayout(btn_layout)
 
         return widget
 
-    def create_command_list_test(self) -> QWidget:
+    def create_macro_list_test(self) -> QWidget:
         """
         CommandList 테스트 위젯을 생성합니다.
 
@@ -203,8 +203,8 @@ class ViewTestWindow(QMainWindow):
         layout = QVBoxLayout(widget)
 
         # CommandList 인스턴스
-        self.command_list = CommandListWidget()
-        layout.addWidget(self.command_list)
+        self.macro_list = MacroListWidget()
+        layout.addWidget(self.macro_list)
 
         # 정보 레이블
 
@@ -214,10 +214,10 @@ class ViewTestWindow(QMainWindow):
         # Persistence Test Buttons
         btn_layout = QHBoxLayout()
         btn_save = QPushButton("Save to Console")
-        btn_save.clicked.connect(lambda: print(self.command_list.get_command_list()))
+        btn_save.clicked.connect(lambda: print(self.macro_list.get_macro_list()))
 
         btn_load = QPushButton("Load Dummy Data")
-        btn_load.clicked.connect(lambda: self.command_list.set_command_list([
+        btn_load.clicked.connect(lambda: self.macro_list.set_macro_list([
             {"command": "LOADED_CMD_1", "delay": "200", "enabled": True},
             {"command": "LOADED_CMD_2", "delay": "500", "enabled": False}
         ]))
@@ -228,7 +228,7 @@ class ViewTestWindow(QMainWindow):
 
         return widget
 
-    def create_status_area_test(self) -> QWidget:
+    def create_system_log_widget_test(self) -> QWidget:
         """
         StatusArea 테스트 위젯을 생성합니다.
 
@@ -241,26 +241,26 @@ class ViewTestWindow(QMainWindow):
         layout = QVBoxLayout(widget)
 
         # StatusArea 인스턴스
-        self.status_area = StatusArea()
-        layout.addWidget(self.status_area)
+        self.system_log_widget = SystemLogWidget()
+        layout.addWidget(self.system_log_widget)
 
         # 테스트 버튼
         button_layout = QHBoxLayout()
 
         btn_info = QPushButton("Log INFO")
-        btn_info.clicked.connect(lambda: self.status_area.log("This is an info message", "INFO"))
+        btn_info.clicked.connect(lambda: self.system_log_widget.log("This is an info message", "INFO"))
         button_layout.addWidget(btn_info)
 
         btn_error = QPushButton("Log ERROR")
-        btn_error.clicked.connect(lambda: self.status_area.log("This is an error message", "ERROR"))
+        btn_error.clicked.connect(lambda: self.system_log_widget.log("This is an error message", "ERROR"))
         button_layout.addWidget(btn_error)
 
         btn_warn = QPushButton("Log WARN")
-        btn_warn.clicked.connect(lambda: self.status_area.log("This is a warning message", "WARN"))
+        btn_warn.clicked.connect(lambda: self.system_log_widget.log("This is a warning message", "WARN"))
         button_layout.addWidget(btn_warn)
 
         btn_success = QPushButton("Log SUCCESS")
-        btn_success.clicked.connect(lambda: self.status_area.log("This is a success message", "SUCCESS"))
+        btn_success.clicked.connect(lambda: self.system_log_widget.log("This is a success message", "SUCCESS"))
         button_layout.addWidget(btn_success)
 
         layout.addLayout(button_layout)
@@ -321,7 +321,7 @@ class ViewTestWindow(QMainWindow):
 
         dlg = PreferencesDialog(self, self.settings.get_all_settings())
         if dlg.exec_():
-            print("Preferences Saved")
+            logger.info("Preferences Saved")
             # 실제로는 여기서 설정을 저장하고 적용해야 함
 
     def open_about(self) -> None:
@@ -375,11 +375,11 @@ class ViewTestWindow(QMainWindow):
         self.file_progress.update_progress(self.mock_sent, self.mock_total, speed, eta)
 
     def create_language_test(self) -> QWidget:
-        """LanguageManager 테스트 위젯을 생성합니다."""
+        """LangManager 테스트 위젯을 생성합니다."""
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
-        self.lang_label = QLabel(language_manager.get_text("main_title"))
+        self.lang_label = QLabel(lang_manager.get_text("main_title"))
         self.lang_label.setStyleSheet("font-size: 20px; font-weight: bold;")
 
         btn_en = QPushButton("English")
@@ -398,8 +398,8 @@ class ViewTestWindow(QMainWindow):
 
     def change_language(self, lang: str) -> None:
         """언어를 변경하고 UI를 업데이트합니다."""
-        language_manager.set_language(lang)
-        self.lang_label.setText(language_manager.get_text("main_title"))
+        lang_manager.set_language(lang)
+        self.lang_label.setText(lang_manager.get_text("main_title"))
 
     def closeEvent(self, event) -> None:
         """

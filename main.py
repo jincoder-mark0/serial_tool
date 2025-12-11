@@ -1,14 +1,20 @@
 import sys
 import os
+
+# 프로젝트 루트 경로를 sys.path에 추가하여 모듈 import 가능하게 함
+# 이것은 모든 import 전에 실행되어야 합니다
+sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
+
 import logging
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt
 
-# 프로젝트 루트 경로를 sys.path에 추가하여 모듈 import 가능하게 함
-sys.path.append(os.path.dirname(os.path.abspath(__file__)))
-
 from version import __version__
+from resource_path import ResourcePath
 from view.main_window import MainWindow
+from presenter.main_presenter import MainPresenter
+
+from core.logger import logger
 
 def setup_logging() -> None:
     """
@@ -29,19 +35,32 @@ def main() -> None:
     setup_logging()
     logging.info(f"Starting Serial Tool v{__version__}")
 
+    # 애플리케이션 설정 초기화
+    resource_path = ResourcePath()
+
+    # 핵심 모듈에 설정 주입
+    logger.configure(resource_path)
+
+    # 경로 검증
+    path_status = resource_path.validate_paths()
+    for path_name, exists in path_status.items():
+        if not exists:
+            logging.warning(f"Path not found: {path_name}")
+
+    logging.info(f"Base directory: {resource_path.base_dir}")
+
     # 고해상도(High DPI) 스케일링 설정
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
     app = QApplication(sys.argv)
-    
-    # MainWindow 초기화
-    window = MainWindow()
-    
+
+    # MainWindow 초기화 (resource_path 전달)
+    window = MainWindow(resource_path=resource_path)
+
     # MainPresenter 초기화 (View와 Model 연결)
-    from presenter.main_presenter import MainPresenter
     presenter = MainPresenter(window)
-    
+
     window.show()
 
     logging.info("Application initialized")
