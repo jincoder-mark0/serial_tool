@@ -76,6 +76,15 @@ class MainPresenter(QObject):
         # 현재 파일 전송 다이얼로그
         self._current_transfer_dialog = None
 
+        # 시스템 로그 참조
+        self.system_log = self.view.left_section.system_log_widget
+        self.log_system_message("Application initialized", "INFO")
+
+    def log_system_message(self, message: str, level: str = "INFO") -> None:
+        """시스템 로그에 메시지를 기록합니다."""
+        if self.system_log:
+            self.system_log.log(message, level)
+
     def on_close_requested(self) -> None:
         """
         애플리케이션 종료 요청을 처리합니다.
@@ -114,6 +123,7 @@ class MainPresenter(QObject):
             self.port_controller.close_port()
 
         logger.info("Application shutdown sequence completed.")
+        # 종료 시점이라 UI 업데이트가 의미 없을 수 있지만, 로그 파일에는 남음 (만약 파일 로깅 연동 시)
 
     def on_data_received(self, port_name: str, data: bytes) -> None:
         """
@@ -279,6 +289,7 @@ class MainPresenter(QObject):
 
         # 상태 메시지 표시
         self.global_status_bar.show_message("Settings updated", 2000)
+        self.log_system_message("Settings updated", "INFO")
 
     def on_data_sent(self, port_name: str, data: bytes) -> None:
         """

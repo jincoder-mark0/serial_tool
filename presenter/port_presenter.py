@@ -105,6 +105,10 @@ class PortPresenter(QObject):
                 # 탭 제목 업데이트
                 self.left_panel.update_tab_title(i, port_name)
                 break
+        
+        # 시스템 로그 기록
+        if hasattr(self.left_panel, 'system_log_widget'):
+            self.left_panel.system_log_widget.log(f"[{port_name}] Port opened", "SUCCESS")
 
     def on_port_closed(self, port_name: str) -> None:
         """
@@ -119,6 +123,10 @@ class PortPresenter(QObject):
                 # 탭 제목 업데이트
                 self.left_panel.update_tab_title(i, "-")
                 break
+        
+        # 시스템 로그 기록
+        if hasattr(self.left_panel, 'system_log_widget'):
+            self.left_panel.system_log_widget.log(f"[{port_name}] Port closed", "INFO")
 
     def on_error(self, port_name: str, message: str) -> None:
         """
@@ -126,6 +134,10 @@ class PortPresenter(QObject):
         """
         logger.error(f"Port Error ({port_name}): {message}")
         QMessageBox.critical(self.left_panel, "Error", f"Port Error ({port_name}): {message}")
+
+        # 시스템 로그 기록
+        if hasattr(self.left_panel, 'system_log_widget'):
+            self.left_panel.system_log_widget.log(f"[{port_name}] Error: {message}", "ERROR")
 
         # 에러 발생 시 해당 포트 UI 동기화 (닫힘 상태로 전환 등)
         # 필요 시 구현: 해당 포트 탭 찾아서 set_connected(False) 호출 등

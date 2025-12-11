@@ -149,7 +149,7 @@
     "rx_newline_lf": "LF (\\n)",
     "rx_newline_cr": "CR (\\r)",
     "rx_newline_crlf": "CRLF (\\r\\n)",
-    "system_title": "Status Log",
+    "system_title": "System Log",
     "system_list_log_placeholder": "System status messages will appear here...",
     "system_list_log_tooltip": "System status and error messages",
     "about_btn_close": "Close",

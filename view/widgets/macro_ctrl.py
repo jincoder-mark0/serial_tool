@@ -47,13 +47,20 @@ class MacroCtrlWidget(QWidget):
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
-        layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(2)
 
-        # 1. 상단 행: 스크립트 제어 및 접두사/접미사 (Top Row)
-        top_layout = QHBoxLayout()
-        top_layout.setContentsMargins(0, 0, 0, 0)
+        # Row 0: 자동 실행 설정
+        self.interval_lbl = QLabel(lang_manager.get_text("macro_ctrl_lbl_interval"))
+
+        self.repeat_delay_line_edit = QLineEdit(str(DEFAULT_MACRO_DELAY_MS))
+        self.repeat_delay_line_edit.setFixedWidth(50)
+        self.repeat_delay_line_edit.setAlignment(Qt.AlignRight)
+
+        self.repeat_max_lbl = QLabel(lang_manager.get_text("macro_ctrl_lbl_repeat_max"))
+
+        self.repeat_count_spin = QSpinBox()
+        self.repeat_count_spin.setRange(0, 9999)
+        self.repeat_count_spin.setValue(0)
+        self.repeat_count_spin.setToolTip(lang_manager.get_text("macro_ctrl_spin_repeat_tooltip"))
 
         self.script_save_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_save_script"))
         self.script_save_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_save_script_tooltip"))
@@ -62,34 +69,6 @@ class MacroCtrlWidget(QWidget):
         self.script_load_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_load_script"))
         self.script_load_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_load_script_tooltip"))
         self.script_load_btn.clicked.connect(self.on_script_load_requested)
-
-        top_layout.addStretch()
-        top_layout.addWidget(self.script_save_btn)
-        top_layout.addWidget(self.script_load_btn)
-
-        # 2. 자동 실행 설정 그룹 (Repeat Settings Group)
-        self.execution_settings_grp = QGroupBox(lang_manager.get_text("macro_ctrl_grp_execution"))
-        execution_layout = QGridLayout()
-        execution_layout.setContentsMargins(2, 2, 2, 2)
-        execution_layout.setSpacing(5)
-
-        # Row 0: 자동 실행 설정
-        self.interval_lbl = QLabel(lang_manager.get_text("macro_ctrl_lbl_interval"))
-        execution_layout.addWidget(self.interval_lbl, 0, 0)
-
-        self.repeat_delay_line_edit = QLineEdit(str(DEFAULT_MACRO_DELAY_MS))
-        self.repeat_delay_line_edit.setFixedWidth(50)
-        self.repeat_delay_line_edit.setAlignment(Qt.AlignRight)
-        execution_layout.addWidget(self.repeat_delay_line_edit, 1, 1)
-
-        self.repeat_max_lbl = QLabel(lang_manager.get_text("macro_ctrl_lbl_repeat_max"))
-        execution_layout.addWidget(self.repeat_max_lbl, 0, 2)
-
-        self.repeat_count_spin = QSpinBox()
-        self.repeat_count_spin.setRange(0, 9999)
-        self.repeat_count_spin.setValue(0)
-        self.repeat_count_spin.setToolTip(lang_manager.get_text("macro_ctrl_spin_repeat_tooltip"))
-        execution_layout.addWidget(self.repeat_count_spin, 0, 3)
 
         # Row 1: 자동 실행 제어
         self.macro_repeat_start_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_repeat_start"))
@@ -112,14 +91,31 @@ class MacroCtrlWidget(QWidget):
         self.macro_repeat_count_lbl = QLabel("0 / ∞")
         self.macro_repeat_count_lbl.setAlignment(Qt.AlignCenter)
 
+
+        execution_layout = QGridLayout()
+        execution_layout.setContentsMargins(2, 2, 2, 2)
+        execution_layout.setSpacing(5)
+
+        execution_layout.addWidget(self.interval_lbl, 0, 0)
+        execution_layout.addWidget(self.repeat_delay_line_edit, 0, 1)
+        execution_layout.addWidget(self.repeat_max_lbl, 0, 2)
+        execution_layout.addWidget(self.repeat_count_spin, 0, 3)
+        execution_layout.addWidget(self.script_save_btn, 0, 4)
+        execution_layout.addWidget(self.script_load_btn, 0, 5)
+
         execution_layout.addWidget(self.macro_repeat_start_btn, 1, 0, 1, 2)
         execution_layout.addWidget(self.macro_repeat_stop_btn, 1, 2)
         execution_layout.addWidget(self.macro_repeat_pause_btn, 1, 3)
         execution_layout.addWidget(self.macro_repeat_count_lbl, 1, 4)
 
+        # 자동 실행 설정 그룹 (Repeat Settings Group)
+        self.execution_settings_grp = QGroupBox(lang_manager.get_text("macro_ctrl_grp_execution"))
+        self.execution_settings_grp.setFixedHeight(100) # 높이 고정 (SystemLogWidget과 맞춤)
         self.execution_settings_grp.setLayout(execution_layout)
 
-        layout.addLayout(top_layout)
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
         layout.addWidget(self.execution_settings_grp)
 
         self.setLayout(layout)

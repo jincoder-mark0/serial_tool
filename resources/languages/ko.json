@@ -149,7 +149,7 @@
     "rx_newline_lf": "LF (\\n)",
     "rx_newline_cr": "CR (\\r)",
     "rx_newline_crlf": "CRLF (\\r\\n)",
-    "system_title": "상태 로그",
+    "system_title": "시스템 로그",
     "system_list_log_placeholder": "시스템 상태 메시지가 여기에 표시됩니다...",
     "system_list_log_tooltip": "시스템 상태 및 오류 메시지",
     "about_btn_close": "닫기",

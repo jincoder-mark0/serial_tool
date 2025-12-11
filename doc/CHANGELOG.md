@@ -115,6 +115,22 @@
 - **RxLogWidget 버그 수정**
   - 존재하지 않는 `add_logs_batch` 메서드 호출을 `append_batch`로 수정하여 대량 로그 처리 오류 해결
 
+#### 변경 사항 (Changed) - 저녁 세션
+
+- **System Log 위치 변경**
+  - `PortPanel` 내부에서 `MainLeftSection` 하단(전역)으로 이동
+  - 탭별로 분산된 시스템 로그를 한곳에서 통합 관리하도록 개선
+  - 공간 효율성 증대 및 포트 간 이벤트 순서 파악 용이성 확보
+- **Manual Control UI 개선**
+  - 불필요한 그룹박스(`manual_options_grp`, `manual_send_grp`) 제거
+  - 레이아웃 재배치: 입력창/전송 버튼을 상단에, 옵션 체크박스를 하단에 배치하여 사용성 향상
+  - 옵션 체크박스 레이아웃을 3열 2행으로 변경하여 가로 폭 절약
+- **하단 UI 레이아웃 변경**
+  - `ManualCtrlWidget`과 `SystemLogWidget`을 `MainLeftSection` 하단에 수직(`QVBoxLayout`)으로 배치
+  - `SystemLogWidget`의 전체 높이를 100px로 고정(리스트 높이 고정 제거)하여 우측 패널(`MacroCtrlWidget`)과의 수평 라인 정렬 유도
+  - `MacroCtrlWidget`의 `execution_settings_grp` 높이를 100px로 고정하여 좌측 패널(`SystemLogWidget`)과 높이 일치
+  - 좌측 패널 구성: `PortTabs(Stretch)` - `ManualCtrl` - `SystemLog(Fixed)`
+
 ---
 
 ### View 계층 완성, 중앙 경로 관리, 아키텍처 및 리팩토링 (2025-12-10)

@@ -35,15 +35,14 @@ class ManualCtrlWidget(QWidget):
         self.history_up_btn = None
         self.history_down_btn = None
         self.manual_cmd_txt = None
-        self.manual_send_grp = None
-        self.manual_send_grp = None
+        # self.manual_send_grp = None # Removed
         self.dtr_chk = None
         self.rts_chk = None
         self.suffix_chk = None
         self.prefix_chk = None
         self.hex_chk = None
         self.local_echo_chk = None
-        self.manual_options_grp = None
+        # self.manual_options_grp = None # Removed
 
         # History State
         self.command_history: List[str] = []
@@ -60,43 +59,8 @@ class ManualCtrlWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2) # 간격 최소화
 
-        # 1. 제어 옵션 그룹 (Control Options Group)
-        self.manual_options_grp = QGroupBox(lang_manager.get_text("manual_ctrl_grp_control"))
-        option_layout = QGridLayout()
-        option_layout.setContentsMargins(2, 2, 2, 2) # 내부 여백 최소화
-        option_layout.setSpacing(5)
-
-        self.hex_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_hex"))
-        self.hex_chk.setToolTip(lang_manager.get_text("manual_ctrl_chk_hex_tooltip"))
-        self.hex_chk.stateChanged.connect(self.on_hex_mode_changed)
-
-        # 접두사/접미사 체크박스
-        self.prefix_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_prefix"))
-        self.suffix_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_suffix"))
-
-        # 흐름 제어 (Flow Control - RTS/DTR)
-        self.rts_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_rts"))
-        self.rts_chk.setToolTip(lang_manager.get_text("manual_ctrl_chk_rts_tooltip"))
-        self.dtr_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_dtr"))
-        self.dtr_chk.setToolTip(lang_manager.get_text("manual_ctrl_chk_dtr_tooltip"))
-
-        option_layout.addWidget(self.hex_chk, 0, 0)
-        option_layout.addWidget(self.prefix_chk, 0, 1)
-        option_layout.addWidget(self.suffix_chk, 0, 2)
-        option_layout.addWidget(self.rts_chk, 0, 3)
-        option_layout.addWidget(self.dtr_chk, 0, 4)
-
-        # 로컬 에코 체크박스 추가
-        self.local_echo_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_local_echo"))
-        option_layout.addWidget(self.local_echo_chk, 1, 0)
-
-        self.manual_options_grp.setLayout(option_layout)
-
-        # 3. 수동 전송 영역 (Manual Send Area)
-        self.manual_send_grp = QGroupBox(lang_manager.get_text("manual_ctrl_grp_manual"))
-        send_layout = QHBoxLayout()
-        send_layout.setContentsMargins(2, 2, 2, 2)
-        send_layout.setSpacing(5)
+        # 1. 수동 전송 영역 (Manual Send Area)
+        # self.manual_send_grp 제거하고 직접 레이아웃에 추가
 
         self.manual_cmd_txt = QSmartTextEdit()  # 라인 번호 지원 에디터
         self.manual_cmd_txt.setPlaceholderText(lang_manager.get_text("manual_ctrl_txt_cmd_placeholder"))
@@ -129,13 +93,47 @@ class ManualCtrlWidget(QWidget):
         btn_layout.addWidget(self.history_down_btn)
         btn_layout.addWidget(self.send_manual_cmd_btn)
 
+        send_layout = QHBoxLayout()
+        send_layout.setContentsMargins(0, 0, 0, 0)
+        send_layout.setSpacing(5)
         send_layout.addWidget(self.manual_cmd_txt, 1)
         send_layout.addLayout(btn_layout)
+        
+        # 2. 제어 옵션 영역 (Control Options Area)
+        # self.manual_options_grp 제거하고 직접 레이아웃에 추가
 
-        self.manual_send_grp.setLayout(send_layout)
+        self.hex_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_hex"))
+        self.hex_chk.setToolTip(lang_manager.get_text("manual_ctrl_chk_hex_tooltip"))
+        self.hex_chk.stateChanged.connect(self.on_hex_mode_changed)
 
-        layout.addWidget(self.manual_options_grp)
-        layout.addWidget(self.manual_send_grp)
+        # 접두사/접미사 체크박스
+        self.prefix_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_prefix"))
+        self.suffix_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_suffix"))
+
+        # 흐름 제어 (Flow Control - RTS/DTR)
+        self.rts_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_rts"))
+        self.rts_chk.setToolTip(lang_manager.get_text("manual_ctrl_chk_rts_tooltip"))
+        self.dtr_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_dtr"))
+        self.dtr_chk.setToolTip(lang_manager.get_text("manual_ctrl_chk_dtr_tooltip"))
+
+        # 로컬 에코 체크박스 추가
+        self.local_echo_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_local_echo"))
+
+        option_layout = QGridLayout()
+        option_layout.setContentsMargins(0, 5, 0, 0) # 상단 여백 추가
+        option_layout.setSpacing(5) # 간격 조정
+        
+        # 1행
+        option_layout.addWidget(self.hex_chk, 0, 0)
+        option_layout.addWidget(self.prefix_chk, 0, 1)
+        option_layout.addWidget(self.suffix_chk, 0, 2)
+        option_layout.addWidget(self.rts_chk, 0, 3)
+        option_layout.addWidget(self.dtr_chk, 0, 4)
+        option_layout.addWidget(self.local_echo_chk, 0, 5)
+
+        # 메인 레이아웃에 추가
+        layout.addLayout(send_layout)
+        layout.addLayout(option_layout)
         layout.addStretch() # 하단 여백 추가
 
         self.setLayout(layout)
@@ -148,22 +146,20 @@ class ManualCtrlWidget(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.manual_options_grp.setTitle(lang_manager.get_text("manual_ctrl_grp_control"))
+        # self.manual_options_grp.setTitle(lang_manager.get_text("manual_ctrl_grp_control")) # Removed
         self.hex_chk.setText(lang_manager.get_text("manual_ctrl_chk_hex"))
         self.prefix_chk.setText(lang_manager.get_text("manual_ctrl_chk_prefix"))
         self.suffix_chk.setText(lang_manager.get_text("manual_ctrl_chk_suffix"))
         self.rts_chk.setText(lang_manager.get_text("manual_ctrl_chk_rts"))
         self.dtr_chk.setText(lang_manager.get_text("manual_ctrl_chk_dtr"))
         self.local_echo_chk.setText(lang_manager.get_text("manual_ctrl_chk_local_echo"))
-        self.clear_manual_options_btn.setText(lang_manager.get_text("manual_ctrl_btn_clear"))
-        self.save_manual_log_btn.setText(lang_manager.get_text("manual_ctrl_btn_save_log"))
+        # self.clear_manual_options_btn.setText(lang_manager.get_text("manual_ctrl_btn_clear")) # Removed
+        # self.save_manual_log_btn.setText(lang_manager.get_text("manual_ctrl_btn_save_log")) # Removed
 
-        self.manual_send_grp.setTitle(lang_manager.get_text("manual_ctrl_grp_manual"))
+        # self.manual_send_grp.setTitle(lang_manager.get_text("manual_ctrl_grp_manual")) # Removed
         self.send_manual_cmd_btn.setText(lang_manager.get_text("manual_ctrl_btn_send"))
         self.history_up_btn.setToolTip(lang_manager.get_text("manual_ctrl_btn_history_up_tooltip"))
         self.history_down_btn.setToolTip(lang_manager.get_text("manual_ctrl_btn_history_down_tooltip"))
-        self.manual_cmd_txt.setPlaceholderText(lang_manager.get_text("manual_ctrl_txt_cmd_placeholder"))
-
         self.manual_cmd_txt.setPlaceholderText(lang_manager.get_text("manual_ctrl_txt_cmd_placeholder"))
 
     def _cmd_input_key_press_event(self, event: QKeyEvent) -> None:

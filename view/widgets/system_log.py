@@ -33,6 +33,8 @@ class SystemLogWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
 
+        self.setFixedHeight(100) # 위젯 전체 높이 고정
+
         self.system_log_title = QLabel(lang_manager.get_text("system_title"))
         self.system_log_title.setProperty("class", "section-title")  # 섹션 타이틀 스타일 적용
         # system_log_title.setStyleSheet("font-weight: bold; font-size: 10px;")
@@ -40,7 +42,7 @@ class SystemLogWidget(QWidget):
         # self.system_log_list = QTextEdit()
         self.system_log_list = QSmartListView()
         self.system_log_list.setReadOnly(True)
-        self.system_log_list.setFixedHeight(100) # 높이 고정
+        # self.system_log_list.setFixedHeight(100) # 리스트 높이 고정 제거 (위젯 전체 높이에 맞춤)
         self.system_log_list.setToolTip(lang_manager.get_text("system_list_log_tooltip"))
         self.system_log_list.setPlaceholderText(lang_manager.get_text("system_list_log_placeholder"))
         self.system_log_list.setProperty("class", "fixed-font")  # 고정폭 폰트 적용

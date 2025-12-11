@@ -17,10 +17,10 @@
     "port_scan_interval": 5000
   },
   "ui": {
-    "window_width": 1462,
-    "window_height": 1018,
-    "window_x": 149,
-    "window_y": 12,
+    "window_width": 1325,
+    "window_height": 860,
+    "window_x": 305,
+    "window_y": 53,
     "splitter_state": "AAAA/wAAAAEAAAACAAADvwAAAlwB/////wEAAAABAA=="
   },
   "ports": {
@@ -61,13 +61,13 @@
     ]
   },
   "manual_ctrl": {
-    "input_text": "",
-    "hex_mode": false,
+    "input_text": "xxzc\nsdf\ndf\nd\n",
+    "hex_mode": true,
     "prefix_chk": true,
     "suffix_chk": true,
-    "rts_chk": false,
-    "dtr_chk": false,
-    "local_echo": false,
+    "rts_chk": true,
+    "dtr_chk": true,
+    "local_echo": true,
     "command_history": []
   },
   "macro_list": {

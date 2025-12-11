@@ -4,7 +4,7 @@ from typing import Optional
 
 from view.widgets.port_settings import PortSettingsWidget
 from view.widgets.rx_log import RxLogWidget
-from view.widgets.system_log import SystemLogWidget
+# from view.widgets.system_log import SystemLogWidget
 from view.widgets.port_stats import PortStatsWidget
 
 class PortPanel(QWidget):
@@ -24,7 +24,7 @@ class PortPanel(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
-        self.system_log_widget = None
+        # self.system_log_widget = None
         self.received_area_widget = None
         self.port_stats_widget = None
         self.port_settings_widget = None
@@ -44,7 +44,7 @@ class PortPanel(QWidget):
         self.port_settings_widget = PortSettingsWidget()
         self.port_stats_widget = PortStatsWidget()
         self.received_area_widget = RxLogWidget()
-        self.system_log_widget = SystemLogWidget()
+        # self.system_log_widget = SystemLogWidget() # Global로 이동
 
         # 레이아웃 구성
         # 상단: 설정 (Top: Settings)
@@ -57,7 +57,7 @@ class PortPanel(QWidget):
         layout.addWidget(self.received_area_widget, 1) # Stretch 1
 
         # 하단: 상태 로그 영역 (Bottom: Status Log Area)
-        layout.addWidget(self.system_log_widget)
+        # layout.addWidget(self.system_log_widget) # Global로 이동
 
         self.setLayout(layout)
 

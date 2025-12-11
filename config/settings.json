@@ -9,9 +9,7 @@
     "proportional_font_family": "Segoe UI",
     "proportional_font_size": 9,
     "fixed_font_family": "Consolas",
-    "fixed_font_size": 9,
-    "window_width": 1200,
-    "window_height": 800
+    "fixed_font_size": 9
   },
   "ports": {
     "default_config": {
