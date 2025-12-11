@@ -80,7 +80,8 @@ class LogRecorder:
         self._running = False
         
         if self._thread and self._thread.is_alive():
-            self._thread.join(timeout=2.0)
+            # self._thread.join(timeout=2.0)
+            self._thread.join() # UI 스레드가 잠시 멈추는 것이 우려됨.
         
         if self._file:
             self._file.close()

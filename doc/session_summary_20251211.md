@@ -60,6 +60,10 @@
 - **로그 저장 기능 개선**:
   - `RxLogWidget`의 로그 저장 버튼을 토글 방식으로 변경했습니다.
   - 파일 저장 대화상자 제목에 탭 이름과 다국어 텍스트를 포함(`[탭 이름]::[다국어]`)하여 식별을 용이하게 했습니다.
+- **UI 레이아웃 및 사용성 개선 (Refactoring)**:
+  - **System Log 위치 변경**: 각 포트 패널에 있던 시스템 로그를 좌측 하단(`MainLeftSection`)으로 이동하여 전역 로그로 통합했습니다.
+  - **Manual Control 개선**: 불필요한 그룹박스를 제거하고, 입력창과 버튼을 상단에, 옵션 체크박스를 하단에 배치하여 직관성을 높였습니다.
+  - **레이아웃 정렬**: 좌측 패널의 `SystemLogWidget`과 우측 패널의 `MacroCtrlWidget` 높이를 100px로 일치시켜 시각적 균형을 맞췄습니다.
 
 ### 2.5 아키텍처 및 리팩토링
 
@@ -92,13 +96,15 @@
   - `view/dialogs/preferences_dialog.py`: Packet 탭 추가
   - `view/widgets/rx_log.py`: Newline 처리, ColorManager 적용, 로그 저장 토글, 버그 수정
   - `view/widgets/port_settings.py`: 메서드 복원, 설정 조회 로직 추가, `set_connected` 추가
-  - `view/widgets/manual_ctrl.py`: Local Echo, 히스토리 추가, 중복 버튼 제거
+  - `view/widgets/manual_ctrl.py`: Local Echo, 히스토리 추가, 중복 버튼 제거, UI 레이아웃 개선
   - `view/widgets/macro_list.py`: 컨텍스트 메뉴 추가
+  - `view/widgets/macro_ctrl.py`: 높이 고정
   - `view/sections/main_status_bar.py`: 동적 업데이트 지원
+  - `view/sections/main_left_section.py`: SystemLogWidget 위치 변경 및 레이아웃 조정
   - `view/main_window.py`: 단축키 등록
-  - `view/widgets/system_log.py`: ColorManager 적용
+  - `view/widgets/system_log.py`: ColorManager 적용, 높이 고정
   - `view/custom_qt/smart_list_view.py`: 타임스탬프 로직 제거, 객체 이름 설정
-  - `view/panels/port_panel.py`: 탭 이름 변경 시 RxLogWidget 업데이트
+  - `view/panels/port_panel.py`: 탭 이름 변경 시 RxLogWidget 업데이트, SystemLogWidget 제거
 - **Presenter**:
   - `presenter/main_presenter.py`: 상태바 업데이트, 단축키 처리, 종료 로직, Local Echo, 멀티포트 브로드캐스트, 전이중 레코딩
   - `presenter/port_presenter.py`: 설정 조회 로직 변경, 에러 핸들링 개선, 멀티포트 지원
