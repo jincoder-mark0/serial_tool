@@ -13,7 +13,7 @@ class MacroRunner(QObject):
     step_completed = pyqtSignal(int, bool)      # index, success
     macro_finished = pyqtSignal()
     error_occurred = pyqtSignal(str)
-    
+
     # Send Signal (외부에서 연결하여 실제 전송 수행)
     send_requested = pyqtSignal(str, bool, bool, bool) # text, hex, prefix, suffix
 
@@ -23,7 +23,7 @@ class MacroRunner(QObject):
         self._current_index = 0
         self._is_running = False
         self._is_paused = False
-        
+
         # 타이머
         self._step_timer = QTimer()
         self._step_timer.setSingleShot(True)
@@ -36,7 +36,7 @@ class MacroRunner(QObject):
         self._loop_timer = QTimer()
         self._loop_timer.setSingleShot(True)
         self._loop_timer.timeout.connect(self._start_loop)
-        
+
         self.event_bus = event_bus
 
     def load_macro(self, entries: List[MacroEntry]) -> None:
@@ -54,7 +54,7 @@ class MacroRunner(QObject):
         self._loop_count = loop_count
         self._current_loop = 0
         self._loop_interval_ms = interval_ms
-        
+
         self.event_bus.publish("macro.started")
         self._start_loop()
 
@@ -93,6 +93,22 @@ class MacroRunner(QObject):
         self._current_index = 0
         self._execute_next_step()
 
+    def request_single_send(self, command: str, is_hex: bool, prefix: bool, suffix: bool) -> None:
+        """
+        단일 명령 전송 요청 (프레젠터에서 호출)
+
+        프레젠터가 모델의 시그널을 직접 발생시키지 않고,
+        이 메서드를 통해 전송을 요청하도록 캡슐화를 개선합니다.
+
+        Args:
+            command (str): 전송할 명령어
+            is_hex (bool): HEX 형식 여부
+            prefix (bool): CR 접두사 추가 여부
+            suffix (bool): LF 접미사 추가 여부
+        """
+        self.send_requested.emit(command, is_hex, prefix, suffix)
+
+
     def _execute_next_step(self) -> None:
         """다음 스텝 실행"""
         if not self._is_running or self._is_paused:
@@ -104,7 +120,7 @@ class MacroRunner(QObject):
             if entry.enabled:
                 break
             self._current_index += 1
-        
+
         # 모든 항목 실행 완료
         if self._current_index >= len(self._entries):
             if self._loop_interval_ms > 0:
@@ -120,7 +136,7 @@ class MacroRunner(QObject):
         # 명령 전송
         try:
             self.send_requested.emit(entry.command, entry.is_hex, entry.prefix, entry.suffix)
-            
+
             # Expect 처리 (구조만 마련)
             if entry.expect:
                 # TODO: Expect 매칭을 위한 대기 상태로 전환
@@ -144,7 +160,7 @@ class MacroRunner(QObject):
         """스텝 성공 처리 및 다음 스텝 예약"""
         self.step_completed.emit(self._current_index, True)
         self._current_index += 1
-        
+
         delay = entry.delay_ms if entry.delay_ms > 0 else 10 # 최소 딜레이
         self._step_timer.start(delay)
 

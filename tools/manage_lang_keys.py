@@ -18,15 +18,16 @@ from collections import defaultdict
 from typing import Dict, Set
 
 # view 폴더의 모든 .py 파일에서 get_text 호출을 찾고 모듈별로 그룹화
-def extract_keys_by_module() -> Dict[str, Set[str]]:
+def extract_keys_by_module(view_dir: Path) -> Dict[str, Set[str]]:
     """
     view 폴더의 각 모듈에서 사용되는 키를 추출합니다.
+
+    Args:
+        view_dir: view 폴더의 경로
 
     Returns:
         Dict[str, Set[str]]: 모듈명을 키로, 사용되는 키 집합을 값으로 하는 딕셔너리
     """
-    root_dir = Path(__file__).parent.parent
-    view_dir = root_dir / "view"
     keys_by_module = defaultdict(set)
 
     for py_file in view_dir.rglob("*.py"):
@@ -65,7 +66,7 @@ def get_module_display_name(module_path: str) -> str:
 
     return name
 
-def generate_template(keys_by_module: Dict[str, Set[str]], output_file: str, language: str = "en"):
+def generate_template(keys_by_module: Dict[str, Set[str]], output_file: Path, language: str = "en"):
     """
     모듈별로 그룹화되고 주석이 추가된 언어 템플릿 파일을 생성합니다.
 
@@ -146,18 +147,23 @@ def generate_template(keys_by_module: Dict[str, Set[str]], output_file: str, lan
     lines.append("}\n")
 
     # 실제로는 정상 JSON으로 저장 (주석은 키로 포함)
-    output_path = Path(output_file)
-    output_path.write_text(''.join(lines), encoding='utf-8')
+    output_file.write_text(''.join(lines), encoding='utf-8')
 
     print(f"✓ 템플릿 파일 생성: {output_file}")
     print(f"  - 공통 키: {len(common_keys)}개")
     print(f"  - 모듈별 키: {sum(len(keys - common_keys) for keys in keys_by_module.values())}개")
     print(f"  - 발견된 모듈: {len(sorted_modules)}개")
 
-def check_missing_and_unused():
-    """누락되거나 사용되지 않는 키를 확인"""
-    root_dir = Path(__file__).parent.parent
-    view_dir = root_dir / "view"
+def check_missing_and_unused(view_dir: Path, lang_files: Dict[str, Path]):
+    """
+    누락되거나 사용되지 않는 키를 확인
+
+    Args:
+        view_dir: view 폴더의 경로
+        lang_files: 언어 파일의 경로
+
+    """
+
     used_keys = set()
 
     for py_file in view_dir.rglob("*.py"):
@@ -168,11 +174,6 @@ def check_missing_and_unused():
         used_keys.update(matches)
 
     # JSON 파일의 키들 읽기
-    lang_files = {
-        "en": root_dir / "config/languages/en.json",
-        "ko": root_dir / "config/languages/ko.json"
-    }
-
     lang_keys = {}
     for lang, json_path in lang_files.items():
         try:
@@ -220,6 +221,15 @@ def check_missing_and_unused():
 
 
 def main():
+    root_dir = Path(__file__).parent.parent
+    view_dir = root_dir / "view"
+    lang_dir = root_dir / "resources/languages"
+    lang_template_file = lang_dir / "template_en.json"
+    lang_files = {
+        "en": lang_dir / "en.json",
+        "ko": lang_dir / "ko.json"
+    }
+
     """메인 함수"""
     print("=" * 60)
     print("언어 키 관리 도구")
@@ -227,20 +237,20 @@ def main():
 
     # 1. 모듈별 키 추출
     print("\n[1] 모듈별 키 추출 중...")
-    keys_by_module = extract_keys_by_module()
+    keys_by_module = extract_keys_by_module(view_dir)
     print(f"✓ {len(keys_by_module)}개 모듈에서 키 추출 완료")
 
     # 2. 템플릿 생성
     print("\n[2] 언어 템플릿 생성 중...")
     generate_template(
         keys_by_module,
-        "config/languages/template_en.json",
+        lang_template_file,
         "en"
     )
 
     # 3. 누락/미사용 키 확인
     print("\n[3] 키 검증 중...")
-    check_missing_and_unused()
+    check_missing_and_unused(view_dir,lang_files)
 
     print("\n" + "=" * 60)
     print("완료!")

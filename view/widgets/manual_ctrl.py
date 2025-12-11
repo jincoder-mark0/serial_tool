@@ -98,7 +98,7 @@ class ManualCtrlWidget(QWidget):
         send_layout.setSpacing(5)
         send_layout.addWidget(self.manual_cmd_txt, 1)
         send_layout.addLayout(btn_layout)
-        
+
         # 2. 제어 옵션 영역 (Control Options Area)
         # self.manual_options_grp 제거하고 직접 레이아웃에 추가
 
@@ -122,7 +122,7 @@ class ManualCtrlWidget(QWidget):
         option_layout = QGridLayout()
         option_layout.setContentsMargins(0, 5, 0, 0) # 상단 여백 추가
         option_layout.setSpacing(5) # 간격 조정
-        
+
         # 1행
         option_layout.addWidget(self.hex_chk, 0, 0)
         option_layout.addWidget(self.prefix_chk, 0, 1)

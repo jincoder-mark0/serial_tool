@@ -7,7 +7,7 @@ from typing import Optional
 
 # 변경된 모듈 임포트
 from model.connection_worker import ConnectionWorker
-from model.transports import SerialTransport
+from model.serial_transport import SerialTransport
 from model.packet_parser import ParserFactory, IPacketParser, Packet, ParserType
 from constants import DEFAULT_BAUDRATE
 from core.event_bus import event_bus

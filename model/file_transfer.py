@@ -15,7 +15,29 @@ class FileTransferSignals(QObject):
 class FileTransferEngine(QRunnable):
     """
     파일 전송을 담당하는 엔진 (QRunnable 기반)
+
     별도의 스레드 풀에서 실행되며, 파일을 청크 단위로 읽어 PortController를 통해 전송합니다.
+
+    ## 흐름 제어 (Flow Control) 한계
+
+    현재 구현은 **baudrate 기반 time.sleep()** 을 사용하여 전송 속도를 조절합니다.
+    이는 간단한 구현이지만 다음과 같은 한계가 있습니다:
+
+    - **수신 측 버퍼 상태 미고려**: 수신 장치의 버퍼 크기나 처리 속도를 알 수 없음
+    - **버퍼 오버플로우 위험**: 바쁜 수신 장치에서 데이터 손실 가능
+    - **비효율적 대역폭 사용**: 수신 측이 준비되어도 고정 지연 시간 적용
+
+    ## 사용 가정
+
+    - 수신 장치가 전송 속도를 맞출 수 있어야 함
+    - 안정적인 통신 환경 (노이즈 최소)
+    - 중요한 데이터 전송 시 별도 검증 메커니즘 필요
+
+    ## 향후 개선 계획
+
+    - **하드웨어 흐름 제어 (RTS/CTS)**: pyserial의 rtscts=True 옵션 지원
+    - **소프트웨어 흐름 제어 (XON/XOFF)**: pyserial의 xonxoff=True 옵션 지원
+    - **ACK 기반 프로토콜**: 수신 확인 후 다음 청크 전송
     """
 
     def __init__(self, port_controller: PortController, port_name: str, file_path: str, baudrate: int):
@@ -27,7 +49,7 @@ class FileTransferEngine(QRunnable):
         self.signals = FileTransferSignals()
         self.event_bus = event_bus
         self._is_cancelled = False
-        
+
         # 설정값
         self.chunk_size = 1024 # 1KB
         if self.baudrate > 115200:

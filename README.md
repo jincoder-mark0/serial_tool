@@ -98,8 +98,10 @@ serial_tool/
 ├── requirements.txt        # 의존성 목록
 │
 ├── core/                   # 핵심 유틸리티
+│   ├── error_handler.py    # 에러 핸들러
 │   ├── event_bus.py        # 이벤트 버스
 │   ├── interface.py        # 인터페이스 정의
+│   ├── log_recorder.py     # 로그 기록
 │   ├── logger.py           # 로깅 시스템 (Singleton)
 │   ├── port_state.py       # 포트 상태 관리
 │   ├── settings_manager.py # 설정 관리 (Singleton)
@@ -107,17 +109,25 @@ serial_tool/
 │
 ├── model/                  # 비즈니스 로직
 │   ├── connection_worker.py # 연결 워커
+│   ├── file_transfer.py     # 파일 전송
+│   ├── macro_entry.py       # 매크로 항목
+│   ├── macro_runner.py      # 매크로 실행
+│   ├── packet_parser.py     # 패킷 파싱
 │   ├── port_controller.py  # 포트 제어
-│   └── transports.py       # 전송 관리
+│   ├── serial_manager.py    # 시리얼 관리
+│   └── serial_transport.py # 전송 관리
 │
 ├── presenter/              # MVP Presenter 계층
+│   ├── event_router.py     # 이벤트 라우터
+│   ├── file_presenter.py   # 파일 프레젠터
+│   ├── macro_presenter.py  # 매크로 프레젠터
 │   ├── main_presenter.py   # 메인 프레젠터
 │   └── port_presenter.py   # 포트 프레젠터
 │
 ├── view/                   # UI 계층
 │   ├── main_window.py      # 메인 윈도우
 │   │
-│   ├── manager/              # 관리자 계층
+│   ├── managers/           # 관리자 계층
 │   │   ├── color_manager.py      # 로그 색상 규칙
 │   │   ├── lang_manager.py # 다국어 관리
 │   │   └── theme_manager.py    # 테마 관리
@@ -187,6 +197,7 @@ serial_tool/
 │       └── naming_convention.md # 명명 규칙 (언어 키, 변수명 등)
 │
 ├── tools/                  # 유틸리티 도구
+│   ├── check_lang_keys.py  # 언어 키 검사 도구
 │   └── manage_lang_keys.py # 언어 키 관리 도구
 │
 ├── tests/                  # 테스트 코드
