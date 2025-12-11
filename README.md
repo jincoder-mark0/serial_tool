@@ -340,10 +340,10 @@ Style: 스타일 변경
 
 ```bash
 # UI 파일에서 언어 키 자동 추출
-python managers/manage_lang_keys.py extract
+python tools/manage_lang_keys.py extract
 
 # 누락/미사용 키 확인
-python managers/manage_lang_keys.py check
+python tools/manage_lang_keys.py check
 ```
 
 ### 테스트 실행

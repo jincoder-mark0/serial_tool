@@ -231,7 +231,7 @@ UI 요소의 기본 텍스트 외에 부가적인 정보를 정의할 때, 키 �
 ### 4.2 도구 활용
 프로젝트에는 언어 키 관리를 위한 도구가 있습니다:
 ```bash
-python managers/manage_lang_keys.py
+python tools/manage_lang_keys.py
 ```
 
 이 도구는:
