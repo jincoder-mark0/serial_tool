@@ -94,14 +94,20 @@ class DelimiterParser(IPacketParser):
 class FixedLengthParser(IPacketParser):
     """고정 길이 파서"""
     
-    def __init__(self, length: int):
+    def __init__(self, length: int, max_buffer_size: int = 4096):
         self._length = length
         self._buffer = b""
+        self._max_buffer_size = max_buffer_size
 
     def parse(self, buffer: bytes) -> List[Packet]:
         self._buffer += buffer
+
+        # 버퍼 크기 제한
+        if len(self._buffer) > self._max_buffer_size:
+            self._buffer = self._buffer[-self._max_buffer_size:]
+
         packets = []
-        
+
         while len(self._buffer) >= self._length:
             chunk = self._buffer[:self._length]
             self._buffer = self._buffer[self._length:]

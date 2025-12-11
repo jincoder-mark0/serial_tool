@@ -1,6 +1,5 @@
 from PyQt5.QtCore import QObject, pyqtSignal, QTimer
-from typing import List, Optional
-import re
+from typing import List
 from model.macro_entry import MacroEntry
 from core.logger import logger
 
