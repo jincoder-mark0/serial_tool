@@ -86,6 +86,7 @@
     "manual_ctrl_chk_rts": "RTS",
     "manual_ctrl_chk_rts_tooltip": "Request To Send signal",
     "manual_ctrl_chk_suffix": "Suffix",
+    "manual_ctrl_chk_local_echo": "Local Echo",
     "manual_ctrl_dialog_file_filter_all": "All Files",
     "manual_ctrl_dialog_file_filter_txt": "Text Files",
     "manual_ctrl_dialog_save_log_title": "Save Log",

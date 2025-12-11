@@ -16,7 +16,7 @@ class ManualCtrlWidget(QWidget):
     """
 
     # 시그널 정의
-    manual_cmd_send_requested = pyqtSignal(str, bool, bool, bool) # text, hex_mode, cmd_prefix, cmd_suffix
+    manual_cmd_send_requested = pyqtSignal(str, bool, bool, bool, bool) # text, hex_mode, cmd_prefix, cmd_suffix, local_echo
     transfer_file_send_requested = pyqtSignal(str) # filepath
     transfer_file_selected = pyqtSignal(str) # filepath
     manual_log_save_requested = pyqtSignal(str) # filepath
@@ -50,6 +50,7 @@ class ManualCtrlWidget(QWidget):
         self.suffix_chk = None
         self.prefix_chk = None
         self.hex_chk = None
+        self.local_echo_chk = None
         self.manual_options_grp = None
 
         # History State
@@ -100,6 +101,10 @@ class ManualCtrlWidget(QWidget):
         option_layout.addWidget(self.suffix_chk, 0, 2)
         option_layout.addWidget(self.rts_chk, 0, 3)
         option_layout.addWidget(self.dtr_chk, 0, 4)
+
+        # 로컬 에코 체크박스 추가
+        self.local_echo_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_local_echo"))
+        option_layout.addWidget(self.local_echo_chk, 1, 0)
 
         option_layout.addWidget(self.clear_manual_options_btn, 2, 0, 1, 2)
         option_layout.addWidget(self.save_manual_log_btn, 2, 2, 1, 2)
@@ -190,6 +195,7 @@ class ManualCtrlWidget(QWidget):
         self.suffix_chk.setText(lang_manager.get_text("manual_ctrl_chk_suffix"))
         self.rts_chk.setText(lang_manager.get_text("manual_ctrl_chk_rts"))
         self.dtr_chk.setText(lang_manager.get_text("manual_ctrl_chk_dtr"))
+        self.local_echo_chk.setText(lang_manager.get_text("manual_ctrl_chk_local_echo"))
         self.clear_manual_options_btn.setText(lang_manager.get_text("manual_ctrl_btn_clear"))
         self.save_manual_log_btn.setText(lang_manager.get_text("manual_ctrl_btn_save_log"))
 
@@ -248,7 +254,8 @@ class ManualCtrlWidget(QWidget):
                 text,
                 self.hex_chk.isChecked(),
                 self.prefix_chk.isChecked(),
-                self.suffix_chk.isChecked()
+                self.suffix_chk.isChecked(),
+                self.local_echo_chk.isChecked()
             )
             # 입력 후 지우지 않음 (히스토리 기능이 없으므로 유지하는 편이 나음 -> 히스토리 있으니 지워도 되지만, 보통 남겨두는게 편함)
             # self.manual_cmd_txt.clear()
@@ -363,6 +370,7 @@ class ManualCtrlWidget(QWidget):
             "suffix_chk": self.suffix_chk.isChecked(),
             "rts_chk": self.rts_chk.isChecked(),
             "dtr_chk": self.dtr_chk.isChecked(),
+            "local_echo": self.local_echo_chk.isChecked(),
             "command_history": self.command_history # 히스토리 저장
         }
         return state
@@ -382,5 +390,6 @@ class ManualCtrlWidget(QWidget):
         self.suffix_chk.setChecked(state.get("suffix_chk", False))
         self.rts_chk.setChecked(state.get("rts_chk", False))
         self.dtr_chk.setChecked(state.get("dtr_chk", False))
+        self.local_echo_chk.setChecked(state.get("local_echo", False))
         self.manual_cmd_txt.setPlainText(state.get("input_text", ""))  # QTextEdit는 setPlainText() 사용
         self.command_history = state.get("command_history", [])

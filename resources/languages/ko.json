@@ -86,6 +86,7 @@
     "manual_ctrl_chk_rts": "RTS",
     "manual_ctrl_chk_rts_tooltip": "송신 요청 신호",
     "manual_ctrl_chk_suffix": "접미사",
+    "manual_ctrl_chk_local_echo": "로컬 에코",
     "manual_ctrl_dialog_file_filter_all": "모든 파일",
     "manual_ctrl_dialog_file_filter_txt": "텍스트 파일",
     "manual_ctrl_dialog_save_log_title": "로그 저장",

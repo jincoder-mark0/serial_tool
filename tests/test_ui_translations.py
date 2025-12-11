@@ -33,11 +33,13 @@ def test_manual_ctrl_translation(app, qtbot):
     lang_manager.set_language('en')
     assert manual_ctrl_widget.send_manual_cmd_btn.text() == "Send"
     assert manual_ctrl_widget.hex_chk.text() == "Hex"
+    assert manual_ctrl_widget.local_echo_chk.text() == "Local Echo"
 
     # Switch to Korean
     lang_manager.set_language('ko')
     assert manual_ctrl_widget.send_manual_cmd_btn.text() == "전송"
     assert manual_ctrl_widget.hex_chk.text() == "Hex"
+    assert manual_ctrl_widget.local_echo_chk.text() == "로컬 에코"
 
 def test_macro_list_translation(app, qtbot):
     macro_list_widget = MacroListWidget()

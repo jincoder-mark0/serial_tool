@@ -66,6 +66,7 @@
     "suffix_chk": true,
     "rts_chk": false,
     "dtr_chk": false,
+    "local_echo": false,
     "command_history": []
   },
   "macro_list": {

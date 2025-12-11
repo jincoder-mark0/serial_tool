@@ -162,8 +162,8 @@ class ViewTestWindow(QMainWindow):
 
         # 시그널 연결
         self.manual_ctrl.manual_cmd_send_requested.connect(
-            lambda text, hex_mode, prefix, suffix: self.manual_output.append(
-                f"Send: {text} (hex={hex_mode}, prefix={prefix}, suffix={suffix})"
+            lambda text, hex_mode, prefix, suffix, local_echo: self.manual_output.append(
+                f"Send: {text} (hex={hex_mode}, prefix={prefix}, suffix={suffix}, echo={local_echo})"
             )
         )
         self.manual_ctrl.transfer_file_selected.connect(

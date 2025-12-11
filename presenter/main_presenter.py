@@ -95,7 +95,7 @@ class MainPresenter(QObject):
             if hasattr(widget, 'received_area_widget'):
                 widget.received_area_widget.append_data(data)
 
-    def on_manual_cmd_send_requested(self, text: str, hex_mode: bool, cmd_prefix: bool, cmd_suffix: bool) -> None:
+    def on_manual_cmd_send_requested(self, text: str, hex_mode: bool, cmd_prefix: bool, cmd_suffix: bool, local_echo: bool) -> None:
         """
         수동 명령 전송 요청을 처리합니다.
         prefix/suffix 설정을 적용하고 최종 데이터를 전송합니다.
@@ -105,6 +105,7 @@ class MainPresenter(QObject):
             hex_mode: HEX 모드 사용 여부
             cmd_prefix: 접두사 사용 여부
             cmd_suffix: 접미사 사용 여부
+            local_echo: 로컬 에코 사용 여부
         """
         if not self.port_controller.is_open:
             logger.warning("Port not open")
@@ -138,7 +139,21 @@ class MainPresenter(QObject):
         else:
             data = final_text.encode('utf-8')
 
+        # Send data
         self.port_controller.send_data(data)
+
+        # Local Echo
+        if local_echo:
+            # 현재 활성 포트 패널을 가져와서 ReceivedArea로 데이터 전달
+            index = self.view.left_section.port_tabs.currentIndex()
+            if index >= 0:
+                widget = self.view.left_section.port_tabs.widget(index)
+                if hasattr(widget, 'received_area_widget'):
+                    # 로컬 에코는 수신 데이터처럼 처리하되, 구분할 필요가 있다면 별도 메서드 사용 가능
+                    # 여기서는 단순히 append_data 호출 (수신된 것처럼 표시)
+                    # 실제 수신 데이터와 구분하려면 색상이나 태그를 달리 할 수 있음
+                    # 하지만 RxLogWidget은 bytes를 받으므로 data를 그대로 전달
+                    widget.received_area_widget.append_data(data)
 
     def on_settings_change_requested(self, new_settings: dict) -> None:
         """
