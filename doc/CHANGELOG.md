@@ -40,6 +40,28 @@
   - `common.qss`, `dark_theme.qss`, `light_theme.qss`에서 ID 선택자(`#SmartListView`)를 사용하여 테두리 스타일 적용
   - `QGroupBox` 스타일과의 간섭 제거로 올바른 테두리 표시
 
+#### 추가 사항 (Added) - 오후 세션
+- **Local Echo (로컬 에코)**
+  - `ManualCtrlWidget`에 로컬 에코 체크박스 추가
+  - 송신 데이터를 수신창(`RxLogWidget`)에 표시하는 기능 구현
+- **시스템 로그 및 타임스탬프 색상 규칙**
+  - `ColorManager`에 `SYS_INFO`, `SYS_ERROR` 등 시스템 로그 규칙 추가
+  - `TIMESTAMP` 규칙 추가 및 `get_rule_color` 메서드 구현
+  - `SystemLogWidget` 및 `RxLogWidget`이 `ColorManager`를 통해 색상을 적용하도록 개선
+
+#### 변경 사항 (Changed) - 오후 세션
+- **경로 관리 리팩토링 (Path Management)**
+  - `ResourcePath` 클래스 도입으로 리소스 경로 관리 일원화
+  - `Paths` 클래스 대체 및 테마 아이콘 경로 처리 로직 개선
+  - 주요 모듈(`main.py`, `settings_manager.py` 등) 업데이트
+- **QSmartListView 리팩토링**
+  - 타임스탬프 색상 처리 로직을 제거하고 순수 뷰어 역할로 변경
+  - 색상 처리는 `RxLogWidget` 및 `SystemLogWidget`에서 수행
+
+#### 수정 사항 (Fixed) - 오후 세션
+- **RxLogWidget 버그 수정**
+  - 존재하지 않는 `add_logs_batch` 메서드 호출을 `append_batch`로 수정하여 대량 로그 처리 오류 해결
+
 ---
 
 ### View 계층 완성, 중앙 경로 관리, 아키텍처 및 리팩토링 (2025-12-10)

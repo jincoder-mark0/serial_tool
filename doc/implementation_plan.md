@@ -129,6 +129,7 @@ serial_tool2/
 │   └── session_summary_*.md
 ├── main.py                  # 진입점 [완료]
 ├── version.py              # 버전 정보 [완료]
+```
 
 #### [진행 필요] `core/utils.py`
 **RingBuffer 구현**
@@ -167,6 +168,13 @@ serial_tool2/
 - **Interface**: `PluginBase` (name, version, register, unregister)
 - **Loader**: `importlib` 기반 동적 로딩 (`plugins/` 디렉토리 스캔)
 - **EventBus Integration**: `register(bus, context)` 필수 구현
+
+#### [진행 필요] `core/error_handler.py`
+**전역 에러 핸들러 (Global Error Handler)**
+- **기능**: 처리되지 않은 예외(Uncaught Exception) 포착 및 로깅
+- **구현**: `sys.excepthook` 오버라이딩
+- **UI 연동**: 치명적 오류 시 `QMessageBox`로 사용자 알림 및 로그 파일 위치 안내
+- **안전 모드**: 반복적인 크래시 발생 시 설정 초기화 또는 안전 모드 진입 제안
 
 ---
 
@@ -420,6 +428,15 @@ class MacroEntry:
     - RX/TX 속도, 버퍼 사용량, 현재 시간, 전역 에러 카운트 표시를 위한 View 통합 로직 구현
 - **Task**: `MainPresenter`와 `PortPresenter`에서 발행하는 EventBus 데이터를 받아와 상태바 위젯을 갱신하는 슬롯 메서드 구현
 
+#### [ ] 전역 단축키 시스템 (Global Shortcuts)
+- **목표**: 키보드 중심의 빠른 제어 지원
+- **단축키 목록**:
+    - `F2`: 포트 연결 (Open)
+    - `F3`: 포트 연결 해제 (Close)
+    - `F5`: 수신 로그 지우기 (Clear)
+    - `Ctrl+S`: 로그 저장
+    - `Ctrl+,`: 설정 다이얼로그
+- **구현**: `MainWindow`의 `keyPressEvent` 또는 `QShortcut` 활용
 
 ---
 
@@ -583,7 +600,9 @@ serial_tool_v1.0.0/
 │   └── example_plugin/
 ├── README.md
 ├── CHANGELOG.md
-└── LICENSE
+├── LICENSE
+└── docs/
+    └── UserManual.pdf (or .md)
 ```
 
 ### CI/CD 파이프라인 (GitHub Actions)
@@ -721,19 +740,43 @@ jobs:
     - [x] Code Style Guide Update
     - [x] Preferences Dialog Implementation & Fix
     - [x] Documentation Updates (CHANGELOG, Session Summary)
+    - [x] Path Management Refactoring (`ResourcePath` class)
+    - [x] Color Manager Improvements (System Log, Timestamp Rules)
+    - [x] Local Echo Implementation
 
 ### 진행 중인 작업
-- 🔄 **Core 유틸리티**: RingBuffer, ThreadSafeQueue, EventBus 구현 필요
-- 🔄 **Model 계층**: SerialWorker, PortController 구현 필요
+### Phase 3: Core 유틸리티 (✅ 완료)
+- [x] `SettingsManager` 구현 (싱글톤, AppConfig 통합)
+- [x] `AppConfig` 구현 (중앙 경로 관리)
+- [x] `PortState` Enum 정의
+- [x] `ITransport` 인터페이스 정의
+- [x] `RingBuffer` 구현 (512KB, memoryview 최적화)
+- [x] `ThreadSafeQueue` 구현 (Lock-free 전략)
+- [x] `EventBus` 구현 (Pub/Sub 시스템)
+- [x] `LogManager` 구현 (RotatingFileHandler)
+
+### Phase 4: Model 계층 (진행 중)
+- [x] `SerialTransport` 구현
+- [x] `ConnectionWorker` 구현 (Non-blocking I/O)
+- [x] `PortController` 구현 (상태 머신)
+- [ ] `SerialManager` (PortRegistry) 구현
+- [ ] `MacroRunner` 구현
+- [ ] `PacketParser` 시스템 구현
 
 ### 다음 단계 (우선순위)
-1. **View 보완**
-   - Packet Inspector
-   - UI 및 Port 버튼 'Error' QSS 구현
-2. **Core 유틸리티 완성** (Phase 3)
-   - RingBuffer 구현 및 테스트
-   - ThreadSafeQueue 구현 및 테스트
-   - EventBus 구현 및 테스트
+1. **View 보완** (Phase 2.5)
+   - Packet Inspector 설정 UI 구현
+   - Port Connect 버튼 Error QSS
+   - Main Status Bar 동적 업데이트
+   - 전역 단축키 시스템
+   - Newline 처리 옵션 (RX)
+2. **Model 계층 완성** (Phase 4)
+   - `SerialManager` (PortRegistry) 구현
+   - `MacroRunner` 구현
+   - `PacketParser` 시스템 구현
+3. **Presenter 연동** (Phase 5)
+   - `MacroPresenter` 구현
+   - `FilePresenter` 구현
 3. **Model 계층 구현** (Phase 4)
    - SerialWorker 구현
    - PortController 구현

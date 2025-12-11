@@ -89,46 +89,60 @@ class Example:
 
 ### 2.2 Context (위젯/섹션)
 
-| Context | 설명 | 예시 |
-|---------|------|------|
-| `global` | 앱 전역 공유 | `global_btn_ok`, `global_btn_cancel` |
-| `main` | 메인 윈도우 | `main_menu_file`, `main_title` |
-| `port` | 포트 설정 위젯 | `port_lbl_baudrate`, `port_btn_connect` |
-| `manual_ctrl` | 수동 제어 위젯 | `manual_ctrl_btn_send`, `manual_ctrl_chk_hex` |
-| `cmd` | 명령 리스트/제어 | `cmd_btn_add`, `cmd_col_command` |
-| `macro_list` | 명령 리스트 패널 | `macro_list_col_delay` |
-| `recv` | 수신 영역 위젯 | `recv_btn_clear`, `recv_chk_timestamp` |
-| `pref` | Preferences 다이얼로그 | `pref_lbl_font_size`, `pref_tab_general` |
-| `about` | About 다이얼로그 | `about_title`, `about_lbl_version` |
-| `font` | 폰트 설정 다이얼로그 | `font_grp_fixed`, `font_btn_reset` |
-| `inspector` | 패킷 인스펙터 | `inspector_col_field` |
-| `file_prog` | 파일 전송 진행 | `file_prog_status_completed` |
+| Context | 설명 | 관련 클래스 | 예시 |
+|---------|------|------------|------|
+| **`global`** | 앱 전역 공유 | - | `global_btn_ok`, `global_msg_saved` |
+| **`main`** | 메인 윈도우 | `MainWindow` | `main_title`, `main_menu_file` |
+| **`toolbar`** | 메인 툴바 | `MainToolBar` | `toolbar_act_open`, `toolbar_act_settings` |
+| **`status`** | 메인 상태바 | `MainStatusBar` | `status_msg_ready`, `status_lbl_port` |
+| **`port`** | 포트 설정 패널 | `PortSettingsWidget` | `port_btn_connect`, `port_combo_baud` |
+| **`rx`** | 수신 로그 영역 | `ReceivedAreaWidget` | `rx_btn_clear`, `rx_chk_timestamp` |
+| **`manual_ctrl`**| 수동 제어/전송 | `ManualCtrlWidget` | `manual_ctrl_btn_send`, `manual_ctrl_chk_hex` |
+| **`file_prog`** | 파일 전송 진행 | `FileProgressWidget` | `file_prog_bar_transfer`, `file_prog_btn_cancel` |
+| **`macro_list`**| 매크로 리스트 | `MacroListWidget` | `macro_list_col_command`, `macro_list_btn_add` |
+| **`macro_ctrl`**| 매크로 제어 | `MacroCtrlWidget` | `macro_ctrl_spin_repeat`, `macro_ctrl_btn_start` |
+| **`inspector`** | 패킷 인스펙터 | `PacketInspectorWidget`| `inspector_tree_packet`, `inspector_col_value` |
+| **`system`** | 시스템 로그 | `SystemLogWidget` | `system_list_log`, `system_lbl_title` |
+| **`pref`** | 설정 다이얼로그 | `PreferencesDialog` | `pref_tab_general`, `pref_chk_auto_update` |
+| **`font`** | 폰트 설정 | `FontSettingsDialog` | `font_spin_size`, `font_combo_family` |
+| **`about`** | 정보 다이얼로그 | `AboutDialog` | `about_lbl_version`, `about_btn_close` |
 
 ### 2.3 Type (UI 요소 타입)
 
-| Type | 설명 | 예시 |
-|------|------|------|
-| `title` | 윈도우/다이얼로그 제목 | `main_title`, `about_title` |
-| `menu` | 메뉴 항목 | `main_menu_file`, `main_menu_edit` |
-| `btn` | 버튼 | `port_btn_connect`, `recv_btn_clear` |
-| `lbl` | 라벨 | `port_lbl_port`, `pref_lbl_theme` |
-| `chk` | 체크박스 | `manual_ctrl_chk_rts`, `recv_chk_hex` |
-| `combo` | 콤보박스 | `port_combo_baud` |
-| `input` | 입력 필드 | `manual_ctrl_input_cmd` |
-| `grp` | 그룹박스 | `cmd_grp_auto`, `font_grp_fixed` |
-| `tab` | 탭 | `pref_tab_general`, `right_tab_inspector` |
-| `col` | 테이블 컬럼 | `macro_list_col_command`, `inspector_col_field` |
-| `dialog` | 다이얼로그 | `manual_ctrl_dialog_select_file` |
-| `txt` | 텍스트 영역 | `recv_txt_log` |
-| `status` | 상태 메시지 | `file_prog_status_sending` |
-| `msg` | 일반 메시지 | `global_msg_saved` |
+| Type | 설명 | PyQt 위젯 예시 | 예시 |
+|------|------|---------------|------|
+| `title` | 윈도우/다이얼로그 제목 | - | `main_title`, `about_title` |
+| `menu` | 메뉴 그룹 | `QMenu` | `main_menu_file` |
+| `act` | 액션/명령 | `QAction` | `toolbar_act_open`, `main_act_copy` |
+| `btn` | 버튼 | `QPushButton` | `port_btn_connect`, `rx_btn_clear` |
+| `lbl` | 라벨 | `QLabel` | `port_lbl_port`, `pref_lbl_theme` |
+| `chk` | 체크박스 | `QCheckBox` | `manual_ctrl_chk_rts`, `rx_chk_hex` |
+| `combo` | 콤보박스 | `QComboBox` | `port_combo_baud` |
+| `input` | 문자열 입력 필드 | `QLineEdit` | `manual_ctrl_input_cmd` |
+| `spin` | 숫자 입력 필드 | `QSpinBox` | `macro_ctrl_spin_repeat`, `font_spin_size` |
+| `txt` | 멀티라인 텍스트 영역 | `QTextEdit` | `rx_txt_log` |
+| `grp` | 그룹박스 | `QGroupBox` | `cmd_grp_auto`, `font_grp_fixed` |
+| `tab` | 탭 | `QTabWidget` | `pref_tab_general`, `right_tab_inspector` |
+| `table` | 테이블 뷰 | `QTableView` | `macro_list_table` |
+| `tree` | 트리 뷰 | `QTreeWidget` | `inspector_tree_packet` |
+| `list` | 리스트 뷰 | `QListView` | `system_list_log` |
+| `col` | 테이블/트리 컬럼 | `Header` | `macro_list_col_command`, `inspector_col_field` |
+| `dialog` | 다이얼로그 | `QDialog` | `manual_ctrl_dialog_select_file` |
+| `status` | 상태 메시지 | - | `file_prog_status_sending` |
+| `msg` | 일반 메시지/알림 | `QMessageBox` | `global_msg_saved` |
 
 ### 2.4 Suffix (선택적 속성)
 
-| Suffix | 설명 | 예시 |
-|--------|------|------|
-| `_tooltip` | 툴팁 텍스트 | `port_btn_connect_tooltip` |
-| `_placeholder` | 플레이스홀더 텍스트 | `manual_ctrl_input_cmd_placeholder` |
+UI 요소의 기본 텍스트 외에 부가적인 정보를 정의할 때, 키 이름의 **맨 뒤**에 붙여 사용합니다.
+
+| Suffix | 설명 | 대상 위젯 | 예시 |
+|--------|------|-----------|------|
+| **`_tooltip`** | 마우스 오버 시 표시되는 도움말 | 모든 위젯 | `port_btn_connect_tooltip`<br>`rx_chk_timestamp_tooltip`<br>`macro_list_btn_add_row_tooltip` |
+| **`_placeholder`** | 입력 필드에 표시되는 안내 문구 | `input`, `txt`, `spin` | `manual_ctrl_input_cmd_placeholder`<br>`rx_input_search_placeholder`<br>`file_prog_lbl_eta_placeholder` |
+
+> **Note**: Suffix는 반드시 `[context]_[type]_[name]` 뒤에 위치해야 합니다.
+> * ❌ `port_tooltip_btn_connect` (순서 틀림)
+> * ✅ `port_btn_connect_tooltip` (올바름)
 
 ### 2.5 올바른 예시
 
@@ -230,22 +244,27 @@ python managers/manage_lang_keys.py
 
 ## 5. UI 위젯 변수명 (Widget Variable Names)
 
-PyQt5 위젯 변수명은 `[용도]_[약어]` 형식을 사용합니다.
+PyQt5 위젯 변수명은 **`[기능]_[위젯약어]`** 형식을 사용합니다. (예: `connect_btn`, `rx_log_list`)
 
-### 5.1 표준 약어 규칙
+### 5.1 표준 약어 규칙 (Standard Suffixes)
 
-| UI 요소 | 약어 | 예시 |
-|---------|------|------|
-| Button | `_btn` | `send_btn`, `clear_btn`, `connect_btn` |
-| Label | `_lbl` | `status_lbl`, `port_lbl`, `title_lbl` |
-| CheckBox | `_chk` | `hex_chk`, `prefix_chk`, `suffix_chk` |
-| ComboBox | `_combo` | `port_combo`, `baud_combo` |
-| GroupBox | `_grp` | `option_grp`, `file_grp` |
-| SpinBox | `_spin` | `font_size_spin`, `repeat_spin` |
-| LineEdit | `_input` | `cmd_input`, `search_input` |
-| TextEdit | `_txt` | `log_txt`, `preview_txt` |
-| TableView | `_table` | `cmd_table` |
-| ProgressBar | `_bar` | `progress_bar` |
+| UI 요소 | 약어 | 예시 | 비고 |
+|---------|------|------|------|
+| **Button** | `_btn` | `send_btn`, `clear_btn` | QPushButton |
+| **Label** | `_lbl` | `status_lbl`, `port_lbl` | QLabel |
+| **CheckBox** | `_chk` | `hex_chk`, `timestamp_chk` | QCheckBox |
+| **ComboBox** | `_combo` | `port_combo`, `baud_combo` | QComboBox |
+| **SpinBox** | `_spin` | `repeat_count_spin`, `font_size_spin` | QSpinBox |
+| **LineEdit** | `_input` | `search_input`, `filter_input` | QLineEdit (단일 행 입력) |
+| **TextEdit** | `_txt` | `manual_cmd_txt`, `preview_txt` | QTextEdit, QPlainTextEdit, QSmartTextEdit |
+| **ListView** | `_list` | `rx_log_list`, `system_log_list` | QListView, QSmartListView |
+| **TableView** | `_table` | `macro_table` | QTableView |
+| **TreeWidget** | `_tree` | `packet_tree` | QTreeWidget |
+| **GroupBox** | `_grp` | `control_grp`, `file_grp` | QGroupBox |
+| **Splitter** | `_splitter`| `main_splitter` | QSplitter |
+| **Stacked** | `_stack` | `settings_stack` | QStackedWidget |
+| **TabWidget** | `_tabs` | `port_tabs`, `main_tabs` | QTabWidget (복수형 권장) |
+| **Action** | `_act` | `open_act`, `exit_act` | QAction (메뉴/툴바 항목) |
 
 ### 5.2 복합 위젯 (전체 이름 사용)
 

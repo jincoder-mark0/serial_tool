@@ -72,35 +72,38 @@
     - [x] View 계층 MVP 리팩토링 (SettingsManager 의존성 제거)
 
 ## Phase 2.5: UI 기능 보완 (진행 예정)
-- [ ] **송신(TX) 기능 보완**
-    - [ ] Local Echo (로컬 에코) 옵션 구현
-        - [ ] `ManualCtrlWidget`에 체크박스 추가
-        - [ ] 전송된 데이터를 `ReceivedArea`에 표시하는 로직 구현
+- [x] **송신(TX) 기능 보완**
+    - [x] Local Echo (로컬 에코) 옵션 구현
+        - [x] `ManualCtrlWidget`에 체크박스 추가
+        - [x] 전송된 데이터를 `ReceivedArea`에 표시하는 로직 구현
 - [ ] **수신(RX) 기능 보완**
     - [ ] Newline 처리 옵션
         - [ ] 수신 데이터의 줄바꿈 처리 방식 설정 (Raw, Auto Wrap 등)
+- [ ] **Packet Inspector 설정 UI 구현**
+    - [ ] `PreferencesDialog`에 Parser 설정 탭 추가
+    - [ ] Delimiter, Fixed Length, AT Color Rules 설정 구현
+- [ ] **UI 스타일링 및 피드백 강화**
+    - [ ] Port Connect 버튼 Error 상태 QSS 추가 (연결 실패 시 붉은색 표시)
+    - [ ] `MainStatusBar` 동적 업데이트 연동 (RX/TX 카운트, 에러, 버퍼 상태)
+- [ ] **사용성 개선**
+    - [ ] 전역 단축키 시스템 구현 (F2: Connect, F3: Disconnect, F5: Clear 등)
 
-## Phase 3: Core 유틸리티 (진행 중)
+## Phase 3: Core 유틸리티 (완료)
 - [x] `SettingsManager` 구현 (싱글톤, AppConfig 통합)
 - [x] `AppConfig` 구현 (중앙 경로 관리)
 - [x] `PortState` Enum 정의
 - [x] `ITransport` 인터페이스 정의 (`core/interfaces.py`)
-- [ ] `RingBuffer` 구현
-    - [ ] `core/utils.py` 생성
-    - [ ] 원형 버퍼 로직 구현
-    - [ ] 스레드 안전성 구현
-    - [ ] 오버플로우 처리
-- [ ] `ThreadSafeQueue` 구현
-    - [ ] `core/utils.py`에 추가
-    - [ ] 블로킹/논블로킹 큐 구현
-- [ ] `EventBus` 구현
-    - [ ] `core/event_bus.py` 생성
-    - [ ] Pub/Sub 패턴 구현
-    - [ ] 표준 이벤트 타입 정의 (`core/event_types.py`)
-- [ ] `LogManager` 구현
-    - [ ] `core/logger.py` 생성
-    - [ ] `RotatingFileHandler` 구현 (10MB 제한)
-    - [ ] 성능 로거 구현 (CSV 내보내기)
+- [x] `RingBuffer` 구현 (`core/utils.py`)
+    - [x] 원형 버퍼 로직 구현
+    - [x] 스레드 안전성 구현
+    - [x] 오버플로우 처리
+- [x] `ThreadSafeQueue` 구현 (`core/utils.py`)
+    - [x] 블로킹/논블로킹 큐 구현
+- [x] `EventBus` 구현 (`core/event_bus.py`)
+    - [x] Pub/Sub 패턴 구현
+    - [x] 표준 이벤트 타입 정의
+- [x] `LogManager` 구현 (`core/logger.py`)
+    - [x] `RotatingFileHandler` 구현
 - [x] `SettingsManager` 구현 (싱글톤)
     - [x] AppConfig 통합
 - [x] `PortState` Enum 정의 및 PortSettingsWidget에 적용
@@ -111,17 +114,16 @@
 - [x] `ConnectionWorker` 구현 (Transport 주입, QThread 루프)
     - [x] `ITransport` 주입 구조 적용
     - [x] QThread 기반 Loop 구현
-- [ ] `PortController` 구현
+- [x] `PortController` 구현 (`model/port_controller.py`)
     - [x] Transport 생성 및 Worker 주입 로직 구현
-    - [ ] `model/port_controller.py` 생성
-    - [ ] 상태 머신 구현
+    - [x] 상태 머신 구현
 - [ ] `SerialManager` (PortRegistry) 구현
     - [ ] `model/serial_manager.py` 생성
     - [ ] 포트 레지스트리 및 수명 주기 관리 구현
-- [ ] `PortController` 통합
-    - [ ] Worker 생성 및 Transport 주입 로직
+- [x] `PortController` 통합
+    - [x] Worker 생성 및 Transport 주입 로직
     - [ ] PacketParser 통합 (Raw Data -> Packet 변환)
-    - [ ] EventBus 발행 (`port.rx_data`, `port.status` 등)
+    - [x] EventBus 발행 (`port.rx_data`, `port.status` 등)
 - [ ] `MacroRunner` 구현 (자동화 엔진)**
     - [ ] 상태 머신 (Idle/Running/Paused) 구현
     - [ ] Step 실행 로직 (Send -> Delay/Expect)
@@ -135,7 +137,6 @@
     - [ ] `DelimiterParser`, `FixedLengthParser` 구현
 - [ ] `EventRouter` 구현 (View-Model 분리)
     - [ ] EventBus 구독 및 View 업데이트 라우팅
-- [ ] CI/CD 설정
 
 
 ## Phase 6: Presenter 계층 (아키텍처 개선)
