@@ -71,66 +71,64 @@ class PortPresenter(QObject):
     def handle_connect_click(self) -> None:
         """
         연결 버튼 클릭을 처리합니다.
-        포트가 열려있으면 닫고, 닫혀있으면 엽니다.
+        현재 탭의 설정된 포트 이름으로 연결/해제를 토글합니다.
         """
         if not self.current_port_panel:
             return
 
-        if self.port_controller.is_open:
-            self.port_controller.close_port()
-        else:
-            # PortSettingsWidget에서 현재 설정 가져오기
-            config = self.current_port_panel.port_settings_widget.get_current_config()
-            port = config.get('port')
+        # 현재 패널의 설정 가져오기
+        config = self.current_port_panel.port_settings_widget.get_current_config()
+        port_name = config.get('port')
+        
+        if not port_name:
+            logger.warning("No port selected")
+            QMessageBox.warning(self.left_panel, "Warning", "No port selected.")
+            return
 
-            if port:
-                self.port_controller.open_port(config)
-            else:
-                logger.warning("No port selected")
-                QMessageBox.warning(self.left_panel, "Warning", "No port selected.")
+        # 해당 포트가 열려있는지 확인
+        if self.port_controller.is_port_open(port_name):
+            self.port_controller.close_port(port_name)
+        else:
+            self.port_controller.open_port(config)
 
     def on_port_opened(self, port_name: str) -> None:
         """
         포트 열림 이벤트를 처리합니다.
-        UI를 연결됨 상태로 업데이트하고 탭 제목을 변경합니다.
-
-        Args:
-            port_name (str): 열린 포트의 이름.
+        해당 포트를 사용하는 탭의 UI를 업데이트합니다.
         """
-        if self.current_port_panel:
-            self.current_port_panel.port_settings_widget.set_connected(True)
-            # 탭 제목 업데이트
-            index = self.left_panel.port_tabs.currentIndex()
-            self.left_panel.update_tab_title(index, port_name)
+        # 모든 탭을 순회하며 해당 포트를 사용하는 패널 찾기
+        for i in range(self.left_panel.port_tabs.count()):
+            widget = self.left_panel.port_tabs.widget(i)
+            if hasattr(widget, 'get_port_name') and widget.get_port_name() == port_name:
+                if hasattr(widget, 'port_settings_widget'):
+                    widget.port_settings_widget.set_connected(True)
+                # 탭 제목 업데이트
+                self.left_panel.update_tab_title(i, port_name)
+                break
 
     def on_port_closed(self, port_name: str) -> None:
         """
         포트 닫힘 이벤트를 처리합니다.
-        UI를 연결 해제됨 상태로 업데이트하고 탭 제목을 기본값으로 변경합니다.
-
-        Args:
-            port_name (str): 닫힌 포트의 이름.
+        해당 포트를 사용하는 탭의 UI를 업데이트합니다.
         """
-        if self.current_port_panel:
-            self.current_port_panel.port_settings_widget.set_connected(False)
-            # 탭 제목 업데이트
-            index = self.left_panel.port_tabs.currentIndex()
-            self.left_panel.update_tab_title(index, "-")
+        for i in range(self.left_panel.port_tabs.count()):
+            widget = self.left_panel.port_tabs.widget(i)
+            if hasattr(widget, 'get_port_name') and widget.get_port_name() == port_name:
+                if hasattr(widget, 'port_settings_widget'):
+                    widget.port_settings_widget.set_connected(False)
+                # 탭 제목 업데이트
+                self.left_panel.update_tab_title(i, "-")
+                break
 
-    def on_error(self, message: str) -> None:
+    def on_error(self, port_name: str, message: str) -> None:
         """
         에러 이벤트를 처리합니다.
-        현재는 콘솔에 출력하며, 향후 상태바에 표시할 예정입니다.
-
-        Args:
-            message (str): 에러 메시지.
         """
-        logger.error(f"Port Error: {message}")
-        QMessageBox.critical(self.left_panel, "Error", f"Port Error: {message}")
+        logger.error(f"Port Error ({port_name}): {message}")
+        QMessageBox.critical(self.left_panel, "Error", f"Port Error ({port_name}): {message}")
 
-        # 열기/닫기 중 에러 발생 시 UI 동기화 보장
-        if not self.port_controller.is_open and self.current_port_panel:
-            self.current_port_panel.port_settings_widget.set_connected(False)
+        # 에러 발생 시 해당 포트 UI 동기화 (닫힘 상태로 전환 등)
+        # 필요 시 구현: 해당 포트 탭 찾아서 set_connected(False) 호출 등
 
     def connect_current_port(self) -> None:
         """현재 포트를 연결합니다 (단축키용)."""
@@ -144,8 +142,11 @@ class PortPresenter(QObject):
 
     def disconnect_current_port(self) -> None:
         """현재 포트를 연결 해제합니다 (단축키용)."""
-        if self.port_controller.is_open:
-            self.port_controller.close_port()
+        self.update_current_port_panel()
+        if self.current_port_panel:
+            port_name = self.current_port_panel.get_port_name()
+            if port_name and self.port_controller.is_port_open(port_name):
+                self.port_controller.close_port(port_name)
 
     def clear_log_current_port(self) -> None:
         """현재 포트의 로그를 지웁니다 (단축키용)."""

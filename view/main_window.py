@@ -14,7 +14,8 @@ from view.sections import (
 from view.dialogs import (
     FontSettingsDialog,
     AboutDialog,
-    PreferencesDialog
+    PreferencesDialog,
+    FileTransferDialog
 )
 from view.managers.theme_manager import ThemeManager
 from view.managers.lang_manager import lang_manager, LangManager
@@ -35,6 +36,9 @@ class MainWindow(QMainWindow):
     shortcut_connect_requested = pyqtSignal()
     shortcut_disconnect_requested = pyqtSignal()
     shortcut_clear_requested = pyqtSignal()
+
+    # 파일 전송 시그널 (다이얼로그 인스턴스 전달)
+    file_transfer_dialog_opened = pyqtSignal(object)
 
     def __init__(self, resource_path=None) -> None:
         """
@@ -115,7 +119,6 @@ class MainWindow(QMainWindow):
         main_layout.addWidget(self.splitter)
 
         # 전역 상태바 설정 (위젯 사용)
-        self.global_status_bar = MainStatusBar()
         self.global_status_bar = MainStatusBar()
         self.setStatusBar(self.global_status_bar)
 
@@ -247,7 +250,9 @@ class MainWindow(QMainWindow):
         self.menu_bar.port_open_requested.connect(self.left_section.open_current_port)
         self.menu_bar.tab_close_requested.connect(self.left_section.close_current_tab)
         self.menu_bar.log_save_requested.connect(self.save_log)
+        self.menu_bar.log_save_requested.connect(self.save_log)
         self.menu_bar.toggle_right_panel_requested.connect(self.toggle_right_panel)
+        self.menu_bar.file_transfer_requested.connect(self.open_file_transfer_dialog)
 
     def _connect_toolbar_signals(self) -> None:
         """툴바 시그널을 슬롯에 연결합니다."""
@@ -315,6 +320,17 @@ class MainWindow(QMainWindow):
     def open_about_dialog(self) -> None:
         """정보 대화상자를 엽니다."""
         dialog = AboutDialog(self)
+        dialog.exec_()
+
+    def open_file_transfer_dialog(self) -> None:
+        """파일 전송 대화상자를 엽니다."""
+        # 모달리스(Modeless) 다이얼로그로 열어서 메인 윈도우 조작 가능하게 함 (선택 사항)
+        # 여기서는 Modal로 열되, Presenter가 제어할 수 있도록 함
+        dialog = FileTransferDialog(self)
+        
+        # Presenter에 다이얼로그 인스턴스 전달하여 로직 연결
+        self.file_transfer_dialog_opened.emit(dialog)
+        
         dialog.exec_()
 
     def on_settings_change_requested(self, settings: dict) -> None:

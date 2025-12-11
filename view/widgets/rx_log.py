@@ -2,11 +2,6 @@
 RxLogWidget 모듈
 
 시리얼 포트 등 외부로부터 수신된 데이터를 표시하고 관리하는 메인 위젯을 정의합니다.
-```python
-"""
-RxLogWidget 모듈
-
-시리얼 포트 등 외부로부터 수신된 데이터를 표시하고 관리하는 메인 위젯을 정의합니다.
 QSmartListView를 기반으로 하여 대량의 데이터 처리 성능을 최적화하였으며,
 검색, HEX 모드, 타임스탬프, 일시 정지 등의 편의 기능을 제공합니다.
 """
@@ -15,7 +10,7 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QCheckBox, QLabel, QLineEdit, QFileDialog, QComboBox
 )
-from PyQt5.QtCore import QTimer, pyqtSlot, Qt
+from PyQt5.QtCore import QTimer, pyqtSignal, pyqtSlot, Qt
 from typing import Optional
 import datetime
 from view.managers.color_manager import color_manager   # 전역 매니저 사용
@@ -35,6 +30,9 @@ class RxLogWidget(QWidget):
     수신된 시리얼 데이터를 표시하는 위젯 클래스입니다.
     텍스트/HEX 모드 전환, 일시 정지, 타임스탬프 표시, 로그 저장 및 지우기 기능을 제공합니다.
     """
+    # 녹화 시그널 (포트명은 Presenter에서 관리)
+    recording_started = pyqtSignal(str)  # filepath
+    recording_stopped = pyqtSignal()
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
         RxLogWidget를 초기화합니다.
@@ -66,8 +64,10 @@ class RxLogWidget(QWidget):
         self.is_paused: bool = False
         self.timestamp_enabled: bool = False
         self.filter_enabled: bool = False # Filter State
-        self.ui_update_buffer: list[str] = []
+        self.ui_update_buffer: list = []  # (text, formatter) 튜플 리스트
+
         self.max_lines: int = DEFAULT_LOG_MAX_LINES
+        self.tab_name: str = ""  # 탭 이름 저장
 
         # 색상 규칙 관리자
         self.color_manager = color_manager
@@ -76,6 +76,11 @@ class RxLogWidget(QWidget):
         # 2. UI 구성 및 시그널 연결
         # ---------------------------------------------------------
         self.init_ui()
+        
+        # QSmartListView 초기 설정
+        self.rx_log_list.set_color_manager(self.color_manager)
+        self.rx_log_list.set_hex_mode_enabled(self.hex_mode)
+        self.rx_log_list.set_timestamp_enabled(self.timestamp_enabled, timeout_ms=100)
 
         # 언어 변경 연결
         lang_manager.language_changed.connect(self.retranslate_ui)
@@ -87,6 +92,10 @@ class RxLogWidget(QWidget):
         self.ui_update_timer.setInterval(UI_REFRESH_INTERVAL_MS)
         self.ui_update_timer.timeout.connect(self.flush_buffer)
         self.ui_update_timer.start()
+
+    def set_tab_name(self, name: str) -> None:
+        """탭 이름을 설정합니다."""
+        self.tab_name = name
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
@@ -132,7 +141,8 @@ class RxLogWidget(QWidget):
 
         self.rx_save_log_btn = QPushButton(lang_manager.get_text("rx_btn_save"))
         self.rx_save_log_btn.setToolTip(lang_manager.get_text("rx_btn_save_tooltip"))
-        self.rx_save_log_btn.clicked.connect(self.on_save_log_clicked)
+        self.rx_save_log_btn.setCheckable(True)  # 토글 버튼으로 변경
+        self.rx_save_log_btn.toggled.connect(self.on_recording_toggled)
 
         # Options
         self.rx_filter_chk = QCheckBox(lang_manager.get_text("rx_chk_filter"))
@@ -232,7 +242,7 @@ class RxLogWidget(QWidget):
     # -------------------------------------------------------------------------
     def append_data(self, data: bytes) -> None:
         """
-        수신된 바이트 데이터를 처리하여 버퍼에 추가합니다.
+        수신된 바이트 데이터를 버퍼에 추가합니다.
 
         Args:
             data (bytes): 수신된 원본 바이트 데이터.
@@ -241,105 +251,37 @@ class RxLogWidget(QWidget):
         if self.is_paused:
             return
 
-        text: str = ""
-
-        # 1. 포맷 변환 (Hex / Text)
-        if self.hex_mode:
-            text = " ".join([f"{b:02X}" for b in data]) + " "
-        else:
-            try:
-                # UTF-8 디코딩 (에러 발생 시 대체 문자 사용)
-                text = data.decode('utf-8', errors='replace')
-            except Exception:
-                text = str(data)
-
-        # 2. 타임스탬프 생성
-        ts = ""
-        if self.timestamp_enabled:
-            ts = datetime.datetime.now().strftime("[%H:%M:%S]")
-
-        # 3. Newline 처리 및 분할
-        lines = []
+        # Newline 문자 설정 (QSmartListView에 전달)
         newline_mode = self.rx_newline_combo.currentData()
-
         if self.hex_mode or newline_mode == "Raw":
-            lines.append(text)
+            newline_char = None
         else:
-            delimiter = "\n"
-            if newline_mode == "CR":
-                delimiter = "\r"
-            elif newline_mode == "CRLF":
-                delimiter = "\r\n"
-
-            # Split by delimiter, but keep the delimiter if it's not at the end
-            # This ensures that if a line ends with a delimiter, it's treated as a complete line
-            # and the next data starts a new line.
-            # For example, "abc\n" should be "abc" and then a new line.
-            # "abc\ndef" should be "abc", "def".
-            # "abc" should be "abc".
-
-            # Use a regex split to keep the delimiters if needed, or handle manually
-            # For simplicity, let's assume we want to split and each part is a line.
-            # If the last character is a delimiter, it means the line is complete.
-
-            parts = text.split(delimiter)
-            for i, part in enumerate(parts):
-                if part: # Only add non-empty parts
-                    lines.append(part)
-                # If it's not the last part, and the part was empty, it means there were consecutive delimiters
-                # or a delimiter at the start/end. We need to handle empty lines if they represent actual newlines.
-                # For now, let's just add non-empty parts.
-                # If the original text ended with a delimiter, the last part will be empty.
-                # We don't want to add an empty line for that.
-
-            # If the original text ended with a delimiter, split() will produce an empty string at the end.
-            # We should not add an empty line for this.
-            # Example: "line1\nline2\n".split('\n') -> ['line1', 'line2', '']
-            # Example: "line1\nline2".split('\n') -> ['line1', 'line2']
-            if text.endswith(delimiter) and lines and lines[-1] == "":
-                lines.pop() # Remove the trailing empty string if it was due to a delimiter at the end.
-
-            # If the text itself was just a delimiter, lines would be [''] or empty.
-            # If text is just "\n", parts is ['', ''], lines would be ['']. Pop removes it.
-            # If text is "a\n", parts is ['a', ''], lines would be ['a']. Pop removes ''.
-            # If text is "a", parts is ['a'], lines would be ['a']. No pop.
-            # This logic seems okay for simple line splitting.
-
-        # 4. 색상 규칙 적용 및 버퍼 추가
-        for line in lines:
-            # An empty line might occur if the input was just a newline or multiple newlines.
-            # We should still process it to potentially add a timestamp.
-
-            final_text = line
-
-            if not self.hex_mode:
-                # 텍스트 모드: 타임스탬프 포함하여 전체 규칙 적용
-                if ts:
-                    final_text = f"{ts} {final_text}"
-                final_text = self.color_manager.apply_rules(final_text)
-            else:
-                # HEX 모드: 타임스탬프만 수동으로 색상 적용
-                if ts:
-                    ts_color = self.color_manager.get_rule_color("TIMESTAMP")
-                    final_text = f'<span style="color:{ts_color};">{ts}</span> {final_text}'
-
-            self.ui_update_buffer.append(final_text)
+            newline_char = {
+                "LF": "\n",
+                "CR": "\r",
+                "CRLF": "\r\n"
+            }.get(newline_mode, "\n")
+        
+        self.rx_log_list.set_newline_char(newline_char)
+        
+        # 버퍼에 추가 (bytes 그대로)
+        self.ui_update_buffer.append(data)
 
     def flush_buffer(self) -> None:
         """
         타이머에 의해 주기적으로 호출되어 버퍼 내용을 UI에 반영합니다.
-        데이터를 한 번에 추가(Batch)하여 렌더링 부하를 줄입니다.
+        각 bytes 데이터를 QSmartListView에 전달하여 자동으로 처리합니다.
         """
         if not self.ui_update_buffer:
             return
 
         # 버퍼 내용을 복사하고 즉시 비움
-        lines_to_add = self.ui_update_buffer[:]
+        buffer_items = self.ui_update_buffer[:]
         self.ui_update_buffer.clear()
 
-        # QSmartListView의 배치 추가 메서드 호출
-        # (내부적으로 최대 라인 수 제한 및 자동 스크롤 로직이 수행됨)
-        self.rx_log_list.append_batch(lines_to_add)
+        # 각 bytes를 QSmartListView에 전달
+        for data in buffer_items:
+            self.rx_log_list.append_bytes(data)
 
     # -------------------------------------------------------------------------
     # 사용자 액션 처리 (검색, 옵션, 버튼)
@@ -371,29 +313,43 @@ class RxLogWidget(QWidget):
         self.rx_log_list.clear()
         self.ui_update_buffer.clear()
 
-    @pyqtSlot()
-    def on_save_log_clicked(self) -> None:
-        """현재 표시된 로그 데이터를 파일로 저장합니다."""
+    @pyqtSlot(bool)
+    def on_recording_toggled(self, checked: bool) -> None:
+        """
+        녹화 시작/중단 토글을 처리합니다.
+        
+        Args:
+            checked: 버튼 체크 상태 (True=녹화 시작, False=녹화 중단)
+        """
+        if checked:
+            # 파일 저장 대화상자
+            title = lang_manager.get_text("rx_btn_save")
+            if self.tab_name:
+                title = f"{self.tab_name}::{title}"
 
-        # 파일 저장 대화상자
-        filename, _ = QFileDialog.getSaveFileName(
-            self,
-            lang_manager.get_text("rx_btn_save"),
-            "",
-            "Text Files (*.txt);;All Files (*)"
-        )
+            filename, _ = QFileDialog.getSaveFileName(
+                self,
+                title,
+                "",
+                "Binary Files (*.bin);;All Files (*)"
+            )
+            
+            if filename:
+                # 녹화 시작 시그널
+                self.recording_started.emit(filename)
+                # 버튼 스타일 변경
+                self.rx_save_log_btn.setText("● REC")
+                self.rx_save_log_btn.setStyleSheet("color: red;")
+            else:
+                # 취소 시 버튼 복구
+                self.rx_save_log_btn.setChecked(False)
+        else:
+            # 녹화 중단 시그널
+            self.recording_stopped.emit()
+            # 버튼 스타일 복구
+            self.rx_save_log_btn.setText(lang_manager.get_text("rx_btn_save"))
+            self.rx_save_log_btn.setStyleSheet("")
 
-        if filename:
-            try:
-                # QSmartListView에 새로 만든 메서드 호출
-                # HTML 태그가 제거된 순수 텍스트를 한 번에 가져옴
-                full_text = self.rx_log_list.get_all_text()
-
-                with open(filename, 'w', encoding='utf-8') as f:
-                    f.write(full_text)
-
-            except Exception as e:
-                logger.error(f"Error saving log: {e}")
 
     @pyqtSlot(int)
     def on_rx_filter_changed(self, state: int) -> None:
@@ -415,6 +371,7 @@ class RxLogWidget(QWidget):
             state (int): 체크박스 상태 (Qt.Checked 등).
         """
         self.hex_mode = (state == Qt.Checked)
+        self.rx_log_list.set_hex_mode_enabled(self.hex_mode)
 
     @pyqtSlot(int)
     def on_rx_timestamp_changed(self, state: int) -> None:
@@ -425,6 +382,7 @@ class RxLogWidget(QWidget):
             state (int): 체크박스 상태.
         """
         self.timestamp_enabled = (state == Qt.Checked)
+        self.rx_log_list.set_timestamp_enabled(self.timestamp_enabled, timeout_ms=100)
 
     @pyqtSlot(int)
     def on_rx_pause_changed(self, state: int) -> None:
@@ -493,4 +451,3 @@ class RxLogWidget(QWidget):
         if self.ui_update_timer.isActive():
             self.ui_update_timer.stop()
         super().closeEvent(event)
-```

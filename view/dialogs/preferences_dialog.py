@@ -374,25 +374,25 @@ class PreferencesDialog(QDialog):
         self.suffix_combo.setCurrentText(self._get_setting("settings.cmd_suffix", ""))
 
         # Packet
-        parser_type = self._get_setting("settings.parser_type", 0)
+        parser_type = self._get_setting("packet.parser_type", 0)
         btn = self.parser_type_button_group.button(parser_type)
         if btn:
             btn.setChecked(True)
 
-        delimiters = self._get_setting("settings.delimiters", ["\\r\\n"])
+        delimiters = self._get_setting("packet.delimiters", ["\\r\\n"])
         self.delimiter_list.clear()
         self.delimiter_list.addItems(delimiters)
 
-        self.packet_length_spin.setValue(self._get_setting("settings.packet_length", 64))
+        self.packet_length_spin.setValue(self._get_setting("packet.packet_length", 64))
 
-        self.at_color_ok_chk.setChecked(self._get_setting("settings.at_color_ok", True))
-        self.at_color_error_chk.setChecked(self._get_setting("settings.at_color_error", True))
-        self.at_color_urc_chk.setChecked(self._get_setting("settings.at_color_urc", True))
-        self.at_color_prompt_chk.setChecked(self._get_setting("settings.at_color_prompt", True))
+        self.at_color_ok_chk.setChecked(self._get_setting("packet.at_color_ok", True))
+        self.at_color_error_chk.setChecked(self._get_setting("packet.at_color_error", True))
+        self.at_color_urc_chk.setChecked(self._get_setting("packet.at_color_urc", True))
+        self.at_color_prompt_chk.setChecked(self._get_setting("packet.at_color_prompt", True))
 
-        self.buffer_size_spin.setValue(self._get_setting("settings.inspector_buffer_size", 100))
-        self.realtime_tracking_chk.setChecked(self._get_setting("settings.inspector_realtime", True))
-        self.auto_scroll_chk.setChecked(self._get_setting("settings.inspector_autoscroll", True))
+        self.buffer_size_spin.setValue(self._get_setting("inspector.buffer_size", 100))
+        self.realtime_tracking_chk.setChecked(self._get_setting("inspector.realtime", True))
+        self.auto_scroll_chk.setChecked(self._get_setting("inspector.autoscroll", True))
 
         # Logging
         self.log_path_edit.setText(self._get_setting("logging.path", os.getcwd()))

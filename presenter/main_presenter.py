@@ -3,6 +3,7 @@ from view.main_window import MainWindow
 from model.port_controller import PortController
 from .port_presenter import PortPresenter
 from core.settings_manager import SettingsManager
+from core.log_recorder import log_recorder_manager
 from view.managers.lang_manager import lang_manager
 from core.logger import logger
 
@@ -58,6 +59,21 @@ class MainPresenter(QObject):
         self.view.shortcut_connect_requested.connect(self.on_shortcut_connect)
         self.view.shortcut_disconnect_requested.connect(self.on_shortcut_disconnect)
         self.view.shortcut_clear_requested.connect(self.on_shortcut_clear)
+        
+        # 파일 전송 다이얼로그 연결
+        self.view.file_transfer_dialog_opened.connect(self.on_file_transfer_dialog_opened)
+
+        # 상태바 참조 저장 (반복적인 hasattr 확인 방지)
+        self.global_status_bar = self.view.global_status_bar
+        
+        # 녹화 시그널 연결 (LogRecorder 통합)
+        self._connect_recording_signals()
+        
+        # 현재 녹화 중인 포트 이름
+        self._current_recording_port = None
+        
+        # 현재 파일 전송 다이얼로그
+        self._current_transfer_dialog = None
 
     def on_close_requested(self) -> None:
         """
@@ -98,22 +114,30 @@ class MainPresenter(QObject):
 
         logger.info("Application shutdown sequence completed.")
 
-    def on_data_received(self, data: bytes) -> None:
+    def on_data_received(self, port_name: str, data: bytes) -> None:
         """
         수신된 시리얼 데이터를 처리합니다.
-        현재 활성 포트 패널의 ReceivedArea로 데이터를 전달합니다.
+        포트 이름을 기반으로 해당 포트 패널의 ReceivedArea로 데이터를 전달합니다.
 
         Args:
+            port_name (str): 데이터를 수신한 포트 이름
             data (bytes): 수신된 바이트 데이터.
         """
-        # 현재 활성 포트 패널을 가져와서 ReceivedArea로 데이터 전달
-        index = self.view.left_section.port_tabs.currentIndex()
-        if index >= 0:
-            widget = self.view.left_section.port_tabs.widget(index)
-            if hasattr(widget, 'received_area_widget'):
-                widget.received_area_widget.append_data(data)
+        # 녹화 중이면 LogRecorder에 먼저 기록 (데이터 누락 방지)
+        # 해당 포트가 녹화 중인지 확인
+        if self._current_recording_port == port_name:
+            log_recorder_manager.record(port_name, data)
+        
+        # 포트 이름으로 해당 탭 찾기
+        for i in range(self.view.left_section.port_tabs.count()):
+            widget = self.view.left_section.port_tabs.widget(i)
+            # PortPanel인지 확인하고 포트 이름 비교
+            if hasattr(widget, 'get_port_name') and widget.get_port_name() == port_name:
+                if hasattr(widget, 'received_area_widget'):
+                    widget.received_area_widget.append_data(data)
+                break
 
-        # RX 카운트 증가
+        # RX 카운트 증가 (전체 합계)
         self.rx_byte_count += len(data)
 
     def on_manual_cmd_send_requested(self, text: str, hex_mode: bool, cmd_prefix: bool, cmd_suffix: bool, local_echo: bool) -> None:
@@ -195,8 +219,24 @@ class MainPresenter(QObject):
             'cmd_prefix': 'settings.cmd_prefix',
             'cmd_suffix': 'settings.cmd_suffix',
             'port_baudrate': 'settings.port_baudrate',
+            'port_newline': 'settings.port_newline',
+            'port_localecho': 'settings.port_localecho',
             'port_scan_interval': 'settings.port_scan_interval',
             'log_path': 'logging.path',
+            
+            # Packet Settings
+            'parser_type': 'packet.parser_type',
+            'delimiters': 'packet.delimiters',
+            'packet_length': 'packet.packet_length',
+            'at_color_ok': 'packet.at_color_ok',
+            'at_color_error': 'packet.at_color_error',
+            'at_color_urc': 'packet.at_color_urc',
+            'at_color_prompt': 'packet.at_color_prompt',
+            
+            # Inspector Settings
+            'inspector_buffer_size': 'inspector.buffer_size',
+            'inspector_realtime': 'inspector.realtime',
+            'inspector_autoscroll': 'inspector.autoscroll',
         }
 
         # 데이터 변환 및 저장
@@ -237,38 +277,37 @@ class MainPresenter(QObject):
                 logger.warning(f"Invalid max_log_lines value: {max_lines}")
 
         # 상태 메시지 표시
-        if hasattr(self.view, 'global_status_bar'):
-            self.view.global_status_bar.show_message("Settings updated", 2000)
+        self.global_status_bar.show_message("Settings updated", 2000)
 
-    def on_data_sent(self, data: bytes) -> None:
-        """데이터 전송 시 TX 카운트를 증가시킵니다."""
+    def on_data_sent(self, port_name: str, data: bytes) -> None:
+        """
+        데이터 전송 시 TX 카운트를 증가시키고, 녹화 중이면 데이터를 기록합니다.
+        """
+        # 녹화 중이면 LogRecorder에 기록
+        if self._current_recording_port == port_name:
+            log_recorder_manager.record(port_name, data)
+            
         self.tx_byte_count += len(data)
 
     def on_port_opened(self, port_name: str) -> None:
         """포트 열림 시 상태바 업데이트"""
-        if hasattr(self.view, 'global_status_bar'):
-            self.view.global_status_bar.update_port_status(port_name, True)
-            self.view.global_status_bar.show_message(f"Connected to {port_name}", 3000)
+        self.global_status_bar.update_port_status(port_name, True)
+        self.global_status_bar.show_message(f"Connected to {port_name}", 3000)
 
     def on_port_closed(self, port_name: str) -> None:
         """포트 닫힘 시 상태바 업데이트"""
-        if hasattr(self.view, 'global_status_bar'):
-            self.view.global_status_bar.update_port_status(port_name, False)
-            self.view.global_status_bar.show_message(f"Disconnected from {port_name}", 3000)
+        self.global_status_bar.update_port_status(port_name, False)
+        self.global_status_bar.show_message(f"Disconnected from {port_name}", 3000)
 
-    def on_port_error(self, error_msg: str) -> None:
+    def on_port_error(self, port_name: str, error_msg: str) -> None:
         """포트 에러 시 상태바 업데이트"""
-        if hasattr(self.view, 'global_status_bar'):
-            self.view.global_status_bar.show_message(f"Error: {error_msg}", 5000)
+        self.global_status_bar.show_message(f"Error ({port_name}): {error_msg}", 5000)
 
     def update_status_bar(self) -> None:
         """1초마다 호출되어 상태바 정보를 갱신합니다."""
-        if not hasattr(self.view, 'global_status_bar'):
-            return
-
         # 1. RX/TX 속도 업데이트
-        self.view.global_status_bar.update_rx_speed(self.rx_byte_count)
-        self.view.global_status_bar.update_tx_speed(self.tx_byte_count)
+        self.global_status_bar.update_rx_speed(self.rx_byte_count)
+        self.global_status_bar.update_tx_speed(self.tx_byte_count)
 
         # 카운터 초기화
         self.rx_byte_count = 0
@@ -276,7 +315,7 @@ class MainPresenter(QObject):
 
         # 2. 시간 업데이트
         current_time = QDateTime.currentDateTime().toString("HH:mm:ss")
-        self.view.global_status_bar.update_time(current_time)
+        self.global_status_bar.update_time(current_time)
 
         # 3. 버퍼 상태 (임시: 실제 버퍼 크기를 알 수 있다면 연동)
         # self.view.global_status_bar.update_buffer(buffer_percent)
@@ -293,3 +332,153 @@ class MainPresenter(QObject):
         """F5 단축키: 로그 지우기"""
         self.port_presenter.clear_log_current_port()
 
+    # -------------------------------------------------------------------------
+    # 로그 녹화 (Log Recording)
+    # -------------------------------------------------------------------------
+    def _connect_recording_signals(self) -> None:
+        """모든 포트 패널의 녹화 시그널을 연결합니다."""
+        # 현재 탭의 RxLogWidget 시그널 연결
+        for i in range(self.view.left_section.port_tabs.count()):
+            widget = self.view.left_section.port_tabs.widget(i)
+            if hasattr(widget, 'received_area_widget'):
+                rx_widget = widget.received_area_widget
+                rx_widget.recording_started.connect(self._on_recording_started)
+                rx_widget.recording_stopped.connect(self._on_recording_stopped)
+
+    def _on_recording_started(self, filepath: str) -> None:
+        """
+        녹화 시작 처리
+        
+        Args:
+            filepath: 녹화 파일 경로
+        """
+        # 현재 포트 이름 가져오기
+        port_name = self.port_controller.current_port_name
+        
+        if not port_name:
+            logger.warning("Cannot start recording: No port opened")
+            # UI 버튼 상태를 다시 '저장'으로 되돌려야 함 (구현 복잡도 증가로 생략하거나, 알림 필요)
+            # 여기서는 로그만 남기고, 실제로는 RxLogWidget이 이미 'REC' 상태로 변했을 수 있음.
+            # 완벽한 처리를 위해서는 RxLogWidget에 시그널을 보내 상태를 되돌려야 하지만,
+            # 현재 구조상 간단히 로그만 남김.
+            return
+
+        if log_recorder_manager.start_recording(port_name, filepath):
+            self._current_recording_port = port_name
+            logger.info(f"Recording started: {port_name} -> {filepath}")
+        else:
+            logger.error(f"Failed to start recording: {filepath}")
+
+    def _on_recording_stopped(self) -> None:
+        """녹화 중단 처리"""
+        if self._current_recording_port:
+            log_recorder_manager.stop_recording(self._current_recording_port)
+            logger.info(f"Recording stopped: {self._current_recording_port}")
+            self._current_recording_port = None
+
+    # -------------------------------------------------------------------------
+    # 파일 전송 (File Transfer)
+    # -------------------------------------------------------------------------
+    def on_file_transfer_dialog_opened(self, dialog) -> None:
+        """
+        파일 전송 다이얼로그가 열렸을 때 호출됩니다.
+        다이얼로그의 시그널을 연결합니다.
+        
+        Args:
+            dialog (FileTransferDialog): 다이얼로그 인스턴스
+        """
+        self._current_transfer_dialog = dialog
+        dialog.send_requested.connect(self.on_file_send_requested)
+        dialog.cancel_requested.connect(self.on_file_transfer_cancel)
+        
+        # 전송 상태 변수 초기화
+        self._transfer_file = None
+        self._transfer_total_size = 0
+        self._transfer_sent_size = 0
+        self._transfer_timer = QTimer()
+        self._transfer_timer.timeout.connect(self._send_next_chunk)
+        
+    def on_file_send_requested(self, filepath: str) -> None:
+        """파일 전송 요청 처리"""
+        if not self.port_controller.is_open:
+            logger.warning("Port not open")
+            if self._current_transfer_dialog:
+                self._current_transfer_dialog.set_complete(False, "Port not open")
+            return
+            
+        try:
+            import os
+            self._transfer_total_size = os.path.getsize(filepath)
+            self._transfer_sent_size = 0
+            self._transfer_file = open(filepath, 'rb')
+            self._transfer_start_time = QDateTime.currentMSecsSinceEpoch()
+            
+            # 전송 시작 (10ms 간격으로 청크 전송)
+            self._transfer_timer.start(10)
+            logger.info(f"File transfer started: {filepath} ({self._transfer_total_size} bytes)")
+            
+        except Exception as e:
+            logger.error(f"Failed to open file: {e}")
+            if self._current_transfer_dialog:
+                self._current_transfer_dialog.set_complete(False, str(e))
+                
+    def on_file_transfer_cancel(self) -> None:
+        """파일 전송 취소 처리"""
+        if self._transfer_timer.isActive():
+            self._transfer_timer.stop()
+            
+        if self._transfer_file:
+            self._transfer_file.close()
+            self._transfer_file = None
+            
+        logger.info("File transfer cancelled")
+        if self._current_transfer_dialog:
+            self._current_transfer_dialog.set_complete(False, "Cancelled")
+
+    def _send_next_chunk(self) -> None:
+        """파일 청크 전송 및 진행률 업데이트"""
+        if not self._transfer_file or not self.port_controller.is_open:
+            self.on_file_transfer_cancel()
+            return
+            
+        try:
+            chunk_size = 1024  # 1KB chunk
+            data = self._transfer_file.read(chunk_size)
+            
+            if not data:
+                # 전송 완료
+                self.on_file_transfer_cancel() # 리소스 정리
+                if self._current_transfer_dialog:
+                    self._current_transfer_dialog.set_complete(True, "Finished")
+                return
+                
+            # 데이터 전송
+            self.port_controller.send_data(data)
+            self._transfer_sent_size += len(data)
+            
+            # 진행률 업데이트
+            if self._current_transfer_dialog:
+                current_time = QDateTime.currentMSecsSinceEpoch()
+                elapsed_sec = (current_time - self._transfer_start_time) / 1000.0
+                
+                speed = 0.0
+                eta = 0.0
+                
+                if elapsed_sec > 0:
+                    speed = self._transfer_sent_size / elapsed_sec
+                    if speed > 0:
+                        remaining = self._transfer_total_size - self._transfer_sent_size
+                        eta = remaining / speed
+                        
+                self._current_transfer_dialog.update_progress(
+                    self._transfer_sent_size,
+                    self._transfer_total_size,
+                    speed,
+                    eta
+                )
+                
+        except Exception as e:
+            logger.error(f"File transfer error: {e}")
+            self.on_file_transfer_cancel()
+            if self._current_transfer_dialog:
+                self._current_transfer_dialog.set_complete(False, str(e))

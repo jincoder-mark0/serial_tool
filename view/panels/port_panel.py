@@ -116,7 +116,9 @@ class PortPanel(QWidget):
 
     def update_tab_title(self) -> None:
         """탭 제목 변경 시그널을 발생시킵니다."""
-        self.tab_title_changed.emit(self.get_tab_title())
+        title = self.get_tab_title()
+        self.received_area_widget.set_tab_name(title)
+        self.tab_title_changed.emit(title)
 
     def save_state(self) -> dict:
         """
