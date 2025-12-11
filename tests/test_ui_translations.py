@@ -89,10 +89,10 @@ def test_system_log_widget_translation(app, qtbot):
     qtbot.addWidget(system_log_widget)
 
     lang_manager.set_language('en')
-    assert system_log_widget.status_log_title.text() == "Status Log"
+    assert system_log_widget.system_log_title.text() == "System Log"
 
     lang_manager.set_language('ko')
-    assert system_log_widget.status_log_title.text() == "상태 로그"
+    assert system_log_widget.system_log_title.text() == "시스템 로그"
 
 def test_left_panel_translation(app, qtbot):
     left_panel_widget = MainLeftSection()

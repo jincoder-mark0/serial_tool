@@ -3,12 +3,17 @@ View 컴포넌트 테스트 애플리케이션
 개별 위젯들을 독립적으로 테스트할 수 있습니다.
 """
 import sys
+import os
+
+# 부모 디렉토리를 경로에 추가하여 모듈 import 가능하게 함 (import 전에 실행)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.insert(0, parent_dir)
+
 from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget
 from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QLabel, QTextEdit
 from PyQt5.QtWidgets import QPushButton, QHBoxLayout
-
-import os
 
 from view.widgets.rx_log import RxLogWidget
 from view.widgets.manual_ctrl import ManualCtrlWidget
@@ -21,11 +26,6 @@ from view.dialogs.preferences_dialog import PreferencesDialog
 from view.dialogs.about_dialog import AboutDialog
 from view.widgets.file_progress import FileProgressWidget
 from core.settings_manager import SettingsManager
-
-# 부모 디렉토리를 경로에 추가하여 모듈 import 가능하게 함
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-sys.path.insert(0, parent_dir)
 
 class ViewTestWindow(QMainWindow):
     """View 컴포넌트 테스트용 윈도우 클래스입니다."""
@@ -77,7 +77,11 @@ class ViewTestWindow(QMainWindow):
         # Test 7: FileProgress (파일 전송 진행률)
         tabs.addTab(self.create_file_progress_test(), "FileProgress Test")
 
-        # Test 8: Language (다국어 지원)
+
+        # Test 8: SmartListView (새 기능 테스트)
+        tabs.addTab(self.create_smart_list_view_test(), "SmartListView Test")
+
+        # Test 9: Language (다국어 지원)
         tabs.addTab(self.create_language_test(), "Language Test")
 
         layout.addWidget(tabs)
@@ -146,7 +150,6 @@ class ViewTestWindow(QMainWindow):
             QWidget: 테스트 위젯.
         """
 
-
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
@@ -157,25 +160,55 @@ class ViewTestWindow(QMainWindow):
         # 출력 영역 (Output area)
         self.manual_output = QTextEdit()
         self.manual_output.setReadOnly(True)
-        self.manual_output.setMaximumHeight(200)
+        self.manual_output.setMaximumHeight(150)
+        self.manual_output.setPlaceholderText("전송된 명령어 출력 및 이벤트 로그")
+        layout.addWidget(QLabel("📤 Output Log:"))
         layout.addWidget(self.manual_output)
 
         # 시그널 연결
         self.manual_ctrl.manual_cmd_send_requested.connect(
             lambda text, hex_mode, prefix, suffix, local_echo: self.manual_output.append(
-                f"Send: {text} (hex={hex_mode}, prefix={prefix}, suffix={suffix}, echo={local_echo})"
+                f"✅ Send: '{text}' (hex={hex_mode}, prefix={prefix}, suffix={suffix}, echo={local_echo})"
             )
         )
         self.manual_ctrl.transfer_file_selected.connect(
-            lambda path: self.manual_output.append(f"File selected: {path}")
+            lambda path: self.manual_output.append(f"📁 File selected: {path}")
         )
         self.manual_ctrl.transfer_file_send_requested.connect(
-            lambda path: self.manual_output.append(f"Send file requested: {path}")
+            lambda path: self.manual_output.append(f"📤 Send file requested: {path}")
         )
 
-        # 정보 레이블
+        # 히스토리 테스트 버튼들
+        history_layout = QHBoxLayout()
+        
+        btn_add_at = QPushButton("Add 'AT'")
+        btn_add_at.clicked.connect(lambda: self.manual_ctrl.add_to_history("AT"))
+        history_layout.addWidget(btn_add_at)
+        
+        btn_add_ok = QPushButton("Add 'AT+GMR'")
+        btn_add_ok.clicked.connect(lambda: self.manual_ctrl.add_to_history("AT+GMR"))
+        history_layout.addWidget(btn_add_ok)
+        
+        btn_add_custom = QPushButton("Add 'AT+CREG?'")
+        btn_add_custom.clicked.connect(lambda: self.manual_ctrl.add_to_history("AT+CREG?"))
+        history_layout.addWidget(btn_add_custom)
+        
+        btn_show_history = QPushButton("Show History")
+        btn_show_history.clicked.connect(self.show_manual_history)
+        history_layout.addWidget(btn_show_history)
+        
+        layout.addWidget(QLabel("📜 History Test:"))
+        layout.addLayout(history_layout)
 
-        info = QLabel("✅ 테스트: Send 버튼, HEX 모드, 파일 선택/전송 (Enter/Prefix/Suffix는 설정에서 관리)")
+        # 정보 레이블
+        info = QLabel(
+            "✅ 테스트:\n"
+            "1. Send 버튼: 명령어 전송 및 시그널 확인\n"
+            "2. HEX 모드: 체크박스로 전환\n"
+            "3. 히스토리: Up/Down 버튼으로 이전 명령어 탐색 (Ctrl+Up/Down 키보드 단축키)\n"
+            "4. 파일 선택/전송: Transfer 버튼들 테스트\n"
+            "5. 제어 활성화/비활성화: Enable/Disable Controls 버튼"
+        )
         layout.addWidget(info)
 
         # 제어 활성화/비활성화 테스트
@@ -191,6 +224,17 @@ class ViewTestWindow(QMainWindow):
         layout.addLayout(btn_layout)
 
         return widget
+
+    def show_manual_history(self) -> None:
+        """히스토리 목록을 출력 영역에 표시합니다."""
+        history = self.manual_ctrl.cmd_history
+        if history:
+            self.manual_output.append("\n📜 Command History:")
+            for i, cmd in enumerate(history):
+                self.manual_output.append(f"  [{i+1}] {cmd}")
+            self.manual_output.append(f"Current Index: {self.manual_ctrl.history_index}\n")
+        else:
+            self.manual_output.append("📜 History is empty\n")
 
     def create_macro_list_test(self) -> QWidget:
         """
@@ -333,11 +377,15 @@ class ViewTestWindow(QMainWindow):
         """FileProgressWidget 테스트 위젯을 생성합니다."""
 
 
+
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
         self.file_progress = FileProgressWidget()
         layout.addWidget(self.file_progress)
+        
+        # 취소 버튼 시그널 연결
+        self.file_progress.transfer_cancelled.connect(self.cancel_mock_transfer)
 
         btn_start = QPushButton("Start Mock Transfer")
         btn_start.clicked.connect(self.start_mock_transfer)
@@ -347,6 +395,12 @@ class ViewTestWindow(QMainWindow):
         layout.addStretch()
 
         return widget
+
+    def cancel_mock_transfer(self) -> None:
+        """모의 전송을 취소합니다."""
+        if hasattr(self, 'transfer_timer') and self.transfer_timer.isActive():
+            self.transfer_timer.stop()
+            print("Transfer cancelled by user")
 
     def start_mock_transfer(self) -> None:
         """모의 파일 전송을 시작합니다."""
@@ -373,6 +427,119 @@ class ViewTestWindow(QMainWindow):
         eta = (self.mock_total - self.mock_sent) / speed
 
         self.file_progress.update_progress(self.mock_sent, self.mock_total, speed, eta)
+
+
+    def create_smart_list_view_test(self) -> QWidget:
+        """QSmartListView 새 기능 테스트 위젯을 생성합니다."""
+        from view.custom_qt.smart_list_view import QSmartListView
+        from view.managers.color_manager import color_manager
+        
+        widget = QWidget()
+        layout = QVBoxLayout(widget)
+        
+        # QSmartListView 인스턴스
+        self.smart_list = QSmartListView()
+        self.smart_list.set_color_manager(color_manager)
+        
+        layout.addWidget(self.smart_list)
+        
+        # 테스트 버튼들
+        button_layout = QHBoxLayout()
+        
+        # HEX 모드 테스트
+        btn_hex = QPushButton("Send Bytes (Normal)")
+        btn_hex.clicked.connect(lambda: self.smart_list.append_bytes(b"Normal text\n"))
+        button_layout.addWidget(btn_hex)
+        
+        btn_hex_mode = QPushButton("Toggle HEX Mode")
+        btn_hex_mode.setCheckable(True)
+        btn_hex_mode.toggled.connect(self.smart_list.set_hex_mode_enabled)
+        button_layout.addWidget(btn_hex_mode)
+        
+        # 타임스탬프 테스트
+        btn_timestamp = QPushButton("Toggle Timestamp")
+        btn_timestamp.setCheckable(True)
+        btn_timestamp.toggled.connect(lambda checked: self.smart_list.set_timestamp_enabled(checked, timeout_ms=100))
+        button_layout.addWidget(btn_timestamp)
+        
+        layout.addLayout(button_layout)
+        
+        # 두 번째 줄 버튼
+        button_layout2 = QHBoxLayout()
+        
+        # Newline 모드 테스트
+        btn_newline = QPushButton("Send Multiline (LF)")
+        btn_newline.clicked.connect(lambda: self.smart_list.append_bytes(b"Line1\nLine2\nLine3\n"))
+        button_layout2.addWidget(btn_newline)
+        
+        # Raw 모드 테스트 (타임스탬프 timeout)
+        btn_raw = QPushButton("Raw Mode Test")
+        btn_raw.clicked.connect(self.test_raw_mode_timestamp)
+        button_layout2.addWidget(btn_raw)
+        
+        # 색상 테스트
+        btn_color = QPushButton("Send AT Commands")
+        btn_color.clicked.connect(lambda: [
+            self.smart_list.append_bytes(b"AT\r\n"),
+            self.smart_list.append_bytes(b"OK\r\n"),
+            self.smart_list.append_bytes(b"ERROR\r\n"),
+            self.smart_list.append_bytes(b"+CREG: 1,5\r\n")
+        ])
+        button_layout2.addWidget(btn_color)
+        
+        # 대량 데이터 성능 테스트
+        btn_many = QPushButton("Add 1000 Lines (Performance)")
+        btn_many.clicked.connect(self.test_large_data)
+        button_layout2.addWidget(btn_many)
+        
+        # Clear
+        btn_clear = QPushButton("Clear")
+        btn_clear.clicked.connect(self.smart_list.clear)
+        button_layout2.addWidget(btn_clear)
+        
+        layout.addLayout(button_layout2)
+        
+        # 정보 레이블
+        info = QLabel(
+            "✅ 테스트:\n"
+            "1. HEX 모드: bytes를 HEX 문자열로 표시\n"
+            "2. 타임스탬프: Newline 모드에서는 각 줄마다, Raw 모드에서는 100ms 간격\n"
+            "3. 색상 규칙: AT 명령(OK, ERROR, URC) 색상 적용\n"
+            "4. 성능: UniformItemSizes=True로 대량 데이터 처리 최적화"
+        )
+        layout.addWidget(info)
+        
+        return widget
+    
+    def test_raw_mode_timestamp(self) -> None:
+        """Raw 모드 타임스탬프를 테스트합니다 (간격 체크)."""
+        import time
+        
+        # Newline 제거 (Raw 모드)
+        self.smart_list.set_newline_char(None)
+        
+        # 빠르게 연속으로 전송 (타임스탬프 없어야 함)
+        self.smart_list.append_bytes(b"Data1")
+        time.sleep(0.05)  # 50ms
+        self.smart_list.append_bytes(b"Data2")  # 같은 줄에 붙음
+        
+        # 충분한 간격 후 전송 (타임스탬프 추가되어야 함)
+        time.sleep(0.15)  # 150ms (> 100ms threshold)
+        self.smart_list.append_bytes(b"Data3")  # 새 줄로 시작
+        
+        # Newline 복구
+        self.smart_list.set_newline_char("\n")
+    
+    def test_large_data(self) -> None:
+        """대량 데이터 성능 테스트 (1000줄)."""
+        import time
+        start = time.time()
+        
+        for i in range(1000):
+            self.smart_list.append_bytes(f"[{i+1:04d}] Performance test line {i+1}\n".encode())
+        
+        elapsed = time.time() - start
+        print(f"Added 1000 lines in {elapsed:.2f}s ({1000/elapsed:.0f} lines/sec)")
 
     def create_language_test(self) -> QWidget:
         """LangManager 테스트 위젯을 생성합니다."""

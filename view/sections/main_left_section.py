@@ -5,6 +5,7 @@ from view.managers.lang_manager import lang_manager
 from view.panels.port_panel import PortPanel
 from view.panels.manual_ctrl_panel import ManualCtrlPanel
 from view.panels.port_tab_panel import PortTabPanel
+from view.widgets.system_log import SystemLogWidget
 
 class MainLeftSection(QWidget):
     """
@@ -22,6 +23,7 @@ class MainLeftSection(QWidget):
         super().__init__(parent)
         self.port_tabs = None
         self.manual_ctrl = None
+        self.system_log_widget = None
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
@@ -31,7 +33,7 @@ class MainLeftSection(QWidget):
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(5)
+        layout.setSpacing(10) # 위젯 간 간격 조정 (ManualCtrl과 SystemLog 사이 여백)
 
         # 포트 탭 (Port Tabs)
         self.port_tabs = PortTabPanel()
@@ -40,8 +42,12 @@ class MainLeftSection(QWidget):
         # 수동 제어 패널 (현재 포트에 대한 전역 제어)
         self.manual_ctrl = ManualCtrlPanel()
 
-        layout.addWidget(self.port_tabs, 1)  # 탭이 남은 공간 차지
-        layout.addWidget(self.manual_ctrl)   # 수동 제어는 하단에 위치
+        # 전역 시스템 로그 (Global System Log)
+        self.system_log_widget = SystemLogWidget()
+
+        layout.addWidget(self.port_tabs, 1)  # 탭이 남은 공간 차지 (상단)
+        layout.addWidget(self.manual_ctrl)   # 수동 제어 (중간)
+        layout.addWidget(self.system_log_widget) # 시스템 로그 (하단)
 
         self.setLayout(layout)
 

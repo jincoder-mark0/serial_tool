@@ -6,6 +6,7 @@ QListView를 기반으로 대량의 로그 데이터를 효율적으로 표시�
 """
 import re
 from typing import List, Any, Optional
+from collections import deque
 
 from PyQt5.QtWidgets import QListView, QAbstractItemView, QStyle, QStyledItemDelegate
 from PyQt5.QtCore import (
@@ -51,14 +52,30 @@ class QSmartListView(QListView):
         # 뷰 설정
         self.setProperty("class", "fixed-font") # 고정폭 폰트
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
-        self.setUniformItemSizes(False) # 행 높이가 다를 수 있음
-        self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel) # 부드러운 스크롤
+        
+        # 성능 최적화: 모든 항목이 동일한 높이라고 가정
+        # 대량 로그 처리 시 스크롤 성능 크게 향상
+        self.setUniformItemSizes(True)
+        
+        # 스크롤 모드: PerPixel이 부드럽지만, 대량 데이터에서는 PerItem이 더 빠름
+        # 필요시 ScrollPerItem으로 변경 가능
+        self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
 
         # 설정 관리자
         self._newline_char = "\n"
         self._placeholder_text = ""
         self._filter_enabled = False
         self._current_pattern = None
+        
+        # 선택적 기능 (기본값 = 비활성화)
+        self._hex_mode = False
+        self._timestamp_enabled = False
+        self._timestamp_timeout_ms = 100
+        self._color_manager = None
+        self._last_data_time = None
+        
+        # HEX 모드 전환을 위한 원본 bytes 데이터 저장 (원형 버퍼로 메모리 최적화)
+        self._original_data: deque = deque(maxlen=DEFAULT_LOG_MAX_LINES)
 
         self.setObjectName("SmartListView")
 
@@ -71,6 +88,42 @@ class QSmartListView(QListView):
         """
         self._newline_char = char
 
+    def set_hex_mode_enabled(self, enabled: bool) -> None:
+        """
+        HEX 모드 활성화/비활성화
+        모드 변경 시 모든 데이터를 다시 렌더링합니다.
+        
+        Args:
+            enabled: HEX 모드 활성화 여부
+        """
+        if self._hex_mode == enabled:
+            return  # 변경 없음
+            
+        self._hex_mode = enabled
+        
+        # 모든 데이터를 다시 렌더링
+        self._refresh_all_data()
+
+    def set_timestamp_enabled(self, enabled: bool, timeout_ms: int = 100) -> None:
+        """
+        타임스탬프 활성화
+        
+        Args:
+            enabled: 타임스탬프 활성화 여부
+            timeout_ms: Raw 모드에서 타임스탬프를 찍을 최소 간격 (ms)
+        """
+        self._timestamp_enabled = enabled
+        self._timestamp_timeout_ms = timeout_ms
+
+    def set_color_manager(self, manager) -> None:
+        """
+        색상 규칙 매니저 설정
+        
+        Args:
+            manager: ColorManager 인스턴스
+        """
+        self._color_manager = manager
+
     def setPlaceholderText(self, text: str) -> None:
         """
         데이터가 없을 때 표시할 안내 문구(Placeholder)를 설정합니다.
@@ -81,23 +134,37 @@ class QSmartListView(QListView):
         self._placeholder_text = text
         self.viewport().update()
 
-    def append(self, text: str) -> None:
+    def append(self, text: str, line_formatter=None) -> None:
         """
-        로그 한 줄을 추가합니다.
+        로그 데이터를 추가합니다.
+        newline 문자로 분할하여 여러 줄로 추가하며, 각 라인에 formatter를 적용할 수 있습니다.
 
         Args:
-            text (str): 로그 내용.
+            text (str): 로그 내용 (newline 포함 가능).
+            line_formatter (callable, optional): 각 라인을 포맷팅할 함수.
+                                                 함수 시그니처: formatter(line: str) -> str
         """
-        # 1. Newline 처리 (주입받은 설정 사용)
-        if self._newline_char != "\n":
-            text = text.replace(self._newline_char, "\n")
+        # 1. Newline으로 분할
+        if self._newline_char and self._newline_char in text:
+            lines = text.split(self._newline_char)
+            # 마지막이 빈 문자열이면 제거 (예: "abc\n" -> ["abc", ""])
+            if lines and lines[-1] == "":
+                lines.pop()
+        else:
+            # newline이 없으면 단일 라인
+            lines = [text] if text else []
 
-        # 2. 모델에 추가 (단일 항목이지만 리스트로 전달)
-        self.log_model.add_logs([text])
+        # 2. 각 라인에 formatter 적용 (제공된 경우)
+        if line_formatter:
+            lines = [line_formatter(line) for line in lines]
 
-        # 3. 자동 스크롤 (맨 아래에 있을 때만)
-        if self.is_at_bottom():
-            self.scrollToBottom()
+        # 3. 모델에 batch 추가
+        if lines:
+            self.log_model.add_logs(lines)
+
+            # 4. 자동 스크롤 (맨 아래에 있을 때만)
+            if self.is_at_bottom():
+                self.scrollToBottom()
 
     def append_batch(self, lines: List[str]) -> None:
         """
@@ -161,10 +228,8 @@ class QSmartListView(QListView):
             max_lines (int): 최대 라인 수.
         """
         self.log_model.set_max_lines(max_lines)
-
-    def clear(self) -> None:
-        """로그 뷰의 내용을 모두 지웁니다."""
-        self.log_model.clear()
+        # deque는 maxlen 변경이 불가하므로 새 deque 생성 (기존 데이터 유지)
+        self._original_data = deque(self._original_data, maxlen=max_lines)
 
     def is_at_bottom(self) -> bool:
         """
@@ -176,6 +241,11 @@ class QSmartListView(QListView):
         sb = self.verticalScrollBar()
         # 오차 범위를 두어 판별
         return sb.value() >= (sb.maximum() - 10)
+
+    def clear(self) -> None:
+        """모든 로그 데이터를 지웁니다 (모델 + 원본 데이터)."""
+        self.log_model.clear()
+        self._original_data.clear()
 
     def find_next(self, text: str) -> bool:
         """
@@ -363,6 +433,126 @@ class QSmartListView(QListView):
             painter.drawText(rect, Qt.AlignCenter | Qt.TextWordWrap, self._placeholder_text)
 
             painter.restore()
+
+    def append_bytes(self, data: bytes) -> None:
+        """
+        bytes 데이터를 받아 내부 설정에 따라 처리합니다.
+        
+        - hex_mode: HEX 문자열로 변환
+        - timestamp_enabled: 스마트 타임스탬프 추가
+        - color_manager: 색상 규칙 적용
+        - newline_char: 줄바꿈 분할
+        
+        Args:
+            data: 수신된 바이트 데이터
+        """
+        # 원본 데이터 저장 (HEX 모드 전환용)
+        self._original_data.append(data)
+        
+        # 1. HEX 변환 (옵션)
+        if self._hex_mode:
+            text = " ".join([f"{b:02X}" for b in data]) + " "
+        else:
+            try:
+                text = data.decode('utf-8', errors='replace')
+            except Exception:
+                text = str(data)
+        
+        # 2. 타임스탬프 판단 (스마트 로직)
+        should_add_timestamp = self._should_add_timestamp()
+        
+        # 3. Formatter 정의
+        formatter = None
+        if self._timestamp_enabled or self._color_manager:
+            formatter = self._create_line_formatter(should_add_timestamp)
+        
+        # 4. 기존 append() 호출
+        self.append(text, formatter)
+
+    def _should_add_timestamp(self) -> bool:
+        """타임스탬프를 추가할지 판단합니다."""
+        if not self._timestamp_enabled:
+            return False
+        
+        from PyQt5.QtCore import QDateTime
+        now = QDateTime.currentMSecsSinceEpoch()
+        
+        # Newline 모드: 각 줄 시작에 타임스탬프
+        if self._newline_char:
+            # append()의 formatter에서 각 라인마다 적용됨
+            return True
+        
+        # Raw 모드: 시간 간격 체크
+        if self._last_data_time is None:
+            self._last_data_time = now
+            return True
+        
+        time_diff = now - self._last_data_time
+        if time_diff >= self._timestamp_timeout_ms:
+            self._last_data_time = now
+            return True
+        
+        self._last_data_time = now
+        return False
+
+    def _create_line_formatter(self, add_timestamp: bool):
+        """라인 포맷터 함수를 생성합니다."""
+        def formatter(line: str) -> str:
+            formatted = line
+            
+            # 타임스탬프 추가
+            if add_timestamp:
+                import datetime
+                ts = datetime.datetime.now().strftime("[%H:%M:%S]")
+                formatted = f"{ts} {formatted}"
+            
+            # 색상 규칙 적용 (옵션)
+            if self._color_manager:
+                formatted = self._color_manager.apply_rules(formatted)
+            
+            return formatted
+        
+        return formatter
+
+    def _refresh_all_data(self) -> None:
+        """
+        원본 데이터를 모두 다시 처리하여 화면을 갱신합니다.
+        HEX 모드 변경 시 호출됩니다.
+        """
+        if not self._original_data:
+            return
+        
+        # 현재 스크롤 위치 저장
+        scroll_pos = self.verticalScrollBar().value()
+        was_at_bottom = self.is_at_bottom()
+        
+        # 모델 초기화
+        self.log_model.clear()
+        
+        # 모든 원본 데이터를 다시 처리
+        for data in self._original_data:
+            # HEX 변환
+            if self._hex_mode:
+                text = " ".join([f"{b:02X}" for b in data]) + " "
+            else:
+                try:
+                    text = data.decode('utf-8', errors='replace')
+                except Exception:
+                    text = str(data)
+            
+            # Formatter(타임스탬프는 원본 시간을 알 수 없으므로 생략)
+            formatter = None
+            if self._color_manager:
+                formatter = lambda line: self._color_manager.apply_rules(line)
+            
+            # Append (newline split은 기존 설정 사용)
+            self.append(text, formatter)
+        
+        # 스크롤 위치 복원
+        if was_at_bottom:
+            self.scrollToBottom()
+        else:
+            self.verticalScrollBar().setValue(scroll_pos)
 
 class LogModel(QAbstractListModel):
     """

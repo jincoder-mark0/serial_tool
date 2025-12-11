@@ -11,21 +11,38 @@ from model.transports import SerialTransport
 from constants import DEFAULT_BAUDRATE
 
 class PortController(QObject):
-    # 외부(Presenter)와 통신하는 시그널 (이름 유지)
+    # 외부(Presenter)와 통신하는 시그널
+    # 다중 포트 지원을 위해 port_name 인자 추가
     port_opened = pyqtSignal(str)
     port_closed = pyqtSignal(str)
-    error_occurred = pyqtSignal(str)
-    data_received = pyqtSignal(bytes)
+    error_occurred = pyqtSignal(str, str) # port_name, error_msg
+    data_received = pyqtSignal(str, bytes) # port_name, data
+    data_sent = pyqtSignal(str, bytes) # port_name, data
 
     def __init__(self) -> None:
         super().__init__()
-        self.worker: Optional[ConnectionWorker] = None
-        self._port_name = ""
-        self._baudrate = DEFAULT_BAUDRATE
+        # 포트 이름(str) -> ConnectionWorker 매핑
+        self.workers: dict[str, ConnectionWorker] = {}
 
     @property
     def is_open(self) -> bool:
-        return self.worker is not None and self.worker.isRunning()
+        """하나라도 열린 포트가 있으면 True 반환"""
+        return len(self.workers) > 0
+
+    @property
+    def current_port_name(self) -> str:
+        """
+        현재 열려있는 포트 이름 중 하나를 반환합니다.
+        다중 포트 환경에서는 대표 포트 이름 또는 마지막으로 열린 포트 이름을 반환할 수 있습니다.
+        """
+        if self.workers:
+            return list(self.workers.keys())[-1]
+        return ""
+
+    def is_port_open(self, port_name: str) -> bool:
+        """특정 포트가 열려있는지 확인합니다."""
+        worker = self.workers.get(port_name)
+        return worker is not None and worker.isRunning()
 
     def open_port(self, config: dict) -> bool:
         """
@@ -35,72 +52,89 @@ class PortController(QObject):
         Args:
             config (dict): 포트 설정 딕셔너리.
         """
-        if self.is_open:
-            self.error_occurred.emit("Port is already open.")
-            return False
-
         port_name = config.get('port')
         if not port_name:
-            self.error_occurred.emit("Port name is required.")
+            self.error_occurred.emit("", "Port name is required.")
+            return False
+
+        if self.is_port_open(port_name):
+            self.error_occurred.emit(port_name, "Port is already open.")
             return False
 
         baudrate = config.get('baudrate', DEFAULT_BAUDRATE)
 
-        self._port_name = port_name
-        self._baudrate = baudrate
-
-        # 1. Transport 객체 생성 (여기서 프로토콜 결정 가능)
-        # 예: if protocol == 'SPI': transport = SpiTransport(...)
+        # 1. Transport 객체 생성
         transport = SerialTransport(port_name, baudrate, config=config)
 
-        # 2. Worker에 Transport 주입 (의존성 주입)
-        self.worker = ConnectionWorker(transport, port_name)
+        # 2. Worker에 Transport 주입
+        worker = ConnectionWorker(transport, port_name)
 
         # 3. 시그널 매핑 (Worker 이벤트 -> Controller 시그널)
-        self.worker.connection_opened.connect(self.port_opened)
-        self.worker.connection_closed.connect(self.port_closed)
-        self.worker.error_occurred.connect(self.error_occurred)
-        self.worker.data_received.connect(self.data_received)
+        # 람다를 사용하여 포트 이름을 함께 전달하거나, Worker 시그널이 이미 이름을 포함하므로 그대로 연결
+        worker.connection_opened.connect(self.port_opened)
+        worker.connection_closed.connect(self.on_worker_closed) # 내부 정리용 핸들러 연결
+        
+        # Worker의 error_occurred는 (msg)만 보내므로, (port_name, msg)로 변환 필요
+        # 하지만 ConnectionWorker를 수정하지 않고 여기서 처리하려면 람다 사용
+        # 주의: 람다에서 loop 변수 캡처 문제 방지 (여기선 port_name이 로컬 변수라 괜찮음)
+        worker.error_occurred.connect(lambda msg, p=port_name: self.error_occurred.emit(p, msg))
+        
+        # Worker의 data_received는 (bytes)만 보냄 -> (port_name, bytes)로 변환
+        # ConnectionWorker를 수정하여 (port_name, bytes)를 보내게 하는 것이 더 깔끔할 수 있음
+        # 하지만 ConnectionWorker는 범용적이므로, 여기서 변환하는 것이 맞음.
+        # -> ConnectionWorker 코드를 보니 data_received(bytes)임.
+        # -> ConnectionWorker를 수정하지 않고 여기서 람다로 연결
+        worker.data_received.connect(lambda data, p=port_name: self.data_received.emit(p, data))
 
-        self.worker.start()
+        self.workers[port_name] = worker
+        worker.start()
         return True
 
-    def close_port(self) -> None:
+    def on_worker_closed(self, port_name: str) -> None:
+        """Worker가 닫혔을 때 호출되는 내부 핸들러"""
+        if port_name in self.workers:
+            del self.workers[port_name]
+        self.port_closed.emit(port_name)
+
+    def close_port(self, port_name: Optional[str] = None) -> None:
         """
-        워커를 정지시키고 리소스를 정리합니다.
+        포트를 닫습니다.
+        
+        Args:
+            port_name: 닫을 포트 이름. None이면 모든 포트를 닫습니다.
         """
-        if self.worker:
-            self.worker.stop()
-            self.worker = None
+        if port_name:
+            worker = self.workers.get(port_name)
+            if worker:
+                worker.stop()
+                # on_worker_closed는 worker 시그널에 의해 호출됨
+        else:
+            # 모든 포트 닫기 (복사본으로 순회)
+            for name in list(self.workers.keys()):
+                self.close_port(name)
 
     def send_data(self, data: bytes) -> None:
         """
-        워커로 데이터를 전송합니다.
+        모든 열린 포트로 데이터를 전송합니다 (Broadcasting).
 
         Args:
             data (bytes): 전송할 바이트 데이터.
         """
-        if self.is_open and self.worker:
-            self.worker.send_data(data)
-        else:
-            self.error_occurred.emit("Port is not open.")
+        if not self.workers:
+            self.error_occurred.emit("", "No ports are open.")
+            return
+
+        for port_name, worker in self.workers.items():
+            if worker.isRunning():
+                worker.send_data(data)
+                self.data_sent.emit(port_name, data)
 
     def set_dtr(self, state: bool) -> None:
-        """
-        DTR(Data Terminal Ready) 신호를 설정합니다.
-
-        Args:
-            state (bool): True면 활성화, False면 비활성화.
-        """
-        if self.is_open and self.worker:
-            self.worker.set_dtr(state)
+        """모든 포트의 DTR 설정"""
+        for worker in self.workers.values():
+            worker.set_dtr(state)
 
     def set_rts(self, state: bool) -> None:
-        """
-        RTS(Request To Send) 신호 설정
-
-        Args:
-            state (bool): True면 활성화, False면 비활성화.
-        """
-        if self.is_open and self.worker:
-            self.worker.set_rts(state)
+        """모든 포트의 RTS 설정"""
+        for worker in self.workers.values():
+            worker.set_rts(state)

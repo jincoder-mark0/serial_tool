@@ -237,6 +237,26 @@ class PortSettingsWidget(QGroupBox):
             # 해제 요청 (Request Close)
             self.port_close_requested.emit()
 
+    def get_current_config(self) -> dict:
+        """현재 UI 설정값을 바탕으로 포트 설정 딕셔너리를 반환합니다."""
+        protocol = self.protocol_combo.currentText()
+        config = {"protocol": protocol, "port": self.port_combo.currentText()}
+
+        if protocol == "Serial":
+            config.update({
+                "baudrate": int(self.serial_ctrls_ui['baud_combo'].currentText()),
+                "bytesize": int(self.serial_ctrls_ui['data_combo'].currentText()),
+                "parity": self.serial_ctrls_ui['parity_combo'].currentText(),
+                "stopbits": float(self.serial_ctrls_ui['stop_combo'].currentText()),
+                "flowctrl": self.serial_ctrls_ui['flow_combo'].currentText(),
+            })
+        elif protocol == "SPI":
+            config.update({
+                "speed": int(self.spi_ctrls_ui['speed_combo'].currentText()),
+                "mode": int(self.spi_ctrls_ui['mode_combo'].currentText()),
+            })
+        return config
+
     def on_port_scan_clicked(self) -> None:
         """포트 스캔 버튼 클릭 핸들러입니다."""
         self.port_scan_requested.emit()

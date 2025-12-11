@@ -19,6 +19,7 @@ class MainMenuBar(QMenuBar):
     tab_close_requested = pyqtSignal()
     log_save_requested = pyqtSignal()
     toggle_right_panel_requested = pyqtSignal(bool)
+    file_transfer_requested = pyqtSignal()
 
     def __init__(self, parent=None):
         super().__init__(parent)
@@ -113,6 +114,11 @@ class MainMenuBar(QMenuBar):
 
         # 도구 메뉴 (Tools Menu)
         tools_menu = self.addMenu(lang_manager.get_text("main_menu_tools"))
+        
+        # 파일 전송 액션
+        file_transfer_action = QAction(lang_manager.get_text("manual_ctrl_grp_file"), self)
+        file_transfer_action.triggered.connect(self.file_transfer_requested.emit)
+        tools_menu.addAction(file_transfer_action)
 
         # 도움말 메뉴 (Help Menu)
         help_menu = self.addMenu(lang_manager.get_text("main_menu_help"))

@@ -2,9 +2,48 @@
 
 ## [미배포] (Unreleased)
 
+### UI 기능 보완 및 사용성 개선 (2025-12-11)
+
+#### 추가 사항 (Added)
+
+- **Packet Inspector 설정 UI**
+  - `PreferencesDialog`에 `Packet` 탭 추가
+  - Parser Type (Auto, AT, Delimiter, Fixed, Raw), Delimiter 설정, Fixed Length, AT Color Rules, Inspector Options UI 구현
+  - 관련 설정 로드/저장 로직 구현
+
+- **RX Newline 처리 옵션**
+  - `RxLogWidget`에 Newline 모드 선택 콤보박스 (Raw, LF, CR, CRLF) 추가
+  - 수신 데이터 줄바꿈 처리 로직 구현
+  - 관련 언어 키 추가 (`ko.json`, `en.json`)
+
+- **Main Status Bar 동적 업데이트**
+  - `PortController`에 `data_sent` 시그널 추가
+  - `MainPresenter`에서 1초 주기로 RX/TX 속도(KB/s) 계산 및 상태바 업데이트
+  - 포트 연결/해제/에러 상태 실시간 표시 연동
+
+- **전역 단축키 시스템**
+  - `MainWindow`에 전역 단축키 등록
+  - F2: 현재 포트 연결 (Connect)
+  - F3: 현재 포트 연결 해제 (Disconnect)
+  - F5: 현재 포트 로그 지우기 (Clear Log)
+  - `MainPresenter`와 `PortPresenter` 연동하여 동작 구현
+
+- **전이중 레코딩 (Full Duplex Recording)**
+  - 송신(TX) 데이터와 수신(RX) 데이터를 모두 로그 파일에 기록하는 기능 구현
+  - `MainPresenter`에서 데이터 송수신 이벤트를 캡처하여 `LogRecorderManager`로 전달
+  - `RxLogWidget`의 로그 저장 버튼을 토글 방식으로 변경하고, 파일명에 탭 이름 포함
+
+#### 변경 사항 (Changed)
+
+- **문서 업데이트**
+  - `doc/task.md`: Phase 2.5 완료 상태 반영
+
+---
+
 ### 기능 개선 및 버그 수정 (2025-12-11)
 
 #### 추가 사항 (Added)
+
 - **MacroListWidget 컨텍스트 메뉴**
   - 우클릭 메뉴 추가: Add, Delete, Up, Down 기능 제공
   - 키보드 단축키 외에 마우스 조작 편의성 향상
@@ -18,8 +57,10 @@
 - **리팩토링 (Refactoring)**
   - `PortController.open_port`: 개별 인자 대신 `config` 딕셔너리를 받도록 변경하여 확장성 확보
   - `MainWindow` 종료 로직을 `MainPresenter`로 이동하여 역할 분리 (MVP 패턴 강화)
+  - `PortController`: 멀티포트 지원을 위해 다중 `ConnectionWorker` 관리 구조로 리팩토링
 
 #### 변경 사항 (Changed)
+
 - **에러 핸들링 및 로깅 개선**
   - `PortPresenter` 및 `MacroPanel`에서 `print` 문을 `logger`와 `QMessageBox`로 대체
   - 포트 미선택 시 Warning, 에러 발생 시 Critical 팝업 표시
@@ -28,19 +69,29 @@
 - **PortSettingsWidget 로직 복원**
   - `get_current_config` 메서드 추가 및 `PortPresenter` 연동
   - 누락되었던 `on_protocol_changed`, `on_connect_clicked`, `on_port_scan_clicked` 메서드 복원
+  - `set_connected` 메서드 추가로 호환성 확보
   - 포트 설정 및 연결 로직 정상화
+
+- **ManualCtrlWidget UI 정리**
+  - `RxLogWidget`과 중복되는 `Clear` 및 `Save Log` 버튼 제거
+  - UI 레이아웃 재구성
 
 - **RingBuffer 최적화**
   - `core/utils.py`: `memoryview` 슬라이싱을 사용하여 `write` 메서드 성능 개선
   - 불필요한 데이터 복사 최소화
 
 #### 수정 사항 (Fixed)
+
 - **QSmartListView 테두리 스타일**
   - `QSmartListView`에 객체 이름(`SmartListView`) 부여
   - `common.qss`, `dark_theme.qss`, `light_theme.qss`에서 ID 선택자(`#SmartListView`)를 사용하여 테두리 스타일 적용
   - `QGroupBox` 스타일과의 간섭 제거로 올바른 테두리 표시
 
+- **RxLogWidget 버그 수정**
+  - 존재하지 않는 `add_logs_batch` 메서드 호출을 `append_batch`로 수정하여 대량 로그 처리 오류 해결
+
 #### 추가 사항 (Added) - 오후 세션
+
 - **Local Echo (로컬 에코)**
   - `ManualCtrlWidget`에 로컬 에코 체크박스 추가
   - 송신 데이터를 수신창(`RxLogWidget`)에 표시하는 기능 구현
@@ -50,6 +101,7 @@
   - `SystemLogWidget` 및 `RxLogWidget`이 `ColorManager`를 통해 색상을 적용하도록 개선
 
 #### 변경 사항 (Changed) - 오후 세션
+
 - **경로 관리 리팩토링 (Path Management)**
   - `ResourcePath` 클래스 도입으로 리소스 경로 관리 일원화
   - `Paths` 클래스 대체 및 테마 아이콘 경로 처리 로직 개선
@@ -59,13 +111,32 @@
   - 색상 처리는 `RxLogWidget` 및 `SystemLogWidget`에서 수행
 
 #### 수정 사항 (Fixed) - 오후 세션
+
 - **RxLogWidget 버그 수정**
   - 존재하지 않는 `add_logs_batch` 메서드 호출을 `append_batch`로 수정하여 대량 로그 처리 오류 해결
+
+#### 변경 사항 (Changed) - 저녁 세션
+
+- **System Log 위치 변경**
+  - `PortPanel` 내부에서 `MainLeftSection` 하단(전역)으로 이동
+  - 탭별로 분산된 시스템 로그를 한곳에서 통합 관리하도록 개선
+  - 공간 효율성 증대 및 포트 간 이벤트 순서 파악 용이성 확보
+- **Manual Control UI 개선**
+  - 불필요한 그룹박스(`manual_options_grp`, `manual_send_grp`) 제거
+  - 레이아웃 재배치: 입력창/전송 버튼을 상단에, 옵션 체크박스를 하단에 배치하여 사용성 향상
+  - 옵션 체크박스 레이아웃을 3열 2행으로 변경하여 가로 폭 절약
+- **하단 UI 레이아웃 변경**
+  - `ManualCtrlWidget`과 `SystemLogWidget`을 `MainLeftSection` 하단에 수직(`QVBoxLayout`)으로 배치
+  - `SystemLogWidget`의 전체 높이를 100px로 고정(리스트 높이 고정 제거)하여 우측 패널(`MacroCtrlWidget`)과의 수평 라인 정렬 유도
+  - `MacroCtrlWidget`의 `execution_settings_grp` 높이를 100px로 고정하여 좌측 패널(`SystemLogWidget`)과 높이 일치
+  - 좌측 패널 구성: `PortTabs(Stretch)` - `ManualCtrl` - `SystemLog(Fixed)`
 
 ---
 
 ### View 계층 완성, 중앙 경로 관리, 아키텍처 및 리팩토링 (2025-12-10)
+
 #### 리팩토링 (Refactoring)
+
 - **통신 계층 추상화 (Transport Abstraction)**
   - `core/interfaces.py`: 모든 통신 드라이버가 구현해야 할 `ITransport` 인터페이스 정의
   - `model/transports.py`: PySerial을 감싸는 `SerialTransport` 구현체 작성
@@ -107,12 +178,14 @@
   - 플레이스홀더 텍스트 업데이트 ("Ctrl+Enter to send")
 
 #### 버그 수정 (Fixed)
+
 - **UI 레이아웃**
   - 우측 패널 토글 시 좌측 패널 크기가 변경되는 문제 수정
   - 스플리터 스트레치 팩터 조정 (좌: 0, 우: 1) 및 패널 너비 저장/복원 로직 개선
   - 윈도우 리사이즈 시 System Log 높이를 고정하고 Received Area만 늘어나도록 수정 (`setFixedHeight`)
 
 #### 변경 사항 (Changed)
+
 - **테마 및 스타일 (QSS)**
   - `QSmartListView` 및 `QSmartTextEdit`에 다크/라이트 테마 완벽 지원
   - `QSmartTextEdit`에 `Q_PROPERTY`를 추가하여 QSS에서 라인 번호 색상 제어 가능
@@ -200,7 +273,7 @@
 
 - **doc/implementation_plan.md**
   - 최종 업데이트 날짜: 2025-12-10
-  - 프로젝트 구조 업데이트 (AppConfig, __init__.py, 파일명 수정)
+  - 프로젝트 구조 업데이트 (AppConfig, **init**.py, 파일명 수정)
 
 - **README.md**
   - 주요 기능 업데이트 (PortState, AppConfig, Package-level imports)
@@ -286,7 +359,6 @@
 - **QSS 스타일 확장**
   - `warning` 클래스 추가 (노란색 버튼 스타일)
   - Pause 버튼에 warning 스타일 적용
-
 
 ---
 
@@ -408,7 +480,6 @@
   - `PortTabWidget`과 `PortPanel` 간 순환 import 해결
   - `TYPE_CHECKING`을 사용한 타입 힌트 분리
   - 런타임에만 필요한 곳에서 import 수행
-
 
 #### 변경 사항 (Changed)
 
@@ -563,6 +634,7 @@
   - Presenter 계층 업데이트 (`port_presenter.py`, `main_presenter.py`)
 
 #### 이점 (Benefits)
+
 - 코드 구조의 일관성 및 가독성 향상
 - 컴포넌트 책임 범위 명확화
 - 유지보수 및 확장성 개선
@@ -631,7 +703,6 @@
 
 ### View 계층 마무리 및 다국어 지원 (2025-12-02)
 
-
 #### 추가 사항 (Added)
 
 - **다국어 지원 (Phase 1)**
@@ -679,7 +750,6 @@
 - **디버그 로깅**:
   - 모든 주요 컴포넌트에 저장/복구 디버그 로그 추가 (개발 중)
   - 검증 완료 후 디버그 로그 제거
-
 
 ### 듀얼 폰트 시스템 (2025-12-01)
 

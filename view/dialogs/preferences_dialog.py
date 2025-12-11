@@ -112,7 +112,7 @@ class PreferencesDialog(QDialog):
         self.port_newline_combo = QComboBox()
         self.port_newline_combo.addItems(["\r", "\n", "\r\n"])
         self.port_newline_combo.setEditable(True)
-        
+
         self.port_localecho_chk = QCheckBox(lang_manager.get_text("pref_chk_localecho"))
 
         self.port_scan_interval_spin = QSpinBox()
@@ -224,7 +224,8 @@ class PreferencesDialog(QDialog):
         delimiter_layout = QVBoxLayout()
 
         self.delimiter_list = QListWidget()
-        self.delimiter_list.addItems(["\\r\\n", "0xFF", "0x7E"])
+        # 기본값은 load_settings에서 처리하므로 여기서는 비워둡니다.
+        # self.delimiter_list.addItems(["\\r\\n", "0xFF", "0x7E"])
 
         delimiter_btn_layout = QHBoxLayout()
         self.delimiter_input = QLineEdit()
@@ -253,6 +254,21 @@ class PreferencesDialog(QDialog):
         fixed_length_layout.addRow(lang_manager.get_text("pref_lbl_packet_length"), self.packet_length_spin)
         fixed_length_group.setLayout(fixed_length_layout)
 
+        # AT Color Rules 그룹
+        at_color_group = QGroupBox(lang_manager.get_text("pref_grp_at_colors"))
+        at_color_layout = QVBoxLayout()
+
+        self.at_color_ok_chk = QCheckBox(lang_manager.get_text("pref_chk_at_ok"))
+        self.at_color_error_chk = QCheckBox(lang_manager.get_text("pref_chk_at_error"))
+        self.at_color_urc_chk = QCheckBox(lang_manager.get_text("pref_chk_at_urc"))
+        self.at_color_prompt_chk = QCheckBox(lang_manager.get_text("pref_chk_at_prompt"))
+
+        at_color_layout.addWidget(self.at_color_ok_chk)
+        at_color_layout.addWidget(self.at_color_error_chk)
+        at_color_layout.addWidget(self.at_color_urc_chk)
+        at_color_layout.addWidget(self.at_color_prompt_chk)
+        at_color_group.setLayout(at_color_layout)
+
         # Inspector Options 그룹
         inspector_group = QGroupBox(lang_manager.get_text("pref_grp_inspector_options"))
         inspector_layout = QFormLayout()
@@ -272,12 +288,24 @@ class PreferencesDialog(QDialog):
         inspector_layout.addRow("", self.auto_scroll_chk)
         inspector_group.setLayout(inspector_layout)
 
-        layout.addWidget(parser_type_group)
-        layout.addWidget(delimiter_group)
-        layout.addWidget(fixed_length_group)
-        layout.addWidget(inspector_group)
-        layout.addStretch()
-        widget.setLayout(layout)
+        # 레이아웃 배치
+        # 좌우 2열로 배치하여 공간 활용
+        h_layout = QHBoxLayout()
+        left_v_layout = QVBoxLayout()
+        right_v_layout = QVBoxLayout()
+
+        left_v_layout.addWidget(parser_type_group)
+        left_v_layout.addWidget(delimiter_group)
+
+        right_v_layout.addWidget(fixed_length_group)
+        right_v_layout.addWidget(at_color_group)
+        right_v_layout.addWidget(inspector_group)
+        right_v_layout.addStretch()
+
+        h_layout.addLayout(left_v_layout)
+        h_layout.addLayout(right_v_layout)
+
+        widget.setLayout(h_layout)
         return widget
 
     def _on_add_delimiter(self) -> None:
@@ -338,17 +366,41 @@ class PreferencesDialog(QDialog):
         # Serial
         self.port_baudrate_combo.setCurrentText(str(self._get_setting("settings.port_baudrate", 115200)))
         self.port_newline_combo.setCurrentText(str(self._get_setting("settings.port_newline", "\n")))
+        self.port_localecho_chk.setChecked(self._get_setting("settings.port_localecho", False))
         self.port_scan_interval_spin.setValue(self._get_setting("settings.port_scan_interval", 5000))
 
         # Command
         self.prefix_combo.setCurrentText(self._get_setting("settings.cmd_prefix", ""))
         self.suffix_combo.setCurrentText(self._get_setting("settings.cmd_suffix", ""))
 
+        # Packet
+        parser_type = self._get_setting("packet.parser_type", 0)
+        btn = self.parser_type_button_group.button(parser_type)
+        if btn:
+            btn.setChecked(True)
+
+        delimiters = self._get_setting("packet.delimiters", ["\\r\\n"])
+        self.delimiter_list.clear()
+        self.delimiter_list.addItems(delimiters)
+
+        self.packet_length_spin.setValue(self._get_setting("packet.packet_length", 64))
+
+        self.at_color_ok_chk.setChecked(self._get_setting("packet.at_color_ok", True))
+        self.at_color_error_chk.setChecked(self._get_setting("packet.at_color_error", True))
+        self.at_color_urc_chk.setChecked(self._get_setting("packet.at_color_urc", True))
+        self.at_color_prompt_chk.setChecked(self._get_setting("packet.at_color_prompt", True))
+
+        self.buffer_size_spin.setValue(self._get_setting("inspector.buffer_size", 100))
+        self.realtime_tracking_chk.setChecked(self._get_setting("inspector.realtime", True))
+        self.auto_scroll_chk.setChecked(self._get_setting("inspector.autoscroll", True))
+
         # Logging
         self.log_path_edit.setText(self._get_setting("logging.path", os.getcwd()))
 
     def apply_settings(self) -> None:
         """변경된 설정을 수집하여 시그널을 발생시킵니다."""
+        delimiters = [self.delimiter_list.item(i).text() for i in range(self.delimiter_list.count())]
+
         new_settings = {
             "theme": self.theme_combo.currentText(),
             "language": self.language_combo.currentData(),
@@ -360,7 +412,19 @@ class PreferencesDialog(QDialog):
             "cmd_prefix": self.prefix_combo.currentText(),
             "cmd_suffix": self.suffix_combo.currentText(),
             "log_path": self.log_path_edit.text(),
-            "max_log_lines": self.max_lines_spin.value()
+            "max_log_lines": self.max_lines_spin.value(),
+
+            # Packet Settings
+            "parser_type": self.parser_type_button_group.checkedId(),
+            "delimiters": delimiters,
+            "packet_length": self.packet_length_spin.value(),
+            "at_color_ok": self.at_color_ok_chk.checkState() == Qt.Checked,
+            "at_color_error": self.at_color_error_chk.checkState() == Qt.Checked,
+            "at_color_urc": self.at_color_urc_chk.checkState() == Qt.Checked,
+            "at_color_prompt": self.at_color_prompt_chk.checkState() == Qt.Checked,
+            "inspector_buffer_size": self.buffer_size_spin.value(),
+            "inspector_realtime": self.realtime_tracking_chk.checkState() == Qt.Checked,
+            "inspector_autoscroll": self.auto_scroll_chk.checkState() == Qt.Checked
         }
         self.settings_changed.emit(new_settings)
 
