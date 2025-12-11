@@ -7,6 +7,7 @@ import time
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QMutexLocker, QObject
 from typing import Optional
 from core.interfaces import ITransport
+from core.utils import ThreadSafeQueue
 from constants import (
     DEFAULT_READ_CHUNK_SIZE,
     BATCH_SIZE_THRESHOLD,
@@ -36,6 +37,7 @@ class ConnectionWorker(QThread):
 
         self._is_running = False
         self._mutex = QMutex()
+        self._tx_queue = ThreadSafeQueue() # TX 큐 추가
 
     def run(self) -> None:
         """스레드 실행 루프"""
@@ -49,7 +51,7 @@ class ConnectionWorker(QThread):
 
                 # 배치 처리를 위한 버퍼
                 batch_buffer = bytearray()
-                last_emit_time = time.time() * 1000
+                last_emit_time = time.monotonic() * 1000 # monotonic 시간 사용
 
                 while self.is_running():
                     try:
@@ -60,7 +62,7 @@ class ConnectionWorker(QThread):
                                 batch_buffer.extend(chunk)
 
                         # 3. 배치 전송 로직
-                        current_time = time.time() * 1000
+                        current_time = time.monotonic() * 1000
                         time_diff = current_time - last_emit_time
 
                         if len(batch_buffer) > 0:
@@ -69,8 +71,14 @@ class ConnectionWorker(QThread):
                                 batch_buffer.clear()
                                 last_emit_time = current_time
 
+                        # 4. TX 큐 처리 (비동기 전송)
+                        while not self._tx_queue.is_empty():
+                            data = self._tx_queue.dequeue()
+                            if data:
+                                self.transport.write(data)
+
                         # CPU 부하 방지
-                        if len(batch_buffer) == 0:
+                        if len(batch_buffer) == 0 and self._tx_queue.is_empty():
                             self.msleep(1)
                         else:
                             self.usleep(100)
@@ -105,15 +113,9 @@ class ConnectionWorker(QThread):
                 self.error_occurred.emit(f"Close Error: {str(e)}")
 
     def send_data(self, data: bytes) -> bool:
-        """데이터를 전송합니다 (Thread-safe delegate)."""
-        # 주의: write가 블로킹일 경우 별도 큐를 사용하는 것이 좋으나,
-        # 현재 구조에서는 직접 호출합니다. (pyserial write는 보통 빠름)
+        """데이터를 전송 큐에 추가합니다 (Non-blocking)."""
         if self.transport.is_open():
-            try:
-                self.transport.write(data)
-                return True
-            except Exception as e:
-                self.error_occurred.emit(f"Write Error: {str(e)}")
+            return self._tx_queue.enqueue(data)
         return False
 
     # 하드웨어 제어 메서드 위임

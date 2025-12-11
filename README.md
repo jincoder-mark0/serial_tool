@@ -7,41 +7,44 @@
 ## 주요 기능 (Key Features)
 
 ### 핵심 기능
+
 * **멀티 프로토콜(시리얼, SPI, I2C) 지원**: 탭 인터페이스로 여러 프로토콜(시리얼, SPI, I2C) 포트 동시 제어
 * **수동 제어**:
-  - HEX/ASCII 모드
-  - Prefix/Suffix
-  - 여러 줄 입력 지원 (라인 번호 표시, Ctrl+Enter 전송)
-  - 파일 전송 기능
+  * HEX/ASCII 모드
+  * Prefix/Suffix
+  * 여러 줄 입력 지원 (라인 번호 표시, Ctrl+Enter 전송)
+  * 파일 전송 기능
 
-  - 로그 저장 및 화면(newline 설정, max line 수 설정) 클리어
-  - Local Echo (송신 데이터 표시) 지원
+  * 로그 저장 및 화면(newline 설정, max line 수 설정) 클리어
+  * Local Echo (송신 데이터 표시) 지원
 * **매크로 자동화**:
-  - 여러 명령어를 리스트로 관리
-  - 순차 명령 실행
-  - Repeat 및 Delay 설정
-  - 스크립트 저장 및 불러오기 (JSON 형식)
+  * 여러 명령어를 리스트로 관리
+  * 순차 명령 실행
+  * Repeat 및 Delay 설정
+  * 스크립트 저장 및 불러오기 (JSON 형식)
 * **실시간 모니터링**:
-  - Tx/Rx 바이트 카운트
-  - 색상 규칙 기반 로그 강조 (OK=녹색, ERROR=빨강)
-  - 타임스탬프 표시
+  * Tx/Rx 바이트 카운트
+  * 색상 규칙 기반 로그 강조 (OK=녹색, ERROR=빨강)
+  * 타임스탬프 표시
 
 ### UI/UX 특징
+
 * **현대적 인터페이스**:
-  - 다크/라이트 테마 전환
-  - 듀얼 폰트 시스템 (Proportional/Fixed)
-  - SVG 기반 테마 적응형 아이콘
-  - 컴팩트한 2줄 포트 설정 레이아웃
-  - 3단계 Select All 체크박스
-  - PortState Enum 기반 연결 상태 표시
+  * 다크/라이트 테마 전환
+  * 듀얼 폰트 시스템 (Proportional/Fixed)
+  * SVG 기반 테마 적응형 아이콘
+  * 컴팩트한 2줄 포트 설정 레이아웃
+  * 3단계 Select All 체크박스
+  * PortState Enum 기반 연결 상태 표시
 * **사용성**:
-  - 모든 기능 툴팁 제공
-  - 설정 자동 저장 (창 크기, 테마, 폰트)
-  - 견고한 폴백 메커니즘 (설정 파일 누락 시 복구)
-  - 중앙 집중식 경로 관리 (AppConfig)
-  - Package-level imports (__init__.py)
+  * 모든 기능 툴팁 제공
+  * 설정 자동 저장 (창 크기, 테마, 폰트)
+  * 견고한 폴백 메커니즘 (설정 파일 누락 시 복구)
+  * 중앙 집중식 경로 관리 (AppConfig)
+  * Package-level imports (**init**.py)
 
 ### 다국어 지원
+
 * **한국어/영어** 실시간 전환
 * CommentJSON 기반 번역 관리
 * 언어 키 자동 추출 도구 (`tools/manage_lang_keys.py`)
@@ -51,6 +54,7 @@
 ## 설치 및 실행
 
 ### 요구 사항
+
 * Python 3.8+
 * PyQt5, pyserial, commentjson
 
@@ -207,17 +211,20 @@ serial_tool/
 ```
 
 **설계 원칙**:
-- **View**: UI 표시와 사용자 입력만 처리 (시그널 emit)
-- **Presenter**: 비즈니스 로직 처리 (View ↔ Model 중재)
-- **Model**: 데이터 및 시리얼 통신 담당
+
+* **View**: UI 표시와 사용자 입력만 처리 (시그널 emit)
+* **Presenter**: 비즈니스 로직 처리 (View ↔ Model 중재)
+* **Model**: 데이터 및 시리얼 통신 담당
 
 **최근 리팩토링 사례**:
-- ManualCtrlWidget: Prefix/Suffix 로직 → Presenter로 이동
-- PortSettingsWidget: 설정 접근 → SettingsManager 활용
+
+* ManualCtrlWidget: Prefix/Suffix 로직 → Presenter로 이동
+* PortSettingsWidget: 설정 접근 → SettingsManager 활용
 
 ### 설정 구조
 
 **논리적 그룹 기반** (`config/settings.json`):
+
 ```json
 {
   "serial": { "baudrate": 115200, ... },
@@ -233,59 +240,71 @@ serial_tool/
 
 ### ✅ 완료 항목
 
-**프로젝트 기반**:
-- [x] 프로젝트 구조 및 기본 설정
-- [x] Git 버전 관리 체계
-- [x] 문서화 시스템
-- [x] MVP 아키텍처 기반 리팩토링
+**Model 계층 (Phase 4)**:
 
-**View 계층**:
-- [x] UI 골격 및 위젯 구현
-- [x] 테마 시스템 (Dark/Light)
-- [x] 듀얼 폰트 시스템
-- [x] SVG 아이콘 시스템
-- [x] 다국어 지원 (한국어/영어)
-- [x] 색상 규칙 (OK=녹색, ERROR=빨강)
-- [x] 설정 관리 시스템
-- [x] 코드 품질 개선 (타입 힌트, Docstring)
-- [x] MVP 패턴 적용 (Signal 기반 통신)
+* [x] `SerialManager` (포트 레지스트리)
+* [x] `ConnectionWorker` (비동기 I/O, TX 큐)
+* [x] `SerialTransport` (통신 추상화)
+* [x] `PacketParser` (AT, Delimiter, Fixed)
+* [x] `MacroRunner` (자동화 엔진)
+* [x] `MacroEntry` (DTO)
 
-**Core 유틸리티**:
-- [x] Logger (Singleton, 견고한 패턴)
-- [x] SettingsManager (Singleton, 논리 그룹)
-- [x] 폴백 메커니즘 (설정 파일 복구)
+**Core 유틸리티 (Phase 3)**:
+
+* [x] `RingBuffer`, `ThreadSafeQueue`
+* [x] `EventBus`
+* [x] `Logger`
+* [x] `SettingsManager` (Singleton, 논리 그룹)
+* [x] 폴백 메커니즘 (설정 파일 복구)
+
+**View 계층 (Phase 2)**:
+
+* [x] UI 골격 및 위젯 구현
+* [x] 테마/폰트/아이콘 시스템
+* [x] 다국어 지원
+* [x] 설정 관리 시스템
+* [x] MVP 패턴 적용
+* [x] StatusPanel 위젯
+* [x] 상태바 상세 정보
+* [x] Connect 버튼 색상 변경
+* [x] 단축키 시스템
+* [x] 레이아웃 비율 조정
+* [x] 색상 코드 표준화
+* [x] Splitter 비율 복원
+* [x] Tooltip 개선
+
+**프로젝트 기반 (Phase 1)**:
+
+* [x] 프로젝트 구조 및 기본 설정
+* [x] Git 버전 관리 체계
+* [x] 문서화 시스템
+* [x] MVP 아키텍처 기반 리팩토링
 
 ### 🔄 진행 중
 
-**View 계층 완성** (`view/doc/implementation_plan.md` 참조):
-- [ ] StatusPanel 위젯
-- [ ] 상태바 상세 정보 (6개 필드)
-- [ ] Connect 버튼 색상 변경
-- [ ] 단축키 시스템 (10개)
-- [ ] 레이아웃 비율 조정
-- [ ] 색상 코드 표준화
-- [ ] Splitter 비율 복원
-- [ ] Tooltip 개선
+**Presenter 계층 (Phase 5)**:
 
-**Model/Presenter**:
-- [ ] SerialWorker 완성
-- [ ] PortController 통합
-- [ ] Presenter 로직 확장
+* [ ] `MainPresenter` 로직 확장
+* [ ] `MacroPresenter` 구현
+* [ ] `FilePresenter` 구현
+* [ ] `EventRouter` 구현
 
 ### ⏳ 예정
 
 **단기 (Current Sprint)**:
-- [ ] Macro(list 순차 반복 전송) 자동화 엔진
-- [ ] 파일 전송 기능
-- [ ] 패킷 파서 시스템
+
+* [ ] Macro(list 순차 반복 전송) 자동화 엔진 연동
+* [ ] 파일 전송 기능 연동
+* [ ] 패킷 파서 시스템 연동
 
 **중장기 (Future)**:
-- [ ] 플러그인 시스템
-- [ ] **통신 프로토콜 확장**:
-  - [ ] SPI 지원 (FT4222 칩 등)
-  - [ ] I2C 지원 (FT4222 칩 등)
-  - [ ] 멀티 프로토콜 동시 지원 (Serial + SPI + I2C)
-- [ ] 스크립트 언어 지원 (Python/Lua 임베딩)
+
+* [ ] 플러그인 시스템
+* [ ] **통신 프로토콜 확장**:
+  * [ ] SPI 지원 (FT4222 칩 등)
+  * [ ] I2C 지원 (FT4222 칩 등)
+  * [ ] 멀티 프로토콜 동시 지원 (Serial + SPI + I2C)
+* [ ] 스크립트 언어 지원 (Python/Lua 임베딩)
 
 ---
 
@@ -306,12 +325,13 @@ serial_tool/
 
 ### 코드 스타일
 
-- **PEP 8** 준수
-- **한국어** 주석 및 Docstring
-- **타입 힌트** 필수
-- **MVP 패턴** 준수 (View는 시그널만 emit)
+* **PEP 8** 준수
+* **한국어** 주석 및 Docstring
+* **타입 힌트** 필수
+* **MVP 패턴** 준수 (View는 시그널만 emit)
 
 ### Git 버전 관리
+
 * 본 프로젝트는 **Git을 통한 지속적인 백업**을 권장합니다:
 * 모든 메시지는 한국어로 작성합니다.
 
@@ -325,12 +345,14 @@ Style: 스타일 변경
 ```
 
 **브랜치 전략**:
-- `main`: 안정 버전
-- `feature/기능명`: 개발 브랜치
+
+* `main`: 안정 버전
+* `feature/기능명`: 개발 브랜치
 
 **권장 사항**:
-- 기능 단위로 자주 커밋 (최소 하루 1회)
-- 세션 종료 시 `doc/session_summary_YYYYMMDD.md` 작성
+
+* 기능 단위로 자주 커밋 (최소 하루 1회)
+* 세션 종료 시 `doc/session_summary_YYYYMMDD.md` 작성
 
 ---
 

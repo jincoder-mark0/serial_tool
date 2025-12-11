@@ -16,8 +16,10 @@ from PyQt5.QtCore import (
 from PyQt5.QtGui import (
     QColor, QTextDocument, QAbstractTextDocumentLayout, QTextCharFormat, QPainter
 )
+from PyQt5.QtCore import QDateTime
 
 from constants import DEFAULT_LOG_MAX_LINES, TRIM_CHUNK_RATIO
+import datetime
 
 class QSmartListView(QListView):
     """
@@ -474,7 +476,6 @@ class QSmartListView(QListView):
         if not self._timestamp_enabled:
             return False
         
-        from PyQt5.QtCore import QDateTime
         now = QDateTime.currentMSecsSinceEpoch()
         
         # Newline 모드: 각 줄 시작에 타임스탬프
@@ -502,7 +503,6 @@ class QSmartListView(QListView):
             
             # 타임스탬프 추가
             if add_timestamp:
-                import datetime
                 ts = datetime.datetime.now().strftime("[%H:%M:%S]")
                 formatted = f"{ts} {formatted}"
             

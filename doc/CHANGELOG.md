@@ -131,6 +131,13 @@
   - `MacroCtrlWidget`의 `execution_settings_grp` 높이를 100px로 고정하여 좌측 패널(`SystemLogWidget`)과 높이 일치
   - 좌측 패널 구성: `PortTabs(Stretch)` - `ManualCtrl` - `SystemLog(Fixed)`
 
+- **Model 계층 강화 (Phase 4)**
+  - `SerialManager`: 싱글톤 스레드 안전성 강화 (QMutex 적용) 및 포트 관리 로직 개선
+  - `ConnectionWorker`: TX 큐(`ThreadSafeQueue`) 도입으로 비동기 전송 구현, `time.monotonic()` 적용으로 타이밍 정밀도 향상
+  - `SerialTransport`: 예외 처리 강화 (연결 끊김 감지 및 에러 전파)
+  - `PacketParser`: `ATParser`, `DelimiterParser` 버퍼 크기 제한 추가 (메모리 보호), 임포트 최적화
+  - `MacroRunner`: Expect 처리 구조 마련 및 비동기 실행 로직 개선
+
 ---
 
 ### View 계층 완성, 중앙 경로 관리, 아키텍처 및 리팩토링 (2025-12-10)

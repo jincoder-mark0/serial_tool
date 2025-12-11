@@ -6,6 +6,7 @@ from core.settings_manager import SettingsManager
 from core.log_recorder import log_recorder_manager
 from view.managers.lang_manager import lang_manager
 from core.logger import logger
+import os
 
 class MainPresenter(QObject):
     """
@@ -444,7 +445,6 @@ class MainPresenter(QObject):
             return
             
         try:
-            import os
             self._transfer_total_size = os.path.getsize(filepath)
             self._transfer_sent_size = 0
             self._transfer_file = open(filepath, 'rb')

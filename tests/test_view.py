@@ -26,6 +26,9 @@ from view.dialogs.preferences_dialog import PreferencesDialog
 from view.dialogs.about_dialog import AboutDialog
 from view.widgets.file_progress import FileProgressWidget
 from core.settings_manager import SettingsManager
+from view.custom_qt.smart_list_view import QSmartListView
+from view.managers.color_manager import color_manager
+import time
 
 class ViewTestWindow(QMainWindow):
     """View 컴포넌트 테스트용 윈도우 클래스입니다."""
@@ -431,9 +434,6 @@ class ViewTestWindow(QMainWindow):
 
     def create_smart_list_view_test(self) -> QWidget:
         """QSmartListView 새 기능 테스트 위젯을 생성합니다."""
-        from view.custom_qt.smart_list_view import QSmartListView
-        from view.managers.color_manager import color_manager
-        
         widget = QWidget()
         layout = QVBoxLayout(widget)
         
@@ -512,9 +512,7 @@ class ViewTestWindow(QMainWindow):
         return widget
     
     def test_raw_mode_timestamp(self) -> None:
-        """Raw 모드 타임스탬프를 테스트합니다 (간격 체크)."""
-        import time
-        
+        """Raw 모드 타임스탬프를 테스트합니다 (간격 체크)."""        
         # Newline 제거 (Raw 모드)
         self.smart_list.set_newline_char(None)
         
@@ -532,7 +530,6 @@ class ViewTestWindow(QMainWindow):
     
     def test_large_data(self) -> None:
         """대량 데이터 성능 테스트 (1000줄)."""
-        import time
         start = time.time()
         
         for i in range(1000):

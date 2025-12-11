@@ -11,6 +11,7 @@ from pathlib import Path
 from typing import Dict, Any
 from constants import DEFAULT_BAUDRATE, DEFAULT_LOG_MAX_LINES
 from core.logger import logger
+import os
 
 class SettingsManager:
     """
@@ -64,7 +65,6 @@ class SettingsManager:
             return SettingsManager._resource_path.settings_file
         else:
             # 하위 호환성: AppConfig가 없으면 기존 방식 사용
-            import os
             if hasattr(os, '_MEIPASS'):
                 # PyInstaller 번들 환경
                 base_path = Path(os._MEIPASS)

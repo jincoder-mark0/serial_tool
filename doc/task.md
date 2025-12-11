@@ -141,24 +141,24 @@
   - [x] Transport 생성 및 Worker 주입 로직 구현
   - [x] 상태 머신 구현
   - [x] 멀티포트 지원 (다중 Worker 관리)
-- [ ] `SerialManager` (PortRegistry) 구현
-  - [ ] `model/serial_manager.py` 생성
-  - [ ] 포트 레지스트리 및 수명 주기 관리 구현
+- [x] `SerialManager` (PortRegistry) 구현
+  - [x] `model/serial_manager.py` 생성
+  - [x] 포트 레지스트리 및 수명 주기 관리 구현
 - [x] `PortController` 통합
   - [x] Worker 생성 및 Transport 주입 로직
   - [ ] PacketParser 통합 (Raw Data -> Packet 변환)
   - [x] EventBus 발행 (`port.rx_data`, `port.status` 등)
-- [ ] `MacroRunner` 구현 (자동화 엔진)**
-  - [ ] 상태 머신 (Idle/Running/Paused) 구현
-  - [ ] Step 실행 로직 (Send -> Delay/Expect)
-  - [ ] QTimer 기반 타이밍 제어
-- [ ] `PacketParser` 시스템 구현
-  - [ ] `model/packet_parser.py` 생성
-  - [ ] `ParserFactory` 구현 (AT, Delimiter, Fixed, Hex)
+- [x] `MacroRunner` 구현 (자동화 엔진)
+  - [x] 상태 머신 (Idle/Running/Paused) 구현
+  - [x] Step 실행 로직 (Send -> Delay/Expect)
+  - [x] QTimer 기반 타이밍 제어
+- [x] `PacketParser` 시스템 구현
+  - [x] `model/packet_parser.py` 생성
+  - [x] `ParserFactory` 구현 (AT, Delimiter, Fixed, Hex)
   - [ ] `ExpectMatcher` 구현 (Regex 기반)
-  - [ ] `IPacketParser` 인터페이스 및 `RxPacket` 데이터 클래스 정의
-  - [ ] `ATParser` 구현 (AT Command 파싱)
-  - [ ] `DelimiterParser`, `FixedLengthParser` 구현
+  - [x] `IPacketParser` 인터페이스 및 `RxPacket` 데이터 클래스 정의
+  - [x] `ATParser` 구현 (AT Command 파싱)
+  - [x] `DelimiterParser`, `FixedLengthParser` 구현
 - [ ] `EventRouter` 구현 (View-Model 분리)
   - [ ] EventBus 구독 및 View 업데이트 라우팅
 

@@ -235,7 +235,7 @@ serial_tool2/
 - 포트별 독립 TX 큐
 - 포트별 독립 Worker 스레드
 
-#### [진행 예정] `model/serial_manager.py`
+#### [완료] `model/serial_manager.py`
 
 **PortRegistry 구현 (싱글톤)**
 
@@ -250,7 +250,7 @@ serial_tool2/
   - 타임아웃 설정 (기본 5초)
   - 매칭 실패 시 재시도 정책
 
-#### [진행 예정] `model/packet_parser.py`
+#### [완료] `model/packet_parser.py`
 
 **패킷 파서 시스템**
 
@@ -263,7 +263,7 @@ serial_tool2/
 - **ParserFactory**: 설정(`AT`, `Hex` 등)에 따라 적절한 파서 인스턴스 생성 (전략 패턴)
 - **Performance**: 1ms 이하 파싱 지연 목표
 
-#### [진행 예정] `model/macro_runner.py`
+#### [완료] `model/macro_runner.py`
 
 **매크로 실행 엔진**
 
@@ -279,7 +279,7 @@ serial_tool2/
   - `pause()` / `resume()`: 일시 정지 및 재개
   - `set_interval(ms)`: 반복 간격 설정
 
-#### [진행 예정] `model/macro_entry.py`
+#### [완료] `model/macro_entry.py`
 
 **MacroEntry DTO**
 

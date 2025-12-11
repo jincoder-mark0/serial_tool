@@ -46,7 +46,6 @@ class PortTabPanel(QTabWidget):
 
     def edit_tab_name(self, index: int) -> None:
         """탭 이름을 수정합니다."""
-        from view.panels.port_panel import PortPanel
 
         widget = self.widget(index)
         if not isinstance(widget, PortPanel):

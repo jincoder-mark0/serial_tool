@@ -115,16 +115,34 @@ class MacroRunner(QObject):
         # 명령 전송
         try:
             self.send_requested.emit(entry.command, entry.is_hex, entry.prefix, entry.suffix)
-            # TODO: Expect 처리 로직 추가 필요 (현재는 Delay만 처리)
             
+            # Expect 처리 (구조만 마련)
+            if entry.expect:
+                # TODO: Expect 매칭을 위한 대기 상태로 전환
+                # 1. RX 데이터 모니터링 시작
+                # 2. 타임아웃 타이머 설정
+                # 3. 매칭 성공 시 _on_step_success 호출
+                # 4. 타임아웃 시 _on_step_failure 호출
+                # 현재는 임시로 Delay 처리로 넘어감
+                pass
+
             # 성공 처리 및 다음 스텝 예약
-            self.step_completed.emit(self._current_index, True)
-            self._current_index += 1
-            
-            delay = entry.delay_ms if entry.delay_ms > 0 else 10 # 최소 딜레이
-            self._step_timer.start(delay)
+            self._on_step_success(entry)
 
         except Exception as e:
             logger.error(f"Macro execution error: {e}")
             self.error_occurred.emit(str(e))
             self.stop()
+
+    def _on_step_success(self, entry: MacroEntry) -> None:
+        """스텝 성공 처리 및 다음 스텝 예약"""
+        self.step_completed.emit(self._current_index, True)
+        self._current_index += 1
+        
+        delay = entry.delay_ms if entry.delay_ms > 0 else 10 # 최소 딜레이
+        self._step_timer.start(delay)
+
+    def _on_step_failure(self, error_msg: str) -> None:
+        """스텝 실패 처리"""
+        self.error_occurred.emit(error_msg)
+        self.stop()

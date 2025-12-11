@@ -1,5 +1,5 @@
 from typing import Dict, List, Optional
-from PyQt5.QtCore import QObject, pyqtSignal
+from PyQt5.QtCore import QObject, pyqtSignal, QMutex, QMutexLocker
 from model.port_controller import PortController
 
 class SerialManager(QObject):
@@ -7,6 +7,7 @@ class SerialManager(QObject):
     애플리케이션 전체의 PortController 인스턴스를 관리하는 중앙 레지스트리 (싱글톤 패턴).
     """
     _instance = None
+    _lock = QMutex() # 싱글톤 생성을 위한 락
 
     # 시그널 정의
     port_added = pyqtSignal(str)    # 포트 컨트롤러 생성됨
@@ -14,8 +15,10 @@ class SerialManager(QObject):
 
     def __new__(cls):
         if cls._instance is None:
-            cls._instance = super(SerialManager, cls).__new__(cls)
-            cls._instance._initialized = False
+            with QMutexLocker(cls._lock):
+                if cls._instance is None:
+                    cls._instance = super(SerialManager, cls).__new__(cls)
+                    cls._instance._initialized = False
         return cls._instance
 
     def __init__(self):

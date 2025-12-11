@@ -1,6 +1,7 @@
 from abc import ABC, abstractmethod
 from typing import List, Optional, Any
 from dataclasses import dataclass
+import time
 
 @dataclass
 class Packet:
@@ -16,10 +17,6 @@ class IPacketParser(ABC):
     def parse(self, buffer: bytes) -> List[Packet]:
         """
         버퍼 데이터를 파싱하여 패킷 리스트를 반환합니다.
-        파싱된 데이터는 버퍼에서 제거된 것으로 간주하거나, 
-        호출자가 반환된 패킷 길이만큼 버퍼를 비워야 합니다.
-        (여기서는 파싱된 패킷 리스트만 반환하고 버퍼 관리는 호출자에게 위임하는 구조가 일반적이나,
-         구현 편의를 위해 파싱 후 남은 버퍼를 반환하거나, 내부 상태를 가질 수 있음)
         """
         pass
 
@@ -32,7 +29,6 @@ class RawParser(IPacketParser):
     """바이너리 데이터를 그대로 패스하는 파서"""
     
     def parse(self, buffer: bytes) -> List[Packet]:
-        import time
         if not buffer:
             return []
         # 모든 데이터를 하나의 패킷으로 처리
@@ -45,17 +41,22 @@ class RawParser(IPacketParser):
 class ATParser(IPacketParser):
     """AT Command 파서 (\r\n 구분, OK/ERROR 응답 처리)"""
     
-    def __init__(self):
+    def __init__(self, max_buffer_size: int = 4096):
         self._buffer = b""
+        self._max_buffer_size = max_buffer_size
 
     def parse(self, buffer: bytes) -> List[Packet]:
-        import time
         self._buffer += buffer
+        
+        # 버퍼 크기 제한 (메모리 보호)
+        if len(self._buffer) > self._max_buffer_size:
+            # 오래된 데이터 버림 (또는 에러 처리)
+            self._buffer = self._buffer[-self._max_buffer_size:]
+            
         packets = []
         
         while b'\r\n' in self._buffer:
             line, self._buffer = self._buffer.split(b'\r\n', 1)
-            # 빈 줄 무시 옵션이 필요할 수 있음
             if line:
                 packets.append(Packet(data=line + b'\r\n', timestamp=time.time(), metadata={"type": "AT"}))
         
@@ -67,13 +68,18 @@ class ATParser(IPacketParser):
 class DelimiterParser(IPacketParser):
     """구분자 기반 파서"""
     
-    def __init__(self, delimiter: bytes = b'\n'):
+    def __init__(self, delimiter: bytes = b'\n', max_buffer_size: int = 4096):
         self._delimiter = delimiter
         self._buffer = b""
+        self._max_buffer_size = max_buffer_size
 
     def parse(self, buffer: bytes) -> List[Packet]:
-        import time
         self._buffer += buffer
+
+        # 버퍼 크기 제한
+        if len(self._buffer) > self._max_buffer_size:
+            self._buffer = self._buffer[-self._max_buffer_size:]
+
         packets = []
         
         while self._delimiter in self._buffer:
@@ -93,7 +99,6 @@ class FixedLengthParser(IPacketParser):
         self._buffer = b""
 
     def parse(self, buffer: bytes) -> List[Packet]:
-        import time
         self._buffer += buffer
         packets = []
         
