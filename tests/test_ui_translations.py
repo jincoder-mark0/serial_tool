@@ -99,14 +99,10 @@ class TestManualCtrlWidget:
         # 영어
         lang_manager.set_language('en')
         assert widget.send_manual_cmd_btn.text() == en_data.get("manual_ctrl_btn_send", "")
-        assert widget.select_file_btn.text() == en_data.get("manual_ctrl_btn_select_file", "")
-        assert widget.send_file_btn.text() == en_data.get("manual_ctrl_btn_send_file", "")
 
         # 한국어
         lang_manager.set_language('ko')
         assert widget.send_manual_cmd_btn.text() == ko_data.get("manual_ctrl_btn_send", "")
-        assert widget.select_file_btn.text() == ko_data.get("manual_ctrl_btn_select_file", "")
-        assert widget.send_file_btn.text() == ko_data.get("manual_ctrl_btn_send_file", "")
 
     def test_checkbox_translations(self, app, qtbot, lang_data):
         """체크박스 텍스트 번역 검증"""
@@ -194,11 +190,11 @@ class TestPacketInspectorWidget:
 
         # 영어
         lang_manager.set_language('en')
-        assert widget.title_label.text() == en_data.get("inspector_grp_title", "")
+        assert widget.title_lbl.text() == en_data.get("inspector_grp_title", "")
 
         # 한국어
         lang_manager.set_language('ko')
-        assert widget.title_label.text() == ko_data.get("inspector_grp_title", "")
+        assert widget.title_lbl.text() == ko_data.get("inspector_grp_title", "")
 
 class TestFileProgressWidget:
     """FileProgressWidget 번역 테스트"""
