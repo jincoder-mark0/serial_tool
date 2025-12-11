@@ -7,7 +7,7 @@ import time
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QMutexLocker, QObject
 from typing import Optional
 from core.interfaces import ITransport
-from core.constants import (
+from app_constants import (
     DEFAULT_READ_CHUNK_SIZE,
     BATCH_SIZE_THRESHOLD,
     BATCH_TIMEOUT_MS

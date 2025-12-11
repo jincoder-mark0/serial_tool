@@ -9,8 +9,8 @@ import logging
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt
 
-from version import __version__
-from config import AppConfig
+from app_version import __version__
+from app_config import AppConfig
 from view.main_window import MainWindow
 from presenter.main_presenter import MainPresenter
 

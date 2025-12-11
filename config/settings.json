@@ -17,11 +17,11 @@
     "port_scan_interval": 5000
   },
   "ui": {
-    "window_width": 593,
-    "window_height": 796,
+    "window_width": 969,
+    "window_height": 1018,
     "window_x": 530,
-    "window_y": 108,
-    "splitter_state": "AAAA/wAAAAEAAAACAAADvgAAAZAB/////wEAAAABAA=="
+    "window_y": 0,
+    "splitter_state": "AAAA/wAAAAEAAAACAAACZAAABWcB/////wEAAAABAA=="
   },
   "ports": {
     "default_config": {
@@ -36,7 +36,7 @@
         "custom_name": "Port",
         "port_settings_widgets": {
           "protocol": "Serial",
-          "port": "COM5",
+          "port": "COM1",
           "serial": {
             "baudrate": "115200",
             "bytesize": "8",

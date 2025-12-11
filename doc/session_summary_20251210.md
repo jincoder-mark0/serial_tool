@@ -109,13 +109,13 @@
 
 ### 4. 네이밍 일관성 개선
 
-#### rx → recv 변경
+#### recv → rx 변경
 - **파일**: `view/widgets/received_area.py`
 - **변경 사항**:
-  - 모든 `rx_` 접두사를 `recv_`로 변경
-  - `on_clear_rx_log_clicked()` → `on_clear_recv_log_clicked()`
-  - `rx_search_input` → `recv_search_input`
-  - `rx_hex_chk` → `recv_hex_chk`
+  - 모든 `recv_` 접두사를 `rx_`로 변경
+  - `on_clear_recv_log_clicked()` → `on_clear_rx_log_clicked()`
+  - `recv_search_input` → `rx_search_input`
+  - `recv_hex_chk` → `rx_hex_chk`
   - 등 모든 관련 변수 및 메서드명 변경
 
 #### manual_control → manual_ctrl 변경
@@ -135,13 +135,13 @@
 
 #### 기타 네이밍 개선
 - **언어 키 통일**:
-  - `recv_lbl_log` → `recv_title`
+  - `recv_lbl_log` → `rx_log_title`
   - `status_lbl_log` → `system_title`
   - `right_tab_inspector` → `right_tab_packet`
   - `pref_tab_parser` → `pref_tab_packet`
 - **QSS 선택자 수정**:
-  - `rx_search_prev_btn` → `recv_search_prev_btn`
-  - `rx_search_next_btn` → `recv_search_next_btn`
+  - `recv_search_prev_btn` → `rx_search_prev_btn`
+  - `recv_search_next_btn` → `rx_search_next_btn`
 
 #### DTR/RTS 제거
 - **PortSettingsWidget**:
@@ -190,32 +190,6 @@
 
 ---
 
-### 6. 버그 수정 및 개선
-
-#### 싱글톤 패턴 수정
-- **문제**: `TypeError: SettingsManager.__new__() takes 1 positional argument but 2 were given`
-- **해결**: `__new__(cls, *args, **kwargs)` 시그니처로 변경
-- **적용 파일**:
-  - `core/settings_manager.py`
-  - `view/tools/lang_manager.py`
-
-#### 경로 계산 수정
-- **문제**: `Language directory not found: e:\_Python\serial_tool2\view\config\languages`
-- **원인**: `view/tools/lang_manager.py`에서 상위 디렉토리 2번만 올라감
-- **해결**: 3번 올라가도록 수정 (`os.path.dirname()` 3회 적용)
-
-#### 우측 패널 표시 상태 복원
-- **MainWindow.init_ui()**:
-  - 설정에서 `right_panel_visible` 읽어서 메뉴 체크 상태 복원
-  - `self.menu_bar.set_right_panel_checked(right_panel_visible)`
-
-#### clear_log() 메서드 개선
-- **main_window.py**:
-  - `isinstance(current_widget, PortPanel)` 체크 제거
-  - 직접 `current_widget.received_area.on_clear_recv_log_clicked()` 호출
-
----
-
 ### 7. 통신 구조 리팩토링 (Protocol Agnostic Architecture)
 **목표**: Serial 통신에만 종속된 구조를 탈피하여, 향후 SPI/I2C 등 다양한 프로토콜을 수용할 수 있는 유연한 구조로 변경.
 
@@ -239,6 +213,69 @@
   - 리스트 뷰 내부에서 정규식 기반의 `find_next`, `find_prev` 메서드 구현.
   - 검색 결과 하이라이트 및 자동 스크롤 기능 포함.
 - **적용**: `ReceivedAreaWidget` 및 `SystemLogWidget`의 로그 뷰어를 `QSmartListView`로 교체 완료.
+
+---
+
+### 9. 아키텍처 리팩토링 (Strict MVP)
+**목표**: View 계층이 `SettingsManager`(Model/Infra)에 직접 의존하는 문제를 해결하여 MVP 패턴을 엄격히 준수.
+
+- **설정 의존성 제거**:
+  - `view/panels/macro_panel.py`: `SettingsManager` import 제거.
+  - `view/sections/main_left_section.py`: `SettingsManager` import 제거.
+- **상태 주입/반환 패턴 도입**:
+  - View는 파일 저장/로드 대신 `save_state() -> dict`와 `load_state(dict)` 메서드만 제공.
+  - 데이터의 흐름: View ↔ Presenter/Window ↔ SettingsManager.
+- **중앙 집중식 저장**:
+  - `MainWindow.closeEvent`에서 각 섹션(`Left`, `Right`)의 `save_state()`를 호출하여 데이터를 수집하고 `SettingsManager`에 저장.
+- **효과**:
+  - View의 테스트 용이성 향상 (설정 파일 없이 UI 상태 테스트 가능).
+  - Side Effect 제거 (UI 조작 시 의도치 않은 설정 파일 변경 방지).
+
+---
+
+### 10. 버그 수정 및 개선
+
+#### 싱글톤 패턴 수정
+- **문제**: `TypeError: SettingsManager.__new__() takes 1 positional argument but 2 were given`
+- **해결**: `__new__(cls, *args, **kwargs)` 시그니처로 변경
+- **적용 파일**:
+  - `core/settings_manager.py`
+  - `view/tools/lang_manager.py`
+
+#### 경로 계산 수정
+- **문제**: `Language directory not found: e:\_Python\serial_tool2\view\config\languages`
+- **원인**: `view/tools/lang_manager.py`에서 상위 디렉토리 2번만 올라감
+- **해결**: 3번 올라가도록 수정 (`os.path.dirname()` 3회 적용)
+
+#### 우측 패널 표시 상태 복원
+- **MainWindow.init_ui()**:
+  - 설정에서 `right_panel_visible` 읽어서 메뉴 체크 상태 복원
+  - `self.menu_bar.set_right_panel_checked(right_panel_visible)`
+
+#### clear_log() 메서드 개선
+- **main_window.py**:
+  - `isinstance(current_widget, PortPanel)` 체크 제거
+  - `isinstance(current_widget, PortPanel)` 체크 제거
+  - 직접 `current_widget.received_area.on_clear_recv_log_clicked()` 호출
+
+#### UI 레이아웃 수정
+- **우측 패널 토글 시 윈도우 크기 조정**:
+  - 하드코딩된 마진 값(10) 제거
+  - `self.centralWidget().layout().contentsMargins()`를 사용하여 동적으로 마진 계산
+  - `self.centralWidget().layout().contentsMargins()`를 사용하여 동적으로 마진 계산
+  - 왼쪽 패널 크기 유지 로직 개선
+- **System Log 높이 고정**:
+  - `SystemLogWidget`의 `system_log_list` 높이를 100px로 고정 (`setFixedHeight`)
+  - 윈도우 리사이즈 시 `ReceivedAreaWidget`만 크기가 변하도록 수정
+
+#### QSS 및 테마 업데이트
+- **QSmartListView 스타일 추가**:
+  - `common.qss`: `QListView`와 동일한 기본 스타일 적용, `.fixed-font` 지원
+  - `dark_theme.qss`, `light_theme.qss`: 배경색, 테두리, 선택 색상 정의
+- **QSmartTextEdit 테마 지원**:
+  - `Q_PROPERTY` 추가: `lineNumberBackgroundColor`, `lineNumberColor`, `currentLineColor`
+  - `dark_theme.qss`: 다크 모드용 색상 지정 (라인번호 배경 #2b2b2b 등)
+  - `light_theme.qss`: 라이트 모드용 색상 지정 (라인번호 배경 #f0f0f0 등)
 
 ---
 

@@ -16,17 +16,15 @@ from view.dialogs import (
     PreferencesDialog
 )
 from view.managers.theme_manager import ThemeManager
-from view.managers.lang_manager import lang_manager
-from core.settings_manager import SettingsManager
-
-from view.managers.lang_manager import LangManager
+from view.managers.lang_manager import lang_manager, LangManager
 from view.managers.color_manager import ColorManager
+from core.settings_manager import SettingsManager
 
 class MainWindow(QMainWindow):
     """
     애플리케이션의 메인 윈도우 클래스입니다.
     MainLeftSection(포트/제어)과 MainRightSection(커맨드/인스펙터)을 포함하며,
-    메뉴바, 상태바 및 전역 설정을 관리합니다.
+    설정의 로드 및 저장을 조율합니다.
     """
 
     setting_save_requested = pyqtSignal(dict)
@@ -36,25 +34,22 @@ class MainWindow(QMainWindow):
         MainWindow를 초기화하고 UI 및 설정을 로드합니다.
 
         Args:
-            app_config: AppConfig 인스턴스. None이면 기본 경로 사용 (하위 호환성)
+            app_config: AppConfig 인스턴스.
         """
         super().__init__()
 
-        # AppConfig 저장
+        # 설정 및 매니저 초기화
         self.app_config = app_config
 
-        # 설정 관리자 초기화 (AppConfig 전달)
         self.settings = SettingsManager(app_config)
-
-        # 테마 관리자 초기화 (AppConfig 전달)
         self.theme_manager = ThemeManager(app_config)
 
-        # 언어 관리자 초기화 및 설정에서 언어 로드 (AppConfig 전달)
-        # Note: lang_manager는 싱글톤이므로 첫 초기화 시에만 app_config 전달
+        # 싱글톤이므로 첫 초기화 시에만 app_config 전달
         if app_config is not None:
             LangManager(app_config)
             ColorManager(app_config)
 
+        # 초기 언어 설정
         lang = self.settings.get('settings.language', 'en')
         lang_manager.set_language(lang)
         lang_manager.language_changed.connect(self.on_language_changed)
@@ -64,39 +59,21 @@ class MainWindow(QMainWindow):
 
         # 우측 패널 숨김 전 왼쪽 패널 너비 저장용
         self._saved_left_width = None
+        self._saved_right_width = None
 
+        # UI 초기화
         self.init_ui()
 
-        # 메뉴바 초기화 (위젯 사용)
+        # 메뉴바 초기화
         self.menu_bar = MainMenuBar(self)
         self.setMenuBar(self.menu_bar)
         self._connect_menu_signals()
 
-        # 폰트 설정 복원 -> QApplication 폰트 적용 -> 테마 적용 순서 유지
+        # 초기 스타일 및 설정 적용
+        self._apply_initial_settings()
 
-        # 1. 설정에서 폰트 복원
-        settings_dict = self.settings.get_all_settings()
-        self.theme_manager.restore_fonts_from_settings(settings_dict)
-
-        # 2. 애플리케이션에 가변폭 폰트 적용 (QApplication의 기본 폰트 설정)
-        prop_font = self.theme_manager.get_proportional_font()
-        QApplication.instance().setFont(prop_font)
-
-        # 3. 설정에서 테마 적용 (폰트 스타일을 포함한 QSS 적용)
-        theme = self.settings.get('settings.theme', 'dark')
-        self.switch_theme(theme)
-
-        # 4. 설정에서 오른쪽 패널 표시 복원
-        right_panel_visible = self.settings.get('settings.right_panel_visible', True)
-        self.menu_bar.set_right_panel_checked(right_panel_visible)
-
-        # 저장된 윈도우 상태(크기, 위치) 로드
+        # 윈도우 상태 및 각 섹션의 데이터 복원
         self._load_window_state()
-
-        # 포트 탭 상태 복원
-        port_states = self.settings.get('ports.tabs', [])
-        if hasattr(self, 'left_section'):
-            self.left_section.load_state(port_states)
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
@@ -119,27 +96,110 @@ class MainWindow(QMainWindow):
 
         self.splitter.addWidget(self.left_section)
         self.splitter.addWidget(self.right_section)
+        self.splitter.setStretchFactor(0, 0)
+        self.splitter.setStretchFactor(1, 1)
 
         # 툴바 시그널 연결 (left_section 초기화 후)
         self._connect_toolbar_signals()
-
-        # 스플리터 상태 복원
-        splitter_state = self.settings.get('ui.splitter_state')
-        if splitter_state:
-            self.splitter.restoreState(QByteArray.fromBase64(splitter_state.encode()))
-        else:
-            self.splitter.setStretchFactor(0, 1) # 좌측 패널 비율
-            self.splitter.setStretchFactor(1, 1) # 우측 패널 비율
-
-        # 우측 패널 가시성 복원
-        right_panel_visible = self.settings.get('settings.right_panel_visible', True)
-        self.right_section.setVisible(right_panel_visible)
 
         main_layout.addWidget(self.splitter)
 
         # 전역 상태바 설정 (위젯 사용)
         self.global_status_bar = MainStatusBar()
         self.setStatusBar(self.global_status_bar)
+
+    def _apply_initial_settings(self) -> None:
+        """초기 폰트, 테마, UI 상태를 적용합니다."""
+        # 폰트 복원
+
+        # 1. 설정에서 폰트 복원
+        settings_dict = self.settings.get_all_settings()
+        self.theme_manager.restore_fonts_from_settings(settings_dict)
+
+        # 2. 애플리케이션에 가변폭 폰트 적용 (QApplication의 기본 폰트 설정)
+        prop_font = self.theme_manager.get_proportional_font()
+        QApplication.instance().setFont(prop_font)
+
+        # 3. 설정에서 테마 적용 (폰트 스타일을 포함한 QSS 적용)
+        theme = self.settings.get('settings.theme', 'dark')
+        self.switch_theme(theme)
+
+        # 4. 설정에서 오른쪽 패널 표시 복원
+        right_panel_visible = self.settings.get('settings.right_panel_visible', True)
+        self.menu_bar.set_right_panel_checked(right_panel_visible)
+        self.right_section.setVisible(right_panel_visible)
+
+        # 5. 설정에서 스플리터 상태 복원
+        splitter_state = self.settings.get('ui.splitter_state')
+        if splitter_state:
+            self.splitter.restoreState(QByteArray.fromBase64(splitter_state.encode()))
+        else:
+            self.splitter.setStretchFactor(0, 1)
+            self.splitter.setStretchFactor(1, 1)
+
+    def _load_window_state(self) -> None:
+        """
+        저장된 윈도우 상태 및 각 섹션의 데이터를 로드하여 주입합니다.
+        """
+        # 1. 윈도우 지오메트리
+        width = self.settings.get('ui.window_width', 1400)
+        height = self.settings.get('ui.window_height', 900)
+        self.resize(width, height)
+
+        x = self.settings.get('ui.window_x')
+        y = self.settings.get('ui.window_y')
+        if x is not None and y is not None:
+            self.move(x, y)
+
+        # 2. Left Section 상태 복원 (설정 파일 구조에 맞춰 데이터 매핑)
+        left_section_state = {
+            "manual_ctrl": self.settings.get("manual_ctrl", {}),
+            "ports": self.settings.get("ports.tabs", [])
+        }
+        self.left_section.load_state(left_section_state)
+
+        # 3. Right Section 상태 복원
+        right_section_state = {
+            "macro_panel": {
+                "commands": self.settings.get("macro_list.commands", []),
+                "control_state": self.settings.get("macro_list.control_state", {})
+            }
+        }
+        self.right_section.load_state(right_section_state)
+
+    def closeEvent(self, event) -> None:
+        """
+        종료 시 모든 상태를 수집하여 저장합니다.
+        View는 데이터를 '반환'만 하고, 저장은 여기서 수행합니다.
+        """
+        # 1. 윈도우 기본 설정 저장
+        self.settings.set('ui.window_width', self.width())
+        self.settings.set('ui.window_height', self.height())
+        self.settings.set('ui.window_x', self.x())
+        self.settings.set('ui.window_y', self.y())
+        self.settings.set('ui.splitter_state', self.splitter.saveState().toBase64().data().decode())
+        self.settings.set('settings.right_panel_visible', self.right_section.isVisible())
+
+        # 2. Left Section 상태 수집 및 저장
+        left_state = self.left_section.save_state()
+        if 'manual_ctrl' in left_state:
+            self.settings.set('manual_ctrl', left_state['manual_ctrl'])
+        if 'ports' in left_state:
+            self.settings.set('ports.tabs', left_state['ports'])
+
+        # 3. Right Section 상태 수집 및 저장
+        right_state = self.right_section.save_state()
+        if 'macro_panel' in right_state:
+            macro_data = right_state['macro_panel']
+            self.settings.set('macro_list.commands', macro_data.get('commands', []))
+            self.settings.set('macro_list.control_state', macro_data.get('control_state', {}))
+
+        # 4. 파일 쓰기
+        self.settings.save_settings()
+
+        # 종료 이벤트 수락
+        event.accept()
+
 
     def _connect_menu_signals(self) -> None:
         """메뉴바 시그널을 슬롯에 연결합니다."""
@@ -151,16 +211,10 @@ class MainWindow(QMainWindow):
         self.menu_bar.preferences_requested.connect(self.open_preferences_dialog)
         self.menu_bar.about_requested.connect(self.open_about_dialog)
 
-        # New signals
         self.menu_bar.open_port_requested.connect(self.left_section.open_current_port)
         self.menu_bar.close_tab_requested.connect(self.left_section.close_current_tab)
         self.menu_bar.save_log_requested.connect(self.save_log)
         self.menu_bar.toggle_right_panel_requested.connect(self.toggle_right_panel)
-
-    def save_log(self) -> None:
-        """로그 저장 기능을 수행합니다."""
-        if hasattr(self, 'left_section'):
-            self.left_section.manual_ctrl.manual_ctrl_widget.on_save_manual_log_clicked()
 
     def _connect_toolbar_signals(self) -> None:
         """툴바 시그널을 슬롯에 연결합니다."""
@@ -170,12 +224,18 @@ class MainWindow(QMainWindow):
         self.main_toolbar.save_log_requested.connect(self.save_log)
         self.main_toolbar.settings_requested.connect(self.open_preferences_dialog)
 
+    def save_log(self) -> None:
+        """로그 저장 기능을 수행합니다."""
+        if hasattr(self, 'left_section'):
+            self.left_section.manual_ctrl.manual_ctrl_widget.on_save_manual_log_clicked()
+
     def clear_log(self) -> None:
         """현재 활성화된 탭의 로그를 지웁니다."""
         if hasattr(self, 'left_section'):
             current_index = self.left_section.port_tabs.currentIndex()
             current_widget = self.left_section.port_tabs.widget(current_index)
-            current_widget.received_area_widget.on_clear_rx_log_clicked()
+            if current_widget and hasattr(current_widget, 'received_area_widget'):
+                current_widget.received_area_widget.on_clear_rx_log_clicked()
 
     def switch_theme(self, theme_name: str) -> None:
         """
@@ -194,13 +254,11 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'menu_bar'):
             self.menu_bar.set_current_theme(theme_name)
 
-        if theme_name == "dark":
-            self.global_status_bar.show_message("Theme changed to Dark", 2000)
-        else:
-            self.global_status_bar.show_message("Theme changed to Light", 2000)
+        msg = f"Theme changed to {theme_name.capitalize()}"
+        self.global_status_bar.show_message(msg, 2000)
 
     def open_font_settings_dialog(self) -> None:
-        """듀얼 폰트 설정 대화상자를 엽니다."""
+        """폰트 설정 대화상자를 엽니다."""
         dialog = FontSettingsDialog(self.theme_manager, self)
         if dialog.exec_():
             # 폰트 설정 저장
@@ -215,45 +273,20 @@ class MainWindow(QMainWindow):
             self.global_status_bar.show_message("Font settings updated", 2000)
 
     def open_preferences_dialog(self) -> None:
-        """Preferences 다이얼로그를 엽니다."""
+        """설정 대화상자를 엽니다."""
         current_settings = self.settings.get_all_settings()
         dialog = PreferencesDialog(self, current_settings)
         dialog.settings_changed.connect(self.on_settings_change_requested)
         dialog.exec_()
 
-
     def open_about_dialog(self) -> None:
-        """About 다이얼로그를 엽니다."""
+        """정보 대화상자를 엽니다."""
         dialog = AboutDialog(self)
         dialog.exec_()
 
     def on_settings_change_requested(self, settings: dict) -> None:
-        """Preferences 설정 저장을 요청합니다."""
+        """설정 변경 요청을 Presenter로 전달합니다."""
         self.setting_save_requested.emit(settings)
-
-    def _load_window_state(self) -> None:
-        """
-        저장된 윈도우 상태(크기, 위치)를 로드하여 적용합니다.
-        """
-        # 윈도우 크기 로드
-        width = self.settings.get('ui.window_width', 1400)
-        height = self.settings.get('ui.window_height', 900)
-        self.resize(width, height)
-
-        # 윈도우 위치 로드 (옵션)
-        x = self.settings.get('ui.window_x')
-        y = self.settings.get('ui.window_y')
-        if x is not None and y is not None:
-            self.move(x, y)
-
-    def _save_window_state(self) -> None:
-        """
-        현재 윈도우 상태(크기, 위치)를 설정에 저장합니다.
-        """
-        self.settings.set('ui.window_width', self.width())
-        self.settings.set('ui.window_height', self.height())
-        self.settings.set('ui.window_x', self.x())
-        self.settings.set('ui.window_y', self.y())
 
     def on_language_changed(self, lang_code: str) -> None:
         """
@@ -275,7 +308,7 @@ class MainWindow(QMainWindow):
         self.settings.set('settings.language', lang_code)
 
     def toggle_right_panel(self, visible: bool) -> None:
-        """우측 패널의 가시성을 토글하고 윈도우 크기를 조정합니다."""
+        """우측 패널의 가시성을 토글합니다."""
         if visible == self.right_section.isVisible():
             return
 
@@ -284,13 +317,14 @@ class MainWindow(QMainWindow):
 
         if visible:
             # 보이기: 윈도우 폭 증가
-            target_right_width = 400 # 기본값
-
-            # 저장된 왼쪽 패널 너비가 있으면 사용, 없으면 현재 너비 사용
-            if self._saved_left_width is not None:
-                left_width = self._saved_left_width
+            # 저장된 오른쪽 패널 너비가 있으면 사용, 없으면 기본값 400
+            if hasattr(self, '_saved_right_width') and self._saved_right_width is not None:
+                target_right_width = self._saved_right_width
             else:
-                left_width = self.left_section.width()
+                target_right_width = 400
+
+            # 현재 왼쪽 패널 너비 사용 (사용자가 조절했을 수 있으므로 저장된 값보다 현재 값 우선)
+            left_width = self.left_section.width()
 
             self.resize(current_width + target_right_width + handle_width, self.height())
             self.right_section.setVisible(True)
@@ -300,43 +334,19 @@ class MainWindow(QMainWindow):
 
             # 복원 후 저장된 값 초기화
             self._saved_left_width = None
+            self._saved_right_width = None
 
         else:
             # 숨기기: 윈도우 폭 감소
-            # 현재 왼쪽 패널 너비를 저장
+            # 현재 패널 너비 저장
             self._saved_left_width = self.left_section.width()
+            self._saved_right_width = self.right_section.width()
 
-            right_width = self.right_section.width()
+            # 왼쪽 패널의 현재 너비를 기준으로 윈도우 크기 재조정
+            # 중앙 위젯의 좌우 마진을 동적으로 계산
+            margins = self.centralWidget().layout().contentsMargins()
+            total_margin = margins.left() + margins.right()
+            new_window_width = self._saved_left_width + total_margin
+
             self.right_section.setVisible(False)
-            self.resize(current_width - right_width - handle_width, self.height())
-
-    def closeEvent(self, event) -> None:
-        """
-        윈도우 종료 이벤트를 처리합니다.
-        윈도우 상태와 설정을 저장하고 애플리케이션을 종료합니다.
-
-        Args:
-            event (QCloseEvent): 종료 이벤트 객체.
-        """
-        # 윈도우 상태 저장
-        self._save_window_state()
-
-        # 스플리터 상태 저장
-        self.settings.set('ui.splitter_state', self.splitter.saveState().toBase64().data().decode())
-
-        # 우측 패널 가시성 저장
-        self.settings.set('settings.right_panel_visible', self.right_section.isVisible())
-
-        # 패널 상태 저장
-        if hasattr(self, 'right_section'):
-            self.right_section.save_state()
-
-        if hasattr(self, 'left_section'):
-            port_states = self.left_section.save_state()
-            self.settings.set('ports.tabs', port_states)
-
-        # 설정 파일 저장
-        self.settings.save_settings()
-
-        # 종료 이벤트 수락
-        event.accept()
+            self.resize(new_window_width, self.height())

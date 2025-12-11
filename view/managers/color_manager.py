@@ -15,11 +15,10 @@ except ImportError:
     import json
 
 # 상수 임포트 (하드코딩 제거)
-from core.constants import (
+from app_constants import (
     LOG_COLOR_SUCCESS,
     LOG_COLOR_ERROR,
-    LOG_COLOR_WARN,
-    LOG_COLOR_INFO  # PROMPT용으로 대체 사용하거나 별도 정의 가능
+    LOG_COLOR_WARN  # PROMPT용으로 대체 사용하거나 별도 정의 가능
 )
 
 @dataclass

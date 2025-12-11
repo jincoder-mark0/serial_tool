@@ -9,13 +9,13 @@ from typing import List, Any, Optional
 
 from PyQt5.QtWidgets import QListView, QAbstractItemView, QStyle, QStyledItemDelegate
 from PyQt5.QtCore import (
-    Qt, QAbstractListModel, QModelIndex, QVariant, QSize, QRegExp, QRect, pyqtSlot
+    Qt, QAbstractListModel, QModelIndex, QVariant, QSize, QRegExp, pyqtSlot
 )
 from PyQt5.QtGui import (
     QColor, QTextDocument, QAbstractTextDocumentLayout, QTextCharFormat, QPainter
 )
 
-from core.constants import DEFAULT_LOG_MAX_LINES, TRIM_CHUNK_RATIO, LOG_COLOR_TIMESTAMP
+from app_constants import DEFAULT_LOG_MAX_LINES, TRIM_CHUNK_RATIO, LOG_COLOR_TIMESTAMP
 
 class QSmartListView(QListView):
     """

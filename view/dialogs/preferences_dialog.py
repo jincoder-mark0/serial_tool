@@ -9,7 +9,7 @@ from typing import Dict, Any, Optional
 import os
 from view.managers.lang_manager import lang_manager
 
-from core.constants import (
+from app_constants import (
     VALID_BAUDRATES,
     DEFAULT_LOG_MAX_LINES,
     MIN_SCAN_INTERVAL_MS,

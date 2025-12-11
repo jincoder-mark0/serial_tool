@@ -165,6 +165,21 @@ QTableView QTableCornerButton::section {
     background-color: #f0f0f0;
 }
 
+/* QListView */
+QListView, QSmartListView {
+    background-color: #ffffff;
+    border-color: #c0c0c0;
+    selection-background-color: #e0f0ff;
+    selection-color: #000000;
+}
+
+/* QSmartTextEdit Custom Properties */
+QSmartTextEdit {
+    qproperty-lineNumberBackgroundColor: #f0f0f0;
+    qproperty-lineNumberColor: #808080;
+    qproperty-currentLineColor: #e8e8e8;
+}
+
 /* QCheckBox */
 QCheckBox::indicator {
     border-color: #c0c0c0;

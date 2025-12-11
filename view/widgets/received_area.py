@@ -7,11 +7,10 @@ QSmartListView를 기반으로 하여 대량의 데이터 처리 성능을 최�
 """
 
 from PyQt5.QtWidgets import (
-    QTextEdit, QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QCheckBox, QLabel, QLineEdit, QScrollBar
+    QWidget, QVBoxLayout, QHBoxLayout,
+    QPushButton, QCheckBox, QLabel, QLineEdit
 )
 from PyQt5.QtCore import QTimer, pyqtSlot, Qt
-from PyQt5.QtGui import QTextCursor, QTextDocument
 from typing import Optional
 import datetime
 from view.managers.color_manager import color_manager   # 전역 매니저 사용
@@ -19,7 +18,7 @@ from view.managers.lang_manager import lang_manager     # 전역 매니저 사�
 
 from view.custom_widgets.smart_list_view import QSmartListView
 
-from core.constants import (
+from app_constants import (
     DEFAULT_LOG_MAX_LINES,
     UI_REFRESH_INTERVAL_MS,
     LOG_COLOR_TIMESTAMP

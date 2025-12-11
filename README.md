@@ -85,9 +85,9 @@ python main.py
 
 ```
 serial_tool2/
-├── main.py                 # 애플리케이션 진입점
-├── config.py               # 애플리케이션 설정
-├── version.py              # 버전 정보
+├── app_main.py             # 애플리케이션 진입점
+├── app_config.py           # 애플리케이션 설정
+├── app_version.py          # 버전 정보
 ├── requirements.txt        # 의존성 목록
 │
 ├── core/                   # 핵심 유틸리티

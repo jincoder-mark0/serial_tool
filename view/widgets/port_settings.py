@@ -5,9 +5,9 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIntValidator
 from view.managers.lang_manager import lang_manager
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 from core.port_state import PortState
-from core.constants import VALID_BAUDRATES, DEFAULT_BAUDRATE
+from app_constants import VALID_BAUDRATES, DEFAULT_BAUDRATE
 
 class PortSettingsWidget(QGroupBox):
     """

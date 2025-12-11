@@ -69,7 +69,8 @@
     - [x] Parser 탭 UI 구현 (PreferencesDialog)
     - [x] 중앙 집중식 경로 관리 (AppConfig)
     - [x] __init__.py 생성으로 import 간결화
-    - [x] 네이밍 일관성 개선 (rx → recv, manual_control → manual_ctrl)
+    - [x] 네이밍 일관성 개선
+    - [x] View 계층 MVP 리팩토링 (SettingsManager 의존성 제거)
 
 
 ## Phase 3: Core 유틸리티 (진행 중)
@@ -81,6 +82,7 @@
     - [ ] `core/utils.py` 생성
     - [ ] 원형 버퍼 로직 구현
     - [ ] 스레드 안전성 구현
+    - [ ] 오버플로우 처리
 - [ ] `ThreadSafeQueue` 구현
     - [ ] `core/utils.py`에 추가
     - [ ] 블로킹/논블로킹 큐 구현
@@ -99,7 +101,7 @@
 
 ## Phase 4: Model 계층 (진행 중)
 - [x] `SerialTransport` 구현 (`model/transports.py`)
-- [x] `ConnectionWorker` 구현 (구 SerialWorker 리팩토링)
+- [x] `ConnectionWorker` 구현 (Transport 주입, QThread 루프)
     - [x] `ITransport` 주입 구조 적용
     - [x] QThread 기반 Loop 구현
 - [ ] `PortController` 구현
@@ -109,18 +111,38 @@
 - [ ] `SerialManager` (PortRegistry) 구현
     - [ ] `model/serial_manager.py` 생성
     - [ ] 포트 레지스트리 및 수명 주기 관리 구현
+- [ ] `PortController` 통합
+    - [ ] Worker 생성 및 Transport 주입 로직
+    - [ ] PacketParser 통합 (Raw Data -> Packet 변환)
+    - [ ] EventBus 발행 (`port.rx_data`, `port.status` 등)
+- [ ] `MacroRunner` 구현 (자동화 엔진)**
+    - [ ] 상태 머신 (Idle/Running/Paused) 구현
+    - [ ] Step 실행 로직 (Send -> Delay/Expect)
+    - [ ] QTimer 기반 타이밍 제어
 - [ ] `PacketParser` 시스템 구현
     - [ ] `model/packet_parser.py` 생성
     - [ ] `ParserFactory` 구현 (AT, Delimiter, Fixed, Hex)
     - [ ] `ExpectMatcher` 구현 (Regex 기반)
+    - [ ] `IPacketParser` 인터페이스 및 `RxPacket` 데이터 클래스 정의
+    - [ ] `ATParser` 구현 (AT Command 파싱)
+    - [ ] `DelimiterParser`, `FixedLengthParser` 구현
 - [ ] `EventRouter` 구현 (View-Model 분리)
-- [ ] `PortPresenter` 구현 (열기/닫기/설정)
-- [ ] `MainPresenter` 구현 (앱 수명 주기)
-- [ ] `CommandPresenter` 구현 (CL 로직)
-- [ ] `FilePresenter` 구현 (전송 로직)
+    - [ ] EventBus 구독 및 View 업데이트 라우팅
 - [ ] CI/CD 설정
 
-## Phase 6: 자동화 및 고급 기능 (계획됨)
+
+## Phase 6: Presenter 계층 (아키텍처 개선)
+- [ ] **Presenter 계층 세분화**
+    - [ ] `MainPresenter`: 앱 생명주기 및 하위 Presenter 조율
+    - [ ] `PortPresenter`: 포트 연결/해제/설정 제어 (완성)
+    - [ ] `MacroPresenter`: 매크로 로드/저장/실행 제어 (신규)
+    - [ ] `FilePresenter`: 파일 전송 로직 제어 (신규)
+- [ ] **EventRouter 구현**
+    - [ ] EventBus 구독 및 View 업데이트 라우팅
+- [ ] **설정 관리 통합**
+    - [ ] View의 `save_state`/`load_state`와 SettingsManager 연동
+
+## Phase 7: 자동화 및 고급 기능 (계획됨)
 - [ ] `MacroRunner` 구현 (커맨드 리스트 엔진)
     - [ ] 상태 머신 (Idle/Running/Paused)
     - [ ] 단계 실행 (Send -> Expect -> Delay)
@@ -140,13 +162,13 @@
     - [x] `ReceivedAreaWidget`에 QSmartListView 적용
     - [x] `SystemLogWidget`에 QSmartListView 적용
 
-## Phase 7: 플러그인 시스템 (계획됨)
+## Phase 8: 플러그인 시스템 (계획됨)
 - [ ] 플러그인 인프라 구현
     - [ ] `core/plugin_base.py` 생성 (인터페이스)
     - [ ] `core/plugin_loader.py` 생성 (동적 임포트)
     - [ ] `ExamplePlugin` 구현
 
-## Phase 8: 검증 및 배포 (계획됨)
+## Phase 9: 검증 및 배포 (계획됨)
 - [ ] 테스트 환경 설정
     - [ ] 가상 시리얼 포트 설정 (com0com/socat)
     - [ ] Mock Serial 클래스 생성

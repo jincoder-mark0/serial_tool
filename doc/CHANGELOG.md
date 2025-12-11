@@ -2,7 +2,7 @@
 
 ## [미배포] (Unreleased)
 
-### View 계층 완성 및 중앙 경로 관리 (2025-12-10)
+### View 계층 완성, 중앙 경로 관리, 아키텍처 및 리팩토링 (2025-12-10)
 #### 리팩토링 (Refactoring)
 - **통신 계층 추상화 (Transport Abstraction)**
   - `core/interfaces.py`: 모든 통신 드라이버가 구현해야 할 `ITransport` 인터페이스 정의
@@ -44,7 +44,22 @@
   - 여러 줄 입력 지원 (Enter: 새 줄, Ctrl+Enter: 전송)
   - 플레이스홀더 텍스트 업데이트 ("Ctrl+Enter to send")
 
+#### 버그 수정 (Fixed)
+- **UI 레이아웃**
+  - 우측 패널 토글 시 좌측 패널 크기가 변경되는 문제 수정
+  - 스플리터 스트레치 팩터 조정 (좌: 0, 우: 1) 및 패널 너비 저장/복원 로직 개선
+  - 윈도우 리사이즈 시 System Log 높이를 고정하고 Received Area만 늘어나도록 수정 (`setFixedHeight`)
+
 #### 변경 사항 (Changed)
+- **테마 및 스타일 (QSS)**
+  - `QSmartListView` 및 `QSmartTextEdit`에 다크/라이트 테마 완벽 지원
+  - `QSmartTextEdit`에 `Q_PROPERTY`를 추가하여 QSS에서 라인 번호 색상 제어 가능
+  - `common.qss`에 `QSmartListView` 기본 스타일 추가
+- **Strict MVP 아키텍처 적용**
+  - View 계층(`MacroPanel`, `MainLeftSection` 등)에서 `SettingsManager` 의존성을 완전히 제거했습니다.
+  - View는 이제 스스로 파일을 저장하지 않고, `save_state() -> dict`와 `load_state(dict)` 메서드를 통해 상태 데이터만 주고받습니다.
+  - 데이터의 영구 저장 및 복원 책임이 `MainWindow`(향후 `MainPresenter`)로 이관되어, UI와 비즈니스 로직(설정 관리)의 결합도가 낮아졌습니다.
+  - `MainRightSection`에 하위 패널들의 상태를 집계하는 로직을 추가했습니다.
 
 - **네이밍 일관성 개선**
   - `rx` → `recv`: ReceivedAreaWidget의 모든 변수 및 메서드명 변경
@@ -95,7 +110,7 @@
   - 클래스명 변경: `SerialWorker` → `ConnectionWorker`
   - **의존성 주입**: Worker가 특정 라이브러리(pyserial) 대신 `ITransport` 인터페이스에 의존하도록 변경
   - `PortController`: `SerialTransport`를 생성하여 `ConnectionWorker`에 주입하는 구조로 변경
-  
+
 - **ReceivedArea 동적 설정**
   - `set_max_lines(max_lines)` 메서드 추가
   - `MainPresenter`에서 설정 변경 시 모든 ReceivedArea 업데이트
@@ -114,7 +129,7 @@
   - 기존 `QTextEdit` 기반 로그 뷰를 `QListView` 기반의 `QSmartListView`로 교체
   - 대량의 로그 데이터 처리 시 메모리 사용량 감소 및 렌더링 성능 대폭 향상
   - `view/widgets/received_area.py` 및 `view/widgets/system_log.py`에 적용
- 
+
 #### 문서 업데이트 (Documentation)
 
 - **doc/task.md**

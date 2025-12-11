@@ -117,16 +117,16 @@ QTableView QTableCornerButton::section {
 }
 
 /* QListView */
-QListView {
+QListView, QSmartListView {
     border-width: 1px;
     border-style: solid;
 }
 
-QListView QTableCornerButton::section {
+QListView QTableCornerButton::section, QSmartListView QTableCornerButton::section {
     border: none;
 }
 
-QListView[readOnly="true"] {
+QListView[readOnly="true"], QSmartListView[readOnly="true"] {
     border: 1px;
 }
 
@@ -208,7 +208,8 @@ QPushButton[class="accent"], QPushButton[class="danger"], QPushButton[class="war
 /* Apply Fixed Font to Text Data Widgets */
 QTextEdit.fixed-font,
 QPlainTextEdit.fixed-font,
-QLineEdit.fixed-font {
+QLineEdit.fixed-font,
+QSmartListView.fixed-font {
     font-family: "Consolas", "Monospace", "Courier New", monospace;
     font-size: 9pt;
 }

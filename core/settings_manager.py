@@ -9,7 +9,7 @@ except ImportError:
     import json
 from pathlib import Path
 from typing import Dict, Any
-from core.constants import DEFAULT_BAUDRATE, DEFAULT_LOG_MAX_LINES
+from app_constants import DEFAULT_BAUDRATE, DEFAULT_LOG_MAX_LINES
 
 class SettingsManager:
     """
