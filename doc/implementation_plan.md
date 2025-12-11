@@ -181,7 +181,7 @@ serial_tool2/
 - **Loader**: `importlib` 기반 동적 로딩 (`plugins/` 디렉토리 스캔)
 - **EventBus Integration**: `register(bus, context)` 필수 구현
 
-#### [진행 필요] `core/error_handler.py`
+#### [진행 예정] `core/error_handler.py`
 
 **전역 에러 핸들러 (Global Error Handler)**
 
@@ -245,12 +245,8 @@ serial_tool2/
   - `get_all_ports() -> List[PortController]`: 활성 포트 목록 반환
   - `close_all_ports()`: 애플리케이션 종료 시 모든 포트 정리
   - `active_ports` 속성: 현재 열려있는 포트 이름 목록 관리
-**Expect/Timeout 처리**
-  - 정규식 기반 매칭
-  - 타임아웃 설정 (기본 5초)
-  - 매칭 실패 시 재시도 정책
 
-#### [완료] `model/packet_parser.py`
+#### [진행 예정] `model/packet_parser.py` (보완)
 
 **패킷 파서 시스템**
 
@@ -261,7 +257,8 @@ serial_tool2/
   - `DelimiterParser`: 사용자 정의 구분자(예: STX/ETX, Comma) 처리
   - `FixedLengthParser`: 고정 길이 패킷 처리
 - **ParserFactory**: 설정(`AT`, `Hex` 등)에 따라 적절한 파서 인스턴스 생성 (전략 패턴)
-- **Performance**: 1ms 이하 파싱 지연 목표
+- **[New] ExpectMatcher**: 정규식 기반 응답 대기 및 매칭 기능 구현
+- **[New] PortController 통합**: Raw Data 수신 시 Parser를 거쳐 Packet 객체로 변환 후 EventBus 발행
 
 #### [완료] `model/macro_runner.py`
 
@@ -305,11 +302,12 @@ class MacroEntry:
 
 **FileTransferEngine(QRunnable)**
 
-- Chunk 기반 전송 (기본 1KB)
-- 적응형 Chunk Size (baudrate 기반)
-- 진행률 계산 (바이트 단위)
-- 취소 메커니즘 (플래그 체크)
-- 재시도 정책 (최대 3회)
+- **구조**: `QRunnable`을 상속받아 별도 스레드 풀에서 실행
+- **Chunk 기반 전송**: 기본 1KB ~ 4KB (Baudrate에 따라 적응형 조절 가능)
+- **진행률 계산**: 전송된 바이트 / 전체 바이트
+- **취소 메커니즘**: `cancel()` 플래그 체크
+- **재시도 정책**: 전송 실패 시 최대 3회 재시도
+- **EventBus 연동**: `file.progress`, `file.completed`, `file.error` 이벤트 발행
 
 **시그널**
 

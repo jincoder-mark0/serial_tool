@@ -27,12 +27,15 @@ def setup_logging() -> None:
         datefmt='%H:%M:%S'
     )
 
+from core.error_handler import install_global_error_handler
+
 def main() -> None:
     """
     애플리케이션의 메인 진입점입니다.
     로깅 설정, QApplication 초기화, 메인 윈도우 생성 및 실행을 담당합니다.
     """
     setup_logging()
+    install_global_error_handler()
     logging.info(f"Starting Serial Tool v{__version__}")
 
     # 애플리케이션 설정 초기화

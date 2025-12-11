@@ -8,6 +8,7 @@ from typing import Optional
 # 변경된 모듈 임포트
 from model.connection_worker import ConnectionWorker
 from model.transports import SerialTransport
+from model.packet_parser import ParserFactory, IPacketParser, Packet
 from constants import DEFAULT_BAUDRATE
 
 class PortController(QObject):
@@ -18,11 +19,14 @@ class PortController(QObject):
     error_occurred = pyqtSignal(str, str) # port_name, error_msg
     data_received = pyqtSignal(str, bytes) # port_name, data
     data_sent = pyqtSignal(str, bytes) # port_name, data
+    packet_received = pyqtSignal(str, object) # port_name, Packet object
 
     def __init__(self) -> None:
         super().__init__()
         # 포트 이름(str) -> ConnectionWorker 매핑
         self.workers: dict[str, ConnectionWorker] = {}
+        # 포트 이름(str) -> IPacketParser 매핑
+        self.parsers: dict[str, IPacketParser] = {}
 
     @property
     def is_open(self) -> bool:
@@ -69,31 +73,47 @@ class PortController(QObject):
         # 2. Worker에 Transport 주입
         worker = ConnectionWorker(transport, port_name)
 
-        # 3. 시그널 매핑 (Worker 이벤트 -> Controller 시그널)
-        # 람다를 사용하여 포트 이름을 함께 전달하거나, Worker 시그널이 이미 이름을 포함하므로 그대로 연결
+        # 3. Parser 생성
+        parser_type = config.get('parser_type', 'Raw')
+        parser_kwargs = {}
+        if parser_type == 'Delimiter':
+            parser_kwargs['delimiter'] = config.get('parser_delimiter', b'\n')
+        elif parser_type == 'FixedLength':
+            parser_kwargs['length'] = config.get('parser_length', 10)
+            
+        self.parsers[port_name] = ParserFactory.create_parser(parser_type, **parser_kwargs)
+
+        # 4. 시그널 매핑 (Worker 이벤트 -> Controller 시그널)
         worker.connection_opened.connect(self.port_opened)
-        worker.connection_closed.connect(self.on_worker_closed) # 내부 정리용 핸들러 연결
+        worker.connection_closed.connect(self.on_worker_closed)
         
-        # Worker의 error_occurred는 (msg)만 보내므로, (port_name, msg)로 변환 필요
-        # 하지만 ConnectionWorker를 수정하지 않고 여기서 처리하려면 람다 사용
-        # 주의: 람다에서 loop 변수 캡처 문제 방지 (여기선 port_name이 로컬 변수라 괜찮음)
         worker.error_occurred.connect(lambda msg, p=port_name: self.error_occurred.emit(p, msg))
         
-        # Worker의 data_received는 (bytes)만 보냄 -> (port_name, bytes)로 변환
-        # ConnectionWorker를 수정하여 (port_name, bytes)를 보내게 하는 것이 더 깔끔할 수 있음
-        # 하지만 ConnectionWorker는 범용적이므로, 여기서 변환하는 것이 맞음.
-        # -> ConnectionWorker 코드를 보니 data_received(bytes)임.
-        # -> ConnectionWorker를 수정하지 않고 여기서 람다로 연결
-        worker.data_received.connect(lambda data, p=port_name: self.data_received.emit(p, data))
+        # 데이터 수신 핸들러 연결 (Raw 데이터 및 패킷 파싱 처리)
+        worker.data_received.connect(lambda data, p=port_name: self._handle_data_received(p, data))
 
         self.workers[port_name] = worker
         worker.start()
         return True
 
+    def _handle_data_received(self, port_name: str, data: bytes) -> None:
+        """데이터 수신 처리: Raw 시그널 발행 및 패킷 파싱"""
+        # 1. Raw 데이터 시그널 발행
+        self.data_received.emit(port_name, data)
+        
+        # 2. 패킷 파싱 및 패킷 시그널 발행
+        parser = self.parsers.get(port_name)
+        if parser:
+            packets = parser.parse(data)
+            for packet in packets:
+                self.packet_received.emit(port_name, packet)
+
     def on_worker_closed(self, port_name: str) -> None:
         """Worker가 닫혔을 때 호출되는 내부 핸들러"""
         if port_name in self.workers:
             del self.workers[port_name]
+        if port_name in self.parsers:
+            del self.parsers[port_name]
         self.port_closed.emit(port_name)
 
     def close_port(self, port_name: Optional[str] = None) -> None:

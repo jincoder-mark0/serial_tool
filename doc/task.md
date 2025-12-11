@@ -37,6 +37,11 @@
   - [x] `MacroCtrlWidget` (커맨드 제어)
   - [x] `PacketInspectorWidget` (패킷 인스펙터)
   - [x] `FileProgressWidget` (파일 전송 진행)
+  - [x] `QSmartListView` 구현 (`view/custom_widgets/smart_list_view.py`)
+    - [x] QAbstractListModel 기반 로그 모델
+    - [x] 검색(Find Next/Prev) 기능 구현
+  - [x] `RxLogWidget`에 QSmartListView 적용
+  - [x] `SystemLogWidget`에 QSmartListView 적용
 - [x] 테마 시스템 구현
   - [x] `ThemeManager` 생성
   - [x] `common.qss` 생성
@@ -109,7 +114,7 @@
   - [x] MacroList 컨텍스트 메뉴 추가
   - [x] ManualCtrl 히스토리 기능 추가
 
-## Phase 3: Core 유틸리티 (완료)
+## Phase 3: Core 유틸리티 (보완 필요)
 
 - [x] `SettingsManager` 구현 (싱글톤, AppConfig 통합)
 - [x] `AppConfig` 구현 (중앙 경로 관리)
@@ -130,6 +135,9 @@
   - [x] AppConfig 통합
 - [x] `PortState` Enum 정의 및 PortSettingsWidget에 적용
 - [x] `AppConfig` 구현 (중앙 경로 관리)
+- [x] `GlobalErrorHandler` 구현 (`core/error_handler.py`)
+  - [x] `sys.excepthook` 오버라이딩
+  - [x] UI 에러 메시지 표시 연동
 
 ## Phase 4: Model 계층 (진행 중)
 
@@ -146,7 +154,7 @@
   - [x] 포트 레지스트리 및 수명 주기 관리 구현
 - [x] `PortController` 통합
   - [x] Worker 생성 및 Transport 주입 로직
-  - [ ] PacketParser 통합 (Raw Data -> Packet 변환)
+  - [x] PacketParser 통합 (Raw Data -> Packet 변환)
   - [x] EventBus 발행 (`port.rx_data`, `port.status` 등)
 - [x] `MacroRunner` 구현 (자동화 엔진)
   - [x] 상태 머신 (Idle/Running/Paused) 구현
@@ -155,12 +163,10 @@
 - [x] `PacketParser` 시스템 구현
   - [x] `model/packet_parser.py` 생성
   - [x] `ParserFactory` 구현 (AT, Delimiter, Fixed, Hex)
-  - [ ] `ExpectMatcher` 구현 (Regex 기반)
+  - [x] `ExpectMatcher` 구현 (Regex 기반)
   - [x] `IPacketParser` 인터페이스 및 `RxPacket` 데이터 클래스 정의
   - [x] `ATParser` 구현 (AT Command 파싱)
   - [x] `DelimiterParser`, `FixedLengthParser` 구현
-- [ ] `EventRouter` 구현 (View-Model 분리)
-  - [ ] EventBus 구독 및 View 업데이트 라우팅
 
 ## Phase 5: Presenter 계층 (아키텍처 개선)
 
@@ -170,6 +176,7 @@
   - [ ] `MacroPresenter`: 매크로 로드/저장/실행 제어 (신규)
   - [ ] `FilePresenter`: 파일 전송 로직 제어 (신규)
 - [ ] **EventRouter 구현**
+  - [ ] `EventRouter` 구현 (View-Model 분리)
   - [ ] EventBus 구독 및 View 업데이트 라우팅
 - [ ] **설정 관리 통합**
   - [ ] View의 `save_state`/`load_state`와 SettingsManager 연동
@@ -180,20 +187,15 @@
   - [ ] 상태 머신 (Idle/Running/Paused)
   - [ ] 단계 실행 (Send -> Expect -> Delay)
   - [ ] Auto Run 스케줄러 (Interval/Loops)
-- [ ] `FileTransferEngine` 구현
-  - [ ] 청크 기반 전송 (적응형 크기)
-  - [ ] 진행률 계산 및 취소 지원
+- [x] `FileTransferEngine` 구현
+  - [x] 청크 기반 전송 (적응형 크기)
+  - [x] 진행률 계산 및 취소 지원
   - [ ] Rx 파일 캡처 (`RxCaptureWriter`)
 - [ ] `AutoTxScheduler` 구현 (주기적 전송)
 - [ ] 성능 최적화
   - [ ] RxLogView를 위한 `BatchRenderer` 구현
   - [ ] `RingBuffer` 최적화 (bytearray)
   - [ ] 논블로킹 I/O 루프 최적화
-  - [x] `QSmartListView` 구현 (`view/custom_widgets/smart_list_view.py`)
-    - [x] QAbstractListModel 기반 로그 모델
-    - [x] 검색(Find Next/Prev) 기능 구현
-  - [x] `RxLogWidget`에 QSmartListView 적용
-  - [x] `SystemLogWidget`에 QSmartListView 적용
 
 ## Phase 7: 플러그인 시스템 (계획됨)
 

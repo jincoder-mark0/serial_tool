@@ -2,6 +2,32 @@
 
 ## [미배포] (Unreleased)
 
+### Core 및 Model 기능 강화 (2025-12-11 - 심야 세션)
+
+#### 추가 사항 (Added)
+
+- **Global Error Handler (전역 에러 핸들러)**
+  - `core/error_handler.py`: 처리되지 않은 예외(Uncaught Exception)를 포착하여 로깅하고 사용자에게 알림
+  - `sys.excepthook` 오버라이딩을 통해 구현
+  - `main.py`에 통합하여 애플리케이션 안정성 확보
+
+- **ExpectMatcher (응답 대기 매처)**
+  - `model/packet_parser.py`: 정규식(Regex) 및 문자열 리터럴 기반 매칭 클래스 구현
+  - 매크로 실행 시 특정 응답을 대기하는 기능의 기반 마련
+
+- **PacketParser 통합**
+  - `model/port_controller.py`: `PacketParser`를 통합하여 수신된 Raw 데이터를 Packet 객체로 변환
+  - `packet_received` 시그널 추가 및 `parsers` 딕셔너리를 통한 포트별 파서 관리
+  - 설정(`parser_type`, `delimiter` 등)에 따른 파서 자동 초기화
+
+- **FileTransferEngine (파일 전송 엔진)**
+  - `model/file_transfer.py`: `QRunnable` 기반의 파일 전송 엔진 구현
+  - 별도 스레드에서 실행되어 UI 블로킹 방지
+  - Baudrate 기반 적응형 청크 전송 및 진행률(Progress) 시그널링
+  - 전송 취소 기능 지원
+
+---
+
 ### UI 기능 보완 및 사용성 개선 (2025-12-11)
 
 #### 추가 사항 (Added)

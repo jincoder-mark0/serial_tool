@@ -2,6 +2,7 @@ from abc import ABC, abstractmethod
 from typing import List, Optional, Any
 from dataclasses import dataclass
 import time
+import re
 
 @dataclass
 class Packet:
@@ -133,3 +134,41 @@ class ParserFactory:
             return FixedLengthParser(length)
         else:
             return RawParser()
+
+class ExpectMatcher:
+    """
+    정규식 기반 응답 대기 및 매칭 클래스
+    """
+    def __init__(self, pattern: str, is_regex: bool = False):
+        self.pattern = pattern
+        self.is_regex = is_regex
+        self._buffer = b""
+        
+        if is_regex:
+            try:
+                # bytes로 매칭하기 위해 pattern을 bytes로 인코딩
+                self._regex = re.compile(pattern.encode('utf-8'))
+            except re.error:
+                # 유효하지 않은 정규식인 경우 리터럴 매칭으로 fallback
+                self.is_regex = False
+                self._target_bytes = pattern.encode('utf-8')
+        else:
+            self._target_bytes = pattern.encode('utf-8')
+
+    def match(self, data: bytes) -> bool:
+        """
+        데이터를 버퍼에 추가하고 매칭 여부를 확인합니다.
+        """
+        self._buffer += data
+        
+        if self.is_regex:
+            if self._regex.search(self._buffer):
+                return True
+        else:
+            if self._target_bytes in self._buffer:
+                return True
+                
+        return False
+
+    def reset(self) -> None:
+        self._buffer = b""
