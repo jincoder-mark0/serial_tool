@@ -68,7 +68,6 @@
     - [x] PortState Enum 및 QSS 통합
     - [x] Parser 탭 UI 구현 (PreferencesDialog)
     - [x] 중앙 집중식 경로 관리 (AppConfig)
-    - [x] __init__.py 생성으로 import 간결화
     - [x] 네이밍 일관성 개선
     - [x] View 계층 MVP 리팩토링 (SettingsManager 의존성 제거)
 
@@ -80,7 +79,6 @@
 - [ ] **수신(RX) 기능 보완**
     - [ ] Newline 처리 옵션
         - [ ] 수신 데이터의 줄바꿈 처리 방식 설정 (Raw, Auto Wrap 등)
-
 
 ## Phase 3: Core 유틸리티 (진행 중)
 - [x] `SettingsManager` 구현 (싱글톤, AppConfig 통합)
