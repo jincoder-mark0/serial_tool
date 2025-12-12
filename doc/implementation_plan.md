@@ -4,7 +4,7 @@
 
 ## 목표 (Goal)
 
-`Implementation_Specification.md`에 정의된 **SerialTool v1.0**을 **Python 3.10+** 및 **PyQt5**를 사용하여 구현합니다. **Layered MVP (Model-View-Presenter)** 아키텍처와 **Worker Thread** 모델을 적용하여 **고성능**, **안정성**, **확장성**을 확보하는 것이 목표입니다.
+`Implementation_Specification.md`에 정의된 **SerialTool v1.0**을 **Python 3.10+** 및 **PyQt5**를 사용하여 구현합니다. **MVP (Model-View-Presenter)** 아키텍처와 **Worker Thread** 모델을 적용하여 **고성능**, **안정성**, **확장성**을 확보하는 것이 목표입니다.
 
 ### 핵심 목표
 
@@ -381,7 +381,7 @@ serial_tool2/
 **EventRouter (View-Model Decoupling)**
 
 - **Role**: View 이벤트를 Domain 메서드로 라우팅, Domain 시그널을 View 업데이트로 변환
-- **Benefit**: View와 Model 간의 직접 의존성 제거 (Strict Layered MVP 준수)
+- **Benefit**: View와 Model 간의 직접 의존성 제거 (Strict MVP 준수)
 
 ---
 

@@ -17,11 +17,11 @@
     "port_scan_interval": 5000
   },
   "ui": {
-    "window_width": 1325,
+    "window_width": 1065,
     "window_height": 860,
     "window_x": 305,
     "window_y": 53,
-    "splitter_state": "AAAA/wAAAAEAAAACAAADvwAAAlwB/////wEAAAABAA=="
+    "splitter_state": "AAAA/wAAAAEAAAACAAAEHwAAAcMB/////wEAAAABAA=="
   },
   "ports": {
     "default_config": {

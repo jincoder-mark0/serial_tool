@@ -1,5 +1,5 @@
 """
-ManualControlPresenter 단위 테스트
+ManualCtrlPresenter 단위 테스트
 
 수동 제어 로직(포맷팅, Hex 변환, 전송 제어)을 검증합니다.
 """
@@ -10,7 +10,7 @@ from unittest.mock import MagicMock
 
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from presenter.manual_control_presenter import ManualControlPresenter
+from presenter.manual_ctrl_presenter import ManualCtrlPresenter
 from core.settings_manager import SettingsManager
 from constants import ConfigKeys
 
@@ -27,7 +27,7 @@ def presenter(mock_components):
     """Presenter 인스턴스 생성"""
     view, port_controller, local_echo_callback = mock_components
     # SettingsManager는 싱글톤이므로 설정 주입이 필요함 (여기서는 기본값 사용 가정)
-    return ManualControlPresenter(view, port_controller, local_echo_callback)
+    return ManualCtrlPresenter(view, port_controller, local_echo_callback)
 
 def test_send_text_with_prefix_suffix(presenter, mock_components):
     """텍스트 모드 전송 시 Prefix/Suffix 적용 테스트"""

@@ -15,7 +15,7 @@
 
 ## HOW
 * QMainWindow 상속
-* Strict MVP 패턴을 위한 시그널 노출
+* MVP 패턴을 위한 시그널 노출
 * SettingsManager를 통한 상태 복원
 """
 from PyQt5.QtWidgets import (

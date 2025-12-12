@@ -212,7 +212,7 @@ serial_tool/
 
 ## 아키텍처
 
-본 프로젝트는 **Layered MVP (Model-View-Presenter)** 패턴을 엄격히 준수하며, **Event-Driven** 방식으로 컴포넌트 간 결합도를 최소화했습니다.
+본 프로젝트는 **MVP (Model-View-Presenter)** 패턴을 엄격히 준수하며, **Event-Driven** 방식으로 컴포넌트 간 결합도를 최소화했습니다.
 
 ### MVP 패턴
 

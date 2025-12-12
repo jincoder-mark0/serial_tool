@@ -44,12 +44,12 @@
 
 ---
 
-### Presenter 계층 구조화 및 Strict MVP 리팩토링 (2025-12-12)
+### Presenter 계층 구조화 및 MVP 리팩토링 (2025-12-12)
 
 #### 추가 사항 (Added)
 
 - **신규 Presenter 도입**
-  - **`ManualControlPresenter`**: 수동 명령어 전송, Prefix/Suffix 처리, Hex 변환 로직을 전담
+  - **`ManualCtrlPresenter`**: 수동 명령어 전송, Prefix/Suffix 처리, Hex 변환 로직을 전담
   - **`PacketPresenter`**: 패킷 데이터의 포맷팅(Timestamp, Hex/ASCII 변환) 및 설정 적용 로직 전담
   - **`FilePresenter`**: 파일 전송 진행률, 속도(Speed), 잔여 시간(ETA) 계산 로직 전담
 
@@ -61,10 +61,10 @@
 
 - **MainPresenter 대규모 리팩토링**
   - View 내부 계층(`view.left_section.manual_ctrl...`)에 대한 직접 접근 코드를 전면 제거
-  - `ManualControl`, `Packet`, `File` 관련 로직을 각 전담 Presenter로 이관하여 코드 비대화 해소
+  - `ManualCtrl`, `Packet`, `File` 관련 로직을 각 전담 Presenter로 이관하여 코드 비대화 해소
   - `EventRouter`와 `MainWindow`의 공개 인터페이스만을 사용하여 로직 조율
 
-- **Strict MVP 원칙 적용**
+- **MVP 원칙 적용**
   - **PortPresenter**: `connect_btn` 등 위젯 직접 제어를 제거하고 시그널 구독 및 상태 변경 요청 방식으로 전환
   - **FileTransferDialog**: 내부의 계산 로직을 모두 제거하고, Presenter가 전달하는 데이터만 표시하는 수동적인 뷰로 전환
   - **Local Echo**: `MainPresenter` 내 하드코딩된 로직을 제거하고, View 인터페이스(Callback)를 통해 유연하게 처리
@@ -419,7 +419,7 @@
   - `QSmartListView` 및 `QSmartTextEdit`에 다크/라이트 테마 완벽 지원
   - `QSmartTextEdit`에 `Q_PROPERTY`를 추가하여 QSS에서 라인 번호 색상 제어 가능
   - `common.qss`에 `QSmartListView` 기본 스타일 추가
-- **Strict MVP 아키텍처 적용**
+- **MVP 아키텍처 적용**
   - View 계층(`MacroPanel`, `MainLeftSection` 등)에서 `SettingsManager` 의존성을 완전히 제거했습니다.
   - View는 이제 스스로 파일을 저장하지 않고, `save_state() -> dict`와 `load_state(dict)` 메서드를 통해 상태 데이터만 주고받습니다.
   - 데이터의 영구 저장 및 복원 책임이 `MainWindow`(향후 `MainPresenter`)로 이관되어, UI와 비즈니스 로직(설정 관리)의 결합도가 낮아졌습니다.
@@ -1087,7 +1087,7 @@
 
 #### 추가 사항 (Added)
 
-- Layered MVP 아키텍처 확립
+- MVP 아키텍처 확립
 - 모듈식 폴더 구조 생성:
   - `view/panels/`: LeftPanel, RightPanel, PortPanel, MacroListPanel
   - `view/widgets/`: PortSettings, CommandList, CommandControl, ManualControl

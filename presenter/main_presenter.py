@@ -27,7 +27,7 @@ from .port_presenter import PortPresenter
 from .macro_presenter import MacroPresenter
 from .file_presenter import FilePresenter
 from .packet_presenter import PacketPresenter
-from .manual_control_presenter import ManualControlPresenter
+from .manual_ctrl_presenter import ManualCtrlPresenter
 from .event_router import EventRouter
 from core.settings_manager import SettingsManager
 from core.data_logger import data_logger_manager
@@ -64,7 +64,7 @@ class MainPresenter(QObject):
         self.event_router = EventRouter()
 
         # --- 2. Sub-Presenter 초기화 ---
-        # Strict MVP: View가 노출한 인터페이스를 통해 하위 View 전달
+        # MVP: View가 노출한 인터페이스를 통해 하위 View 전달
 
         # 2.1 Port Control
         self.port_presenter = PortPresenter(self.view.port_view, self.port_controller)
@@ -77,7 +77,7 @@ class MainPresenter(QObject):
 
         # 2.4 Packet Inspector
         # MainWindow는 packet_inspector_panel에 대한 직접적인 프로퍼티가 없으므로 right_section을 통해 접근하거나
-        # MainWindow에 packet_view 프로퍼티를 추가하는 것이 Strict MVP에 더 부합함.
+        # MainWindow에 packet_view 프로퍼티를 추가하는 것이 MVP에 더 부합함.
         # 여기서는 right_section을 통해 접근 (기존 macro_view 패턴과 동일하게 MainWindow 수정 필요할 수 있음)
         # MainWindow에 packet_view 프로퍼티를 추가했다고 가정하고 사용 (아래 MainWindow 수정 코드 필요)
         # 하지만 이번 턴의 요구사항 범위 내에서 해결하기 위해 직접 접근 방식 사용 (view.right_section.packet_inspector)
@@ -85,7 +85,7 @@ class MainPresenter(QObject):
 
         # 2.5 Manual Control
         # Local Echo 처리를 위해 view의 append_local_echo_data 메서드를 콜백으로 전달
-        self.manual_control_presenter = ManualControlPresenter(
+        self.manual_ctrl_presenter = ManualCtrlPresenter(
             self.view.left_section.manual_ctrl,
             self.port_controller,
             self.view.append_local_echo_data
@@ -110,15 +110,15 @@ class MainPresenter(QObject):
         # Progress는 빈도가 높으므로 MainStatusbar가 아닌 FileDialog에서만 처리 (성능 고려)
 
         # --- 4. 내부 Model 시그널 연결 ---
-        # 매크로 러너의 전송 요청은 ManualControlPresenter 로직과 유사하므로
-        # ManualControlPresenter의 메서드를 호출하거나, 별도로 처리.
+        # 매크로 러너의 전송 요청은 ManualCtrlPresenter 로직과 유사하므로
+        # ManualCtrlPresenter의 메서드를 호출하거나, 별도로 처리.
         # 여기서는 매크로 로직이 독립적이므로 MainPresenter에서 중계하되,
-        # 로직 중복을 피하기 위해 ManualControlPresenter의 로직을 재사용할 수도 있음.
+        # 로직 중복을 피하기 위해 ManualCtrlPresenter의 로직을 재사용할 수도 있음.
         # 다만 MacroRunner의 시그널 인자가 다르므로(local_echo 없음), 별도 처리 유지.
         self.macro_runner.send_requested.connect(self.on_macro_cmd_send_requested)
 
         # --- 5. View 시그널 연결 (View -> Presenter) ---
-        # 수동 전송 요청은 이제 ManualControlPresenter가 직접 처리하므로
+        # 수동 전송 요청은 이제 ManualCtrlPresenter가 직접 처리하므로
         # MainPresenter에서는 연결하지 않음.
         # self.view.manual_cmd_send_requested.connect(...) -> REMOVED
 
@@ -226,8 +226,8 @@ class MainPresenter(QObject):
         """
         매크로 전송 요청 처리
 
-        Note: ManualControlPresenter와 로직이 유사하므로 추후 공통 로직으로 분리 가능.
-        현재는 ManualControlPresenter가 View 인스턴스를 가지고 있어 재사용이 어려우므로 별도 처리.
+        Note: ManualCtrlPresenter와 로직이 유사하므로 추후 공통 로직으로 분리 가능.
+        현재는 ManualCtrlPresenter가 View 인스턴스를 가지고 있어 재사용이 어려우므로 별도 처리.
 
         Logic:
             - 포트 열림 확인
@@ -243,7 +243,7 @@ class MainPresenter(QObject):
             cmd_suffix (bool): 접미사 사용 여부
             local_echo (bool): 로컬 에코 사용 여부
         """
-        # ManualControlPresenter의 메서드를 직접 호출할 수도 있으나, 인자가 약간 다름 (local_echo)
+        # ManualCtrlPresenter의 메서드를 직접 호출할 수도 있으나, 인자가 약간 다름 (local_echo)
         # 여기서는 MainPresenter에서 직접 처리 (기존 로직 유지)
         if not self.port_controller.is_open:
             logger.warning("Port not open")

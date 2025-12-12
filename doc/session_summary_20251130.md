@@ -3,7 +3,7 @@
 ## 1. 세션 목표
 
 - 프로젝트 명칭 변경(`SerialManager` -> `SerialTool`) 및 디렉토리 구조 재정리.
-- Layered MVP 아키텍처 기반의 UI 골격(Skeleton) 완성.
+- MVP 아키텍처 기반의 UI 골격(Skeleton) 완성.
 - 주요 위젯(`CommandList`, `ManualControl`)의 기본 기능 구현 및 리팩토링.
 
 ## 2. 주요 변경 사항

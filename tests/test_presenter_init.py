@@ -4,7 +4,7 @@ Presenter 초기화 및 연동 테스트
 - MainPresenter가 하위 Presenter들을 올바르게 초기화하는지 검증
 - EventRouter 연결 상태 확인
 - DataLogger 연동 확인
-- 신규 Presenter (Packet, ManualControl) 초기화 검증
+- 신규 Presenter (Packet, ManualCtrl) 초기화 검증
 
 pytest tests/test_presenter_init.py -v
 """
@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from view.main_window import MainWindow
 from presenter.main_presenter import MainPresenter
 from presenter.packet_presenter import PacketPresenter
-from presenter.manual_control_presenter import ManualControlPresenter
+from presenter.manual_ctrl_presenter import ManualCtrlPresenter
 from resource_path import ResourcePath
 from core.data_logger import data_logger_manager
 
@@ -47,8 +47,8 @@ def test_presenter_initialization(main_presenter):
     assert main_presenter.packet_presenter is not None
     assert isinstance(main_presenter.packet_presenter, PacketPresenter)
 
-    assert main_presenter.manual_control_presenter is not None
-    assert isinstance(main_presenter.manual_control_presenter, ManualControlPresenter)
+    assert main_presenter.manual_ctrl_presenter is not None
+    assert isinstance(main_presenter.manual_ctrl_presenter, ManualCtrlPresenter)
 
     # 3. EventRouter
     assert main_presenter.event_router is not None

@@ -27,7 +27,7 @@ from core.settings_manager import SettingsManager
 from core.logger import logger
 from constants import ConfigKeys
 
-class ManualControlPresenter(QObject):
+class ManualCtrlPresenter(QObject):
     """
     수동 제어 Presenter 클래스
 
@@ -41,7 +41,7 @@ class ManualControlPresenter(QObject):
         local_echo_callback: Optional[Callable[[bytes], None]] = None
     ) -> None:
         """
-        ManualControlPresenter 초기화
+        ManualCtrlPresenter 초기화
 
         Args:
             view (ManualCtrlPanel): 수동 제어 뷰 패널

@@ -62,8 +62,8 @@ class ViewTestWindow(QMainWindow):
         # Test 1: ReceivedArea (색상 규칙, Trim, 타임스탬프 테스트)
         tabs.addTab(self.create_received_area_test(), "ReceivedArea Test")
 
-        # Test 2: ManualControl (입력, 파일 전송 테스트)
-        tabs.addTab(self.create_manual_ctrl_test(), "ManualControl Test")
+        # Test 2: ManualCtrl (입력, 파일 전송 테스트)
+        tabs.addTab(self.create_manual_ctrl_test(), "ManualCtrl Test")
 
         # Test 3: CommandList (커맨드 리스트 테스트)
         tabs.addTab(self.create_macro_list_test(), "CommandList Test")
@@ -147,7 +147,7 @@ class ViewTestWindow(QMainWindow):
 
     def create_manual_ctrl_test(self) -> QWidget:
         """
-        ManualControl 테스트 위젯을 생성합니다.
+        ManualCtrl 테스트 위젯을 생성합니다.
 
         Returns:
             QWidget: 테스트 위젯.
@@ -156,7 +156,7 @@ class ViewTestWindow(QMainWindow):
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
-        # ManualControl 인스턴스
+        # ManualCtrl 인스턴스
         self.manual_ctrl = ManualCtrlWidget()
         layout.addWidget(self.manual_ctrl)
 

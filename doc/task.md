@@ -32,7 +32,7 @@
 - [x] 위젯 구현
   - [x] `PortSettingsWidget` (포트 설정)
   - [x] `ReceivedArea` (로그 뷰)
-  - [x] `ManualControlWidget` (수동 제어)
+  - [x] `ManualCtrlWidget` (수동 제어)
   - [x] `MacroListWidget` (커맨드 리스트)
   - [x] `MacroCtrlWidget` (커맨드 제어)
   - [x] `PacketInspectorWidget` (패킷 인스펙터)
@@ -60,7 +60,7 @@
 - [x] 다국어 지원 (Localization)
   - [x] `LanguageManager` 생성
   - [x] `en.json` 및 `ko.json` 생성
-  - [x] `ManualControlWidget`에 적용
+  - [x] `ManualCtrlWidget`에 적용
   - [x] `ReceivedArea`에 적용
   - [x] `MacroListWidget`에 적용
   - [x] `MacroCtrlWidget`에 적용
@@ -185,7 +185,7 @@
   - [x] `MacroPresenter`: 매크로 로드/저장/실행 제어 (신규)
   - [x] `FilePresenter`: 파일 전송 로직 제어 (신규)
   - [x] `PacketPresenter`: (신규)
-  - [x] `ManualControlPresenter`: (신규)
+  - [x] `ManualCtrlPresenter`: (신규)
 - [ ] **EventRouter 구현**
   - [ ] `EventRouter` 구현 (View-Model 분리)
   - [ ] EventBus 구독 및 View 업데이트 라우팅
