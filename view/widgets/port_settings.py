@@ -308,10 +308,23 @@ class PortSettingsWidget(QGroupBox):
 
         self.port_connection_changed.emit(connected)
 
+    def set_connected(self, connected: bool) -> None:
+        """
+        PortPresenter와의 호환성을 위한 헬퍼 메서드입니다.
+        단순 boolean 값을 받아 내부의 PortState로 변환하여 처리합니다.
+
+        Args:
+            connected (bool): 연결 여부
+        """
+        state = PortState.CONNECTED if connected else PortState.DISCONNECTED
+        self.set_connection_state(state)
+
     def toggle_connection(self) -> None:
+        """연결 상태를 토글합니다 (버튼 클릭 시뮬레이션)."""
         self.connect_btn.click()
 
     def is_connected(self) -> bool:
+        """현재 연결 상태를 반환합니다."""
         return self.connect_btn.property("state") == PortState.CONNECTED.value
 
     def retranslate_ui(self) -> None:
