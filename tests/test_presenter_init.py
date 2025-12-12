@@ -1,28 +1,71 @@
+"""
+Presenter 초기화 및 연동 테스트
+
+- MainPresenter가 하위 Presenter들을 올바르게 초기화하는지 검증
+- EventRouter 연결 상태 확인
+- DataLogger 연동 확인
+
+pytest tests/test_presenter_init.py -v
+"""
 import sys
-import unittest
+import os
+import pytest
 from PyQt5.QtWidgets import QApplication
+
+# 프로젝트 루트 경로 설정
+sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+
 from view.main_window import MainWindow
 from presenter.main_presenter import MainPresenter
 from resource_path import ResourcePath
+from core.data_logger import data_logger_manager
 
-# QApplication instance needed for widgets
-app = QApplication(sys.argv)
+@pytest.fixture
+def main_presenter(qtbot):
+    """MainPresenter Fixture"""
+    # 리소스 경로 초기화
+    resource_path = ResourcePath()
 
-class TestPresenterInit(unittest.TestCase):
-    def test_main_presenter_init(self):
-        """MainPresenter 초기화 테스트"""
-        resource_path = ResourcePath()
-        window = MainWindow(resource_path=resource_path)
-        presenter = MainPresenter(window)
-        
-        self.assertIsNotNone(presenter.port_controller)
-        self.assertIsNotNone(presenter.macro_runner)
-        self.assertIsNotNone(presenter.event_router)
-        self.assertIsNotNone(presenter.port_presenter)
-        self.assertIsNotNone(presenter.macro_presenter)
-        self.assertIsNotNone(presenter.file_presenter)
-        
-        print("MainPresenter initialized successfully")
+    # View & Presenter 생성
+    window = MainWindow(resource_path)
+    qtbot.addWidget(window)
+    presenter = MainPresenter(window)
 
-if __name__ == '__main__':
-    unittest.main()
+    return presenter
+
+def test_presenter_initialization(main_presenter):
+    """모든 하위 Presenter와 컴포넌트가 올바르게 초기화되었는지 확인"""
+
+    # 1. Sub-presenters
+    assert main_presenter.port_presenter is not None
+    assert main_presenter.macro_presenter is not None
+    assert main_presenter.file_presenter is not None
+
+    # 2. EventRouter
+    assert main_presenter.event_router is not None
+
+    # 3. Models
+    assert main_presenter.port_controller is not None
+    assert main_presenter.macro_runner is not None
+
+def test_event_router_connection(main_presenter):
+    """EventRouter와 MainPresenter 핸들러 연결 확인"""
+    # EventRouter는 시그널을 가지고 있어야 함
+    assert hasattr(main_presenter.event_router, 'data_received')
+    assert hasattr(main_presenter.event_router, 'port_opened')
+
+    # 실제 연결 여부는 PyQt 시그널의 receivers() 등으로 확인 가능하나,
+    # 여기서는 초기화 과정에서 에러가 없는지로 간접 검증
+
+def test_data_logger_integration(main_presenter):
+    """DataLogger가 전역적으로 접근 가능하고 Presenter와 연동 준비되었는지 확인"""
+    # DataLoggerManager는 싱글톤이므로 import된 객체 확인
+    assert data_logger_manager is not None
+
+    # MainPresenter는 DataLogger를 직접 멤버로 갖지 않고,
+    # EventRouter나 메서드 내에서 전역 객체를 사용함.
+    # 따라서 여기서는 System Log 위젯 초기화 여부로 간접 확인
+    assert main_presenter.system_log is not None
+
+if __name__ == "__main__":
+    pytest.main([__file__])

@@ -34,7 +34,7 @@ from .macro_presenter import MacroPresenter
 from .file_presenter import FilePresenter
 from .event_router import EventRouter
 from core.settings_manager import SettingsManager
-from core.data_logger import log_recorder_manager
+from core.data_logger import data_logger_manager
 from view.managers.lang_manager import lang_manager
 from core.logger import logger
 from constants import ConfigKeys
@@ -171,8 +171,8 @@ class MainPresenter(QObject):
         """
         # 로깅 중이면 DataLogger에 먼저 기록 (데이터 누락 방지)
         # 해당 포트가 로깅 중인지 확인
-        if log_recorder_manager.is_logging(port_name):
-            log_recorder_manager.record(port_name, data)
+        if data_logger_manager.is_logging(port_name):
+            data_logger_manager.record(port_name, data)
 
         # 포트 이름으로 해당 탭 찾기
         for i in range(self.view.left_section.port_tabs.count()):
@@ -340,8 +340,8 @@ class MainPresenter(QObject):
         EventRouter를 통해 호출
         """
         # 로깅 중이면 DataLogger에 기록
-        if log_recorder_manager.is_logging(port_name):
-            log_recorder_manager.record(port_name, data)
+        if data_logger_manager.is_logging(port_name):
+            data_logger_manager.record(port_name, data)
 
         self.tx_byte_count += len(data)
 
@@ -438,7 +438,7 @@ class MainPresenter(QObject):
             logger.warning("Cannot start logging: No port opened")
             return
 
-        if log_recorder_manager.start_logging(port_name, filepath):
+        if data_logger_manager.start_logging(port_name, filepath):
             logger.info(f"Logging started: {port_name} -> {filepath}")
         else:
             logger.error(f"Failed to start logging: {filepath}")
@@ -450,6 +450,6 @@ class MainPresenter(QObject):
             return
 
         port_name = panel.get_port_name()
-        if port_name and log_recorder_manager.is_logging(port_name):
-            log_recorder_manager.stop_logging(port_name)
+        if port_name and data_logger_manager.is_logging(port_name):
+            data_logger_manager.stop_logging(port_name)
             logger.info(f"Logging stopped: {port_name}")
