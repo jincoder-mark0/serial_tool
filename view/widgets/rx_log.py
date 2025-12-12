@@ -31,8 +31,8 @@ class RxLogWidget(QWidget):
     텍스트/HEX 모드 전환, 일시 정지, 타임스탬프 표시, 로그 저장 및 지우기 기능을 제공합니다.
     """
     # 로깅 시그널 (포트명은 Presenter에서 관리)
-    logging_started = pyqtSignal(str)  # filepath
-    logging_stopped = pyqtSignal()
+    data_logging_started = pyqtSignal(str)  # filepath
+    data_logging_stopped = pyqtSignal()
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
         RxLogWidget를 초기화합니다.
@@ -49,7 +49,7 @@ class RxLogWidget(QWidget):
         self.rx_search_prev_btn = None
         self.rx_search_next_btn = None
         self.rx_search_input = None
-        self.rx_save_log_btn = None
+        self.rx_toggle_data_log_btn = None
         self.rx_clear_log_btn = None
         self.rx_pause_chk = None
         self.rx_timestamp_chk = None
@@ -139,10 +139,10 @@ class RxLogWidget(QWidget):
         self.rx_clear_log_btn.setToolTip(lang_manager.get_text("rx_btn_clear_tooltip"))
         self.rx_clear_log_btn.clicked.connect(self.on_clear_rx_log_clicked)
 
-        self.rx_save_log_btn = QPushButton(lang_manager.get_text("rx_btn_save"))
-        self.rx_save_log_btn.setToolTip(lang_manager.get_text("rx_btn_save_tooltip"))
-        self.rx_save_log_btn.setCheckable(True)  # 토글 버튼으로 변경
-        self.rx_save_log_btn.toggled.connect(self.on_logging_toggled)
+        self.rx_toggle_data_log_btn = QPushButton(lang_manager.get_text("rx_btn_save"))
+        self.rx_toggle_data_log_btn.setToolTip(lang_manager.get_text("rx_btn_stoggle_data_log_tooltip"))
+        self.rx_toggle_data_log_btn.setCheckable(True)  # 토글 버튼으로 변경
+        self.rx_toggle_data_log_btn.toggled.connect(self.on_logging_toggled)
 
         # Options
         self.rx_filter_chk = QCheckBox(lang_manager.get_text("rx_chk_filter"))
@@ -194,7 +194,7 @@ class RxLogWidget(QWidget):
         toolbar_layout.addWidget(self.rx_timestamp_chk)
         toolbar_layout.addWidget(self.rx_pause_chk)
         toolbar_layout.addWidget(self.rx_clear_log_btn)
-        toolbar_layout.addWidget(self.rx_save_log_btn)
+        toolbar_layout.addWidget(self.rx_toggle_data_log_btn)
         layout.addLayout(toolbar_layout)
         layout.addWidget(self.rx_log_list)
         self.setLayout(layout)
@@ -225,8 +225,8 @@ class RxLogWidget(QWidget):
         # Buttons
         self.rx_clear_log_btn.setText(lang_manager.get_text("rx_btn_clear"))
         self.rx_clear_log_btn.setToolTip(lang_manager.get_text("rx_btn_clear_tooltip"))
-        self.rx_save_log_btn.setText(lang_manager.get_text("rx_btn_save"))
-        self.rx_save_log_btn.setToolTip(lang_manager.get_text("rx_btn_save_tooltip"))
+        self.rx_toggle_data_log_btn.setText(lang_manager.get_text("rx_btn_save"))
+        self.rx_toggle_data_log_btn.setToolTip(lang_manager.get_text("rx_btn_stoggle_data_log_tooltip"))
 
         # Newline Combo
         current_idx = self.rx_newline_combo.currentIndex()
@@ -336,19 +336,19 @@ class RxLogWidget(QWidget):
 
             if filename:
                 # 로깅 시작 시그널
-                self.logging_started.emit(filename)
+                self.data_logging_started.emit(filename)
                 # 버튼 스타일 변경
-                self.rx_save_log_btn.setText("● REC")
-                self.rx_save_log_btn.setStyleSheet("color: red;")
+                self.rx_toggle_data_log_btn.setText("● REC")
+                self.rx_toggle_data_log_btn.setStyleSheet("color: red;")
             else:
                 # 취소 시 버튼 복구
-                self.rx_save_log_btn.setChecked(False)
+                self.rx_toggle_data_log_btn.setChecked(False)
         else:
             # 로깅 중단 시그널
-            self.logging_stopped.emit()
+            self.data_logging_stopped.emit()
             # 버튼 스타일 복구
-            self.rx_save_log_btn.setText(lang_manager.get_text("rx_btn_save"))
-            self.rx_save_log_btn.setStyleSheet("")
+            self.rx_toggle_data_log_btn.setText(lang_manager.get_text("rx_btn_save"))
+            self.rx_toggle_data_log_btn.setStyleSheet("")
 
 
     @pyqtSlot(int)

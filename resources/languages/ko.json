@@ -70,7 +70,7 @@
     "main_menu_new_tab_tooltip": "새 탭 만들기",
     "main_menu_open_port": "포트 열기",
     "main_menu_preferences": "설정",
-    "main_menu_save_log": "로그 저장",
+    "main_menu_save_data_log": "로그 저장",
     "main_menu_theme": "테마",
     "main_menu_theme_dark": "다크",
     "main_menu_theme_light": "라이트",
@@ -180,7 +180,7 @@
     "rx_btn_clear": "지우기",
     "rx_btn_clear_tooltip": "수신 로그 지우기",
     "rx_btn_save": "저장",
-    "rx_btn_save_tooltip": "로그를 파일로 저장",
+    "rx_btn_stoggle_data_log_tooltip": "로그를 파일로 저장",
     "rx_btn_search_next_tooltip": "다음 찾기",
     "rx_btn_search_prev_tooltip": "이전 찾기",
     "rx_chk_filter": "필터",
@@ -208,6 +208,6 @@
     "toolbar_btn_clear": "지우기",
     "toolbar_btn_close": "닫기",
     "toolbar_btn_open": "열기",
-    "toolbar_btn_save_log": "로그 저장",
+    "toolbar_btn_save_data_log": "로그 저장",
     "toolbar_btn_settings": "설정"
 }

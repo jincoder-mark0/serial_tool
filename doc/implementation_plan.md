@@ -282,15 +282,15 @@ serial_tool2/
 
 ```python
 @dataclass
-class MacroEntry:
-    enabled: bool
-    command: str
-    is_hex: bool
-    prefix: bool
-    suffix: bool
-    delay_ms: int
-    expect: str = ""
-    timeout_ms: int = 5000
+  class MacroEntry:
+      enabled: bool
+      command: str
+      is_hex: bool
+      prefix: bool
+      suffix: bool
+      delay_ms: int
+      expect: str = ""
+      timeout_ms: int = 5000
 ```
 
 **JSON 직렬화**
@@ -515,14 +515,14 @@ class MacroEntry:
 **PluginBase 인터페이스**
 
 ```python
-class PluginBase(ABC):
-    @abstractmethod
-    def register(self, app_context: AppContext) -> None:
-        pass
-
-    @abstractmethod
-    def unregister(self) -> None:
-        pass
+  class PluginBase(ABC):
+      @abstractmethod
+      def register(self, app_context: AppContext) -> None:
+          pass
+  
+      @abstractmethod
+      def unregister(self) -> None:
+          pass
 ```
 
 **AppContext**

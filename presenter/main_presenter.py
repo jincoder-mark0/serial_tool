@@ -34,7 +34,7 @@ from .macro_presenter import MacroPresenter
 from .file_presenter import FilePresenter
 from .event_router import EventRouter
 from core.settings_manager import SettingsManager
-from core.log_recorder import log_recorder_manager
+from core.data_logger import log_recorder_manager
 from view.managers.lang_manager import lang_manager
 from core.logger import logger
 from constants import ConfigKeys
@@ -105,7 +105,7 @@ class MainPresenter(QObject):
         # 상태바 참조 저장 (반복적인 hasattr 확인 방지)
         self.global_status_bar = self.view.global_status_bar
 
-        # 로깅 시그널 연결 (LogRecorder 통합)
+        # 로깅 시그널 연결 (DataLogger 통합)
         self._connect_logging_signals()
 
         # 탭 추가 시그널 연결 (새 탭의 로깅 시그널 연결용)
@@ -169,7 +169,7 @@ class MainPresenter(QObject):
             port_name (str): 데이터를 수신한 포트 이름
             data (bytes): 수신된 바이트 데이터.
         """
-        # 로깅 중이면 LogRecorder에 먼저 기록 (데이터 누락 방지)
+        # 로깅 중이면 DataLogger에 먼저 기록 (데이터 누락 방지)
         # 해당 포트가 로깅 중인지 확인
         if log_recorder_manager.is_logging(port_name):
             log_recorder_manager.record(port_name, data)
@@ -339,7 +339,7 @@ class MainPresenter(QObject):
         로깅 중이면 데이터 기록
         EventRouter를 통해 호출
         """
-        # 로깅 중이면 LogRecorder에 기록
+        # 로깅 중이면 DataLogger에 기록
         if log_recorder_manager.is_logging(port_name):
             log_recorder_manager.record(port_name, data)
 
@@ -404,13 +404,13 @@ class MainPresenter(QObject):
             rx_widget = panel.received_area_widget
             # 중복 연결 방지를 위해 disconnect 시도 (실패해도 무방)
             try:
-                rx_widget.logging_started.disconnect(self._on_logging_started)
-                rx_widget.logging_stopped.disconnect(self._on_logging_stopped)
+                rx_widget.data_logging_started.disconnect(self._on_data_logging_started)
+                rx_widget.data_logging_stopped.disconnect(self._on_data_logging_stopped)
             except TypeError:
                 pass
 
-            rx_widget.logging_started.connect(self._on_logging_started)
-            rx_widget.logging_stopped.connect(self._on_logging_stopped)
+            rx_widget.data_logging_started.connect(self._on_data_logging_started)
+            rx_widget.data_logging_stopped.connect(self._on_data_logging_stopped)
 
     def _get_port_panel_from_sender(self):
         """시그널을 보낸 RxLogWidget이 속한 PortPanel을 찾습니다."""
@@ -421,7 +421,7 @@ class MainPresenter(QObject):
                 return widget
         return None
 
-    def _on_logging_started(self, filepath: str) -> None:
+    def _on_data_logging_started(self, filepath: str) -> None:
         """
         로깅 시작 처리
 
@@ -443,7 +443,7 @@ class MainPresenter(QObject):
         else:
             logger.error(f"Failed to start logging: {filepath}")
 
-    def _on_logging_stopped(self) -> None:
+    def _on_data_logging_stopped(self) -> None:
         """로깅 중단 처리"""
         panel = self._get_port_panel_from_sender()
         if not panel:

@@ -2,6 +2,41 @@
 
 ## [미배포] (Unreleased)
 
+---
+
+### 아키텍처 안정화 및 핵심 기능 고도화 (2025-12-12)
+
+#### 추가 사항 (Added)
+
+- **설정 키 상수화 (ConfigKeys)**
+  - `constants.py`에 `ConfigKeys` 클래스 추가 및 설정 경로 중앙 관리
+  - 모든 설정 접근 로직(`SettingsManager.get/set`)에 상수 적용 완료
+
+- **핵심 기능 로직 보강**
+  - **매크로**: `ExpectMatcher` 구현 및 `_wait_for_expect` 응답 대기 로직 추가
+  - **파일 전송**: 송신 큐 모니터링을 통한 Backpressure(역압) 제어 로직 추가
+  - **성능**: `QSmartListView` 검색 입력에 디바운싱(300ms) 타이머 추가
+
+#### 변경 사항 (Changed)
+
+- **명명 규칙 및 구조 개선 (Renaming & Refactoring)**
+  - **Data Logger**: `LogRecorder`를 `DataLogger`로 명칭 변경 (시스템 로그와 데이터 로깅의 역할 분리 명확화)
+  - **Event System**: `PortController`의 중복된 이벤트 발행 구조를 제거하고 Signal-EventBus 자동 브리지 구현
+  - **Macro Engine**: `QTimer` 기반 루프를 `QThread` + `QWaitCondition` 기반으로 전면 교체 (Windows 타이머 정밀도 문제 해결)
+
+- **로직 최적화 및 수정**
+  - **Flow Control**: 하드웨어 흐름 제어 설정에 따라 전송 지연(Sleep)을 조건부로 적용하도록 변경
+  - **Error Handler**: `KeyboardInterrupt` 발생 시 기존 훅(`_old_excepthook`)을 호출하여 호환성 유지
+
+#### 이점 (Benefits)
+
+- **안정성 확보**: 대량 데이터 전송 및 고속 매크로 실행 시의 메모리 폭증 및 데이터 유실 방지
+- **유지보수성 향상**: 문자열 리터럴 제거 및 이벤트 흐름 단일화로 코드 복잡도 감소
+- **성능 개선**: 정규식 필터링 시 UI 프리징 현상 해결 및 매크로 타이밍 정밀도(1ms) 확보
+- **명확성 증대**: 시스템 로그와 데이터 로깅의 용어 분리로 개발자 혼동 방지
+
+---
+
 ### 코드 문서화 강화 (2025-12-12)
 
 #### 추가 사항 (Added)
@@ -177,7 +212,7 @@
 
 - **전이중 레코딩 (Full Duplex Recording)**
   - 송신(TX) 데이터와 수신(RX) 데이터를 모두 로그 파일에 기록하는 기능 구현
-  - `MainPresenter`에서 데이터 송수신 이벤트를 캡처하여 `LogRecorderManager`로 전달
+  - `MainPresenter`에서 데이터 송수신 이벤트를 캡처하여 `DataLoggerManager`로 전달
   - `RxLogWidget`의 로그 저장 버튼을 토글 방식으로 변경하고, 파일명에 탭 이름 포함
 
 #### 변경 사항 (Changed)

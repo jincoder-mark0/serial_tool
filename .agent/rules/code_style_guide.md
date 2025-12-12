@@ -36,13 +36,13 @@ trigger: always_on
 ### 3.2 간단한 예시
 
 ```python
-def get_available_ports() -> List[str]:
-    """사용 가능한 시리얼 포트 목록을 반환합니다
-
-    Returns:
-        List[str]: 포트 이름 리스트
-    """
-    # 구현 내용...
+  def get_available_ports() -> List[str]:
+      """사용 가능한 시리얼 포트 목록을 반환합니다
+  
+      Returns:
+          List[str]: 포트 이름 리스트
+      """
+      # 구현 내용...
 ```
 
 > [!NOTE]

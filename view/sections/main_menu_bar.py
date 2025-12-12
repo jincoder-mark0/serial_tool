@@ -17,7 +17,7 @@ class MainMenuBar(QMenuBar):
     about_requested = pyqtSignal()
     port_open_requested = pyqtSignal()
     tab_close_requested = pyqtSignal()
-    log_save_requested = pyqtSignal()
+    data_log_save_requested = pyqtSignal()
     toggle_right_panel_requested = pyqtSignal(bool)
     file_transfer_requested = pyqtSignal()
 
@@ -51,10 +51,10 @@ class MainMenuBar(QMenuBar):
         close_tab_action.triggered.connect(self.tab_close_requested.emit)
         file_menu.addAction(close_tab_action)
 
-        save_log_action = QAction(lang_manager.get_text("main_menu_save_log"), self)
-        save_log_action.setShortcut("Ctrl+Shift+S")
-        save_log_action.triggered.connect(self.log_save_requested.emit)
-        file_menu.addAction(save_log_action)
+        save_data_log_action = QAction(lang_manager.get_text("main_menu_save_data_log"), self)
+        save_data_log_action.setShortcut("Ctrl+Shift+S")
+        save_data_log_action.triggered.connect(self.data_log_save_requested.emit)
+        file_menu.addAction(save_data_log_action)
 
         file_menu.addSeparator()
 
@@ -114,7 +114,7 @@ class MainMenuBar(QMenuBar):
 
         # 도구 메뉴 (Tools Menu)
         tools_menu = self.addMenu(lang_manager.get_text("main_menu_tools"))
-        
+
         # 파일 전송 액션
         file_transfer_action = QAction(lang_manager.get_text("manual_ctrl_grp_file"), self)
         file_transfer_action.triggered.connect(self.file_transfer_requested.emit)

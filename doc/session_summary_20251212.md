@@ -2,105 +2,85 @@
 
 ## 1. 개요 (Overview)
 
-금일 오전 세션은 **EventBus 싱글톤 패턴 수정** 및 **Presenter 계층 구조화**에 집중했습니다.
+금일 개발 오전 세션은 **EventBus 싱글톤 패턴 수정** 및 **Presenter 계층 구조화**로 시작하여,
+**아키텍처 안정화(Stabilization)**와 **핵심 기능의 정밀도 향상**에 집중했습니다.
 
-이전 세션에서 발생한 `ModuleNotFoundError` 테스트 실패 문제를 해결하고, EventBus를 올바른 싱글톤 패턴으로 리팩토링했습니다. 또한 `EventRouter`, `MacroPresenter`, `FilePresenter` 등 새로운 Presenter 클래스를 도입하여 Model 계층과 View 계층 간의 이벤트 흐름을 개선했습니다.
-
-추가로 코드 문서화 강화 (주석 가이드 준수)을 진행하였습니다.
+오전에는 `ModuleNotFoundError` 및 싱글톤 이슈를 해결하고 `EventRouter`를 도입했습니다. 이후 세션에서는 **이벤트 전달 체계의 이중성 제거**, **설정 키 상수화**, **매크로 엔진의 타이밍 정밀도 개선(QThread 전환)**, **파일 전송 흐름 제어(Backpressure)** 등 시스템의 신뢰성을 높이는 대규모 리팩토링을 수행했습니다. 또한 명확한 역할 분리를 위해 `LogRecorder`를 `DataLogger`로 명칭을 변경했습니다.
 
 ## 2. 주요 변경 사항 (Key Changes)
 
-### 2.1 EventBus 싱글톤 수정
+### 2.1 EventBus 및 Presenter 구조화
 
-- **전역 인스턴스 도입**:
-  - `core/event_bus.py`에 모듈 레벨 `event_bus` 인스턴스를 생성했습니다.
-  - `__new__` 메서드를 통한 싱글톤 구현을 제거하고, 간단한 모듈 레벨 인스턴스로 변경했습니다.
-  - `_initialized` 플래그 관련 로직을 제거하여 코드를 단순화했습니다.
-
-- **전역 인스턴스 사용**:
-  - `PortController`, `MacroRunner`, `FileTransferEngine`, `EventRouter`에서 `EventBus()` 대신 `event_bus`를 import하여 사용하도록 변경했습니다.
+- **EventBus 전역 인스턴스 도입**:
+  - `core/event_bus.py`에 모듈 레벨 `event_bus` 인스턴스를 생성하고 복잡한 싱글톤 로직을 단순화했습니다.
   - 모든 컴포넌트가 동일한 EventBus 인스턴스를 공유하도록 보장했습니다.
 
-### 2.2 Presenter 계층 구조화
+- **Presenter 계층 세분화**:
+  - **`EventRouter`**: EventBus 이벤트를 PyQt 시그널로 변환하여 View와 Model의 결합도를 낮췄습니다.
+  - **`MacroPresenter`**: 매크로 실행 및 상태 관리를 전담합니다.
+  - **`FilePresenter`**: 파일 전송 로직 및 진행률 표시를 전담합니다.
 
-- **EventRouter 구현** (`presenter/event_router.py`):
-  - EventBus 이벤트를 PyQt 시그널로 변환하는 라우터 클래스를 구현했습니다.
-  - Port Events: `port_opened`, `port_closed`, `port_error`, `data_received`
-  - Macro Events: `macro_started`, `macro_finished`, `macro_progress`
-  - File Transfer Events: `file_transfer_progress`, `file_transfer_completed`
-  - 워커 스레드에서 발생한 이벤트도 UI 스레드에서 안전하게 처리할 수 있도록 보장합니다.
+- **MainPresenter 리팩토링**:
+  - 하위 Presenter(`Port`, `Macro`, `File`)를 초기화하고 조율하는 역할로 재정립했습니다.
 
-- **MacroPresenter 구현** (`presenter/macro_presenter.py`):
-  - `MacroPanel`과 `MacroRunner`를 연결하는 Presenter입니다.
-  - 매크로 시작/정지, 단일 명령 전송 요청을 처리합니다.
-  - `MacroRunner`의 시그널과 UI를 연동합니다.
+### 2.2 아키텍처 및 구조 개선
 
-- **FilePresenter 구현** (`presenter/file_presenter.py`):
-  - 파일 전송 로직을 전담하는 Presenter입니다.
-  - `FileTransferEngine`을 관리하고 진행률 UI를 업데이트합니다.
-  - 전송 완료/에러 상태를 처리합니다.
+- **이벤트 전달 체계 일원화 (Event System Unification)**:
+  - `PortController`에서 Signal 발생과 EventBus 발행이 중복되던 구조를 개선했습니다.
+  - Signal 발생 시 자동으로 EventBus로 전파되도록 `_connect_signals_to_eventbus` 브리지를 구현하여 **SSOT(Single Source of Truth)** 원칙을 확립했습니다.
+  - `MainPresenter`가 Model에 직접 의존하지 않고 `EventRouter`를 통해 통신하도록 수정했습니다.
 
-### 2.3 MainPresenter 리팩토링
+- **설정 키 상수화 (ConfigKeys)**:
+  - 설정 파일(`settings.json`)의 키 경로를 관리하는 `ConfigKeys` 상수 클래스를 `constants.py`에 도입했습니다.
+  - 코드 전반에 산재된 문자열 리터럴을 상수로 교체하여 오타 방지 및 유지보수성을 확보했습니다.
 
-- 새로운 Presenter들(`MacroPresenter`, `FilePresenter`)과 `EventRouter`를 초기화합니다.
-- `EventRouter` 시그널을 통해 포트 이벤트를 처리하도록 변경했습니다.
-- 파일 전송 로직을 `FilePresenter`로 위임했습니다.
-- `MacroRunner.send_requested` 시그널(4개 인자)과 `on_manual_cmd_send_requested`(5개 인자) 간 불일치를 해결하기 위해 `on_macro_cmd_send_requested` 중간 핸들러를 추가했습니다.
+- **Data Logger 명칭 변경**:
+  - 시스템 로그(`Logger`)와 데이터 로깅의 역할을 명확히 구분하기 위해 `LogRecorder`를 **`DataLogger`**로 변경했습니다.
+  - 관련 클래스(`DataLogger`, `DataLoggerManager`) 및 UI 텍스트를 일괄 수정했습니다.
 
-### 2.4 Model 계층 EventBus 통합
+### 2.3 핵심 기능 고도화 (Core Logic Enhancements)
 
-- **PortController**:
-  - 포트 열림/닫힘/에러 시 EventBus로 이벤트를 발행합니다.
-  - 데이터 수신/패킷 수신 시에도 이벤트를 발행합니다.
-  - 실수로 제거된 시그널 정의(`port_opened`, `port_closed` 등)를 복구했습니다.
+- **매크로 엔진 정밀도 개선 (Macro Engine)**:
+  - `MacroRunner`를 기존 `QTimer` 기반에서 **`QThread` + `QWaitCondition`** 기반으로 전면 재작성했습니다.
+  - Windows 환경에서의 타이머 오차 문제를 해결하고(1ms 단위 제어), 대량 로그 수신 시 발생하는 UI 블로킹에 의한 타이밍 지연을 제거했습니다.
+  - `ExpectMatcher`(`model/packet_parser.py`) 구현 및 `_wait_for_expect` 로직을 추가하여 응답 대기 기능을 완성했습니다.
 
-- **MacroRunner**:
-  - 매크로 시작/종료/에러 시 EventBus로 이벤트를 발행합니다.
-  - `pause()`, `resume()`, `_start_loop()` 메서드를 복구했습니다.
+- **파일 전송 안정성 확보 (File Transfer)**:
+  - **Backpressure(역압) 제어**: 송신 큐(`TX Queue`) 크기를 모니터링하여 버퍼 오버플로우를 방지하는 로직을 추가했습니다.
+  - **Flow Control 연동**: 포트 설정(RTS/CTS, XON/XOFF)에 따라 전송 지연(Sleep)을 조건부로 적용하여 전송 속도를 최적화했습니다.
 
-- **FileTransferEngine**:
-  - 파일 전송 진행률/완료/에러 시 EventBus로 이벤트를 발행합니다.
+### 2.4 성능 최적화 및 버그 수정
 
-### 2.5 테스트 수정 및 추가
+- **로그 필터링 성능 개선**:
+  - `QSmartListView` 검색 입력에 **디바운싱(Debouncing, 300ms)**을 적용했습니다.
+  - 대량의 로그가 쌓인 상태에서 정규식 입력 시 발생하는 UI 프리징 현상을 해결했습니다.
 
-- **test_core_refinement.py 생성**:
-  - `ExpectMatcher` 테스트: 기본 문자열 매칭, 정규식 매칭, 버퍼 크기 제한, 리셋
-  - `ParserType` 상수 테스트: 상수값 확인, `ParserFactory` 파서 생성
-  - 테스트 파라미터 수정: `feed()` → `match()`, `timeout_ms` 제거, 상수값 수정
-
-- **test_presenter_init.py 수정**:
-  - 디버그 코드 제거
-  - `MacroPresenter`, `FilePresenter`, `EventRouter` 초기화 검증 추가
-
-### 2.6 버그 수정 (Bug Fixes)
-
-- **PortController 시그널 복구**: 이전 세션에서 실수로 제거된 시그널 정의를 복구했습니다.
-- **MacroRunner 파일 복구**: 잘못된 편집으로 손상된 파일 내용을 복구했습니다.
-- **FileTransferEngine 파일 복구**: 잘못된 편집으로 손상된 파일 내용을 복구했습니다.
-- **EventRouter 파일 복구**: 실수로 제거된 시그널 정의를 복구했습니다.
+- **에러 핸들러 호환성 개선**:
+  - `GlobalErrorHandler`에서 `KeyboardInterrupt` 처리 시 기존 훅(`_old_excepthook`)을 호출하도록 수정하여, 다른 라이브러리와의 호환성을 보장했습니다.
 
 ## 3. 파일 변경 목록 (File Changes)
 
-### 신규 생성
+### 신규 생성 및 주요 수정
 
-- `presenter/event_router.py`: EventBus 이벤트를 PyQt 시그널로 변환하는 라우터
-- `presenter/macro_presenter.py`: MacroPanel과 MacroRunner 연결 Presenter
-- `presenter/file_presenter.py`: 파일 전송 로직 Presenter
-- `tests/test_core_refinement.py`: ExpectMatcher 및 ParserType 테스트
+- **Core & Constants**:
+  - `constants.py`: `ConfigKeys` 상수 클래스 추가.
+  - `core/data_logger.py`: (구 log_recorder.py) 클래스명 변경 및 로직 수정.
+  - `core/error_handler.py`: 훅 체이닝 로직 개선.
+  - `core/event_bus.py`: 전역 인스턴스화.
 
-### 수정
+- **Model**:
+  - `model/port_controller.py`: 시그널-EventBus 브리지 구현, 설정 저장, 중복 코드 제거.
+  - `model/macro_runner.py`: QThread 기반으로 전면 리팩토링, Expect 로직 추가.
+  - `model/packet_parser.py`: `ExpectMatcher` 구현, `ParserType` 상수 추가.
+  - `model/file_transfer.py`: Backpressure 및 Flow Control 로직 추가.
+  - `model/connection_worker.py`: 큐 사이즈 조회 메서드 추가.
 
-- `core/event_bus.py`: 전역 `event_bus` 인스턴스 추가, 싱글톤 로직 단순화
-- `model/port_controller.py`: EventBus 통합, 시그널 정의 복구
-- `model/macro_runner.py`: EventBus 통합, 파일 복구
-- `model/file_transfer.py`: EventBus 통합, 파일 복구
-- `presenter/main_presenter.py`: 새 Presenter 초기화, `on_macro_cmd_send_requested` 추가
-- `tests/test_presenter_init.py`: 디버그 코드 제거
-
-### 문서
-
-- `doc/CHANGELOG.md`: 2025-12-12 변경 사항 추가
-- `doc/session_summary_20251212.md`: 금일 세션 요약 (본 문서)
+- **View & Presenter**:
+  - `presenter/event_router.py`: 신규 생성, `data_sent` 시그널 라우팅.
+  - `presenter/macro_presenter.py`, `file_presenter.py`: 신규 생성.
+  - `presenter/main_presenter.py`: ConfigKeys 적용, EventRouter 의존성 강화.
+  - `view/custom_qt/smart_list_view.py`: 필터링 디바운스 타이머 추가.
+  - `view/main_window.py`, `view/dialogs/preferences_dialog.py`: ConfigKeys 적용.
 
 ## 4. 테스트 결과 (Test Results)
 
@@ -118,13 +98,15 @@
   - `ExpectMatcher`를 `MacroRunner`에 통합하여 응답 대기 기능 구현
   - `PacketParser`를 `PacketInspectorWidget`과 연동
 
-- **Phase 6: 자동화 및 고급 기능**
+- **Phase 6: 자동화 및 고급 기능 (진행 중)**
+  - `MacroRunner`와 UI 연동 테스트 (실제 장비)
   - `FileTransferEngine`과 UI 완전 연동 (`FilePresenter` 활용)
   - 파일 전송 다이얼로그 진행률 표시 구현
+  - 파일 전송 중단/재개 기능 고도화
 
-- **테스트 보완**
-  - UI 번역 테스트 실패 원인 분석 및 수정
-  - 통합 테스트 추가
+- **안정화 (Stabilization)**
+  - 통합 테스트(Integration Test) 시나리오 추가
+  - 장시간(Long-run) 동작 시 메모리 누수 점검
 
 ## 6. 아키텍처 다이어그램 (Architecture)
 

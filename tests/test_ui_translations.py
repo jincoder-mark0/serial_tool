@@ -157,12 +157,12 @@ class TestRxLogWidget:
         # 영어
         lang_manager.set_language('en')
         assert widget.rx_clear_log_btn.text() == en_data.get("rx_btn_clear", "")
-        assert widget.rx_save_log_btn.text() == en_data.get("rx_btn_save", "")
+        assert widget.rx_toggle_data_log_btn.text() == en_data.get("rx_btn_save", "")
 
         # 한국어
         lang_manager.set_language('ko')
         assert widget.rx_clear_log_btn.text() == ko_data.get("rx_btn_clear", "")
-        assert widget.rx_save_log_btn.text() == ko_data.get("rx_btn_save", "")
+        assert widget.rx_toggle_data_log_btn.text() == ko_data.get("rx_btn_save", "")
 
     def test_checkbox_translations(self, app, qtbot, lang_data):
         """체크박스 텍스트 번역 검증"""

@@ -1,7 +1,7 @@
 """
-실시간 로깅 모듈
+데이터 로거 모듈 (Data Logger)
 
-시리얼 포트에서 수신된 원본 바이트 데이터를 파일에 실시간으로 기록합니다.
+수신된 원본 바이트 데이터를 파일에 실시간으로 기록합니다.
 백그라운드 스레드에서 비동기로 처리하여 UI에 영향을 주지 않습니다.
 
 ## WHY
@@ -10,8 +10,8 @@
 * 포트별 독립적인 로깅 지원 필요
 
 ## WHAT
-* LogRecorder: 단일 포트 로깅 담당
-* LogRecorderManager: 여러 포트의 로깅 관리
+* DataLogger: 단일 포트 로깅 담당
+* DataLoggerManager: 여러 포트의 로깅 관리
 
 ## HOW
 * Queue와 백그라운드 스레드로 비동기 파일 쓰기
@@ -23,7 +23,7 @@ from threading import Thread
 import os
 from core.logger import logger
 
-class LogRecorder:
+class DataLogger:
     """
     단일 포트의 실시간 로깅를 담당합니다.
 
@@ -36,7 +36,7 @@ class LogRecorder:
     """
 
     def __init__(self):
-        """LogRecorder를 초기화합니다."""
+        """DataLogger를 초기화합니다."""
         self._file = None
         self._queue: Queue = Queue()
         self._thread: Optional[Thread] = None
@@ -72,7 +72,7 @@ class LogRecorder:
 
             return True
         except Exception as e:
-            logger.error(f"LogRecorder start failed: {e}")
+            logger.error(f"DataLogger start failed: {e}")
             return False
 
     def stop(self) -> None:
@@ -112,19 +112,19 @@ class LogRecorder:
             except Empty:
                 continue
             except Exception as e:
-                logger.error(f"LogRecorder write error: {e}")
+                logger.error(f"DataLogger write error: {e}")
 
 
-class LogRecorderManager:
+class DataLoggerManager:
     """
     여러 포트의 로깅를 관리합니다.
 
-    포트별로 별도의 LogRecorder 인스턴스를 생성하고 관리합니다.
+    포트별로 별도의 DataLogger 인스턴스를 생성하고 관리합니다.
     """
 
     def __init__(self):
-        """LogRecorderManager를 초기화합니다."""
-        self._recorders: Dict[str, LogRecorder] = {}
+        """DataLoggerManager를 초기화합니다."""
+        self._recorders: Dict[str, DataLogger] = {}
 
     def start_logging(self, port_name: str, filepath: str) -> bool:
         """
@@ -141,7 +141,7 @@ class LogRecorderManager:
         if port_name in self._recorders:
             self.stop_logging(port_name)
 
-        recorder = LogRecorder()
+        recorder = DataLogger()
         if recorder.start(filepath):
             self._recorders[port_name] = recorder
             return True
@@ -202,4 +202,4 @@ class LogRecorderManager:
 
 
 # 전역 인스턴스 (싱글톤)
-log_recorder_manager = LogRecorderManager()
+log_recorder_manager = DataLoggerManager()

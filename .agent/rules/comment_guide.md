@@ -188,18 +188,18 @@ def complex_trading_logic(self):
 `if`, `elif`, `else` 등의 분기가 복잡할 경우, 각 조건이 **어떤 비즈니스 시나리오**를 의미하는지 주석으로 명시합니다.
 
 ```python
-if order_status == "FILLED":
-    # 체결 완료: 잔고를 갱신하고 다음 주문을 준비
-    self.update_balance()
-elif order_status == "PARTIALLY_FILLED":
-    # 부분 체결: 미체결 수량을 계산하여 정정 주문 대기
-    self.handle_partial_fill()
-elif order_status == "REJECTED" and error_code == 9001:
-    # 주문 거부 (예수금 부족): 리스크 레벨 상향 조정 후 재시도 중지
-    self.stop_strategy("Insufficient Funds")
-else:
-    # 기타 대기 상태 또는 알 수 없는 오류
-    self.log_warning(f"Unknown status: {order_status}")
+  if order_status == "FILLED":
+      # 체결 완료: 잔고를 갱신하고 다음 주문을 준비
+      self.update_balance()
+  elif order_status == "PARTIALLY_FILLED":
+      # 부분 체결: 미체결 수량을 계산하여 정정 주문 대기
+      self.handle_partial_fill()
+  elif order_status == "REJECTED" and error_code == 9001:
+      # 주문 거부 (예수금 부족): 리스크 레벨 상향 조정 후 재시도 중지
+      self.stop_strategy("Insufficient Funds")
+  else:
+      # 기타 대기 상태 또는 알 수 없는 오류
+      self.log_warning(f"Unknown status: {order_status}")
 ```
 
 ### 6.3 수식 및 상수 (Formulas & Constants)

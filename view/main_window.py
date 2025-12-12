@@ -250,8 +250,8 @@ class MainWindow(QMainWindow):
 
         self.menu_bar.port_open_requested.connect(self.left_section.open_current_port)
         self.menu_bar.tab_close_requested.connect(self.left_section.close_current_tab)
-        self.menu_bar.log_save_requested.connect(self.save_log)
-        self.menu_bar.log_save_requested.connect(self.save_log)
+        self.menu_bar.data_log_save_requested.connect(self.save_log)
+        self.menu_bar.data_log_save_requested.connect(self.save_log)
         self.menu_bar.toggle_right_panel_requested.connect(self.toggle_right_panel)
         self.menu_bar.file_transfer_requested.connect(self.open_file_transfer_dialog)
 
@@ -260,7 +260,7 @@ class MainWindow(QMainWindow):
         self.main_toolbar.open_requested.connect(self.left_section.open_current_port)
         self.main_toolbar.close_requested.connect(self.left_section.close_current_port)
         self.main_toolbar.clear_requested.connect(self.clear_log)
-        self.main_toolbar.log_save_requested.connect(self.save_log)
+        self.main_toolbar.data_log_save_requested.connect(self.save_log)
         self.main_toolbar.settings_requested.connect(self.open_preferences_dialog)
 
     def save_log(self) -> None:
