@@ -183,7 +183,8 @@ class FilePresenter(QObject):
         if hasattr(self, '_transfer_start_time'):
             del self._transfer_start_time
 
-    def _on_error(self, msg: str) -> None:
+    @staticmethod
+    def _on_error(msg: str) -> None:
         """
         에러 처리
 

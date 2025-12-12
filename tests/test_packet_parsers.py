@@ -16,7 +16,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from model.packet_parser import (
-    RawParser, ATParser, DelimiterParser, FixedLengthParser, Packet
+    RawParser, ATParser, DelimiterParser, FixedLengthParser
 )
 
 def test_raw_parser():

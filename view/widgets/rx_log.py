@@ -12,7 +12,6 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import QTimer, pyqtSignal, pyqtSlot, Qt
 from typing import Optional
-import datetime
 from view.managers.color_manager import color_manager   # 전역 매니저 사용
 from view.managers.lang_manager import lang_manager     # 전역 매니저 사용
 
@@ -20,8 +19,7 @@ from view.custom_qt.smart_list_view import QSmartListView
 
 from constants import (
     DEFAULT_LOG_MAX_LINES,
-    UI_REFRESH_INTERVAL_MS,
-    LOG_COLOR_TIMESTAMP
+    UI_REFRESH_INTERVAL_MS
 )
 from core.logger import logger
 

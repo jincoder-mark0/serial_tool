@@ -24,7 +24,6 @@ pytest tests\test_ui_translations_dynamic.py -v -s
 import sys
 import os
 import pytest
-from PyQt5.QtWidgets import QApplication, QAction, QLabel, QPushButton, QGroupBox, QCheckBox
 
 # 프로젝트 루트 경로를 sys.path에 추가
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
@@ -32,7 +31,6 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from view.main_window import MainWindow
 from view.managers.lang_manager import lang_manager
 from resource_path import ResourcePath
-from constants import ConfigKeys
 
 # 테스트에 사용할 리소스 경로 설정 (실제 런타임과 동일 환경)
 resource_path = ResourcePath()

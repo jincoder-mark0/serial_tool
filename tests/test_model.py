@@ -24,7 +24,6 @@ pytest tests/test_model.py -v
 import sys
 import os
 import pytest
-import time
 from PyQt5.QtCore import QObject
 
 # 프로젝트 루트 경로 설정
@@ -166,6 +165,7 @@ class MockPortController(QObject):
         self.sent_data.append(data)
         return True
 
+    @staticmethod
     def get_port_config(self, port_name):
         return {}
 

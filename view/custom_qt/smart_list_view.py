@@ -348,6 +348,7 @@ class QSmartListView(QListView):
         # 줄바꿈으로 연결하여 반환
         return "\n".join(lines)
 
+    @staticmethod
     def _create_pattern(self, text: str) -> QRegExp:
         """
         검색 문자열을 QRegExp 객체로 변환

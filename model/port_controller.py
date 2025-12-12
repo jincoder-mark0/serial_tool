@@ -28,7 +28,7 @@ from typing import Optional, Dict, Any
 
 from model.connection_worker import ConnectionWorker
 from model.serial_transport import SerialTransport
-from model.packet_parser import ParserFactory, IPacketParser, Packet, ParserType
+from model.packet_parser import ParserFactory, IPacketParser, ParserType
 from constants import DEFAULT_BAUDRATE
 from core.event_bus import event_bus
 

@@ -91,7 +91,8 @@ class GlobalErrorHandler(QObject):
             # GUI가 없는 경우 콘솔에 출력
             print("Critical Error (No GUI):", error_msg, file=sys.stderr)
 
-    def _show_error_dialog(self, error_type: str, error_message: str, traceback_str: str) -> None:
+    @staticmethod
+    def _show_error_dialog(error_type: str, error_message: str, traceback_str: str) -> None:
         """
         에러 다이얼로그 표시 (메인 스레드에서 실행됨)
         

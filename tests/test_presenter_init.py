@@ -10,7 +10,6 @@ pytest tests/test_presenter_init.py -v
 import sys
 import os
 import pytest
-from PyQt5.QtWidgets import QApplication
 
 # 프로젝트 루트 경로 설정
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))

@@ -23,7 +23,7 @@
 * ExtraSelection으로 현재 라인 하이라이트
 * pyqtProperty로 QSS 스타일링 지원
 """
-from PyQt5.QtWidgets import QWidget, QPlainTextEdit, QTextEdit, QHBoxLayout
+from PyQt5.QtWidgets import QWidget, QPlainTextEdit, QTextEdit
 from PyQt5.QtCore import Qt, QRect, pyqtProperty
 from PyQt5.QtGui import QPainter, QColor, QTextFormat, QPaintEvent, QResizeEvent
 

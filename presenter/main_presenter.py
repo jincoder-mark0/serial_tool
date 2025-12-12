@@ -334,6 +334,7 @@ class MainPresenter(QObject):
         self.global_status_bar.show_message("Settings updated", 2000)
         self.log_system_message("Settings updated", "INFO")
 
+    @staticmethod
     def on_font_settings_changed(self, font_settings: dict) -> None:
         """
         폰트 설정 변경 요청을 처리하고 저장합니다.
@@ -364,8 +365,7 @@ class MainPresenter(QObject):
 
     def on_data_sent(self, port_name: str, data: bytes) -> None:
         """
-        데이터 전송 시 TX 카운트 증가
-        로깅 중이면 데이터 기록
+        데이터 전송 시 TX 카운트 증가, 로깅 중이면 데이터 기록
         EventRouter를 통해 호출
         """
         # 로깅 중이면 DataLogger에 기록

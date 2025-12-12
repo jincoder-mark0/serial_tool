@@ -143,7 +143,7 @@ class ColorManager:
 
     def remove_rule(self, name: str) -> None:
         """
-        사용자 정의 색상 규칙을 추가합니다.
+        사용자 정의 색상 규칙을 삭제합니다.
 
         Args:
             name (str): 규칙 이름.
@@ -152,7 +152,10 @@ class ColorManager:
 
     def toggle_rule(self, name: str) -> None:
         """
-        현재 규칙들을 JSON 파일로 저장합니다.
+        사용자 정의 색상 규칙을 토글합니다.
+
+        Args:
+            name (str): 규칙 이름.
         """
         for rule in self.rules:
             if rule.name == name:
@@ -162,6 +165,9 @@ class ColorManager:
     def save_to_json(self, filepath: str) -> None:
         """
         현재 규칙들을 JSON 파일로 저장합니다.
+
+        Args:
+            filepath (str): 읽을 파일 경로.
         """
         rules_data = [
             {

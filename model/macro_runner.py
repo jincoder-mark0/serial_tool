@@ -207,7 +207,7 @@ class MacroRunner(QThread):
 
         while self._check_running():
             # 1. 루프 횟수 체크 (0은 무한 반복)
-            if self._loop_count > 0 and current_loop >= self._loop_count:
+            if 0 < self._loop_count <= current_loop:
                 break
 
             current_loop += 1

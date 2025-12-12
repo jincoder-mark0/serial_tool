@@ -22,7 +22,6 @@ EventBus와 Presenter/View 사이의 이벤트를 라우팅합니다.
 * Dictionary 데이터를 개별 인자로 분해하여 전달
 """
 from PyQt5.QtCore import QObject, pyqtSignal
-from typing import Any
 from core.event_bus import event_bus
 
 class EventRouter(QObject):
