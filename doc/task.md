@@ -180,7 +180,7 @@
 ## Phase 5: Presenter 계층 (아키텍처 개선)
 
 - [ ] **Presenter 계층 세분화**
-  - [ ] `MainPresenter`: 앱 생명주기 및 하위 Presenter 조율
+  - [x] `MainPresenter`: 앱 생명주기 및 하위 Presenter 조율
   - [x] `PortPresenter`: 포트 연결/해제/설정 제어 (완성)
   - [x] `MacroPresenter`: 매크로 로드/저장/실행 제어 (신규)
   - [ ] `FilePresenter`: 파일 전송 로직 제어 (신규)
