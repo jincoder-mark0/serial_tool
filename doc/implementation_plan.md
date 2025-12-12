@@ -45,93 +45,125 @@
 프로젝트 루트 하위에 계층별 모듈을 구성합니다:
 
 ```
-serial_tool2/
-├── config.py                # 중앙 경로 관리 (AppConfig) [완료]
-├── core/                    # 핵심 유틸리티 및 인프라
-│   ├── interfaces.py       # ITransport 인터페이스
-│   ├── event_bus.py        # EventBus (Pub/Sub)
-│   ├── utils.py            # RingBuffer, ThreadSafeQueue
-│   ├── logger.py           # 로깅 시스템 [완료]
-│   ├── settings_manager.py # 설정 관리 [완료]
-│   └── port_state.py       # PortState Enum [완료]
-├── model/                   # 비즈니스 로직 및 Worker
-│   ├── transports.py       # SerialTransport 등 통신 구현체
-│   ├── connection_worker.py # 범용 통신 Worker
-│   ├── port_controller.py  # 포트 라이프사이클 관리
-│   ├── serial_manager.py   # 멀티포트 레지스트리
-│   ├── packet_parser.py    # 패킷 파싱 (AT/Delimiter/Fixed/Hex)
-│   ├── macro_runner.py     # Macro List 실행 엔진
-│   └── file_transfer.py    # 파일 전송 엔진
-├── view/                    # UI 계층
-│   ├── main_window.py      # 메인 윈도우 [완료]
-│   ├── managers/           # View 매니저 [완료]
-│   │   ├── theme_manager.py    # 테마 관리 [완료]
-│   │   ├── lang_manager.py     # 언어 관리 [완료]
-│   │   └── color_manager.py    # 로그 색상 규칙 [완료]
-│   ├── sections/           # 섹션 (화면 분할) [완료]
-│   │   ├── __init__.py          # Package init [완료]
-│   │   ├── main_left_section.py  # 좌측 섹션 [완료]
-│   │   ├── main_right_section.py # 우측 섹션 [완료]
-│   │   ├── main_menu_bar.py      # 메인 메뉴바 [완료]
-│   │   ├── main_status_bar.py    # 메인 상태바 [완료]
-│   │   └── main_tool_bar.py      # 메인 툴바 [완료]
-│   ├── panels/             # 패널 (기능 그룹) [완료]
-│   │   ├── port_panel.py   # 포트 패널 [완료]
-│   │   ├── port_tab_panel.py # 포트 탭 패널 [완료]
-│   │   ├── macro_panel.py  # 매크로 패널 [완료]
-│   │   ├── manual_ctrl_panel.py # 수동 제어 패널 [완료]
-│   │   ├── packet_inspector_panel.py # 패킷 인스펙터 패널 [완료]
-│   │   └── tx_panel.py     # 전송 패널 [완료]
-│   ├── widgets/            # 위젯 (UI 요소) [완료]
-│   │   ├── __init__.py          # Package init [완료]
-│   │   ├── port_settings.py       # 포트 설정 [완료]
-│   │   ├── received_area.py       # 로그 뷰 [완료]
-│   │   ├── manual_ctrl.py         # 수동 제어 [완료]
-│   │   ├── macro_list.py          # 매크로 리스트 [완료]
-│   │   ├── macro_ctrl.py          # 매크로 제어 [완료]
-│   │   ├── packet_inspector.py    # 패킷 인스펙터 [완료]
-│   │   ├── system_log.py         # 상태 표시 영역 [완료]
-│   │   ├── port_stats.py          # 포트 통계 [완료]
-│   │   └── file_progress.py       # 파일 전송 진행 [완료]
-│   ├── custom_widgets/     # PyQt5 커스텀 위젯 [완료]
-│   │   ├── smart_list_view.py # 고성능 로그 뷰어 [완료]
-│   │   ├── smart_number_edit.py   # HEX 입력 필드 [완료]
-│   │   └── smart_plain_text_edit.py # 스마트 텍스트 에디터 [완료]
-│   └── dialogs/            # 대화상자 [완료]
-│       ├── __init__.py          # Package init [완료]
-│       ├── about_dialog.py        # 정보 대화상자 [완료]
-│       ├── font_settings_dialog.py# 폰트 설정 [완료]
-│       └── preferences_dialog.py  # 환경 설정 [완료]
-├── presenter/               # Presenter 계층
-│   ├── main_presenter.py   # 중앙 제어
-│   ├── port_presenter.py   # 포트 제어
-│   ├── macro_presenter.py  # 매크로 제어
-│   ├── file_presenter.py   # 파일 전송 제어
-│   └── event_router.py     # 이벤트 라우팅
-├── plugins/                 # 확장 플러그인
-│   └── example_plugin/     # 샘플 플러그인
-├── resources/               # 리소스 파일 [완료]
-│   ├── themes/             # QSS 테마 [완료]
-│   │   ├── common.qss
-│   │   ├── dark_theme.qss
-│   │   └── light_theme.qss
-│   └── icons/              # SVG 아이콘 [완료]
-├── config/                  # 설정 파일
-│   ├── default_settings.json
-│   └── color_rules.json
-├── tests/                   # 테스트
-│   ├── test_view.py        # View 독립 테스트 [완료]
-│   ├── test_core.py
-│   ├── test_model.py
-│   └── test_integration.py
-├── doc/                     # 문서
-│   ├── Implementation_Specification.md [완료]
-│   ├── CHANGELOG.md        [완료]
-│   ├── implementation_plan.md
-│   ├── task.md
-│   └── session_summary_*.md
-├── main.py                  # 진입점 [완료]
-├── version.py              # 버전 정보 [완료]
+serial_tool/
+├── main.py                           # 애플리케이션 진입점
+├── resource_path.py                  # 경로 관리
+├── constants.py                      # 상수 정의
+├── version.py                        # 버전 정보
+├── requirements.txt                  # 의존성 목록
+│
+├── core/                             # 핵심 유틸리티
+│   ├── cmd_processor.py              # 명령어 처리
+│   ├── data_logger.py                # 데이터 로깅
+│   ├── error_handler.py              # 에러 핸들러
+│   ├── event_bus.py                  # 이벤트 버스
+│   ├── interface.py                  # 인터페이스 정의
+│   ├── logger.py                     # 로깅 시스템 (Singleton)
+│   ├── port_state.py                 # 포트 상태 관리
+│   ├── settings_manager.py           # 설정 관리 (Singleton)
+│   └── utils.py                      # 유틸리티 함수
+│
+├── model/                            # 비즈니스 로직
+│   ├── connection_worker.py          # 연결 워커
+│   ├── file_transfer.py              # 파일 전송
+│   ├── macro_entry.py                # 매크로 항목
+│   ├── macro_runner.py               # 매크로 실행
+│   ├── packet_parser.py              # 패킷 파싱
+│   ├── port_controller.py            # 포트 제어
+│   ├── serial_manager.py             # 시리얼 관리
+│   └── serial_transport.py           # 전송 관리
+│
+├── presenter/                        # MVP Presenter 계층
+│   ├── event_router.py               # 이벤트 라우터
+│   ├── file_presenter.py             # 파일 프레젠터
+│   ├── macro_presenter.py            # 매크로 프레젠터
+│   ├── main_presenter.py             # 메인 프레젠터
+│   ├── manual_ctrl_presenter.py      # 수동 제어 프레젠터
+│   ├── packet_presenter.py           # 패킷 프레젠터
+│   └── port_presenter.py             # 포트 프레젠터
+│
+├── view/                             # UI 계층
+│   ├── main_window.py                # 메인 윈도우
+│   │
+│   ├── managers/                     # 관리자 계층
+│   │   ├── color_manager.py          # 로그 색상 규칙
+│   │   ├── lang_manager.py           # 다국어 관리
+│   │   └── theme_manager.py          # 테마 관리
+│   │
+│   ├── custom_qt/                    # PyQt5 커스텀 위젯
+│   │   ├── smart_number_edit.py      # 스마트 숫자 편집 위젯
+│   │   ├── smart_list_view.py        # 스마트 리스트 뷰 위젯
+│   │   └── smart_plain_text_edit.py  # 스마트 plain 텍스트 편집 위젯
+│   │
+│   ├── sections/                     # 섹션 (대 분할)
+│   │   ├── main_left_section.py      # 메인 왼쪽 섹션
+│   │   ├── main_menu_bar.py          # 메인 메뉴 바
+│   │   ├── main_right_section.py     # 메인 오른쪽 섹션
+│   │   ├── main_status_bar.py        # 메인 상태 바
+│   │   └── main_tool_bar.py          # 메인 도구 바
+│   │
+│   ├── panels/                       # 패널 (중 단위)
+│   │   ├── macro_panel.py            # 매크로 패널
+│   │   ├── manual_ctrl_panel.py      # 수동 제어 패널
+│   │   ├── packet_inspector_panel.py # 패킷 인스펙터 패널
+│   │   ├── port_panel.py             # 포트 패널
+│   │   └── port_tab_panel.py         # 포트 탭 패널
+│   │
+│   ├── widgets/                      # 위젯 (소 단위)
+│   │   ├── file_progress.py          # 파일 진행률 위젯
+│   │   ├── manual_ctrl.py            # 수동 제어 위젯
+│   │   ├── macro_list.py             # 매크로 리스트 위젯
+│   │   ├── manual_ctrl.py            # 수동 제어 위젯
+│   │   ├── packet_inspector.py       # 패킷 인스펙터 위젯
+│   │   ├── port_settings.py          # 포트 설정 위젯
+│   │   ├── port_stats.py             # 포트 통계 위젯
+│   │   ├── rx_log.py                 # 수신 로그 위젯
+│   │   └── system_log.py             # 시스템 로그 위젯
+│   │
+│   └── dialogs/                      # 대화상자
+│       ├── about_dialog.py           # 정보 대화상자
+│       ├── file_transfer_dialog.py   # 파일 전송 대화상자
+│       ├── font_settings_dialog.py   # 폰트 설정 대화상자
+│       └── preferences_dialog.py     # 설정 대화상자
+│
+├── resources/                        # 리소스 파일
+│   ├── languages/                    # 다국어 리소스
+│   │   ├── ko.json                   # 한국어
+│   │   └── en.json                   # 영어
+│   │
+│   ├── configs/                      # 설정 파일
+│   │   ├── settings.json             # 앱 설정 (논리 그룹: serial, command, logging, ui)
+│   │   └── color_rules.json          # 로그 색상 규칙
+│   │
+│   ├── icons/                        # SVG 아이콘
+│   │   ├── light/                    # 라이트 테마용
+│   │   └── dark/                     # 다크 테마용
+│   │
+│   └── themes/                       # QSS 스타일시트
+│       ├── common.qss                # 공통 스타일시트
+│       ├── dark_theme.qss            # 다크 테마 스타일시트
+│       └── light_theme.qss           # 라이트 테마 스타일시트
+│
+├── doc/                              # 프로젝트 문서
+│   ├── changelog.md                  # 변경 이력
+│   └── session_summary_YYYYMMDD.md   # 작업 세션 요약
+│
+├── .agent/                           # 개발 가이드
+│   └── rules/                        # 규칙
+│       ├── code_style_guide.md       # 코드 스타일 가이드
+│       ├── comment_guide.md          # 주석 가이드
+│       ├── git_guide.md              # git 가이드
+│       └── naming_convention.md      # 명명 규칙 (언어 키, 변수명 등)
+│
+├── tools/                            # 유틸리티 도구
+│   ├── check_lang_keys.py            # 언어 키 검사 도구
+│   └── manage_lang_keys.py           # 언어 키 관리 도구
+│
+├── tests/                            # 테스트 코드
+│   ├── test_view.py
+│   └── test_ui_translations.py
+│
+└── logs/                             # 로그 파일 (gitignore)
 ```
 
 #### [진행 필요] `core/utils.py`
@@ -519,7 +551,7 @@ serial_tool2/
       @abstractmethod
       def register(self, app_context: AppContext) -> None:
           pass
-  
+
       @abstractmethod
       def unregister(self) -> None:
           pass

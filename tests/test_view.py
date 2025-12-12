@@ -265,8 +265,8 @@ class ViewTestWindow(QMainWindow):
 
         btn_load = QPushButton("Load Dummy Data")
         btn_load.clicked.connect(lambda: self.macro_list.set_macro_list([
-            {"command": "LOADED_CMD_1", "delay": "200", "enabled": True},
-            {"command": "LOADED_CMD_2", "delay": "500", "enabled": False}
+            {"cmd": "LOADED_CMD_1", "delay": "200", "enabled": True},
+            {"cmd": "LOADED_CMD_2", "delay": "500", "enabled": False}
         ]))
 
         btn_layout.addWidget(btn_save)

@@ -152,9 +152,9 @@ class MacroPanel(QWidget):
         self._loading = True
         try:
             # 커맨드 리스트 로드
-            commands = state.get("commands", [])
-            if commands:
-                self.macro_list.load_state(commands)
+            cmds = state.get("cmds", [])
+            if cmds:
+                self.macro_list.load_state(cmds)
 
             # 컨트롤 설정 로드
             control_state = state.get("control_state", {})
@@ -171,7 +171,7 @@ class MacroPanel(QWidget):
             Dict[str, Any]: 현재 패널 상태 데이터.
         """
         return {
-            "commands": self.macro_list.save_state(),
+            "cmds": self.macro_list.save_state(),
             "control_state": self.marco_ctrl.save_state()
         }
 

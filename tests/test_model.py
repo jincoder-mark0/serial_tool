@@ -95,8 +95,8 @@ def test_macro_runner_basic_flow(qtbot):
 
     # 테스트용 매크로 엔트리 (Delay 10ms로 최소화)
     entries = [
-        MacroEntry(command="CMD1", delay_ms=10),
-        MacroEntry(command="CMD2", delay_ms=10)
+        MacroEntry(cmd="CMD1", delay_ms=10),
+        MacroEntry(cmd="CMD2", delay_ms=10)
     ]
     runner.load_macro(entries)
 
@@ -124,7 +124,7 @@ def test_macro_runner_expect(qtbot):
 
     # Expect가 있는 엔트리 설정 (Timeout 5초로 설정하여 테스트 중 타임아웃 방지)
     entries = [
-        MacroEntry(command="AT", expect="OK", timeout_ms=5000, delay_ms=10)
+        MacroEntry(cmd="AT", expect="OK", timeout_ms=5000, delay_ms=10)
     ]
     runner.load_macro(entries)
 

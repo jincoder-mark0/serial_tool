@@ -41,7 +41,7 @@ class PreferencesDialog(QDialog):
         self.tabs = QTabWidget()
         self.tabs.addTab(self.create_general_tab(), lang_manager.get_text("pref_tab_general"))
         self.tabs.addTab(self.create_serial_tab(), lang_manager.get_text("pref_tab_serial"))
-        self.tabs.addTab(self.create_cmd_tab(), lang_manager.get_text("pref_tab_command"))
+        self.tabs.addTab(self.create_cmd_tab(), lang_manager.get_text("pref_tab_cmd"))
         self.tabs.addTab(self.create_packet_tab(), lang_manager.get_text("pref_tab_packet"))
         self.tabs.addTab(self.create_logging_tab(), lang_manager.get_text("pref_tab_logging"))
 
@@ -114,7 +114,7 @@ class PreferencesDialog(QDialog):
         self.port_newline_combo.addItems(["\r", "\n", "\r\n"])
         self.port_newline_combo.setEditable(True)
 
-        self.port_localecho_chk = QCheckBox(lang_manager.get_text("pref_chk_localecho"))
+        self.port_local_echo_chk = QCheckBox(lang_manager.get_text("pref_chk_local_echo"))
 
         self.port_scan_interval_spin = QSpinBox()
         self.port_scan_interval_spin.setRange(MIN_SCAN_INTERVAL_MS, MAX_SCAN_INTERVAL_MS)
@@ -123,7 +123,7 @@ class PreferencesDialog(QDialog):
 
         default_layout.addRow(lang_manager.get_text("pref_lbl_baudrate"), self.port_baudrate_combo)
         default_layout.addRow(lang_manager.get_text("pref_lbl_newline"), self.port_newline_combo)
-        default_layout.addRow(lang_manager.get_text("pref_lbl_localecho"), self.port_localecho_chk)
+        default_layout.addRow(lang_manager.get_text("pref_lbl_local_echo"), self.port_local_echo_chk)
         default_layout.addRow(lang_manager.get_text("pref_lbl_scan"), self.port_scan_interval_spin)
         default_group.setLayout(default_layout)
 
@@ -367,7 +367,7 @@ class PreferencesDialog(QDialog):
         # Serial
         self.port_baudrate_combo.setCurrentText(str(self._get_setting(ConfigKeys.PORT_BAUDRATE, 115200)))
         self.port_newline_combo.setCurrentText(str(self._get_setting(ConfigKeys.PORT_NEWLINE, "\n")))
-        self.port_localecho_chk.setChecked(self._get_setting(ConfigKeys.PORT_LOCALECHO, False))
+        self.port_local_echo_chk.setChecked(self._get_setting(ConfigKeys.PORT_LOCAL_ECHO, False))
         self.port_scan_interval_spin.setValue(self._get_setting(ConfigKeys.PORT_SCAN_INTERVAL, 5000))
 
         # Command
@@ -408,7 +408,7 @@ class PreferencesDialog(QDialog):
             "proportional_font_size": self.proportional_font_size_spin.value(),
             "port_baudrate": self.port_baudrate_combo.currentText(),
             "port_newline": self.port_newline_combo.currentText(),
-            "port_localecho": self.port_localecho_chk.checkState() == Qt.Checked,
+            "port_local_echo": self.port_local_echo_chk.checkState() == Qt.Checked,
             "port_scan_interval": self.port_scan_interval_spin.value(),
             "cmd_prefix": self.prefix_combo.currentText(),
             "cmd_suffix": self.suffix_combo.currentText(),

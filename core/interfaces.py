@@ -56,3 +56,6 @@ class ITransport(ABC):
 
     def set_rts(self, state: bool) -> None:
         pass
+
+    def set_local_echo(self, state: bool) -> None:
+        pass

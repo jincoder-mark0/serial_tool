@@ -326,3 +326,13 @@ class PortController(QObject):
         """
         for worker in self.workers.values():
             worker.set_rts(state)
+
+    def set_local_echo(self, state: bool) -> None:
+        """
+        모든 포트의 Local Echo 신호 설정
+
+        Args:
+            state: True면 Local Echo ON, False면 Local Echo OFF
+        """
+        for worker in self.workers.values():
+            worker.set_local_echo(state)

@@ -41,6 +41,7 @@ class ManualCtrlWidget(QWidget):
     manual_cmd_send_requested = pyqtSignal(str, bool, bool, bool, bool) # text, hex, prefix, suffix, local_echo
     rts_changed = pyqtSignal(bool) # RTS 상태 변경
     dtr_changed = pyqtSignal(bool) # DTR 상태 변경
+    local_echo_changed = pyqtSignal(bool) # Local Echo 상태 변경
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -62,7 +63,7 @@ class ManualCtrlWidget(QWidget):
         self.local_echo_chk = None
 
         # History State
-        self.command_history: List[str] = []
+        self.cmd_history: List[str] = []
         self.history_index: int = -1
 
         self.init_ui()
@@ -139,6 +140,7 @@ class ManualCtrlWidget(QWidget):
 
         # 로컬 에코 체크박스 추가
         self.local_echo_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_local_echo"))
+        self.local_echo_chk.stateChanged.connect(lambda state: self.local_echo_changed.emit(state == Qt.Checked))
 
         option_layout = QGridLayout()
         option_layout.setContentsMargins(0, 5, 0, 0) # 상단 여백 추가
@@ -242,25 +244,25 @@ class ManualCtrlWidget(QWidget):
         Args:
             cmd (str): 명령어 텍스트
         """
-        if cmd in self.command_history:
-            self.command_history.remove(cmd)
+        if cmd in self.cmd_history:
+            self.cmd_history.remove(cmd)
 
-        self.command_history.append(cmd)
+        self.cmd_history.append(cmd)
 
         # 최대 크기 제한
-        if len(self.command_history) > MAX_CMD_HISTORY_SIZE:
-            self.command_history.pop(0) # 가장 오래된 항목 제거
+        if len(self.cmd_history) > MAX_CMD_HISTORY_SIZE:
+            self.cmd_history.pop(0) # 가장 오래된 항목 제거
 
         # 인덱스 초기화 (새 명령 입력 시 히스토리 탐색 중단)
         self.history_index = -1
 
     def on_history_up_clicked(self) -> None:
         """이전 히스토리 탐색"""
-        if not self.command_history: return
+        if not self.cmd_history: return
 
         if self.history_index == -1:
             # 현재 입력 중인 상태에서 위로 누르면 가장 최근(마지막) 명령
-            self.history_index = len(self.command_history) - 1
+            self.history_index = len(self.cmd_history) - 1
         elif self.history_index > 0:
             self.history_index -= 1
 
@@ -268,9 +270,9 @@ class ManualCtrlWidget(QWidget):
 
     def on_history_down_clicked(self) -> None:
         """다음 히스토리 탐색"""
-        if not self.command_history or self.history_index == -1: return
+        if not self.cmd_history or self.history_index == -1: return
 
-        if self.history_index < len(self.command_history) - 1:
+        if self.history_index < len(self.cmd_history) - 1:
             self.history_index += 1
             self._update_input_from_history()
         else:
@@ -280,8 +282,8 @@ class ManualCtrlWidget(QWidget):
 
     def _update_input_from_history(self) -> None:
         """히스토리 내용을 입력창에 반영"""
-        if 0 <= self.history_index < len(self.command_history):
-            cmd = self.command_history[self.history_index]
+        if 0 <= self.history_index < len(self.cmd_history):
+            cmd = self.cmd_history[self.history_index]
             self.manual_cmd_txt.setPlainText(cmd)
             # 커서 끝으로 이동
             cursor = self.manual_cmd_txt.textCursor()
@@ -324,7 +326,7 @@ class ManualCtrlWidget(QWidget):
             "rts_chk": self.rts_chk.isChecked(),
             "dtr_chk": self.dtr_chk.isChecked(),
             "local_echo": self.local_echo_chk.isChecked(),
-            "command_history": self.command_history # 히스토리 저장
+            "cmd_history": self.cmd_history # 히스토리 저장
         }
         return state
 
@@ -345,4 +347,4 @@ class ManualCtrlWidget(QWidget):
         self.dtr_chk.setChecked(state.get("dtr_chk", False))
         self.local_echo_chk.setChecked(state.get("local_echo", False))
         self.manual_cmd_txt.setPlainText(state.get("input_text", ""))
-        self.command_history = state.get("command_history", [])
+        self.cmd_history = state.get("cmd_history", [])

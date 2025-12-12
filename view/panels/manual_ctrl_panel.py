@@ -5,16 +5,17 @@ ManualCtrlWidget을 래핑하여 섹션에 통합합니다.
 
 ## WHY
 * 위젯과 레이아웃 관리의 분리
-* 하위 위젯 시그널의 상위 전파(Bubbling)
+* 하위 위젯 시그널의 상위 전파(Bubbling)를 통한 캡슐화 유지
+* Presenter가 내부 위젯 구조를 알 필요 없도록 추상화
 
 ## WHAT
 * ManualCtrlWidget 생성 및 배치
-* 시그널 중계
-* 상태 저장 및 복원 인터페이스
+* 하위 위젯의 사용자 입력/제어 시그널 중계
+* 상태 저장 및 복원 인터페이스 제공
 
 ## HOW
 * QVBoxLayout 사용
-* Signal Chain 패턴 적용
+* Signal Chain 패턴 적용 (Widget -> Panel -> Presenter)
 """
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtCore import pyqtSignal
@@ -31,6 +32,9 @@ class ManualCtrlPanel(QWidget):
 
     # 하위 위젯 시그널 상위 전달 (Signal Bubbling)
     manual_cmd_send_requested = pyqtSignal(str, bool, bool, bool, bool)
+    rts_changed = pyqtSignal(bool) # RTS 상태 변경 시그널
+    dtr_changed = pyqtSignal(bool) # DTR 상태 변경 시그널
+    local_echo_changed = pyqtSignal(bool) # Local Echo 상태 변경 시그널
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -50,8 +54,11 @@ class ManualCtrlPanel(QWidget):
 
         self.manual_ctrl_widget = ManualCtrlWidget()
 
-        # 위젯 시그널 -> 패널 시그널 연결
+        # 위젯 시그널 -> 패널 시그널 연결 (Forwarding)
         self.manual_ctrl_widget.manual_cmd_send_requested.connect(self.manual_cmd_send_requested.emit)
+        self.manual_ctrl_widget.rts_changed.connect(self.rts_changed.emit)
+        self.manual_ctrl_widget.dtr_changed.connect(self.dtr_changed.emit)
+        self.manual_ctrl_widget.local_echo_changed.connect(self.local_echo_changed.emit)
 
         layout.addWidget(self.manual_ctrl_widget)
 

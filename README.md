@@ -91,121 +91,124 @@ python main.py
 
 ```
 serial_tool/
-├── main.py                 # 애플리케이션 진입점
-├── path.py                 # 경로 관리
-├── constants.py            # 상수 정의
-├── version.py              # 버전 정보
-├── requirements.txt        # 의존성 목록
+├── main.py                           # 애플리케이션 진입점
+├── resource_path.py                  # 경로 관리
+├── constants.py                      # 상수 정의
+├── version.py                        # 버전 정보
+├── requirements.txt                  # 의존성 목록
 │
-├── core/                   # 핵심 유틸리티
-│   ├── error_handler.py    # 에러 핸들러
-│   ├── event_bus.py        # 이벤트 버스
-│   ├── interface.py        # 인터페이스 정의
-│   ├── log_recorder.py     # 로그 기록
-│   ├── logger.py           # 로깅 시스템 (Singleton)
-│   ├── port_state.py       # 포트 상태 관리
-│   ├── settings_manager.py # 설정 관리 (Singleton)
-│   └── utils.py            # 유틸리티 함수
+├── core/                             # 핵심 유틸리티
+│   ├── cmd_processor.py              # 명령어 처리
+│   ├── data_logger.py                # 데이터 로깅
+│   ├── error_handler.py              # 에러 핸들러
+│   ├── event_bus.py                  # 이벤트 버스
+│   ├── interface.py                  # 인터페이스 정의
+│   ├── logger.py                     # 로깅 시스템 (Singleton)
+│   ├── port_state.py                 # 포트 상태 관리
+│   ├── settings_manager.py           # 설정 관리 (Singleton)
+│   └── utils.py                      # 유틸리티 함수
 │
-├── model/                  # 비즈니스 로직
-│   ├── connection_worker.py # 연결 워커
-│   ├── file_transfer.py     # 파일 전송
-│   ├── macro_entry.py       # 매크로 항목
-│   ├── macro_runner.py      # 매크로 실행
-│   ├── packet_parser.py     # 패킷 파싱
-│   ├── port_controller.py  # 포트 제어
-│   ├── serial_manager.py    # 시리얼 관리
-│   └── serial_transport.py # 전송 관리
+├── model/                            # 비즈니스 로직
+│   ├── connection_worker.py          # 연결 워커
+│   ├── file_transfer.py              # 파일 전송
+│   ├── macro_entry.py                # 매크로 항목
+│   ├── macro_runner.py               # 매크로 실행
+│   ├── packet_parser.py              # 패킷 파싱
+│   ├── port_controller.py            # 포트 제어
+│   ├── serial_manager.py             # 시리얼 관리
+│   └── serial_transport.py           # 전송 관리
 │
-├── presenter/              # MVP Presenter 계층
-│   ├── event_router.py     # 이벤트 라우터
-│   ├── file_presenter.py   # 파일 프레젠터
-│   ├── macro_presenter.py  # 매크로 프레젠터
-│   ├── main_presenter.py   # 메인 프레젠터
-│   └── port_presenter.py   # 포트 프레젠터
+├── presenter/                        # MVP Presenter 계층
+│   ├── event_router.py               # 이벤트 라우터
+│   ├── file_presenter.py             # 파일 프레젠터
+│   ├── macro_presenter.py            # 매크로 프레젠터
+│   ├── main_presenter.py             # 메인 프레젠터
+│   ├── manual_ctrl_presenter.py      # 수동 제어 프레젠터
+│   ├── packet_presenter.py           # 패킷 프레젠터
+│   └── port_presenter.py             # 포트 프레젠터
 │
-├── view/                   # UI 계층
-│   ├── main_window.py      # 메인 윈도우
+├── view/                             # UI 계층
+│   ├── main_window.py                # 메인 윈도우
 │   │
-│   ├── managers/           # 관리자 계층
-│   │   ├── color_manager.py      # 로그 색상 규칙
-│   │   ├── lang_manager.py # 다국어 관리
-│   │   └── theme_manager.py    # 테마 관리
+│   ├── managers/                     # 관리자 계층
+│   │   ├── color_manager.py          # 로그 색상 규칙
+│   │   ├── lang_manager.py           # 다국어 관리
+│   │   └── theme_manager.py          # 테마 관리
 │   │
-│   ├── custom_qt/       # PyQt5 커스텀 위젯
-│   │   ├── smart_number_edit.py # 스마트 숫자 편집 위젯
-│   │   ├── smart_list_view.py # 스마트 리스트 뷰 위젯
-│   │   └── smart_plain_text_edit.py # 스마트 plain 텍스트 편집 위젯
+│   ├── custom_qt/                    # PyQt5 커스텀 위젯
+│   │   ├── smart_number_edit.py      # 스마트 숫자 편집 위젯
+│   │   ├── smart_list_view.py        # 스마트 리스트 뷰 위젯
+│   │   └── smart_plain_text_edit.py  # 스마트 plain 텍스트 편집 위젯
 │   │
-│   ├── sections/           # 섹션 (대 분할)
-│   │   ├── main_left_section.py # 메인 왼쪽 섹션
-│   │   ├── main_menu_bar.py # 메인 메뉴 바
-│   │   ├── main_right_section.py # 메인 오른쪽 섹션
-│   │   ├── main_status_bar.py # 메인 상태 바
-│   │   └── main_tool_bar.py # 메인 도구 바
+│   ├── sections/                     # 섹션 (대 분할)
+│   │   ├── main_left_section.py      # 메인 왼쪽 섹션
+│   │   ├── main_menu_bar.py          # 메인 메뉴 바
+│   │   ├── main_right_section.py     # 메인 오른쪽 섹션
+│   │   ├── main_status_bar.py        # 메인 상태 바
+│   │   └── main_tool_bar.py          # 메인 도구 바
 │   │
-│   ├── panels/             # 패널 (중 단위)
-│   │   ├── macro_panel.py # 매크로 패널
-│   │   ├── manual_ctrl_panel.py # 수동 제어 패널
+│   ├── panels/                       # 패널 (중 단위)
+│   │   ├── macro_panel.py            # 매크로 패널
+│   │   ├── manual_ctrl_panel.py      # 수동 제어 패널
 │   │   ├── packet_inspector_panel.py # 패킷 인스펙터 패널
-│   │   ├── port_panel.py # 포트 패널
-│   │   └── port_tab_panel.py # 포트 탭 패널
+│   │   ├── port_panel.py             # 포트 패널
+│   │   └── port_tab_panel.py         # 포트 탭 패널
 │   │
-│   ├── widgets/            # 위젯 (소 단위)
-│   │   ├── file_progress.py  # 파일 진행률 위젯
-│   │   ├── manual_ctrl.py    # 수동 제어 위젯
-│   │   ├── macro_list.py     # 매크로 리스트 위젯
-│   │   ├── packet_inspector.py # 패킷 인스펙터 위젯
-│   │   ├── port_settings.py  # 포트 설정 위젯
-│   │   ├── port_stats.py     # 포트 통계 위젯
-│   │   ├── rx_log.py         # 수신 로그 위젯
-│   │   └── system_log.py     # 시스템 로그 위젯
+│   ├── widgets/                      # 위젯 (소 단위)
+│   │   ├── file_progress.py          # 파일 진행률 위젯
+│   │   ├── manual_ctrl.py            # 수동 제어 위젯
+│   │   ├── macro_list.py             # 매크로 리스트 위젯
+│   │   ├── manual_ctrl.py            # 수동 제어 위젯
+│   │   ├── packet_inspector.py       # 패킷 인스펙터 위젯
+│   │   ├── port_settings.py          # 포트 설정 위젯
+│   │   ├── port_stats.py             # 포트 통계 위젯
+│   │   ├── rx_log.py                 # 수신 로그 위젯
+│   │   └── system_log.py             # 시스템 로그 위젯
 │   │
-│   ├── dialogs/            # 대화상자
-│   │   ├── about_dialog.py # 정보 대화상자
-│   │   ├── font_settings_dialog.py # 폰트 설정 대화상자
-│   │   └── preferences_dialog.py # 설정 대화상자
+│   └── dialogs/                      # 대화상자
+│       ├── about_dialog.py           # 정보 대화상자
+│       ├── file_transfer_dialog.py   # 파일 전송 대화상자
+│       ├── font_settings_dialog.py   # 폰트 설정 대화상자
+│       └── preferences_dialog.py     # 설정 대화상자
+│
+├── resources/                        # 리소스 파일
+│   ├── languages/                    # 다국어 리소스
+│   │   ├── ko.json                   # 한국어
+│   │   └── en.json                   # 영어
 │   │
-│   └── doc/                # View 계층 문서
-│       └── implementation_plan.md  # View 구현 계획
+│   ├── configs/                      # 설정 파일
+│   │   ├── settings.json             # 앱 설정 (논리 그룹: serial, command, logging, ui)
+│   │   └── color_rules.json          # 로그 색상 규칙
+│   │
+│   ├── icons/                        # SVG 아이콘
+│   │   ├── light/                    # 라이트 테마용
+│   │   └── dark/                     # 다크 테마용
+│   │
+│   └── themes/                       # QSS 스타일시트
+│       ├── common.qss                # 공통 스타일시트
+│       ├── dark_theme.qss            # 다크 테마 스타일시트
+│       └── light_theme.qss           # 라이트 테마 스타일시트
 │
-├── config/                 # 설정 파일
-│   ├── settings.json       # 앱 설정 (논리 그룹: serial, command, logging, ui)
-│   ├── color_rules.json    # 로그 색상 규칙
-│   └── languages/          # 다국어 리소스
-│       ├── ko.json         # 한국어
-│       └── en.json         # 영어
+├── doc/                              # 프로젝트 문서
+│   ├── changelog.md                  # 변경 이력
+│   └── session_summary_YYYYMMDD.md   # 작업 세션 요약
 │
-├── resources/              # 리소스 파일
-│   ├── icons/              # SVG 아이콘
-│   │   ├── light/          # 라이트 테마용
-│   │   └── dark/           # 다크 테마용
-│   └── themes/             # QSS 스타일시트
-│       ├── dark_theme.qss
-│       └── light_theme.qss
+├── .agent/                           # 개발 가이드
+│   └── rules/                        # 규칙
+│       ├── code_style_guide.md       # 코드 스타일 가이드
+│       ├── comment_guide.md          # 주석 가이드
+│       ├── git_guide.md              # git 가이드
+│       └── naming_convention.md      # 명명 규칙 (언어 키, 변수명 등)
 │
-├── doc/                    # 프로젝트 문서
-│   ├── Implementation_Specification.md  # 구현 명세서 (전체 설계)
-│   ├── changelog.md                     # 변경 이력
-│   └── session_summary_YYYYMMDD.md      # 작업 세션 요약
+├── tools/                            # 유틸리티 도구
+│   ├── check_lang_keys.py            # 언어 키 검사 도구
+│   └── manage_lang_keys.py           # 언어 키 관리 도구
 │
-├── .agent/                 # 개발 가이드
-│   └── rules/                # 규칙
-│       ├── code_style_guide.md # 코드 스타일 가이드
-│       ├── comment_guide.md # 주석 가이드
-│       ├── git_guide.md # git 가이드
-│       └── naming_convention.md # 명명 규칙 (언어 키, 변수명 등)
-│
-├── tools/                  # 유틸리티 도구
-│   ├── check_lang_keys.py  # 언어 키 검사 도구
-│   └── manage_lang_keys.py # 언어 키 관리 도구
-│
-├── tests/                  # 테스트 코드
+├── tests/                            # 테스트 코드
 │   ├── test_view.py
 │   └── test_ui_translations.py
 │
-├── logs/                   # 로그 파일 (gitignore)
-└── ignore/                 # 연습 파일 (gitignore)
+└── logs/                             # 로그 파일 (gitignore)
 ```
 
 ---
@@ -222,6 +225,7 @@ serial_tool/
 │ (UI 전용)   │  Signal │ (비즈니스 로직)│   Data  │ (데이터/통신)│
 └─────────────┘         └────────────────┘         └──────────────┘
 ```
+
 ### A. 계층 구조 (Layers)
 
 | 계층 | 역할 | 주요 구성 요소 | 비고 |
@@ -230,7 +234,6 @@ serial_tool/
 | **Presenter** | **중재자 (Mediator)** | `MainPresenter`, `PortPresenter`, `MacroPresenter` | View의 시그널을 받아 Model을 제어하고, Model의 이벤트를 View에 반영. |
 | **Model** | **비즈니스 로직 및 데이터** | `PortController`, `MacroRunner`, `FileTransferEngine` | 실제 통신, 파싱, 자동화 로직 수행. UI를 전혀 모르며 `EventBus`로 상태 전파. |
 | **Core** | **인프라 및 유틸리티** | `EventBus`, `DataLogger`, `SettingsManager`, `ResourcePath` | 전역에서 사용되는 공통 기능 제공. |
-
 
 ### 아키텍처 다이어그램 (Architecture)
 
@@ -411,50 +414,54 @@ graph TD
 ## 데이터 흐름 시나리오 (Data Flow Scenarios)
 
 ### A. 포트 연결 및 데이터 수신 (RX Flow)
+>
 > **핵심**: `Worker Thread`와 `EventBus`를 통한 비동기 UI 업데이트
 
-1.  **User**: `PortSettingsWidget`에서 'Connect' 버튼 클릭.
-2.  **View**: `port_open_requested(config)` 시그널 발생.
-3.  **Presenter**: `PortPresenter`가 시그널을 수신하고 `PortController.open_port(config)` 호출.
-4.  **Model**: `PortController`가 `SerialTransport`를 생성하고, 이를 `ConnectionWorker`(QThread)에 주입하여 시작.
-5.  **Worker**: 백그라운드 스레드에서 `SerialTransport.read()` 루프 실행 (Non-blocking).
-6.  **Bridge**: 데이터 수신 시 `PortController`가 Signal을 발생시키고, 이는 자동으로 `EventBus`의 `port.data_received` 토픽으로 발행됨 (SSOT 원칙).
-7.  **Routing**:
+1. **User**: `PortSettingsWidget`에서 'Connect' 버튼 클릭.
+2. **View**: `port_open_requested(config)` 시그널 발생.
+3. **Presenter**: `PortPresenter`가 시그널을 수신하고 `PortController.open_port(config)` 호출.
+4. **Model**: `PortController`가 `SerialTransport`를 생성하고, 이를 `ConnectionWorker`(QThread)에 주입하여 시작.
+5. **Worker**: 백그라운드 스레드에서 `SerialTransport.read()` 루프 실행 (Non-blocking).
+6. **Bridge**: 데이터 수신 시 `PortController`가 Signal을 발생시키고, 이는 자동으로 `EventBus`의 `port.data_received` 토픽으로 발행됨 (SSOT 원칙).
+7. **Routing**:
     * `DataLogger`: Raw 데이터를 파일에 기록.
     * `EventRouter`: 이벤트를 감지하여 `data_received` 시그널로 변환.
-8.  **UI Update**: `MainPresenter`가 시그널을 받아 `RxLogWidget`(`QSmartListView`)에 데이터를 전달하여 렌더링.
+8. **UI Update**: `MainPresenter`가 시그널을 받아 `RxLogWidget`(`QSmartListView`)에 데이터를 전달하여 렌더링.
 
 ### B. 수동 명령어 전송 (Manual TX Flow)
+>
 > **핵심**: Presenter에서의 비즈니스 로직(Prefix/Suffix) 처리
 
-1.  **User**: `ManualCtrlWidget`에서 명령어 입력 후 'Send' 클릭.
-2.  **View**: `manual_cmd_send_requested` 시그널 발생 (입력값, 옵션 상태 전달).
-3.  **Presenter**: `MainPresenter`가 설정(`ConfigKeys`)을 조회하여 Prefix/Suffix를 조합하고 HEX 변환을 수행.
-4.  **Model**: `PortController.send_data()`를 호출하여 활성 포트로 데이터 전송.
-5.  **Feedback**: 전송된 데이터는 `Local Echo` 옵션에 따라 `RxLogWidget`에 표시되고, `DataLogger`에 기록됨.
+1. **User**: `ManualCtrlWidget`에서 명령어 입력 후 'Send' 클릭.
+2. **View**: `manual_cmd_send_requested` 시그널 발생 (입력값, 옵션 상태 전달).
+3. **Presenter**: `MainPresenter`가 설정(`ConfigKeys`)을 조회하여 Prefix/Suffix를 조합하고 HEX 변환을 수행.
+4. **Model**: `PortController.send_data()`를 호출하여 활성 포트로 데이터 전송.
+5. **Feedback**: 전송된 데이터는 `Local Echo` 옵션에 따라 `RxLogWidget`에 표시되고, `DataLogger`에 기록됨.
 
 ### C. 매크로 자동화 실행 (Automation Flow)
+>
 > **핵심**: `QThread` 기반 정밀 타이밍 및 `Expect` 대기
 
-1.  **User**: `MacroCtrlWidget`에서 'Repeat Start' 클릭.
-2.  **Presenter**: `MacroPresenter`가 선택된 항목들을 `MacroEntry` 객체로 변환하여 `MacroRunner`에 로드.
-3.  **Model (`MacroRunner`)**:
+1. **User**: `MacroCtrlWidget`에서 'Repeat Start' 클릭.
+2. **Presenter**: `MacroPresenter`가 선택된 항목들을 `MacroEntry` 객체로 변환하여 `MacroRunner`에 로드.
+3. **Model (`MacroRunner`)**:
     * `QThread` 내부 루프 시작.
     * **Send**: `send_requested` 시그널 → `MainPresenter` → `PortController`.
     * **Expect**: `ExpectMatcher`를 설정하고 `QWaitCondition`으로 대기. `EventBus`로 들어오는 수신 데이터를 실시간 검사.
     * **Delay**: 정밀 타이밍을 위해 `QWaitCondition.wait()` 사용 (Windows Timer 오차 해결).
-4.  **Completion**: 루프 종료 시 `macro_finished` 이벤트 발생 → UI 상태 복구.
+4. **Completion**: 루프 종료 시 `macro_finished` 이벤트 발생 → UI 상태 복구.
 
 ### D. 파일 전송 (File Transfer Flow)
+>
 > **핵심**: `Backpressure` 제어 및 스레드 풀 사용
 
-1.  **User**: `ManualCtrlWidget` 파일 탭에서 'Send File' 클릭.
-2.  **Presenter**: `FilePresenter`가 `FileTransferEngine`(`QRunnable`)을 생성하고 `QThreadPool`에서 실행.
-3.  **Model (`FileTransferEngine`)**:
+1. **User**: `ManualCtrlWidget` 파일 탭에서 'Send File' 클릭.
+2. **Presenter**: `FilePresenter`가 `FileTransferEngine`(`QRunnable`)을 생성하고 `QThreadPool`에서 실행.
+3. **Model (`FileTransferEngine`)**:
     * 파일을 Chunk 단위로 읽음.
     * **Backpressure**: `PortController`의 송신 큐(`TX Queue`) 크기를 모니터링하여 오버플로우 방지.
     * **Flow Control**: RTS/CTS 설정에 따라 전송 지연(Sleep) 최적화.
-4.  **Update**: 진행률(`progress`) 이벤트를 `EventBus`로 발행 → `FileProgressWidget` 갱신.
+4. **Update**: 진행률(`progress`) 이벤트를 `EventBus`로 발행 → `FileProgressWidget` 갱신.
 
 ---
 

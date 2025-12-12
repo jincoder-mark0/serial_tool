@@ -181,7 +181,7 @@ class MacroListWidget(QWidget):
         labels = [
             "",
             lang_manager.get_text("macro_list_col_prefix"),
-            lang_manager.get_text("macro_list_col_command"),
+            lang_manager.get_text("macro_list_col_cmd"),
             lang_manager.get_text("macro_list_col_suffix"),
             lang_manager.get_text("macro_list_col_hex"),
             lang_manager.get_text("macro_list_col_delay"),
@@ -208,31 +208,31 @@ class MacroListWidget(QWidget):
         Returns:
             List[Dict[str, Any]]: 커맨드 데이터 리스트.
         """
-        commands = []
+        cmds = []
         for row in range(self.macro_table_model.rowCount()):
             cmd_data = {
                 "enabled": self.macro_table_model.item(row, 0).checkState() == Qt.Checked,
                 "prefix": self.macro_table_model.item(row, 1).checkState() == Qt.Checked,
-                "command": self.macro_table_model.item(row, 2).text(),
+                "cmd": self.macro_table_model.item(row, 2).text(),
                 "suffix": self.macro_table_model.item(row, 3).checkState() == Qt.Checked,
                 "hex_mode": self.macro_table_model.item(row, 4).checkState() == Qt.Checked,
                 "delay": self.macro_table_model.item(row, 5).text()
             }
-            commands.append(cmd_data)
-        return commands
+            cmds.append(cmd_data)
+        return cmds
 
-    def set_macro_list(self, commands: List[Dict[str, Any]]) -> None:
+    def set_macro_list(self, cmds: List[Dict[str, Any]]) -> None:
         """
         커맨드 리스트 데이터를 설정합니다.
 
         Args:
-            commands (List[Dict[str, Any]]): 커맨드 데이터 리스트.
+            cmds (List[Dict[str, Any]]): 커맨드 데이터 리스트.
         """
         self.macro_table_model.removeRows(0, self.macro_table_model.rowCount())
-        for i, cmd in enumerate(commands):
+        for i, cmd in enumerate(cmds):
             self._insert_row(
                 i,
-                cmd.get("command", ""),
+                cmd.get("cmd", ""),
                 cmd.get("prefix", True),
                 cmd.get("hex_mode", False),
                 cmd.get("suffix", True),
@@ -484,8 +484,8 @@ class MacroListWidget(QWidget):
         Returns:
             list: 명령어 목록 데이터.
         """
-        commands = self.get_macro_list()
-        return commands
+        cmds = self.get_macro_list()
+        return cmds
 
     def load_state(self, state: list) -> None:
         """

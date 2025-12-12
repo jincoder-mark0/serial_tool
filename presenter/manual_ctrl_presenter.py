@@ -15,14 +15,15 @@
 
 ## HOW
 * View 시그널 구독 (ManualCtrlPanel -> Widget)
-* PortController 메서드 호출 (send_data, set_rts, set_dtr)
-* SettingsManager 설정값 조회
+* CmdProcessor를 통한 데이터 가공
+* PortController 메서드 호출 (send_data, set_rts, set_dtr, set_local_echo)
 """
 from PyQt5.QtCore import QObject
 from typing import Callable, Optional
 from view.panels.manual_ctrl_panel import ManualCtrlPanel
 from model.port_controller import PortController
 from core.settings_manager import SettingsManager
+from core.cmd_processor import CmdProcessor
 from core.logger import logger
 from constants import ConfigKeys
 
@@ -58,13 +59,14 @@ class ManualCtrlPresenter(QObject):
         widget.manual_cmd_send_requested.connect(self.on_manual_cmd_send_requested)
         widget.rts_changed.connect(self.on_rts_changed)
         widget.dtr_changed.connect(self.on_dtr_changed)
+        widget.local_echo_changed.connect(self.on_local_echo_changed)
 
         # 초기 상태 설정 (전역 설정 반영)
         self._apply_initial_settings()
 
     def _apply_initial_settings(self) -> None:
         """설정 파일에서 Local Echo 기본값을 읽어 View에 적용"""
-        default_echo = self.settings_manager.get(ConfigKeys.PORT_LOCALECHO, False)
+        default_echo = self.settings_manager.get(ConfigKeys.PORT_LOCAL_ECHO, False)
         self.view.set_local_echo_state(default_echo)
 
     def on_manual_cmd_send_requested(self, text: str, hex_mode: bool, cmd_prefix: bool, cmd_suffix: bool, local_echo: bool) -> None:
@@ -73,8 +75,7 @@ class ManualCtrlPresenter(QObject):
 
         Logic:
             - 포트 열림 확인
-            - Prefix/Suffix 적용
-            - Hex 모드 변환 및 유효성 검사
+            - CmdProcessor를 사용하여 데이터 변환
             - 데이터 전송 및 Local Echo 처리
 
         Args:
@@ -88,35 +89,17 @@ class ManualCtrlPresenter(QObject):
             logger.warning("Manual Send: Port not open")
             return
 
-        final_text = text
-
-        # Prefix 적용
-        if cmd_prefix:
-            prefix = self.settings_manager.get(ConfigKeys.CMD_PREFIX, "")
-            final_text = prefix + final_text
-
-        # Suffix 적용
-        if cmd_suffix:
-            suffix = self.settings_manager.get(ConfigKeys.CMD_SUFFIX, "")
-            final_text = final_text + suffix
-
-        # 데이터 변환 (Hex vs Text)
-        data: bytes
-        if hex_mode:
-            try:
-                # 공백 제거 후 Hex 변환
-                data = bytes.fromhex(final_text.replace(' ', ''))
-            except ValueError:
-                logger.error(f"Invalid hex string for sending: {final_text}")
-                # TODO: View에 에러 알림 표시 (향후 개선 사항)
-                return
-        else:
-            data = final_text.encode('utf-8')
+        try:
+            # 데이터 가공 위임
+            data = CmdProcessor.process_cmd(text, hex_mode, cmd_prefix, cmd_suffix)
+        except ValueError:
+            logger.error(f"Invalid hex string for sending: {text}")
+            return
 
         # 데이터 전송
         self.port_controller.send_data(data)
 
-        # Local Echo 처리
+        # Local Echo (View에 직접 표시 요청)
         if local_echo and self.local_echo_callback:
             self.local_echo_callback(data)
 
@@ -141,3 +124,14 @@ class ManualCtrlPresenter(QObject):
         if self.port_controller.is_open:
             self.port_controller.set_dtr(state)
             logger.info(f"DTR changed to {state}")
+
+    def on_local_echo_changed(self, state: bool) -> None:
+        """
+        Local Echo 상태 변경 처리
+
+        Args:
+            state (bool): Local Echo 상태 (True=ON, False=OFF)
+        """
+        if self.port_controller.is_open:
+            self.port_controller.set_local_echo(state)
+            logger.info(f"Local Echo changed to {state}")

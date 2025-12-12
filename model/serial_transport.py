@@ -162,3 +162,8 @@ class SerialTransport(ITransport):
         """RTS(Request To Send) 신호 설정"""
         if self.is_open():
             self._serial.rts = state
+
+    def set_local_echo(self, state: bool) -> None:
+        """Local Echo 신호 설정"""
+        if self.is_open():
+            pass # TODO
