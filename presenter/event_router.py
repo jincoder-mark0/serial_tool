@@ -11,7 +11,7 @@ EventBus와 Presenter/View 사이의 이벤트를 라우팅합니다.
 
 ## WHAT
 * EventBus 이벤트 구독 및 PyQt Signal 발행
-* 포트 이벤트 라우팅 (opened, closed, error, data_received, data_sent)
+* 포트 이벤트 라우팅 (opened, closed, error, data_received, data_sent, packet_received)
 * 매크로 이벤트 라우팅 (started, finished, progress)
 * 파일 전송 이벤트 라우팅 (progress, completed)
 
@@ -36,7 +36,8 @@ class EventRouter(QObject):
     port_closed = pyqtSignal(str)
     port_error = pyqtSignal(str, str)  # port_name, error_message
     data_received = pyqtSignal(str, bytes)  # port_name, data
-    data_sent = pyqtSignal(str, bytes)  # [New] port_name, data
+    data_sent = pyqtSignal(str, bytes)  # port_name, data
+    packet_received = pyqtSignal(str, object) # port_name, Packet object
 
     # Macro Events
     macro_started = pyqtSignal()
@@ -68,6 +69,7 @@ class EventRouter(QObject):
         self.bus.subscribe("port.error", self._on_port_error)
         self.bus.subscribe("port.data_received", self._on_data_received)
         self.bus.subscribe("port.data_sent", self._on_data_sent)
+        self.bus.subscribe("port.packet_received", self._on_packet_received)
 
         # Macro Events (간단한 이벤트는 Lambda 사용)
         self.bus.subscribe("macro.started", lambda _: self.macro_started.emit())
@@ -94,8 +96,12 @@ class EventRouter(QObject):
         self.data_received.emit(data.get('port', ''), data.get('data', b''))
 
     def _on_data_sent(self, data: dict):
-        """데이터 송신 이벤트 → PyQt Signal (Dictionary 분해) [New]"""
+        """데이터 송신 이벤트 → PyQt Signal (Dictionary 분해)"""
         self.data_sent.emit(data.get('port', ''), data.get('data', b''))
+
+    def _on_packet_received(self, data: dict):
+        """패킷 수신 이벤트 → PyQt Signal (Dictionary 분해)"""
+        self.packet_received.emit(data.get('port', ''), data.get('packet'))
 
     def _on_file_progress(self, data: dict):
         """파일 전송 진행률 이벤트 → PyQt Signal (Dictionary 분해)"""

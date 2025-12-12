@@ -10,7 +10,7 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 * 전역 이벤트 및 설정 관리
 
 ## WHAT
-* 하위 Presenter (Port, Macro, File) 생성 및 연결
+* 하위 Presenter (Port, Macro, File, Packet) 생성 및 연결
 * View 이벤트 처리 (시그널 구독)
 * Model 상태 변화에 따른 View 업데이트
 * 설정 저장 및 로드 로직
@@ -26,6 +26,7 @@ from model.macro_runner import MacroRunner
 from .port_presenter import PortPresenter
 from .macro_presenter import MacroPresenter
 from .file_presenter import FilePresenter
+from .packet_presenter import PacketPresenter # Added
 from .event_router import EventRouter
 from core.settings_manager import SettingsManager
 from core.data_logger import data_logger_manager
@@ -66,6 +67,14 @@ class MainPresenter(QObject):
         self.port_presenter = PortPresenter(self.view.port_view, self.port_controller)
         self.macro_presenter = MacroPresenter(self.view.macro_view, self.macro_runner)
         self.file_presenter = FilePresenter(self.port_controller)
+
+        # [New] PacketPresenter 초기화
+        # MainWindow는 packet_inspector_panel에 대한 직접적인 프로퍼티가 없으므로 right_section을 통해 접근하거나
+        # MainWindow에 packet_view 프로퍼티를 추가하는 것이 Strict MVP에 더 부합함.
+        # 여기서는 right_section을 통해 접근 (기존 macro_view 패턴과 동일하게 MainWindow 수정 필요할 수 있음)
+        # MainWindow에 packet_view 프로퍼티를 추가했다고 가정하고 사용 (아래 MainWindow 수정 코드 필요)
+        # 하지만 이번 턴의 요구사항 범위 내에서 해결하기 위해 직접 접근 방식 사용 (view.right_section.packet_inspector)
+        self.packet_presenter = PacketPresenter(self.view.right_section.packet_inspector, self.event_router)
 
         # --- 3. EventRouter 시그널 연결 (Model -> Presenter) ---
         self.event_router.data_received.connect(self.on_data_received)
@@ -320,7 +329,10 @@ class MainPresenter(QObject):
             except (ValueError, TypeError):
                 logger.warning("Invalid max_log_lines value")
 
-        # 상태 메시지 표시
+        # [New] PacketPresenter 설정 업데이트 요청
+        # (설정 저장 후 즉시 반영)
+        self.packet_presenter.apply_settings()
+
         self.view.show_status_message("Settings updated", 2000)
         self.view.log_system_message("Settings updated", "INFO")
 
@@ -381,8 +393,8 @@ class MainPresenter(QObject):
         """상태바 주기적 업데이트"""
         # 1. RX/TX 속도 업데이트
         self.view.update_status_bar_stats(self.rx_byte_count, self.tx_byte_count)
-
-        # 카운터 초기화self.rx_byte_count = 0
+        # 카운터 초기화
+        self.rx_byte_count = 0
         self.tx_byte_count = 0
 
         # 2. 시간 업데이트
@@ -390,22 +402,22 @@ class MainPresenter(QObject):
         self.view.update_status_bar_time(current_time)
 
     def on_shortcut_connect(self) -> None:
-        """연결 단축키 핸들러"""
+        """연결 단축키"""
         self.port_presenter.connect_current_port()
 
     def on_shortcut_disconnect(self) -> None:
-        """연결 해제 단축키 핸들러"""
+        """연결 해제 단축키"""
         self.port_presenter.disconnect_current_port()
 
     def on_shortcut_clear(self) -> None:
-        """로그 지우기 단축키 핸들러"""
+        """로그 지우기 단축키"""
         self.port_presenter.clear_log_current_port()
 
     # -------------------------------------------------------------------------
     # 데이터 로깅 (Log Logging)
     # -------------------------------------------------------------------------
     def _connect_logging_signals(self) -> None:
-        """모든 포트 패널의 로깅 시그널 연결"""
+        """로깅 시그널 연결"""
         count = self.view.get_port_tabs_count()
         for i in range(count):
             widget = self.view.get_port_tab_widget(i)
@@ -435,7 +447,7 @@ class MainPresenter(QObject):
             rx_widget.data_logging_stopped.connect(self._on_data_logging_stopped)
 
     def _get_port_panel_from_sender(self):
-        """시그널 발신자로부터 패널 찾기"""
+        """시그널 발신 패널 찾기"""
         sender = self.sender()
         count = self.view.get_port_tabs_count()
         for i in range(count):
