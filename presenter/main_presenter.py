@@ -1,7 +1,8 @@
 """
 메인 프레젠터 모듈
 
-애플리케이션의 최상위 Presenter로서 모든 하위 Presenter와 Model을 조율합니다.
+애플리케이션의 최상위 Presenter
+모든 하위 Presenter와 Model을 조율
 
 ## WHY
 * MVP 패턴의 중심 조율자 역할
@@ -15,7 +16,7 @@
 * 설정 저장/로드 처리
 * 상태바 업데이트 및 시스템 로그 관리
 * 단축키 처리
-* 로그 녹화 기능 통합
+* 로깅 기능 통합
 
 ## HOW
 * PortPresenter, MacroPresenter, FilePresenter 생성 및 조율
@@ -62,15 +63,14 @@ class MainPresenter(QObject):
         self.macro_presenter = MacroPresenter(self.view.right_section.macro_panel, self.macro_runner)
         self.file_presenter = FilePresenter(self.port_controller)
 
-        # EventRouter 시그널 연결 (Model -> Presenter)
+        # EventRouter 시그널 연결 (Model -> EventBus -> Presenter)
         self.event_router.data_received.connect(self.on_data_received)
         self.event_router.port_opened.connect(self.on_port_opened)
         self.event_router.port_closed.connect(self.on_port_closed)
         self.event_router.port_error.connect(self.on_port_error)
 
-        # PortController 직접 연결 제거 (EventRouter로 대체)
-        # self.port_controller.data_received.connect(self.on_data_received)
-        self.port_controller.data_sent.connect(self.on_data_sent) # data_sent는 EventRouter에 없음 (추가 가능하지만 일단 유지)
+        # data_sent, EventRouter를 통해 수신
+        self.event_router.data_sent.connect(self.on_data_sent)
 
         # MacroRunner 전송 요청 연결 (4개 인자: text, hex, prefix, suffix)
         self.macro_runner.send_requested.connect(self.on_macro_cmd_send_requested)
@@ -93,12 +93,6 @@ class MainPresenter(QObject):
         self.status_timer.timeout.connect(self.update_status_bar)
         self.status_timer.start(1000)
 
-        # 포트 컨트롤러 시그널 연결 (일부는 EventRouter로 대체됨)
-        # self.port_controller.data_sent.connect(self.on_data_sent) # 위에서 연결함
-        # self.port_controller.port_opened.connect(self.on_port_opened)
-        # self.port_controller.port_closed.connect(self.on_port_closed)
-        # self.port_controller.error_occurred.connect(self.on_port_error)
-
         # 단축키 시그널 연결
         self.view.shortcut_connect_requested.connect(self.on_shortcut_connect)
         self.view.shortcut_disconnect_requested.connect(self.on_shortcut_disconnect)
@@ -110,15 +104,11 @@ class MainPresenter(QObject):
         # 상태바 참조 저장 (반복적인 hasattr 확인 방지)
         self.global_status_bar = self.view.global_status_bar
 
-        # 녹화 시그널 연결 (LogRecorder 통합)
-        self._connect_recording_signals()
+        # 로깅 시그널 연결 (LogRecorder 통합)
+        self._connect_logging_signals()
 
-        # 탭 추가 시그널 연결 (새 탭의 녹화 시그널 연결용)
+        # 탭 추가 시그널 연결 (새 탭의 로깅 시그널 연결용)
         self.view.left_section.port_tabs.tab_added.connect(self._on_port_tab_added)
-
-
-        # 현재 파일 전송 다이얼로그 (FilePresenter로 이동됨)
-        # self._current_transfer_dialog = None
 
         # 시스템 로그 참조
         self.system_log = self.view.left_section.system_log_widget
@@ -178,9 +168,9 @@ class MainPresenter(QObject):
             port_name (str): 데이터를 수신한 포트 이름
             data (bytes): 수신된 바이트 데이터.
         """
-        # 녹화 중이면 LogRecorder에 먼저 기록 (데이터 누락 방지)
-        # 해당 포트가 녹화 중인지 확인
-        if log_recorder_manager.is_recording(port_name):
+        # 로깅 중이면 LogRecorder에 먼저 기록 (데이터 누락 방지)
+        # 해당 포트가 로깅 중인지 확인
+        if log_recorder_manager.is_logging(port_name):
             log_recorder_manager.record(port_name, data)
 
         # 포트 이름으로 해당 탭 찾기
@@ -344,10 +334,12 @@ class MainPresenter(QObject):
 
     def on_data_sent(self, port_name: str, data: bytes) -> None:
         """
-        데이터 전송 시 TX 카운트를 증가시키고, 녹화 중이면 데이터를 기록합니다.
+        데이터 전송 시 TX 카운트 증가
+        로깅 중이면 데이터 기록
+        EventRouter를 통해 호출
         """
-        # 녹화 중이면 LogRecorder에 기록
-        if log_recorder_manager.is_recording(port_name):
+        # 로깅 중이면 LogRecorder에 기록
+        if log_recorder_manager.is_logging(port_name):
             log_recorder_manager.record(port_name, data)
 
         self.tx_byte_count += len(data)
@@ -380,9 +372,6 @@ class MainPresenter(QObject):
         current_time = QDateTime.currentDateTime().toString("HH:mm:ss")
         self.global_status_bar.update_time(current_time)
 
-        # 3. 버퍼 상태 (임시: 실제 버퍼 크기를 알 수 있다면 연동)
-        # self.view.global_status_bar.update_buffer(buffer_percent)
-
     def on_shortcut_connect(self) -> None:
         """F2 단축키: 현재 포트 연결"""
         self.port_presenter.connect_current_port()
@@ -396,31 +385,31 @@ class MainPresenter(QObject):
         self.port_presenter.clear_log_current_port()
 
     # -------------------------------------------------------------------------
-    # 로그 녹화 (Log Recording)
+    # 로깅 (Log Logging)
     # -------------------------------------------------------------------------
-    def _connect_recording_signals(self) -> None:
-        """모든 포트 패널의 녹화 시그널을 연결합니다."""
+    def _connect_logging_signals(self) -> None:
+        """모든 포트 패널의 로깅 시그널을 연결합니다."""
         for i in range(self.view.left_section.port_tabs.count()):
             widget = self.view.left_section.port_tabs.widget(i)
-            self._connect_single_port_recording(widget)
+            self._connect_single_port_logging(widget)
 
     def _on_port_tab_added(self, panel) -> None:
-        """새 탭이 추가되었을 때 녹화 시그널을 연결합니다."""
-        self._connect_single_port_recording(panel)
+        """새 탭이 추가되었을 때 로깅 시그널을 연결합니다."""
+        self._connect_single_port_logging(panel)
 
-    def _connect_single_port_recording(self, panel) -> None:
-        """단일 포트 패널의 녹화 시그널을 연결합니다."""
+    def _connect_single_port_logging(self, panel) -> None:
+        """단일 포트 패널의 로깅 시그널을 연결합니다."""
         if hasattr(panel, 'received_area_widget'):
             rx_widget = panel.received_area_widget
             # 중복 연결 방지를 위해 disconnect 시도 (실패해도 무방)
             try:
-                rx_widget.recording_started.disconnect(self._on_recording_started)
-                rx_widget.recording_stopped.disconnect(self._on_recording_stopped)
+                rx_widget.logging_started.disconnect(self._on_logging_started)
+                rx_widget.logging_stopped.disconnect(self._on_logging_stopped)
             except TypeError:
                 pass
 
-            rx_widget.recording_started.connect(self._on_recording_started)
-            rx_widget.recording_stopped.connect(self._on_recording_stopped)
+            rx_widget.logging_started.connect(self._on_logging_started)
+            rx_widget.logging_stopped.connect(self._on_logging_stopped)
 
     def _get_port_panel_from_sender(self):
         """시그널을 보낸 RxLogWidget이 속한 PortPanel을 찾습니다."""
@@ -431,12 +420,12 @@ class MainPresenter(QObject):
                 return widget
         return None
 
-    def _on_recording_started(self, filepath: str) -> None:
+    def _on_logging_started(self, filepath: str) -> None:
         """
-        녹화 시작 처리
+        로깅 시작 처리
 
         Args:
-            filepath: 녹화 파일 경로
+            filepath: 로깅 파일 경로
         """
         panel = self._get_port_panel_from_sender()
         if not panel:
@@ -445,26 +434,21 @@ class MainPresenter(QObject):
         port_name = panel.get_port_name()
 
         if not port_name:
-            logger.warning("Cannot start recording: No port opened")
+            logger.warning("Cannot start logging: No port opened")
             return
 
-        if log_recorder_manager.start_recording(port_name, filepath):
-            logger.info(f"Recording started: {port_name} -> {filepath}")
+        if log_recorder_manager.start_logging(port_name, filepath):
+            logger.info(f"Logging started: {port_name} -> {filepath}")
         else:
-            logger.error(f"Failed to start recording: {filepath}")
+            logger.error(f"Failed to start logging: {filepath}")
 
-    def _on_recording_stopped(self) -> None:
-        """녹화 중단 처리"""
+    def _on_logging_stopped(self) -> None:
+        """로깅 중단 처리"""
         panel = self._get_port_panel_from_sender()
         if not panel:
             return
 
         port_name = panel.get_port_name()
-        if port_name and log_recorder_manager.is_recording(port_name):
-            log_recorder_manager.stop_recording(port_name)
-            logger.info(f"Recording stopped: {port_name}")
-
-    # -------------------------------------------------------------------------
-    # 파일 전송 (File Transfer) - FilePresenter로 위임됨
-    # -------------------------------------------------------------------------
-    # 기존 로직 제거됨
+        if port_name and log_recorder_manager.is_logging(port_name):
+            log_recorder_manager.stop_logging(port_name)
+            logger.info(f"Logging stopped: {port_name}")

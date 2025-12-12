@@ -30,9 +30,9 @@ class RxLogWidget(QWidget):
     수신된 시리얼 데이터를 표시하는 위젯 클래스입니다.
     텍스트/HEX 모드 전환, 일시 정지, 타임스탬프 표시, 로그 저장 및 지우기 기능을 제공합니다.
     """
-    # 녹화 시그널 (포트명은 Presenter에서 관리)
-    recording_started = pyqtSignal(str)  # filepath
-    recording_stopped = pyqtSignal()
+    # 로깅 시그널 (포트명은 Presenter에서 관리)
+    logging_started = pyqtSignal(str)  # filepath
+    logging_stopped = pyqtSignal()
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
         RxLogWidget를 초기화합니다.
@@ -142,7 +142,7 @@ class RxLogWidget(QWidget):
         self.rx_save_log_btn = QPushButton(lang_manager.get_text("rx_btn_save"))
         self.rx_save_log_btn.setToolTip(lang_manager.get_text("rx_btn_save_tooltip"))
         self.rx_save_log_btn.setCheckable(True)  # 토글 버튼으로 변경
-        self.rx_save_log_btn.toggled.connect(self.on_recording_toggled)
+        self.rx_save_log_btn.toggled.connect(self.on_logging_toggled)
 
         # Options
         self.rx_filter_chk = QCheckBox(lang_manager.get_text("rx_chk_filter"))
@@ -314,12 +314,12 @@ class RxLogWidget(QWidget):
         self.ui_update_buffer.clear()
 
     @pyqtSlot(bool)
-    def on_recording_toggled(self, checked: bool) -> None:
+    def on_logging_toggled(self, checked: bool) -> None:
         """
-        녹화 시작/중단 토글을 처리합니다.
+        로깅 시작/중단 토글을 처리합니다.
 
         Args:
-            checked: 버튼 체크 상태 (True=녹화 시작, False=녹화 중단)
+            checked: 버튼 체크 상태 (True=로깅 시작, False=로깅 중단)
         """
         if checked:
             # 파일 저장 대화상자
@@ -335,8 +335,8 @@ class RxLogWidget(QWidget):
             )
 
             if filename:
-                # 녹화 시작 시그널
-                self.recording_started.emit(filename)
+                # 로깅 시작 시그널
+                self.logging_started.emit(filename)
                 # 버튼 스타일 변경
                 self.rx_save_log_btn.setText("● REC")
                 self.rx_save_log_btn.setStyleSheet("color: red;")
@@ -344,8 +344,8 @@ class RxLogWidget(QWidget):
                 # 취소 시 버튼 복구
                 self.rx_save_log_btn.setChecked(False)
         else:
-            # 녹화 중단 시그널
-            self.recording_stopped.emit()
+            # 로깅 중단 시그널
+            self.logging_stopped.emit()
             # 버튼 스타일 복구
             self.rx_save_log_btn.setText(lang_manager.get_text("rx_btn_save"))
             self.rx_save_log_btn.setStyleSheet("")

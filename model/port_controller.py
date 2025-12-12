@@ -1,7 +1,7 @@
 """
 포트 컨트롤러 모듈
 
-시리얼 포트의 생명주기와 설정을 관리하는 컨트롤러입니다.
+시리얼 포트의 생명주기와 설정을 관리 컨트롤러
 
 ## WHY
 * 다중 포트 동시 관리 지원
@@ -36,7 +36,9 @@ class PortController(QObject):
     """
     포트 생명주기 및 설정 관리 클래스
 
-    다중 포트를 동시에 관리하며, 각 포트별로 독립적인 Worker와 Parser를 유지합니다.
+    다중 포트 동시 관리
+    각 포트별로 독립적인 Worker와 Parser를 유지
+    Signal 발생 시 자동으로 EventBus로 이벤트를 전파
     """
 
     # 외부(Presenter)와 통신하는 시그널
@@ -49,7 +51,13 @@ class PortController(QObject):
     packet_received = pyqtSignal(str, object) # port_name, Packet object
 
     def __init__(self) -> None:
-        """PortController 초기화"""
+        """
+        PortController 초기화
+        
+        Logic:
+            - Worker/Parser 저장소 초기화
+            - Signal -> EventBus 자동 중계 연결
+        """
         super().__init__()
         # 포트 이름(str) -> ConnectionWorker 매핑
         self.workers: dict[str, ConnectionWorker] = {}
@@ -58,6 +66,30 @@ class PortController(QObject):
 
         # EventBus 인스턴스
         self.event_bus = event_bus
+        
+        # Signal -> EventBus 자동 연결
+        self._connect_signals_to_eventbus()
+
+    def _connect_signals_to_eventbus(self) -> None:
+        """PyQt Signal 발생 시 자동으로 EventBus 이벤트를 발행하도록 연결합니다."""
+        self.port_opened.connect(lambda p: self.event_bus.publish("port.opened", p))
+        self.port_closed.connect(lambda p: self.event_bus.publish("port.closed", p))
+        
+        self.error_occurred.connect(
+            lambda p, m: self.event_bus.publish("port.error", {'port': p, 'message': m})
+        )
+        
+        self.data_received.connect(
+            lambda p, d: self.event_bus.publish("port.data_received", {'port': p, 'data': d})
+        )
+        
+        self.data_sent.connect(
+            lambda p, d: self.event_bus.publish("port.data_sent", {'port': p, 'data': d})
+        )
+        
+        self.packet_received.connect(
+            lambda p, pkt: self.event_bus.publish("port.packet_received", {'port': p, 'packet': pkt})
+        )
 
     @property
     def is_open(self) -> bool:
@@ -142,11 +174,11 @@ class PortController(QObject):
 
         self.parsers[port_name] = ParserFactory.create_parser(parser_type, **parser_kwargs)
 
-        # 4. 시그널 매핑 (Worker 이벤트 -> Controller 시그널 + EventBus)
-        worker.connection_opened.connect(lambda p=port_name: [self.port_opened.emit(p), self.event_bus.publish("port.opened", p)])
+        # 4. 시그널 매핑 (Worker 이벤트 -> Controller 시그널)
+        worker.connection_opened.connect(lambda p=port_name: self.port_opened.emit(p))
         worker.connection_closed.connect(self.on_worker_closed)
 
-        worker.error_occurred.connect(lambda msg, p=port_name: [self.error_occurred.emit(p, msg), self.event_bus.publish("port.error", {'port': p, 'message': msg})])
+        worker.error_occurred.connect(lambda msg, p=port_name: self.error_occurred.emit(p, msg))
 
         # 데이터 수신 핸들러 연결 (Raw 데이터 및 패킷 파싱 처리)
         worker.data_received.connect(lambda data, p=port_name: self._handle_data_received(p, data))
@@ -160,7 +192,7 @@ class PortController(QObject):
         데이터 수신 처리
 
         Logic:
-            - Raw 데이터 시그널 발행 (PyQt Signal + EventBus)
+            - Raw 데이터 시그널 발행 (Signal -> EventBus 자동 전파)
             - 해당 포트의 Parser로 패킷 파싱
             - 파싱된 각 패킷을 시그널로 발행
 
@@ -170,7 +202,6 @@ class PortController(QObject):
         """
         # 1. Raw 데이터 시그널 발행
         self.data_received.emit(port_name, data)
-        self.event_bus.publish("port.data_received", {'port': port_name, 'data': data})
 
         # 2. 패킷 파싱 및 패킷 시그널 발행
         parser = self.parsers.get(port_name)
@@ -178,7 +209,6 @@ class PortController(QObject):
             packets = parser.parse(data)
             for packet in packets:
                 self.packet_received.emit(port_name, packet)
-                self.event_bus.publish("port.packet_received", {'port': port_name, 'packet': packet})
 
     def on_worker_closed(self, port_name: str) -> None:
         """
@@ -195,7 +225,6 @@ class PortController(QObject):
 
         # 이벤트 발행
         self.port_closed.emit(port_name)
-        self.event_bus.publish("port.closed", port_name)
 
     def close_port(self, port_name: Optional[str] = None) -> None:
         """
