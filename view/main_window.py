@@ -1,3 +1,23 @@
+"""
+메인 윈도우 모듈
+
+애플리케이션의 최상위 뷰를 정의합니다.
+
+## WHY
+* 전체 UI 레이아웃 구성 및 관리
+* Presenter와의 인터페이스(Signal/Slot) 제공
+* 전역 설정 및 리소스 초기화
+
+## WHAT
+* 섹션(Section) 배치 및 스플리터 관리
+* 메뉴바, 툴바, 상태바 관리
+* Presenter용 공개 API 제공
+
+## HOW
+* QMainWindow 상속
+* Strict MVP 패턴을 위한 시그널 노출
+* SettingsManager를 통한 상태 복원
+"""
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QSplitter, QApplication, QShortcut
 )
@@ -5,17 +25,10 @@ from PyQt5.QtGui import QKeySequence
 from PyQt5.QtCore import Qt, pyqtSignal, QByteArray
 
 from view.sections import (
-    MainLeftSection,
-    MainRightSection,
-    MainStatusBar,
-    MainMenuBar,
-    MainToolBar
+    MainLeftSection, MainRightSection, MainStatusBar, MainMenuBar, MainToolBar
 )
 from view.dialogs import (
-    FontSettingsDialog,
-    AboutDialog,
-    PreferencesDialog,
-    FileTransferDialog
+    FontSettingsDialog, AboutDialog, PreferencesDialog, FileTransferDialog
 )
 from view.managers.theme_manager import ThemeManager
 from view.managers.lang_manager import lang_manager, LangManager
@@ -25,11 +38,13 @@ from constants import ConfigKeys
 
 class MainWindow(QMainWindow):
     """
-    애플리케이션의 메인 윈도우 클래스입니다.
-    MainLeftSection(포트/제어)과 MainRightSection(커맨드/인스펙터)을 포함하며,
-    설정의 로드 및 저장을 조율합니다.
+    메인 윈도우 클래스
+
+    Presenter가 UI 내부 구조를 알 필요 없이 조작할 수 있도록
+    필요한 인터페이스를 프로퍼티와 메서드로 제공합니다.
     """
 
+    # Presenter 전달용 시그널 (UI 이벤트 -> 비즈니스 로직 요청)
     close_requested = pyqtSignal()
     settings_save_requested = pyqtSignal(dict)
 
@@ -43,12 +58,16 @@ class MainWindow(QMainWindow):
     # 파일 전송 시그널 (다이얼로그 인스턴스 전달)
     file_transfer_dialog_opened = pyqtSignal(object)
 
+    # 하위 컴포넌트 시그널 중계 (Signal Chaining)
+    manual_cmd_send_requested = pyqtSignal(str, bool, bool, bool, bool)
+    port_tab_added = pyqtSignal(object)
+
     def __init__(self, resource_path=None) -> None:
         """
-        MainWindow를 초기화하고 UI 및 설정을 로드합니다.
+        MainWindow 초기화
 
         Args:
-            resource_path: ResourcePath 인스턴스.
+            resource_path: 리소스 경로 객체
         """
         super().__init__()
 
@@ -93,7 +112,7 @@ class MainWindow(QMainWindow):
         self.init_shortcuts()
 
     def init_ui(self) -> None:
-        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
+        """UI 레이아웃 및 컴포넌트 초기화"""
         central_widget = QWidget()
         self.setCentralWidget(central_widget)
 
@@ -116,7 +135,10 @@ class MainWindow(QMainWindow):
         self.splitter.setStretchFactor(0, 0)
         self.splitter.setStretchFactor(1, 1)
 
-        # 툴바 시그널 연결 (left_section 초기화 후)
+        # 시그널 체이닝 (하위 -> 상위)
+        self.left_section.manual_cmd_send_requested.connect(self.manual_cmd_send_requested.emit)
+        self.left_section.port_tab_added.connect(self.port_tab_added.emit)
+
         self._connect_toolbar_signals()
 
         main_layout.addWidget(self.splitter)
@@ -124,6 +146,79 @@ class MainWindow(QMainWindow):
         # 전역 상태바 설정 (위젯 사용)
         self.global_status_bar = MainStatusBar()
         self.setStatusBar(self.global_status_bar)
+
+    # --------------------------------------------------------
+    # Presenter Interface (View 인터페이스)
+    # --------------------------------------------------------
+    @property
+    def port_view(self):
+        """PortPresenter용 뷰 인터페이스 반환"""
+        return self.left_section
+
+    @property
+    def macro_view(self):
+        """MacroPresenter용 뷰 인터페이스 반환"""
+        return self.right_section.macro_panel
+
+    def get_port_tabs_count(self) -> int:
+        """현재 포트 탭 개수 반환"""
+        return self.left_section.port_tabs.count()
+
+    def get_port_tab_widget(self, index: int) -> QWidget:
+        """
+        인덱스에 해당하는 포트 탭 위젯 반환
+
+        Args:
+            index (int): 탭 인덱스
+
+        Returns:
+            QWidget: 포트 패널 위젯
+        """
+        return self.left_section.port_tabs.widget(index)
+
+    def log_system_message(self, message: str, level: str = "INFO") -> None:
+        """
+        시스템 로그 기록
+
+        Args:
+            message (str): 메시지 내용
+            level (str): 로그 레벨
+        """
+        self.left_section.system_log_widget.log(message, level)
+
+    def update_status_bar_stats(self, rx_bytes: int, tx_bytes: int) -> None:
+        """상태바 통계 업데이트"""
+        self.global_status_bar.update_rx_speed(rx_bytes)
+        self.global_status_bar.update_tx_speed(tx_bytes)
+
+    def update_status_bar_time(self, time_str: str) -> None:
+        """상태바 시간 업데이트"""
+        self.global_status_bar.update_time(time_str)
+
+    def update_status_bar_port(self, port_name: str, connected: bool) -> None:
+        """상태바 포트 상태 업데이트"""
+        self.global_status_bar.update_port_status(port_name, connected)
+
+    def show_status_message(self, message: str, timeout: int = 0) -> None:
+        """상태바 메시지 표시"""
+        self.global_status_bar.show_message(message, timeout)
+
+    def manual_save_log(self) -> None:
+        """로그 저장 다이얼로그 호출"""
+        self.left_section.manual_ctrl.manual_ctrl_widget.on_save_manual_log_clicked()
+
+    def append_local_echo_data(self, data: bytes) -> None:
+        """
+        Local Echo 데이터를 현재 활성화된 포트 탭에 추가합니다.
+
+        Args:
+            data (bytes): 표시할 송신 데이터
+        """
+        self.left_section.append_data_to_current_port(data)
+
+    # --------------------------------------------------------
+    # 내부 로직 (Internal Logic)
+    # --------------------------------------------------------
 
     def init_shortcuts(self) -> None:
         """전역 단축키를 초기화합니다."""
@@ -140,7 +235,15 @@ class MainWindow(QMainWindow):
         self.shortcut_clear.activated.connect(self.shortcut_clear_requested.emit)
 
     def _apply_initial_settings(self) -> None:
-        """초기 폰트, 테마, UI 상태를 적용합니다."""
+        """
+        초기 설정 적용
+
+        Logic:
+            - 폰트 설정 복원
+            - 애플리케이션 폰트 적용
+            - 테마 적용
+            - 패널 및 스플리터 상태 복원
+        """
         # 폰트 복원
 
         # 1. 설정에서 폰트 복원
@@ -170,9 +273,14 @@ class MainWindow(QMainWindow):
 
     def _load_window_state(self) -> None:
         """
-        저장된 윈도우 상태 및 각 섹션의 데이터를 로드하여 주입합니다.
+        윈도우 및 하위 위젯 상태 복원
+
+        Logic:
+            - 윈도우 크기 및 위치 복원
+            - LeftSection 상태 복원
+            - RightSection 상태 복원
         """
-        # 1. 윈도우 지오메트리
+        # 1. 윈도우 지오메트리 복원
         width = self.settings.get(ConfigKeys.WINDOW_WIDTH, 1400)
         height = self.settings.get(ConfigKeys.WINDOW_HEIGHT, 900)
         self.resize(width, height)
@@ -200,10 +308,10 @@ class MainWindow(QMainWindow):
 
     def get_window_state(self) -> dict:
         """
-        현재 윈도우의 모든 상태를 수집하여 반환합니다.
+        현재 윈도우 상태 반환
 
         Returns:
-            dict: 윈도우 상태 딕셔너리
+            dict: 윈도우 및 하위 위젯 상태
         """
         state = {}
 
@@ -239,9 +347,8 @@ class MainWindow(QMainWindow):
         self.close_requested.emit()
         event.accept()
 
-
     def _connect_menu_signals(self) -> None:
-        """메뉴바 시그널을 슬롯에 연결합니다."""
+        """메뉴바 시그널 연결"""
         self.menu_bar.tab_new_requested.connect(self.left_section.add_new_port_tab)
         self.menu_bar.exit_requested.connect(self.close)
         self.menu_bar.theme_changed.connect(self.switch_theme)
@@ -252,26 +359,20 @@ class MainWindow(QMainWindow):
 
         self.menu_bar.port_open_requested.connect(self.left_section.open_current_port)
         self.menu_bar.tab_close_requested.connect(self.left_section.close_current_tab)
-        self.menu_bar.data_log_save_requested.connect(self.save_log)
-        self.menu_bar.data_log_save_requested.connect(self.save_log)
+        self.menu_bar.data_log_save_requested.connect(self.manual_save_log)
         self.menu_bar.toggle_right_panel_requested.connect(self.toggle_right_panel)
         self.menu_bar.file_transfer_requested.connect(self.open_file_transfer_dialog)
 
     def _connect_toolbar_signals(self) -> None:
-        """툴바 시그널을 슬롯에 연결합니다."""
+        """툴바 시그널 연결"""
         self.main_toolbar.open_requested.connect(self.left_section.open_current_port)
         self.main_toolbar.close_requested.connect(self.left_section.close_current_port)
         self.main_toolbar.clear_requested.connect(self.clear_log)
-        self.main_toolbar.data_log_save_requested.connect(self.save_log)
+        self.main_toolbar.data_log_save_requested.connect(self.manual_save_log)
         self.main_toolbar.settings_requested.connect(self.open_preferences_dialog)
 
-    def save_log(self) -> None:
-        """로그 저장 기능을 수행합니다."""
-        if hasattr(self, 'left_section'):
-            self.left_section.manual_ctrl.manual_ctrl_widget.on_save_manual_log_clicked()
-
     def clear_log(self) -> None:
-        """현재 활성화된 탭의 로그를 지웁니다."""
+        """현재 활성 탭의 로그 삭제"""
         if hasattr(self, 'left_section'):
             current_index = self.left_section.port_tabs.currentIndex()
             current_widget = self.left_section.port_tabs.widget(current_index)
@@ -280,10 +381,10 @@ class MainWindow(QMainWindow):
 
     def switch_theme(self, theme_name: str) -> None:
         """
-        애플리케이션 테마를 전환합니다.
+        테마 전환
 
         Args:
-            theme_name (str): 전환할 테마 이름 ("dark" 또는 "light").
+            theme_name (str): 테마 이름
         """
         self.theme_manager.apply_theme(QApplication.instance(), theme_name)
 
@@ -296,7 +397,7 @@ class MainWindow(QMainWindow):
             self.menu_bar.set_current_theme(theme_name)
 
         msg = f"Theme changed to {theme_name.capitalize()}"
-        self.global_status_bar.show_message(msg, 2000)
+        self.show_status_message(msg, 2000)
 
     def open_font_settings_dialog(self) -> None:
         """
@@ -321,17 +422,17 @@ class MainWindow(QMainWindow):
             prop_font = self.theme_manager.get_proportional_font()
             QApplication.instance().setFont(prop_font)
 
-            self.global_status_bar.show_message("Font settings updated", 2000)
+            self.show_status_message("Font settings updated", 2000)
 
     def open_preferences_dialog(self) -> None:
-        """설정 대화상자를 엽니다."""
+        """설정 다이얼로그 열기"""
         current_settings = self.settings.get_all_settings()
         dialog = PreferencesDialog(self, current_settings)
         dialog.settings_changed.connect(self.on_settings_change_requested)
         dialog.exec_()
 
     def open_about_dialog(self) -> None:
-        """정보 대화상자를 엽니다."""
+        """정보 다이얼로그 열기"""
         dialog = AboutDialog(self)
         dialog.exec_()
 
@@ -347,16 +448,15 @@ class MainWindow(QMainWindow):
         dialog.exec_()
 
     def on_settings_change_requested(self, settings: dict) -> None:
-        """설정 변경 요청을 Presenter로 전달합니다."""
+        """설정 변경 요청 처리"""
         self.settings_save_requested.emit(settings)
 
     def on_language_changed(self, lang_code: str) -> None:
         """
-        언어 변경 시 호출되는 슬롯입니다.
-        윈도우 제목과 메뉴 텍스트를 업데이트합니다.
+        언어 변경 핸들러
 
         Args:
-            lang_code (str): 변경된 언어 코드 (예: 'en', 'ko').
+            lang_code (str): 언어 코드
         """
         self.setWindowTitle(f"{lang_manager.get_text('main_title')} v1.0")
 
@@ -370,7 +470,7 @@ class MainWindow(QMainWindow):
         self.settings.set(ConfigKeys.LANGUAGE, lang_code)
 
     def toggle_right_panel(self, visible: bool) -> None:
-        """우측 패널의 가시성을 토글합니다."""
+        """우측 패널 가시성 토글"""
         if visible == self.right_section.isVisible():
             return
 

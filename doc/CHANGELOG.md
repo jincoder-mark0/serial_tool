@@ -44,6 +44,39 @@
 
 ---
 
+### Presenter 계층 구조화 및 Strict MVP 리팩토링 (2025-12-12)
+
+#### 추가 사항 (Added)
+
+- **신규 Presenter 도입**
+  - **`ManualControlPresenter`**: 수동 명령어 전송, Prefix/Suffix 처리, Hex 변환 로직을 전담
+  - **`PacketPresenter`**: 패킷 데이터의 포맷팅(Timestamp, Hex/ASCII 변환) 및 설정 적용 로직 전담
+  - **`FilePresenter`**: 파일 전송 진행률, 속도(Speed), 잔여 시간(ETA) 계산 로직 전담
+
+- **View 인터페이스 강화 (Passive View)**
+  - **Interface Methods**: Presenter가 View의 내부 위젯에 직접 접근하지 않도록 공개 메서드(`set_connected`, `append_local_echo_data`, `update_progress`) 구현
+  - **Signal Bubbling**: 하위 위젯(`ManualCtrlWidget`)의 이벤트를 패널(`ManualCtrlPanel`)과 섹션(`MainLeftSection`)을 거쳐 최상위(`MainWindow`)로 전달하는 구조 구현
+
+#### 변경 사항 (Changed)
+
+- **MainPresenter 대규모 리팩토링**
+  - View 내부 계층(`view.left_section.manual_ctrl...`)에 대한 직접 접근 코드를 전면 제거
+  - `ManualControl`, `Packet`, `File` 관련 로직을 각 전담 Presenter로 이관하여 코드 비대화 해소
+  - `EventRouter`와 `MainWindow`의 공개 인터페이스만을 사용하여 로직 조율
+
+- **Strict MVP 원칙 적용**
+  - **PortPresenter**: `connect_btn` 등 위젯 직접 제어를 제거하고 시그널 구독 및 상태 변경 요청 방식으로 전환
+  - **FileTransferDialog**: 내부의 계산 로직을 모두 제거하고, Presenter가 전달하는 데이터만 표시하는 수동적인 뷰로 전환
+  - **Local Echo**: `MainPresenter` 내 하드코딩된 로직을 제거하고, View 인터페이스(Callback)를 통해 유연하게 처리
+
+#### 이점 (Benefits)
+
+- **결합도 감소**: Presenter가 View의 구체적인 구현(위젯 계층 구조)을 알 필요가 없어져 유지보수성 향상 (디미터 법칙 준수)
+- **책임 분리 명확화**: 각 Presenter가 특정 도메인 로직만 담당하여 단일 책임 원칙(SRP) 강화
+- **테스트 용이성 증대**: View의 로직이 제거되고 Presenter로 이동함에 따라, UI 없이 비즈니스 로직에 대한 단위 테스트 가능
+
+---
+
 ### 코드 문서화 강화 (2025-12-12)
 
 #### 추가 사항 (Added)
