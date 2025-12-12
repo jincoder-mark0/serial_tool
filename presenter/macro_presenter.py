@@ -20,7 +20,7 @@
 * 캡슐화를 위해 Model의 메서드 호출 (시그널 직접 발생 금지)
 """
 from PyQt5.QtCore import QObject
-from typing import List, Dict, Any
+from typing import List
 
 from view.panels.macro_panel import MacroPanel
 from model.macro_runner import MacroRunner

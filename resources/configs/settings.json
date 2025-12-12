@@ -8,7 +8,7 @@
     "proportional_font_size": 9,
     "fixed_font_family": "Consolas",
     "fixed_font_size": 9,
-    "right_panel_visible": true,
+    "right_panel_visible": false,
     "cmd_prefix": "",
     "cmd_suffix": "",
     "port_baudrate": 200,

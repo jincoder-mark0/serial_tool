@@ -8,6 +8,7 @@
 * 버퍼 오버플로우 방지
 * 패킷 단위 처리로 데이터 무결성 보장
 * 확장 가능한 파서 아키텍처
+* 매크로의 Expect 기능 지원 (패턴 매칭)
 
 ## WHAT
 * IPacketParser 인터페이스 정의
@@ -26,7 +27,7 @@
 * Factory 패턴으로 파서 생성
 """
 from abc import ABC, abstractmethod
-from typing import List, Optional, Any
+from typing import List, Optional
 from dataclasses import dataclass
 import time
 import re
@@ -117,7 +118,7 @@ class ATParser(IPacketParser):
 
         # 버퍼 크기 제한 (메모리 보호)
         if len(self._buffer) > self._max_buffer_size:
-            # 오래된 데이터 버림 (또는 에러 처리)
+            # 오래된 데이터 버림
             self._buffer = self._buffer[-self._max_buffer_size:]
 
         packets = []
@@ -240,12 +241,14 @@ class ExpectMatcher:
         Args:
             pattern: 매칭할 패턴 (문자열 또는 정규식)
             is_regex: 정규식 사용 여부
-            max_buffer_size: 최대 버퍼 크기
+            max_buffer_size: 최대 버퍼 크기 (기본 1MB)
         """
         self.pattern = pattern
         self.is_regex = is_regex
         self.max_buffer_size = max_buffer_size
         self._buffer = b""
+        self._regex = None
+        self._target_bytes = b""
 
         if is_regex:
             try:
@@ -264,7 +267,7 @@ class ExpectMatcher:
 
         Logic:
             - 새 데이터를 버퍼에 추가
-            - 버퍼 크기 제한 확인
+            - 버퍼 크기 제한 확인 (오래된 데이터 삭제)
             - 정규식 또는 리터럴 매칭 수행
 
         Args:
@@ -279,7 +282,8 @@ class ExpectMatcher:
         if len(self._buffer) > self.max_buffer_size:
             self._buffer = self._buffer[-self.max_buffer_size:]
 
-        if self.is_regex:
+        if self.is_regex and self._regex:
+            # search는 부분 매칭도 허용
             if self._regex.search(self._buffer):
                 return True
         else:

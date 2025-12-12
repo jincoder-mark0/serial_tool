@@ -1,7 +1,7 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QFileDialog, QMessageBox
 from PyQt5.QtCore import pyqtSignal
 import commentjson
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 
 from view.widgets.macro_list import MacroListWidget
 from view.widgets.macro_ctrl import MacroCtrlWidget

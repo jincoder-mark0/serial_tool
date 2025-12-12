@@ -1,5 +1,5 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any
 from view.managers.lang_manager import lang_manager
 
 from view.panels.port_panel import PortPanel

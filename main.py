@@ -14,7 +14,6 @@ SerialTool 애플리케이션 진입점
 * ResourcePath 초기화
 * MainWindow 및 MainPresenter 생성
 * 전역 에러 핸들러 설치
-* High DPI 지원 설정
 
 ## HOW
 * sys.path 조정으로 모듈 import 경로 설정
@@ -71,6 +70,8 @@ def main() -> None:
         - 이벤트 루프 시작
     """
     setup_logging()
+
+    # 전역 에러 핸들러 설치
     install_global_error_handler()
     logging.info(f"Starting Serial Tool v{__version__}")
 

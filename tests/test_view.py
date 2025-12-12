@@ -368,7 +368,7 @@ class ViewTestWindow(QMainWindow):
 
         dlg = PreferencesDialog(self, self.settings.get_all_settings())
         if dlg.exec_():
-            logger.info("Preferences Saved")
+            print("Preferences Saved")
             # 실제로는 여기서 설정을 저장하고 적용해야 함
 
     def open_about(self) -> None:

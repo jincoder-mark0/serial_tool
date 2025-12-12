@@ -21,6 +21,7 @@ from view.managers.theme_manager import ThemeManager
 from view.managers.lang_manager import lang_manager, LangManager
 from view.managers.color_manager import ColorManager
 from core.settings_manager import SettingsManager
+from constants import ConfigKeys
 
 class MainWindow(QMainWindow):
     """
@@ -31,6 +32,8 @@ class MainWindow(QMainWindow):
 
     close_requested = pyqtSignal()
     settings_save_requested = pyqtSignal(dict)
+
+    font_settings_changed = pyqtSignal(dict)
 
     # 단축키 시그널
     shortcut_connect_requested = pyqtSignal()
@@ -61,7 +64,7 @@ class MainWindow(QMainWindow):
             ColorManager(resource_path)
 
         # 초기 언어 설정
-        lang = self.settings.get('settings.language', 'en')
+        lang = self.settings.get(ConfigKeys.LANGUAGE, 'en')
         lang_manager.set_language(lang)
         lang_manager.language_changed.connect(self.on_language_changed)
 
@@ -149,16 +152,16 @@ class MainWindow(QMainWindow):
         QApplication.instance().setFont(prop_font)
 
         # 3. 설정에서 테마 적용 (폰트 스타일을 포함한 QSS 적용)
-        theme = self.settings.get('settings.theme', 'dark')
+        theme = self.settings.get(ConfigKeys.THEME, 'dark')
         self.switch_theme(theme)
 
         # 4. 설정에서 오른쪽 패널 표시 복원
-        right_panel_visible = self.settings.get('settings.right_panel_visible', True)
+        right_panel_visible = self.settings.get(ConfigKeys.RIGHT_PANEL_VISIBLE, True)
         self.menu_bar.set_right_panel_checked(right_panel_visible)
         self.right_section.setVisible(right_panel_visible)
 
         # 5. 설정에서 스플리터 상태 복원
-        splitter_state = self.settings.get('ui.splitter_state')
+        splitter_state = self.settings.get(ConfigKeys.SPLITTER_STATE)
         if splitter_state:
             self.splitter.restoreState(QByteArray.fromBase64(splitter_state.encode()))
         else:
@@ -170,27 +173,27 @@ class MainWindow(QMainWindow):
         저장된 윈도우 상태 및 각 섹션의 데이터를 로드하여 주입합니다.
         """
         # 1. 윈도우 지오메트리
-        width = self.settings.get('ui.window_width', 1400)
-        height = self.settings.get('ui.window_height', 900)
+        width = self.settings.get(ConfigKeys.WINDOW_WIDTH, 1400)
+        height = self.settings.get(ConfigKeys.WINDOW_HEIGHT, 900)
         self.resize(width, height)
 
-        x = self.settings.get('ui.window_x')
-        y = self.settings.get('ui.window_y')
+        x = self.settings.get(ConfigKeys.WINDOW_X)
+        y = self.settings.get(ConfigKeys.WINDOW_Y)
         if x is not None and y is not None:
             self.move(x, y)
 
         # 2. Left Section 상태 복원 (설정 파일 구조에 맞춰 데이터 매핑)
         left_section_state = {
-            "manual_ctrl": self.settings.get("manual_ctrl", {}),
-            "ports": self.settings.get("ports.tabs", [])
+            "manual_ctrl": self.settings.get(ConfigKeys.MANUAL_CTRL_STATE, {}),
+            "ports": self.settings.get(ConfigKeys.PORTS_TABS_STATE, [])
         }
         self.left_section.load_state(left_section_state)
 
         # 3. Right Section 상태 복원
         right_section_state = {
             "macro_panel": {
-                "commands": self.settings.get("macro_list.commands", []),
-                "control_state": self.settings.get("macro_list.control_state", {})
+                "commands": self.settings.get(ConfigKeys.MACRO_COMMANDS, []),
+                "control_state": self.settings.get(ConfigKeys.MACRO_CONTROL_STATE, {})
             }
         }
         self.right_section.load_state(right_section_state)
@@ -205,26 +208,26 @@ class MainWindow(QMainWindow):
         state = {}
 
         # 1. 윈도우 기본 설정
-        state['ui.window_width'] = self.width()
-        state['ui.window_height'] = self.height()
-        state['ui.window_x'] = self.x()
-        state['ui.window_y'] = self.y()
-        state['ui.splitter_state'] = self.splitter.saveState().toBase64().data().decode()
-        state['settings.right_panel_visible'] = self.right_section.isVisible()
+        state[ConfigKeys.WINDOW_WIDTH] = self.width()
+        state[ConfigKeys.WINDOW_HEIGHT] = self.height()
+        state[ConfigKeys.WINDOW_X] = self.x()
+        state[ConfigKeys.WINDOW_Y] = self.y()
+        state[ConfigKeys.SPLITTER_STATE] = self.splitter.saveState().toBase64().data().decode()
+        state[ConfigKeys.RIGHT_PANEL_VISIBLE] = self.right_section.isVisible()
 
         # 2. Left Section 상태
         left_state = self.left_section.save_state()
         if 'manual_ctrl' in left_state:
-            state['manual_ctrl'] = left_state['manual_ctrl']
+            state[ConfigKeys.MANUAL_CTRL_STATE] = left_state['manual_ctrl']
         if 'ports' in left_state:
-            state['ports.tabs'] = left_state['ports']
+            state[ConfigKeys.PORTS_TABS_STATE] = left_state['ports']
 
         # 3. Right Section 상태
         right_state = self.right_section.save_state()
         if 'macro_panel' in right_state:
             macro_data = right_state['macro_panel']
-            state['macro_list.commands'] = macro_data.get('commands', [])
-            state['macro_list.control_state'] = macro_data.get('control_state', {})
+            state[ConfigKeys.MACRO_COMMANDS] = macro_data.get('commands', [])
+            state[ConfigKeys.MACRO_CONTROL_STATE] = macro_data.get('control_state', {})
 
         return state
 
@@ -249,8 +252,8 @@ class MainWindow(QMainWindow):
 
         self.menu_bar.port_open_requested.connect(self.left_section.open_current_port)
         self.menu_bar.tab_close_requested.connect(self.left_section.close_current_tab)
-        self.menu_bar.log_save_requested.connect(self.save_log)
-        self.menu_bar.log_save_requested.connect(self.save_log)
+        self.menu_bar.data_log_save_requested.connect(self.save_log)
+        self.menu_bar.data_log_save_requested.connect(self.save_log)
         self.menu_bar.toggle_right_panel_requested.connect(self.toggle_right_panel)
         self.menu_bar.file_transfer_requested.connect(self.open_file_transfer_dialog)
 
@@ -259,7 +262,7 @@ class MainWindow(QMainWindow):
         self.main_toolbar.open_requested.connect(self.left_section.open_current_port)
         self.main_toolbar.close_requested.connect(self.left_section.close_current_port)
         self.main_toolbar.clear_requested.connect(self.clear_log)
-        self.main_toolbar.log_save_requested.connect(self.save_log)
+        self.main_toolbar.data_log_save_requested.connect(self.save_log)
         self.main_toolbar.settings_requested.connect(self.open_preferences_dialog)
 
     def save_log(self) -> None:
@@ -286,7 +289,7 @@ class MainWindow(QMainWindow):
 
         # 테마 설정을 저장
         if hasattr(self, 'settings'):
-            self.settings.set('settings.theme', theme_name)
+            self.settings.set(ConfigKeys.THEME, theme_name)
 
         # 메뉴바의 테마 체크 표시 업데이트
         if hasattr(self, 'menu_bar'):
@@ -296,15 +299,25 @@ class MainWindow(QMainWindow):
         self.global_status_bar.show_message(msg, 2000)
 
     def open_font_settings_dialog(self) -> None:
-        """폰트 설정 대화상자를 엽니다."""
+        """
+        폰트 설정 대화상자를 엽니다.
+
+        Logic:
+            - FontSettingsDialog 실행
+            - 다이얼로그에서 변경된 내용(ThemeManager 상태)을 가져옴
+            - Presenter에 저장 요청 (font_settings_changed 시그널 emit)
+            - UI 업데이트
+        """
         dialog = FontSettingsDialog(self.theme_manager, self)
         if dialog.exec_():
-            # 폰트 설정 저장
+            # 폰트 설정 가져오기 (ThemeManager는 이미 다이얼로그에 의해 업데이트됨)
             font_settings = self.theme_manager.get_font_settings()
-            for key, value in font_settings.items():
-                self.settings.set(f'settings.{key}', value)
 
-            # 애플리케이션에 가변폭 폰트 적용
+            # Presenter로 변경 사항 전달 (저장 요청)
+            # MVP: View는 데이터를 전달만 하고 저장은 Presenter가 담당
+            self.font_settings_changed.emit(font_settings)
+
+            # 애플리케이션에 가변폭 폰트 적용 (UI 즉시 반영)
             prop_font = self.theme_manager.get_proportional_font()
             QApplication.instance().setFont(prop_font)
 
@@ -327,10 +340,10 @@ class MainWindow(QMainWindow):
         # 모달리스(Modeless) 다이얼로그로 열어서 메인 윈도우 조작 가능하게 함 (선택 사항)
         # 여기서는 Modal로 열되, Presenter가 제어할 수 있도록 함
         dialog = FileTransferDialog(self)
-        
+
         # Presenter에 다이얼로그 인스턴스 전달하여 로직 연결
         self.file_transfer_dialog_opened.emit(dialog)
-        
+
         dialog.exec_()
 
     def on_settings_change_requested(self, settings: dict) -> None:
@@ -354,7 +367,7 @@ class MainWindow(QMainWindow):
         self.menu_bar.retranslate_ui()
 
         # 설정에 언어 저장
-        self.settings.set('settings.language', lang_code)
+        self.settings.set(ConfigKeys.LANGUAGE, lang_code)
 
     def toggle_right_panel(self, visible: bool) -> None:
         """우측 패널의 가시성을 토글합니다."""

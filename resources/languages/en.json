@@ -70,7 +70,7 @@
     "main_menu_new_tab_tooltip": "Create new tab",
     "main_menu_open_port": "Open Port",
     "main_menu_preferences": "Preferences",
-    "main_menu_save_log": "Save Log",
+    "main_menu_save_data_log": "Save Log",
     "main_menu_theme": "Theme",
     "main_menu_theme_dark": "Dark",
     "main_menu_theme_light": "Light",
@@ -180,7 +180,7 @@
     "rx_btn_clear": "Clear",
     "rx_btn_clear_tooltip": "Clear received log",
     "rx_btn_save": "Save",
-    "rx_btn_save_tooltip": "Save log to file",
+    "rx_btn_stoggle_data_log_tooltip": "Save log to file",
     "rx_btn_search_next_tooltip": "Find next",
     "rx_btn_search_prev_tooltip": "Find previous",
     "rx_chk_filter": "Filter",
@@ -208,6 +208,6 @@
     "toolbar_btn_clear": "Clear",
     "toolbar_btn_close": "Close",
     "toolbar_btn_open": "Open",
-    "toolbar_btn_save_log": "Save Log",
+    "toolbar_btn_save_data_log": "Save Log",
     "toolbar_btn_settings": "Settings"
 }

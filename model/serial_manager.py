@@ -21,7 +21,7 @@ PortController 인스턴스의 중앙 레지스트리 역할을 수행합니다.
 * PyQt Signal로 포트 추가/제거 이벤트 발행
 * Lazy initialization으로 필요 시 Controller 생성
 """
-from typing import Dict, List, Optional
+from typing import Dict, List
 from PyQt5.QtCore import QObject, pyqtSignal, QMutex, QMutexLocker
 from model.port_controller import PortController
 

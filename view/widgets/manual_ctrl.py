@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QCheckBox,
-    QLabel, QFileDialog, QGroupBox, QGridLayout, QPlainTextEdit
+    QGridLayout, QPlainTextEdit
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QKeyEvent
@@ -16,7 +16,6 @@ class ManualCtrlWidget(QWidget):
     """
 
     # 시그널 정의
-    manual_cmd_send_requested = pyqtSignal(str, bool, bool, bool, bool) # text, hex_mode, cmd_prefix, cmd_suffix, local_echo
     manual_cmd_send_requested = pyqtSignal(str, bool, bool, bool, bool) # text, hex_mode, cmd_prefix, cmd_suffix, local_echo
 
     # 접두사/접미사 상수 (CommandControl과 동일)

@@ -21,11 +21,10 @@
 * QDateTime으로 경과 시간 및 속도 계산
 * PortController를 통한 데이터 전송
 """
-from PyQt5.QtCore import QObject, QTimer, QDateTime
+from PyQt5.QtCore import QObject, QDateTime, QThreadPool
 from model.port_controller import PortController
 from model.file_transfer import FileTransferEngine
 from core.logger import logger
-import os
 
 class FilePresenter(QObject):
     """
@@ -62,7 +61,7 @@ class FilePresenter(QObject):
 
         Logic:
             - 포트 열림 상태 확인
-            - Baudrate 설정 로드
+            - Baudrate 및 Flow Control 설정 로드
             - FileTransferEngine 생성 및 Signal 연결
             - QThreadPool에서 비동기 실행
             - 전송 시작 시간 기록
@@ -78,18 +77,24 @@ class FilePresenter(QObject):
 
         port_name = self.port_controller.current_port_name
         if not port_name:
-             if self.current_dialog:
+            if self.current_dialog:
                 self.current_dialog.set_complete(False, "No active port")
-             return
+            return
 
-        # Baudrate 가져오기 (SettingsManager 사용)
-        from core.settings_manager import SettingsManager
-        settings = SettingsManager()
-        baudrate = settings.get('settings.port_baudrate', 115200)
+        # Baudrate 및 FlowControl 가져오기 (PortController에서 조회)
+        port_config = self.port_controller.get_port_config(port_name)
+        baudrate = port_config.get('baudrate', 115200)
+        flow_control = port_config.get('flowctrl', 'None')
 
         try:
-            # Engine 생성 및 시작
-            self.current_engine = FileTransferEngine(self.port_controller, port_name, filepath, baudrate)
+            # Engine 생성 및 시작 (Flow Control 정보 전달)
+            self.current_engine = FileTransferEngine(
+                self.port_controller,
+                port_name,
+                filepath,
+                baudrate,
+                flow_control
+            )
 
             # Signal 연결
             self.current_engine.signals.progress_updated.connect(self._on_progress)
@@ -97,10 +102,9 @@ class FilePresenter(QObject):
             self.current_engine.signals.error_occurred.connect(self._on_error)
 
             # QThreadPool에서 실행 (QRunnable)
-            from PyQt5.QtCore import QThreadPool
             QThreadPool.globalInstance().start(self.current_engine)
 
-            logger.info(f"File transfer started: {filepath}")
+            logger.info(f"File transfer started: {filepath} (Flow: {flow_control})")
 
         except Exception as e:
             logger.error(f"Failed to start file transfer: {e}")
@@ -179,7 +183,8 @@ class FilePresenter(QObject):
         if hasattr(self, '_transfer_start_time'):
             del self._transfer_start_time
 
-    def _on_error(self, msg: str) -> None:
+    @staticmethod
+    def _on_error(msg: str) -> None:
         """
         에러 처리
 

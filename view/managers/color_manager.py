@@ -14,6 +14,8 @@ try:
 except ImportError:
     import json
 
+from core.logger import logger
+
 # 상수 임포트 (하드코딩 제거)
 from constants import (
     LOG_COLOR_SUCCESS,
@@ -141,22 +143,19 @@ class ColorManager:
 
     def remove_rule(self, name: str) -> None:
         """
-        사용자 정의 색상 규칙을 추가합니다.
+        사용자 정의 색상 규칙을 삭제합니다.
 
         Args:
             name (str): 규칙 이름.
-            pattern (str): 매칭 패턴 (정규식 또는 일반 문자열).
-            color (str): HTML 색상 코드 (예: '#FF0000').
-            is_regex (bool, optional): 정규식 패턴 여부. 기본값은 True.
         """
         self.rules = [r for r in self.rules if r.name != name]
 
     def toggle_rule(self, name: str) -> None:
         """
-        현재 규칙들을 JSON 파일로 저장합니다.
+        사용자 정의 색상 규칙을 토글합니다.
 
         Args:
-            filepath (str): 저장할 파일 경로.
+            name (str): 규칙 이름.
         """
         for rule in self.rules:
             if rule.name == name:
@@ -164,7 +163,12 @@ class ColorManager:
                 break
 
     def save_to_json(self, filepath: str) -> None:
-        """현재 규칙들을 JSON 파일로 저장합니다."""
+        """
+        현재 규칙들을 JSON 파일로 저장합니다.
+
+        Args:
+            filepath (str): 읽을 파일 경로.
+        """
         rules_data = [
             {
                 'name': r.name,
