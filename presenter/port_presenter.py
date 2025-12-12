@@ -10,7 +10,7 @@
 * 단축키 기능 제공
 
 ## WHAT
-* PortSettingsWidget(View)와 PortController(Model) 연결
+* PortSettingsWidget(View)와 ConnectionController(Model) 연결
 * 포트 스캔 및 목록 업데이트
 * 연결/해제 토글 처리
 * 포트 상태별 UI 업데이트
@@ -18,7 +18,7 @@
 
 ## HOW
 * MainLeftSection의 포트 탭 관리
-* PortController Signal을 View 업데이트로 변환
+* ConnectionController Signal을 View 업데이트로 변환
 * 현재 활성 탭 추적 및 설정 적용
 * QMessageBox로 에러 알림
 * 시스템 로그에 이벤트 기록
@@ -28,7 +28,7 @@ from PyQt5.QtWidgets import QMessageBox
 import serial.tools.list_ports
 
 from view.sections.main_left_section import MainLeftSection
-from model.port_controller import PortController
+from model.connection_controller import ConnectionController
 from core.settings_manager import SettingsManager
 from core.logger import logger
 from constants import ConfigKeys
@@ -37,19 +37,19 @@ class PortPresenter(QObject):
     """
     포트 설정 및 제어 Presenter
 
-    PortSettingsWidget(View)와 PortController(Model)를 연결합니다.
+    PortSettingsWidget(View)와 ConnectionController(Model)를 연결합니다.
     """
-    def __init__(self, left_panel: MainLeftSection, port_controller: PortController) -> None:
+    def __init__(self, left_panel: MainLeftSection, connection_controller: ConnectionController) -> None:
         """
         PortPresenter 초기화
 
         Args:
             left_panel: 좌측 패널 (포트 탭 및 설정 포함)
-            port_controller: 포트 제어기 Model
+            connection_controller: 포트 제어기 Model
         """
         super().__init__()
         self.left_panel = left_panel
-        self.port_controller = port_controller
+        self.connection_controller = connection_controller
 
         # 현재 활성 포트 패널 가져오기
         self.current_port_panel = None
@@ -76,9 +76,9 @@ class PortPresenter(QObject):
         self.left_panel.port_tabs.currentChanged.connect(self.update_current_port_panel)
 
         # Model Signal 연결
-        self.port_controller.port_opened.connect(self.on_port_opened)
-        self.port_controller.port_closed.connect(self.on_port_closed)
-        self.port_controller.error_occurred.connect(self.on_error)
+        self.connection_controller.connection_opened.connect(self.on_port_opened)
+        self.connection_controller.connection_closed.connect(self.on_port_closed)
+        self.connection_controller.error_occurred.connect(self.on_error)
 
     def _connect_tab_signals(self, widget) -> None:
         """
@@ -137,7 +137,7 @@ class PortPresenter(QObject):
         Args:
             config: 포트 설정 딕셔너리
         """
-        self.port_controller.open_port(config)
+        self.connection_controller.open_connection(config)
 
     def handle_close_request(self) -> None:
         """
@@ -157,7 +157,7 @@ class PortPresenter(QObject):
             config = sender.get_current_config()
             port_name = config.get('port')
             if port_name:
-                self.port_controller.close_port(port_name)
+                self.connection_controller.close_connection(port_name)
 
     def on_port_opened(self, port_name: str) -> None:
         """
@@ -236,8 +236,8 @@ class PortPresenter(QObject):
         if self.current_port_panel:
             config = self.current_port_panel.port_settings_widget.get_current_config()
             port_name = config.get('port')
-            if port_name and not self.port_controller.is_port_open(port_name):
-                self.port_controller.open_port(config)
+            if port_name and not self.connection_controller.is_connection_open(port_name):
+                self.connection_controller.open_connection(config)
             elif not port_name:
                 logger.warning("No port selected")
 
@@ -246,8 +246,8 @@ class PortPresenter(QObject):
         self.update_current_port_panel()
         if self.current_port_panel:
             port_name = self.current_port_panel.get_port_name()
-            if port_name and self.port_controller.is_port_open(port_name):
-                self.port_controller.close_port(port_name)
+            if port_name and self.connection_controller.is_connection_open(port_name):
+                self.connection_controller.close_connection(port_name)
 
     def clear_log_current_port(self) -> None:
         """현재 포트의 로그 지우기 (단축키용)"""

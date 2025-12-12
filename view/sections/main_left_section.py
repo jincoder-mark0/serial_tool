@@ -180,14 +180,14 @@ class MainLeftSection(QWidget):
         상태 데이터 복원
 
         Logic:
-            - ManualControl 상태 복원
+            - ManualCtrl 상태 복원
             - 기존 탭 제거 (초기화)
             - 저장된 포트 상태만큼 탭 생성 및 복원
 
         Args:
             state (Dict[str, Any]): 복원할 상태 데이터
         """
-        # 1. ManualControl 상태 복원
+        # 1. ManualCtrl 상태 복원
         manual_state = state.get("manual_ctrl", {})
         if manual_state:
             self.manual_ctrl.load_state(manual_state)
@@ -222,7 +222,7 @@ class MainLeftSection(QWidget):
 
         Logic:
             - 시그널 발생원이 현재 활성 탭인지 확인
-            - 활성 탭일 경우 ManualControl 활성화 상태 동기화
+            - 활성 탭일 경우 ManualCtrl 활성화 상태 동기화
 
         Args:
             connected (bool): 연결 여부
@@ -235,5 +235,5 @@ class MainLeftSection(QWidget):
             current_widget = self.port_tabs.widget(current_index)
             if current_widget and hasattr(current_widget, 'port_settings_widget'):
                 if current_widget.port_settings_widget == sender_widget:
-                    # 현재 탭의 변경이면 ManualControl 업데이트
+                    # 현재 탭의 변경이면 ManualCtrl 업데이트
                     self.manual_ctrl.set_controls_enabled(connected)

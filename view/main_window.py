@@ -15,7 +15,7 @@
 
 ## HOW
 * QMainWindow 상속
-* Strict MVP 패턴을 위한 시그널 노출
+* MVP 패턴을 위한 시그널 노출
 * SettingsManager를 통한 상태 복원
 """
 from PyQt5.QtWidgets import (
@@ -300,7 +300,7 @@ class MainWindow(QMainWindow):
         # 3. Right Section 상태 복원
         right_section_state = {
             "macro_panel": {
-                "commands": self.settings.get(ConfigKeys.MACRO_COMMANDS, []),
+                "cmds": self.settings.get(ConfigKeys.MACRO_COMMANDS, []),
                 "control_state": self.settings.get(ConfigKeys.MACRO_CONTROL_STATE, {})
             }
         }
@@ -334,7 +334,7 @@ class MainWindow(QMainWindow):
         right_state = self.right_section.save_state()
         if 'macro_panel' in right_state:
             macro_data = right_state['macro_panel']
-            state[ConfigKeys.MACRO_COMMANDS] = macro_data.get('commands', [])
+            state[ConfigKeys.MACRO_COMMANDS] = macro_data.get('cmds', [])
             state[ConfigKeys.MACRO_CONTROL_STATE] = macro_data.get('control_state', {})
 
         return state

@@ -128,7 +128,7 @@ class MacroPresenter(QObject):
             if i in indices:
                 entry = MacroEntry(
                     enabled=raw['enabled'],
-                    command=raw['command'],
+                    cmd=raw['cmd'],
                     is_hex=raw['hex_mode'],
                     prefix=raw['prefix'],
                     suffix=raw['suffix'],
@@ -164,7 +164,7 @@ class MacroPresenter(QObject):
             raw = raw_list[row_index]
             # 일관성을 위해 Runner의 유틸리티 메서드를 사용하여 전송 요청
             self.runner.request_single_send(
-                raw['command'], raw['hex_mode'], raw['prefix'], raw['suffix']
+                raw['cmd'], raw['hex_mode'], raw['prefix'], raw['suffix']
             )
 
     def on_step_started(self, index: int, entry: MacroEntry) -> None:

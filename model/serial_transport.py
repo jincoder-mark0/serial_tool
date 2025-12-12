@@ -1,34 +1,33 @@
 """
 시리얼 전송 계층 모듈
 
-ITransport 인터페이스의 구체적인 구현체를 제공합니다.
+DeviceTransport 인터페이스의 구체적인 구현체를 제공합니다.
 
 ## WHY
-* 하드웨어 독립성 (ITransport 추상화)
-* PySerial 라이브러리 캡슐화
-* 에러 처리 및 안전한 I/O
-* 다양한 통신 설정 지원
+* 하드웨어 독립성 (DeviceTransport 추상화) 확보
+* PySerial 라이브러리 캡슐화로 상위 계층 의존성 제거
+* 에러 처리 및 안전한 I/O 보장
+* 다양한 통신 설정(Baudrate, Parity 등) 지원
 
 ## WHAT
 * PySerial 기반 시리얼 통신 구현
 * Non-blocking I/O 지원
-* 흐름 제어 (RTS/CTS) 지원
-* DTR/RTS 제어 신호 관리
-* 에러 처리 및 복구
+* 흐름 제어 (RTS/CTS) 설정
+* DTR/RTS 하드웨어 제어 신호 관리
+* 연결 예외 처리
 
 ## HOW
-* ITransport 인터페이스 구현
-* serial.Serial 객체 래핑
+* DeviceTransport 인터페이스 구현
+* serial.Serial 객체 래핑 및 위임
 * 설정 Dictionary로 유연한 파라미터 전달
-* Exception 처리로 안정성 보장
 """
 import serial
 from typing import Dict, Any, Optional
-from core.interfaces import ITransport
+from core.device_transport import DeviceTransport
 
-class SerialTransport(ITransport):
+class SerialTransport(DeviceTransport):
     """
-    PySerial 기반 ITransport 구현체
+    PySerial 기반 DeviceTransport 구현체
 
     시리얼 포트 통신을 위한 구체적인 전송 계층 구현입니다.
     """
@@ -38,9 +37,9 @@ class SerialTransport(ITransport):
         SerialTransport 초기화
 
         Args:
-            port: 포트 이름 (예: 'COM1', '/dev/ttyUSB0')
-            baudrate: 통신 속도
-            config: 추가 설정 (bytesize, parity, stopbits, flowctrl 등)
+            port (str): 포트 이름 (예: 'COM1', '/dev/ttyUSB0')
+            baudrate (int): 통신 속도
+            config (Optional[Dict[str, Any]]): 추가 설정 (bytesize, parity, stopbits, flowctrl 등)
         """
         self.port = port
         self.baudrate = baudrate
@@ -89,13 +88,18 @@ class SerialTransport(ITransport):
             raise e
 
     def close(self) -> None:
-        """시리얼 포트 닫기"""
+        """시리얼 포트 닫기 및 리소스 해제"""
         if self._serial and self._serial.is_open:
             self._serial.close()
         self._serial = None
 
     def is_open(self) -> bool:
-        """포트 열림 상태 확인"""
+        """
+        포트 열림 상태 확인
+
+        Returns:
+            bool: 포트가 열려있으면 True
+        """
         return self._serial is not None and self._serial.is_open
 
     def read(self, size: int) -> bytes:
@@ -103,7 +107,7 @@ class SerialTransport(ITransport):
         데이터 읽기
 
         Args:
-            size: 읽을 최대 바이트 수
+            size (int): 읽을 최대 바이트 수
 
         Returns:
             bytes: 읽은 데이터 (에러 시 빈 bytes)
@@ -123,7 +127,7 @@ class SerialTransport(ITransport):
         데이터 쓰기
 
         Args:
-            data: 전송할 바이트 데이터
+            data (bytes): 전송할 바이트 데이터
 
         Raises:
             serial.SerialException: 전송 실패 시
@@ -139,7 +143,7 @@ class SerialTransport(ITransport):
     @property
     def in_waiting(self) -> int:
         """
-        수신 버퍼에 대기 중인 바이트 수
+        수신 버퍼에 대기 중인 바이트 수 반환
 
         Returns:
             int: 대기 중인 바이트 수 (에러 시 0)
@@ -154,11 +158,21 @@ class SerialTransport(ITransport):
         return 0
 
     def set_dtr(self, state: bool) -> None:
-        """DTR(Data Terminal Ready) 신호 설정"""
+        """
+        DTR(Data Terminal Ready) 신호 설정
+
+        Args:
+            state (bool): True=ON, False=OFF
+        """
         if self.is_open():
             self._serial.dtr = state
 
     def set_rts(self, state: bool) -> None:
-        """RTS(Request To Send) 신호 설정"""
+        """
+        RTS(Request To Send) 신호 설정
+
+        Args:
+            state (bool): True=ON, False=OFF
+        """
         if self.is_open():
             self._serial.rts = state

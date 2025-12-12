@@ -6,11 +6,11 @@
 ## WHY
 * 패킷 데이터의 포맷팅 및 가공 로직을 View에서 분리
 * Model 이벤트(packet_received)와 View 업데이트 연결
-* 사용자 설정(설정값) 반영
+* 사용자 설정(설정값) 반영 및 Clear 동작 처리
 
 ## WHAT
-* 패킷 수신 이벤트 처리
-* 데이터 포맷팅 (Timestamp, Hex, ASCII)
+* 패킷 수신 이벤트 처리 및 데이터 포맷팅
+* View의 Clear 요청 처리
 * 설정값(Buffer Size, Autoscroll) 로드 및 적용
 
 ## HOW
@@ -28,7 +28,8 @@ class PacketPresenter(QObject):
     """
     패킷 인스펙터 제어 Presenter
 
-    Model로부터 수신된 패킷 데이터를 가공하여 View에 표시하도록 지시합니다.
+    Model로부터 수신된 패킷 데이터를 가공하여 View에 표시하고,
+    View의 사용자 요청(Clear)을 처리합니다.
     """
 
     def __init__(self, view: PacketInspectorPanel, event_router: EventRouter) -> None:
@@ -48,6 +49,9 @@ class PacketPresenter(QObject):
 
         # 이벤트 구독
         self.event_router.packet_received.connect(self.on_packet_received)
+
+        # View 시그널 연결 (Clear 버튼)
+        self.view.clear_requested.connect(self.on_clear_requested)
 
         # 초기 설정 적용
         self.apply_settings()
@@ -77,7 +81,7 @@ class PacketPresenter(QObject):
 
         Args:
             port_name (str): 포트 이름
-            packet (Packet): 수신된 패킷 객체 (model.packet_parser.Packet)
+            packet (Packet): 수신된 패킷 객체
         """
         # 실시간 추적 옵션 확인
         realtime = self.settings_manager.get(ConfigKeys.INSPECTOR_REALTIME, True)
@@ -107,5 +111,10 @@ class PacketPresenter(QObject):
         self.view.add_packet_to_view(time_str, packet_type, data_hex, data_ascii)
 
     def on_clear_requested(self) -> None:
-        """로그 지우기 요청 처리"""
+        """
+        로그 지우기 요청 처리
+
+        Logic:
+            - View의 clear_view 메서드 호출
+        """
         self.view.clear_view()

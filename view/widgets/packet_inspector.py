@@ -15,7 +15,7 @@
 
 ## HOW
 * QTreeWidget에 QTreeWidgetItem 추가
-* Strict MVP 준수를 위해 로직 없이 UI 조작 메서드만 제공
+* MVP 준수를 위해 로직 없이 UI 조작 메서드만 제공
 """
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QTreeWidget, QTreeWidgetItem
 from PyQt5.QtCore import Qt

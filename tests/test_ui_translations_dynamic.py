@@ -175,9 +175,9 @@ def test_dynamic_language_switching(app, qtbot):
                 assert current_text == expected_text, \
                     f"[{lang_code}] Text mismatch for key '{key}'. Got: '{current_text}', Expected: '{expected_text}'"
 
-def test_manual_control_placeholder_translation(app, qtbot):
+def test_manual_ctrl_placeholder_translation(app, qtbot):
     """
-    ManualControlWidget의 입력창 Placeholder 텍스트 번역을 테스트합니다.
+    ManualCtrlWidget의 입력창 Placeholder 텍스트 번역을 테스트합니다.
     QSmartTextEdit 커스텀 위젯을 사용하므로 별도 검증합니다.
     """
     widget = app.left_section.manual_ctrl.manual_ctrl_widget.manual_cmd_txt

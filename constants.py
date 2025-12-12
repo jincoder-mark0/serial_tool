@@ -43,7 +43,7 @@ class ConfigKeys:
     # Port Defaults
     PORT_BAUDRATE = "settings.port_baudrate"
     PORT_NEWLINE = "settings.port_newline"
-    PORT_LOCALECHO = "settings.port_localecho"
+    PORT_LOCAL_ECHO = "settings.port_local_echo"
     PORT_SCAN_INTERVAL = "settings.port_scan_interval"
 
     # UI State
@@ -80,7 +80,7 @@ class ConfigKeys:
     # Persistence (State Saving)
     MANUAL_CTRL_STATE = "manual_ctrl"
     PORTS_TABS_STATE = "ports.tabs"
-    MACRO_COMMANDS = "macro_list.commands"
+    MACRO_COMMANDS = "macro_list.cmds"
     MACRO_CONTROL_STATE = "macro_list.control_state"
 
 

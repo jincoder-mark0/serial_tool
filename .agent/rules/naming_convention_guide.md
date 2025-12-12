@@ -321,7 +321,7 @@ PyQt5 위젯 변수명은 **`[기능]_[위젯약어]`** 형식을 사용합니�
 
 | 타입 | 접미사 | 예시 |
 |------|--------|------|
-| 독립 위젯 | `Widget` | `PortSettingsWidget`, `ManualControlWidget` |
+| 독립 위젯 | `Widget` | `PortSettingsWidget`, `ManualCtrlWidget` |
 | 복합 패널 | `Panel` | `PortPanel`, `MacroListPanel` |
 | 다이얼로그 | `Dialog` | `PreferencesDialog`, `AboutDialog` |
 | 레이아웃 영역 | `Section` | `LeftSection`, `RightSection` |
