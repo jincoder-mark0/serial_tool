@@ -8,14 +8,15 @@ from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Dict, Any, Optional
 import os
 from view.managers.lang_manager import lang_manager
-
 from constants import (
     VALID_BAUDRATES,
     DEFAULT_LOG_MAX_LINES,
     MIN_SCAN_INTERVAL_MS,
     MAX_SCAN_INTERVAL_MS,
-    MAX_PACKET_SIZE
+    MAX_PACKET_SIZE,
+    ConfigKeys
 )
+
 class PreferencesDialog(QDialog):
     """
     설정 관리 대화상자
@@ -352,50 +353,50 @@ class PreferencesDialog(QDialog):
     def load_settings(self) -> None:
         """현재 설정을 UI에 반영합니다."""
         # General
-        theme = self._get_setting("settings.theme", "Dark").capitalize()
+        theme = self._get_setting(ConfigKeys.THEME, "Dark").capitalize()
         self.theme_combo.setCurrentText(theme)
 
-        lang_code = self._get_setting("settings.language", "en")
+        lang_code = self._get_setting(ConfigKeys.LANGUAGE, "en")
         index = self.language_combo.findData(lang_code)
         if index != -1:
             self.language_combo.setCurrentIndex(index)
 
-        self.proportional_font_size_spin.setValue(self._get_setting("settings.proportional_font_size", 10))
-        self.max_lines_spin.setValue(self._get_setting("settings.rx_max_lines", DEFAULT_LOG_MAX_LINES))
+        self.proportional_font_size_spin.setValue(self._get_setting(ConfigKeys.PROP_FONT_SIZE, 10))
+        self.max_lines_spin.setValue(self._get_setting(ConfigKeys.RX_MAX_LINES, DEFAULT_LOG_MAX_LINES))
 
         # Serial
-        self.port_baudrate_combo.setCurrentText(str(self._get_setting("settings.port_baudrate", 115200)))
-        self.port_newline_combo.setCurrentText(str(self._get_setting("settings.port_newline", "\n")))
-        self.port_localecho_chk.setChecked(self._get_setting("settings.port_localecho", False))
-        self.port_scan_interval_spin.setValue(self._get_setting("settings.port_scan_interval", 5000))
+        self.port_baudrate_combo.setCurrentText(str(self._get_setting(ConfigKeys.PORT_BAUDRATE, 115200)))
+        self.port_newline_combo.setCurrentText(str(self._get_setting(ConfigKeys.PORT_NEWLINE, "\n")))
+        self.port_localecho_chk.setChecked(self._get_setting(ConfigKeys.PORT_LOCALECHO, False))
+        self.port_scan_interval_spin.setValue(self._get_setting(ConfigKeys.PORT_SCAN_INTERVAL, 5000))
 
         # Command
-        self.prefix_combo.setCurrentText(self._get_setting("settings.cmd_prefix", ""))
-        self.suffix_combo.setCurrentText(self._get_setting("settings.cmd_suffix", ""))
+        self.prefix_combo.setCurrentText(self._get_setting(ConfigKeys.CMD_PREFIX, ""))
+        self.suffix_combo.setCurrentText(self._get_setting(ConfigKeys.CMD_SUFFIX, ""))
 
         # Packet
-        parser_type = self._get_setting("packet.parser_type", 0)
+        parser_type = self._get_setting(ConfigKeys.PACKET_PARSER_TYPE, 0)
         btn = self.parser_type_button_group.button(parser_type)
         if btn:
             btn.setChecked(True)
 
-        delimiters = self._get_setting("packet.delimiters", ["\\r\\n"])
+        delimiters = self._get_setting(ConfigKeys.PACKET_DELIMITERS, ["\\r\\n"])
         self.delimiter_list.clear()
         self.delimiter_list.addItems(delimiters)
 
-        self.packet_length_spin.setValue(self._get_setting("packet.packet_length", 64))
+        self.packet_length_spin.setValue(self._get_setting(ConfigKeys.PACKET_LENGTH, 64))
 
-        self.at_color_ok_chk.setChecked(self._get_setting("packet.at_color_ok", True))
-        self.at_color_error_chk.setChecked(self._get_setting("packet.at_color_error", True))
-        self.at_color_urc_chk.setChecked(self._get_setting("packet.at_color_urc", True))
-        self.at_color_prompt_chk.setChecked(self._get_setting("packet.at_color_prompt", True))
+        self.at_color_ok_chk.setChecked(self._get_setting(ConfigKeys.AT_COLOR_OK, True))
+        self.at_color_error_chk.setChecked(self._get_setting(ConfigKeys.AT_COLOR_ERROR, True))
+        self.at_color_urc_chk.setChecked(self._get_setting(ConfigKeys.AT_COLOR_URC, True))
+        self.at_color_prompt_chk.setChecked(self._get_setting(ConfigKeys.AT_COLOR_PROMPT, True))
 
-        self.buffer_size_spin.setValue(self._get_setting("inspector.buffer_size", 100))
-        self.realtime_tracking_chk.setChecked(self._get_setting("inspector.realtime", True))
-        self.auto_scroll_chk.setChecked(self._get_setting("inspector.autoscroll", True))
+        self.buffer_size_spin.setValue(self._get_setting(ConfigKeys.INSPECTOR_BUFFER_SIZE, 100))
+        self.realtime_tracking_chk.setChecked(self._get_setting(ConfigKeys.INSPECTOR_REALTIME, True))
+        self.auto_scroll_chk.setChecked(self._get_setting(ConfigKeys.INSPECTOR_AUTOSCROLL, True))
 
         # Logging
-        self.log_path_edit.setText(self._get_setting("logging.path", os.getcwd()))
+        self.log_path_edit.setText(self._get_setting(ConfigKeys.LOG_PATH, os.getcwd()))
 
     def apply_settings(self) -> None:
         """변경된 설정을 수집하여 시그널을 발생시킵니다."""

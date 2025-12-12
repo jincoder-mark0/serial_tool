@@ -31,6 +31,7 @@ from view.sections.main_left_section import MainLeftSection
 from model.port_controller import PortController
 from core.settings_manager import SettingsManager
 from core.logger import logger
+from constants import ConfigKeys
 
 class PortPresenter(QObject):
     """
@@ -57,7 +58,7 @@ class PortPresenter(QObject):
 
         # 설정에서 max_lines 읽어서 적용
         settings = SettingsManager()
-        max_lines = settings.get('settings.rx_max_lines', 2000)
+        max_lines = settings.get(ConfigKeys.RX_MAX_LINES, 2000)
         if self.current_port_panel and hasattr(self.current_port_panel, 'received_area_widget'):
             self.current_port_panel.received_area_widget.set_max_lines(max_lines)
 

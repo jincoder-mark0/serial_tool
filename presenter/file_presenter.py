@@ -21,11 +21,10 @@
 * QDateTime으로 경과 시간 및 속도 계산
 * PortController를 통한 데이터 전송
 """
-from PyQt5.QtCore import QObject, QTimer, QDateTime
+from PyQt5.QtCore import QObject, QDateTime, QThreadPool
 from model.port_controller import PortController
 from model.file_transfer import FileTransferEngine
 from core.logger import logger
-import os
 
 class FilePresenter(QObject):
     """
@@ -78,9 +77,9 @@ class FilePresenter(QObject):
 
         port_name = self.port_controller.current_port_name
         if not port_name:
-             if self.current_dialog:
+            if self.current_dialog:
                 self.current_dialog.set_complete(False, "No active port")
-             return
+            return
 
         # Baudrate 및 FlowControl 가져오기 (PortController에서 조회)
         port_config = self.port_controller.get_port_config(port_name)
@@ -103,7 +102,6 @@ class FilePresenter(QObject):
             self.current_engine.signals.error_occurred.connect(self._on_error)
 
             # QThreadPool에서 실행 (QRunnable)
-            from PyQt5.QtCore import QThreadPool
             QThreadPool.globalInstance().start(self.current_engine)
 
             logger.info(f"File transfer started: {filepath} (Flow: {flow_control})")

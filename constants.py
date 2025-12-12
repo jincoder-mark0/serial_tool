@@ -15,6 +15,7 @@
 * UI 제한값 및 기본값 (Log Lines, Scan Interval)
 * 타이밍 상수 (Worker Sleep, UI Refresh)
 * 로그 색상 정의
+* [New] ConfigKeys: 설정 키 상수 모음
 
 ## HOW
 * 대문자 Snake Case로 상수 명명
@@ -24,6 +25,64 @@
 """
 
 from typing import List
+
+# ==========================================
+# Configuration Keys (설정 키 상수)
+# ==========================================
+class ConfigKeys:
+    """settings.json의 키 경로를 관리하는 상수 클래스입니다."""
+
+    # Global / Settings
+    THEME = "settings.theme"
+    LANGUAGE = "settings.language"
+    FONT_SIZE = "settings.proportional_font_size"
+    RX_MAX_LINES = "settings.rx_max_lines"
+    CMD_PREFIX = "settings.cmd_prefix"
+    CMD_SUFFIX = "settings.cmd_suffix"
+
+    # Port Defaults
+    PORT_BAUDRATE = "settings.port_baudrate"
+    PORT_NEWLINE = "settings.port_newline"
+    PORT_LOCALECHO = "settings.port_localecho"
+    PORT_SCAN_INTERVAL = "settings.port_scan_interval"
+
+    # UI State
+    WINDOW_WIDTH = "ui.window_width"
+    WINDOW_HEIGHT = "ui.window_height"
+    WINDOW_X = "ui.window_x"
+    WINDOW_Y = "ui.window_y"
+    SPLITTER_STATE = "ui.splitter_state"
+    RIGHT_PANEL_VISIBLE = "settings.right_panel_visible"
+
+    # Fonts (ThemeManager uses these)
+    PROP_FONT_FAMILY = "ui.proportional_font_family"
+    PROP_FONT_SIZE = "ui.proportional_font_size"
+    FIXED_FONT_FAMILY = "ui.fixed_font_family"
+    FIXED_FONT_SIZE = "ui.fixed_font_size"
+
+    # Packet Inspector
+    PACKET_PARSER_TYPE = "packet.parser_type"
+    PACKET_DELIMITERS = "packet.delimiters"
+    PACKET_LENGTH = "packet.packet_length"
+    AT_COLOR_OK = "packet.at_color_ok"
+    AT_COLOR_ERROR = "packet.at_color_error"
+    AT_COLOR_URC = "packet.at_color_urc"
+    AT_COLOR_PROMPT = "packet.at_color_prompt"
+
+    # Inspector Options
+    INSPECTOR_BUFFER_SIZE = "inspector.buffer_size"
+    INSPECTOR_REALTIME = "inspector.realtime"
+    INSPECTOR_AUTOSCROLL = "inspector.autoscroll"
+
+    # Logging
+    LOG_PATH = "logging.path"
+
+    # Persistence (State Saving)
+    MANUAL_CTRL_STATE = "manual_ctrl"
+    PORTS_TABS_STATE = "ports.tabs"
+    MACRO_COMMANDS = "macro_list.commands"
+    MACRO_CONTROL_STATE = "macro_list.control_state"
+
 
 # ==========================================
 # Serial Communication Constants

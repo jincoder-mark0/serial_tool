@@ -37,6 +37,7 @@ from core.settings_manager import SettingsManager
 from core.log_recorder import log_recorder_manager
 from view.managers.lang_manager import lang_manager
 from core.logger import logger
+from constants import ConfigKeys
 
 class MainPresenter(QObject):
     """
@@ -130,24 +131,24 @@ class MainPresenter(QObject):
 
         # 2. 설정 저장
         # 2.1 윈도우 기본 설정
-        settings_manager.set('ui.window_width', state.get('ui.window_width'))
-        settings_manager.set('ui.window_height', state.get('ui.window_height'))
-        settings_manager.set('ui.window_x', state.get('ui.window_x'))
-        settings_manager.set('ui.window_y', state.get('ui.window_y'))
-        settings_manager.set('ui.splitter_state', state.get('ui.splitter_state'))
-        settings_manager.set('settings.right_panel_visible', state.get('settings.right_panel_visible'))
+        settings_manager.set(ConfigKeys.WINDOW_WIDTH, state.get(ConfigKeys.WINDOW_WIDTH))
+        settings_manager.set(ConfigKeys.WINDOW_HEIGHT, state.get(ConfigKeys.WINDOW_HEIGHT))
+        settings_manager.set(ConfigKeys.WINDOW_X, state.get(ConfigKeys.WINDOW_X))
+        settings_manager.set(ConfigKeys.WINDOW_Y, state.get(ConfigKeys.WINDOW_Y))
+        settings_manager.set(ConfigKeys.SPLITTER_STATE, state.get(ConfigKeys.SPLITTER_STATE))
+        settings_manager.set(ConfigKeys.RIGHT_PANEL_VISIBLE, state.get(ConfigKeys.RIGHT_PANEL_VISIBLE))
 
         # 2.2 Left Section 상태
-        if 'manual_ctrl' in state:
-            settings_manager.set('manual_ctrl', state['manual_ctrl'])
-        if 'ports.tabs' in state:
-            settings_manager.set('ports.tabs', state['ports.tabs'])
+        if ConfigKeys.MANUAL_CTRL_STATE in state:
+            settings_manager.set(ConfigKeys.MANUAL_CTRL_STATE, state[ConfigKeys.MANUAL_CTRL_STATE])
+        if ConfigKeys.PORTS_TABS_STATE in state:
+            settings_manager.set(ConfigKeys.PORTS_TABS_STATE, state[ConfigKeys.PORTS_TABS_STATE])
 
         # 2.3 Right Section 상태
-        if 'macro_list.commands' in state:
-            settings_manager.set('macro_list.commands', state['macro_list.commands'])
-        if 'macro_list.control_state' in state:
-            settings_manager.set('macro_list.control_state', state['macro_list.control_state'])
+        if ConfigKeys.MACRO_COMMANDS in state:
+            settings_manager.set(ConfigKeys.MACRO_COMMANDS, state[ConfigKeys.MACRO_COMMANDS])
+        if ConfigKeys.MACRO_CONTROL_STATE in state:
+            settings_manager.set(ConfigKeys.MACRO_CONTROL_STATE, state[ConfigKeys.MACRO_CONTROL_STATE])
 
         # 3. 파일 쓰기
         settings_manager.save_settings()
@@ -207,12 +208,12 @@ class MainPresenter(QObject):
 
         # Apply prefix if requested
         if cmd_prefix:
-            prefix = settings.get("settings.cmd_prefix", "")
+            prefix = settings.get(ConfigKeys.CMD_PREFIX, "")
             final_text = prefix + final_text
 
         # Apply suffix if requested
         if cmd_suffix:
-            suffix = settings.get("settings.cmd_suffix", "")
+            suffix = settings.get(ConfigKeys.CMD_SUFFIX, "")
             final_text = final_text + suffix
 
         # Convert to bytes
@@ -264,31 +265,31 @@ class MainPresenter(QObject):
 
         # 설정 키 매핑
         settings_map = {
-            'theme': 'settings.theme',
-            'language': 'settings.language',
-            'proportional_font_size': 'settings.proportional_font_size',
-            'max_log_lines': 'settings.rx_max_lines',
-            'cmd_prefix': 'settings.cmd_prefix',
-            'cmd_suffix': 'settings.cmd_suffix',
-            'port_baudrate': 'settings.port_baudrate',
-            'port_newline': 'settings.port_newline',
-            'port_localecho': 'settings.port_localecho',
-            'port_scan_interval': 'settings.port_scan_interval',
-            'log_path': 'logging.path',
+            'theme': ConfigKeys.THEME,
+            'language': ConfigKeys.LANGUAGE,
+            'proportional_font_size': ConfigKeys.PROP_FONT_SIZE,
+            'max_log_lines': ConfigKeys.RX_MAX_LINES,
+            'cmd_prefix': ConfigKeys.CMD_PREFIX,
+            'cmd_suffix': ConfigKeys.CMD_SUFFIX,
+            'port_baudrate': ConfigKeys.PORT_BAUDRATE,
+            'port_newline': ConfigKeys.PORT_NEWLINE,
+            'port_localecho': ConfigKeys.PORT_LOCALECHO,
+            'port_scan_interval': ConfigKeys.PORT_SCAN_INTERVAL,
+            'log_path': ConfigKeys.LOG_PATH,
 
             # Packet Settings
-            'parser_type': 'packet.parser_type',
-            'delimiters': 'packet.delimiters',
-            'packet_length': 'packet.packet_length',
-            'at_color_ok': 'packet.at_color_ok',
-            'at_color_error': 'packet.at_color_error',
-            'at_color_urc': 'packet.at_color_urc',
-            'at_color_prompt': 'packet.at_color_prompt',
+            'parser_type': ConfigKeys.PACKET_PARSER_TYPE,
+            'delimiters': ConfigKeys.PACKET_DELIMITERS,
+            'packet_length': ConfigKeys.PACKET_LENGTH,
+            'at_color_ok': ConfigKeys.AT_COLOR_OK,
+            'at_color_error': ConfigKeys.AT_COLOR_ERROR,
+            'at_color_urc': ConfigKeys.AT_COLOR_URC,
+            'at_color_prompt': ConfigKeys.AT_COLOR_PROMPT,
 
             # Inspector Settings
-            'inspector_buffer_size': 'inspector.buffer_size',
-            'inspector_realtime': 'inspector.realtime',
-            'inspector_autoscroll': 'inspector.autoscroll',
+            'inspector_buffer_size': ConfigKeys.INSPECTOR_BUFFER_SIZE,
+            'inspector_realtime': ConfigKeys.INSPECTOR_REALTIME,
+            'inspector_autoscroll': ConfigKeys.INSPECTOR_AUTOSCROLL,
         }
 
         # 데이터 변환 및 저장
