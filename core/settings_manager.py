@@ -1,7 +1,27 @@
 """
-설정 관리자 (Settings Manager)
-애플리케이션 설정을 로드하고 저장합니다.
-AppConfig를 통해 경로를 관리하며, 싱글톤 패턴을 따릅니다.
+설정 관리자 모듈
+
+애플리케이션 설정을 로드하고 저장하는 중앙 관리 시스템입니다.
+
+## WHY
+* 사용자 설정의 영속화 (앱 재시작 후에도 유지)
+* 설정 파일 손상 시 자동 복구 (Fallback)
+* 점(.) 표기법으로 중첩된 설정 접근 편의성 제공
+* 싱글톤 패턴으로 전역 일관성 보장
+
+## WHAT
+* JSON 기반 설정 파일 관리
+* 점(.) 표기법 설정 접근 (예: 'ui.theme')
+* 기본값(Fallback) 자동 생성
+* ResourcePath를 통한 동적 경로 관리
+* 주석 지원 JSON (commentjson) 파싱
+
+## HOW
+* 싱글톤 패턴으로 전역 인스턴스 제공
+* commentjson으로 주석 포함 JSON 파싱
+* 재귀적 딕셔너리 병합으로 설정 통합
+* 파일 로드 실패 시 Fallback 설정 자동 생성
+* ResourcePath로 개발/배포 환경 경로 자동 처리
 """
 try:
     import commentjson as json
@@ -11,6 +31,7 @@ from pathlib import Path
 from typing import Dict, Any
 from constants import DEFAULT_BAUDRATE, DEFAULT_LOG_MAX_LINES
 from core.logger import logger
+import os
 
 class SettingsManager:
     """
@@ -64,7 +85,6 @@ class SettingsManager:
             return SettingsManager._resource_path.settings_file
         else:
             # 하위 호환성: AppConfig가 없으면 기존 방식 사용
-            import os
             if hasattr(os, '_MEIPASS'):
                 # PyInstaller 번들 환경
                 base_path = Path(os._MEIPASS)

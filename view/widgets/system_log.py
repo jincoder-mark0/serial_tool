@@ -3,8 +3,7 @@ from typing import Optional
 import datetime
 from view.managers.lang_manager import lang_manager
 from view.custom_qt.smart_list_view import QSmartListView
-
-
+from view.managers.color_manager import color_manager
 
 class SystemLogWidget(QWidget):
     """
@@ -74,7 +73,6 @@ class SystemLogWidget(QWidget):
 
         # 3. 색상 규칙 적용 (ColorManager 활용)
         # ColorManager에 SYS_INFO, TIMESTAMP 등의 규칙이 정의되어 있어야 함
-        from view.managers.color_manager import color_manager
         full_text = color_manager.apply_rules(full_text)
 
         # 4. 뷰에 추가

@@ -1,7 +1,24 @@
+"""
+UI 번역 테스트
+
+언어 파일(en.json, ko.json)의 내용을 기반으로 UI 위젯의 번역이 올바르게 적용되는지 검증합니다.
+하드코딩된 값 대신 실제 언어 파일을 참조하여 테스트합니다.
+
+pytest tests\test_ui_translations.py -v
+"""
 import sys
 import os
+
+# 부모 디렉토리를 경로에 추가 (import 전에 실행)
+current_dir = os.path.dirname(os.path.abspath(__file__))
+parent_dir = os.path.dirname(current_dir)
+sys.path.insert(0, parent_dir)
+
+import json
 import pytest
-from PyQt5.QtWidgets import QApplication
+from pathlib import Path
+from PyQt5.QtWidgets import QApplication, QWidget
+from typing import Dict, List, Tuple
 
 from view.managers.lang_manager import lang_manager
 from view.widgets.manual_ctrl import ManualCtrlWidget
@@ -13,105 +30,259 @@ from view.widgets.system_log import SystemLogWidget
 from view.sections.main_left_section import MainLeftSection
 from view.sections.main_right_section import MainRightSection
 
-# 부모 디렉토리를 경로에 추가하여 모듈 import 가능하게 함
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-sys.path.insert(0, parent_dir)
+# 언어 파일 경로
+LANG_DIR = Path(parent_dir) / "resources" / "languages"
+EN_FILE = LANG_DIR / "en.json"
+KO_FILE = LANG_DIR / "ko.json"
+
+def load_language_files() -> Tuple[Dict, Dict]:
+    """
+    언어 파일 로드
+
+    Returns:
+        Tuple[Dict, Dict]: (en_data, ko_data)
+    """
+    with open(EN_FILE, 'r', encoding='utf-8') as f:
+        en_data = json.load(f)
+
+    with open(KO_FILE, 'r', encoding='utf-8') as f:
+        ko_data = json.load(f)
+
+    return en_data, ko_data
 
 @pytest.fixture(scope="session")
 def app():
+    """QApplication 인스턴스 생성"""
     app = QApplication.instance()
     if app is None:
         app = QApplication([])
     yield app
 
-def test_manual_ctrl_translation(app, qtbot):
-    manual_ctrl_widget = ManualCtrlWidget()
-    qtbot.addWidget(manual_ctrl_widget)
+@pytest.fixture(scope="session")
+def lang_data():
+    """언어 파일 데이터 로드"""
+    return load_language_files()
 
-    # Switch to English
-    lang_manager.set_language('en')
-    assert manual_ctrl_widget.send_manual_cmd_btn.text() == "Send"
-    assert manual_ctrl_widget.hex_chk.text() == "Hex"
-    assert manual_ctrl_widget.local_echo_chk.text() == "Local Echo"
+def get_widget_text(widget, attr_name: str) -> str:
+    """
+    위젯의 텍스트 또는 툴팁 가져오기
 
-    # Switch to Korean
-    lang_manager.set_language('ko')
-    assert manual_ctrl_widget.send_manual_cmd_btn.text() == "전송"
-    assert manual_ctrl_widget.hex_chk.text() == "Hex"
-    assert manual_ctrl_widget.local_echo_chk.text() == "로컬 에코"
+    Args:
+        widget: PyQt5 위젯
+        attr_name: 속성 이름
 
-def test_macro_list_translation(app, qtbot):
-    macro_list_widget = MacroListWidget()
-    qtbot.addWidget(macro_list_widget)
+    Returns:
+        str: 텍스트 또는 툴팁
+    """
+    if not hasattr(widget, attr_name):
+        return None
 
-    lang_manager.set_language('en')
-    # Check tooltips for buttons as they have no text
-    assert macro_list_widget.add_row_btn.toolTip() == "Add new command"
+    obj = getattr(widget, attr_name)
 
-    lang_manager.set_language('ko')
-    assert macro_list_widget.add_row_btn.toolTip() == "새 명령 추가"
+    # 텍스트 가져오기
+    if hasattr(obj, 'text'):
+        return obj.text()
+    elif hasattr(obj, 'toolTip'):
+        return obj.toolTip()
+    elif hasattr(obj, 'placeholderText'):
+        return obj.placeholderText()
 
-def test_received_area_translation(app, qtbot):
-    received_area_widget = RxLogWidget()
-    qtbot.addWidget(received_area_widget)
+    return None
 
-    lang_manager.set_language('en')
-    assert received_area_widget.rx_clear_log_btn.text() == "Clear"
+class TestManualCtrlWidget:
+    """ManualCtrlWidget 번역 테스트"""
 
-    lang_manager.set_language('ko')
-    assert received_area_widget.rx_clear_log_btn.text() == "지우기"
+    def test_button_translations(self, app, qtbot, lang_data):
+        """버튼 텍스트 번역 검증"""
+        en_data, ko_data = lang_data
+        widget = ManualCtrlWidget()
+        qtbot.addWidget(widget)
 
-def test_packet_inspector_translation(app, qtbot):
-    packet_inspector_widget = PacketInspectorWidget()
-    qtbot.addWidget(packet_inspector_widget)
+        # 영어
+        lang_manager.set_language('en')
+        assert widget.send_manual_cmd_btn.text() == en_data.get("manual_ctrl_btn_send", "")
 
-    lang_manager.set_language('en')
-    assert packet_inspector_widget.title_label.text() == "Packet Inspector"
+        # 한국어
+        lang_manager.set_language('ko')
+        assert widget.send_manual_cmd_btn.text() == ko_data.get("manual_ctrl_btn_send", "")
 
-    lang_manager.set_language('ko')
-    assert packet_inspector_widget.title_label.text() == "패킷 인스펙터"
+    def test_checkbox_translations(self, app, qtbot, lang_data):
+        """체크박스 텍스트 번역 검증"""
+        en_data, ko_data = lang_data
+        widget = ManualCtrlWidget()
+        qtbot.addWidget(widget)
 
-def test_file_progress_translation(app, qtbot):
-    file_progress_widget = FileProgressWidget()
-    qtbot.addWidget(file_progress_widget)
+        # 영어
+        lang_manager.set_language('en')
+        assert widget.hex_chk.text() == en_data.get("manual_ctrl_chk_hex", "")
+        assert widget.local_echo_chk.text() == en_data.get("manual_ctrl_chk_local_echo", "")
+        assert widget.prefix_chk.text() == en_data.get("manual_ctrl_chk_prefix", "")
+        assert widget.suffix_chk.text() == en_data.get("manual_ctrl_chk_suffix", "")
 
-    # Force switch to Korean first to ensure change to English triggers signal
-    lang_manager.set_language('ko')
-    lang_manager.set_language('en')
-    assert file_progress_widget.cancel_btn.text() == "Cancel"
+        # 한국어
+        lang_manager.set_language('ko')
+        assert widget.hex_chk.text() == ko_data.get("manual_ctrl_chk_hex", "")
+        assert widget.local_echo_chk.text() == ko_data.get("manual_ctrl_chk_local_echo", "")
 
-    lang_manager.set_language('ko')
-    assert file_progress_widget.cancel_btn.text() == "취소"
+class TestMacroListWidget:
+    """MacroListWidget 번역 테스트"""
 
-def test_system_log_widget_translation(app, qtbot):
-    system_log_widget = SystemLogWidget()
-    qtbot.addWidget(system_log_widget)
+    def test_button_tooltips(self, app, qtbot, lang_data):
+        """버튼 툴팁 번역 검증"""
+        en_data, ko_data = lang_data
+        widget = MacroListWidget()
+        qtbot.addWidget(widget)
 
-    lang_manager.set_language('en')
-    assert system_log_widget.system_log_title.text() == "System Log"
+        # 영어
+        lang_manager.set_language('en')
+        assert widget.add_row_btn.toolTip() == en_data.get("macro_list_btn_add_row_tooltip", "")
+        assert widget.del_row_btn.toolTip() == en_data.get("macro_list_btn_del_row_tooltip", "")
+        assert widget.up_row_btn.toolTip() == en_data.get("macro_list_btn_up_row_tooltip", "")
+        assert widget.down_row_btn.toolTip() == en_data.get("macro_list_btn_down_row_tooltip", "")
 
-    lang_manager.set_language('ko')
-    assert system_log_widget.system_log_title.text() == "시스템 로그"
+        # 한국어
+        lang_manager.set_language('ko')
+        assert widget.add_row_btn.toolTip() == ko_data.get("macro_list_btn_add_row_tooltip", "")
+        assert widget.del_row_btn.toolTip() == ko_data.get("macro_list_btn_del_row_tooltip", "")
 
-def test_left_panel_translation(app, qtbot):
-    left_panel_widget = MainLeftSection()
-    qtbot.addWidget(left_panel_widget)
+class TestRxLogWidget:
+    """RxLogWidget 번역 테스트"""
 
-    lang_manager.set_language('en')
-    assert left_panel_widget.port_tabs.toolTip() == "Port Tabs"
+    def test_button_translations(self, app, qtbot, lang_data):
+        """버튼 텍스트 번역 검증"""
+        en_data, ko_data = lang_data
+        widget = RxLogWidget()
+        qtbot.addWidget(widget)
 
-    lang_manager.set_language('ko')
-    assert left_panel_widget.port_tabs.toolTip() == "포트 탭"
+        # 영어
+        lang_manager.set_language('en')
+        assert widget.rx_clear_log_btn.text() == en_data.get("rx_btn_clear", "")
+        assert widget.rx_save_log_btn.text() == en_data.get("rx_btn_save", "")
 
-def test_right_panel_translation(app, qtbot):
-    right_panel_widget = MainRightSection()
-    qtbot.addWidget(right_panel_widget)
+        # 한국어
+        lang_manager.set_language('ko')
+        assert widget.rx_clear_log_btn.text() == ko_data.get("rx_btn_clear", "")
+        assert widget.rx_save_log_btn.text() == ko_data.get("rx_btn_save", "")
 
-    lang_manager.set_language('en')
-    assert right_panel_widget.tabs.tabText(0) == "Macro List"
-    assert right_panel_widget.tabs.tabText(1) == "Inspector"
+    def test_checkbox_translations(self, app, qtbot, lang_data):
+        """체크박스 텍스트 번역 검증"""
+        en_data, ko_data = lang_data
+        widget = RxLogWidget()
+        qtbot.addWidget(widget)
 
-    lang_manager.set_language('ko')
-    assert right_panel_widget.tabs.tabText(0) == "매크로 리스트"
-    assert right_panel_widget.tabs.tabText(1) == "인스펙터"
+        # 영어
+        lang_manager.set_language('en')
+        assert widget.rx_hex_chk.text() == en_data.get("rx_chk_hex", "")
+        assert widget.rx_timestamp_chk.text() == en_data.get("rx_chk_timestamp", "")
+        assert widget.rx_pause_chk.text() == en_data.get("rx_chk_pause", "")
+
+        # 한국어
+        lang_manager.set_language('ko')
+        assert widget.rx_hex_chk.text() == ko_data.get("rx_chk_hex", "")
+        assert widget.rx_timestamp_chk.text() == ko_data.get("rx_chk_timestamp", "")
+
+class TestPacketInspectorWidget:
+    """PacketInspectorWidget 번역 테스트"""
+
+    def test_title_translation(self, app, qtbot, lang_data):
+        """제목 텍스트 번역 검증"""
+        en_data, ko_data = lang_data
+        widget = PacketInspectorWidget()
+        qtbot.addWidget(widget)
+
+        # 영어
+        lang_manager.set_language('en')
+        assert widget.title_lbl.text() == en_data.get("inspector_grp_title", "")
+
+        # 한국어
+        lang_manager.set_language('ko')
+        assert widget.title_lbl.text() == ko_data.get("inspector_grp_title", "")
+
+class TestFileProgressWidget:
+    """FileProgressWidget 번역 테스트"""
+
+    def test_button_translation(self, app, qtbot, lang_data):
+        """버튼 텍스트 번역 검증"""
+        en_data, ko_data = lang_data
+        widget = FileProgressWidget()
+        qtbot.addWidget(widget)
+
+        # 영어
+        lang_manager.set_language('en')
+        assert widget.cancel_btn.text() == en_data.get("file_prog_btn_cancel", "")
+
+        # 한국어
+        lang_manager.set_language('ko')
+        assert widget.cancel_btn.text() == ko_data.get("file_prog_btn_cancel", "")
+
+class TestSystemLogWidget:
+    """SystemLogWidget 번역 테스트"""
+
+    def test_title_translation(self, app, qtbot, lang_data):
+        """제목 텍스트 번역 검증"""
+        en_data, ko_data = lang_data
+        widget = SystemLogWidget()
+        qtbot.addWidget(widget)
+
+        # 영어
+        lang_manager.set_language('en')
+        assert widget.system_log_title.text() == en_data.get("system_title", "")
+
+        # 한국어
+        lang_manager.set_language('ko')
+        assert widget.system_log_title.text() == ko_data.get("system_title", "")
+
+class TestMainRightSection:
+    """MainRightSection 번역 테스트"""
+
+    def test_tab_translations(self, app, qtbot, lang_data):
+        """탭 텍스트 번역 검증"""
+        en_data, ko_data = lang_data
+        widget = MainRightSection()
+        qtbot.addWidget(widget)
+
+        # 영어
+        lang_manager.set_language('en')
+        assert widget.tabs.tabText(0) == en_data.get("right_tab_macro_list", "")
+        assert widget.tabs.tabText(1) == en_data.get("right_tab_packet", "")
+
+        # 한국어
+        lang_manager.set_language('ko')
+        assert widget.tabs.tabText(0) == ko_data.get("right_tab_macro_list", "")
+        assert widget.tabs.tabText(1) == ko_data.get("right_tab_packet", "")
+
+class TestLanguageFileIntegrity:
+    """언어 파일 무결성 테스트"""
+
+    def test_language_files_exist(self):
+        """언어 파일 존재 확인"""
+        assert EN_FILE.exists(), f"English language file not found: {EN_FILE}"
+        assert KO_FILE.exists(), f"Korean language file not found: {KO_FILE}"
+
+    def test_language_files_valid_json(self, lang_data):
+        """언어 파일이 유효한 JSON인지 확인"""
+        en_data, ko_data = lang_data
+        assert isinstance(en_data, dict), "en.json should be a dictionary"
+        assert isinstance(ko_data, dict), "ko.json should be a dictionary"
+
+    def test_language_files_have_same_keys(self, lang_data):
+        """영어와 한국어 파일이 동일한 키를 가지는지 확인"""
+        en_data, ko_data = lang_data
+        en_keys = set(en_data.keys())
+        ko_keys = set(ko_data.keys())
+
+        missing_in_ko = en_keys - ko_keys
+        missing_in_en = ko_keys - en_keys
+
+        assert not missing_in_ko, f"Keys missing in ko.json: {missing_in_ko}"
+        assert not missing_in_en, f"Keys missing in en.json: {missing_in_en}"
+
+    def test_no_empty_values(self, lang_data):
+        """빈 값이 없는지 확인"""
+        en_data, ko_data = lang_data
+
+        empty_en = [k for k, v in en_data.items() if not v or not v.strip()]
+        empty_ko = [k for k, v in ko_data.items() if not v or not v.strip()]
+
+        assert not empty_en, f"Empty values in en.json: {empty_en}"
+        assert not empty_ko, f"Empty values in ko.json: {empty_ko}"

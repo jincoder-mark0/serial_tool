@@ -76,7 +76,7 @@ class RxLogWidget(QWidget):
         # 2. UI 구성 및 시그널 연결
         # ---------------------------------------------------------
         self.init_ui()
-        
+
         # QSmartListView 초기 설정
         self.rx_log_list.set_color_manager(self.color_manager)
         self.rx_log_list.set_hex_mode_enabled(self.hex_mode)
@@ -261,9 +261,9 @@ class RxLogWidget(QWidget):
                 "CR": "\r",
                 "CRLF": "\r\n"
             }.get(newline_mode, "\n")
-        
+
         self.rx_log_list.set_newline_char(newline_char)
-        
+
         # 버퍼에 추가 (bytes 그대로)
         self.ui_update_buffer.append(data)
 
@@ -317,7 +317,7 @@ class RxLogWidget(QWidget):
     def on_recording_toggled(self, checked: bool) -> None:
         """
         녹화 시작/중단 토글을 처리합니다.
-        
+
         Args:
             checked: 버튼 체크 상태 (True=녹화 시작, False=녹화 중단)
         """
@@ -333,7 +333,7 @@ class RxLogWidget(QWidget):
                 "",
                 "Binary Files (*.bin);;All Files (*)"
             )
-            
+
             if filename:
                 # 녹화 시작 시그널
                 self.recording_started.emit(filename)

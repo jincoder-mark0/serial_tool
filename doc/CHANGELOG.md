@@ -2,6 +2,153 @@
 
 ## [미배포] (Unreleased)
 
+### 코드 문서화 강화 (2025-12-12)
+
+#### 추가 사항 (Added)
+
+- **주석 가이드 준수 문서화**
+  - 25개 핵심 파일에 WHY/WHAT/HOW 섹션 추가
+  - Google Style Docstring 형식 100% 준수
+  - Logic 섹션으로 복잡한 알고리즘 설명 강화
+
+- **모듈별 문서화 완료**
+  - **Core 모듈 (3개)**: event_bus, logger, settings_manager
+  - **Model 모듈 (8개)**: macro_runner, file_transfer, port_controller, serial_manager, connection_worker, serial_transport, packet_parser, macro_entry
+  - **Presenter 모듈 (5개)**: macro_presenter, main_presenter, port_presenter, file_presenter, event_router
+  - **View 모듈 (5개)**: lang_manager, theme_manager, smart_plain_text_edit, smart_number_edit
+  - **Entry/Config/Resource (4개)**: main.py, constants.py, resource_path.py
+  - **Test 모듈 (1개)**: test_ui_translations_dynamic.py
+
+#### 변경 사항 (Changed)
+
+- **주석 간결성 개선**
+  - "~합니다" → "~" 형태로 간결화
+  - 불필요한 조사 제거
+  - 명사형 종결로 통일
+
+- **기술 용어 일관성 확보**
+  - PyQt, PySerial, pathlib 등 영어 유지
+  - Signal, Slot, Thread, Worker 등 PyQt 용어 영어 유지
+  - Singleton, MVP, Pub/Sub, Factory 등 디자인 패턴 용어 영어 유지
+
+- **Logic 섹션 추가 (17개 파일)**
+  - 복잡한 알고리즘 흐름 명확화
+  - 조건 분기 의도 설명
+  - 에러 처리 로직 문서화
+  - 버퍼 관리 및 메모리 보호 로직 설명
+
+#### 이점 (Benefits)
+
+- **가독성 향상**: 코드 의도를 명확히 전달하여 이해도 증대
+- **유지보수성 개선**: 일관된 문서화 형식으로 코드 수정 용이
+- **온보딩 효율화**: 신규 개발자가 코드베이스를 빠르게 이해 가능
+- **자동 문서화 준비**: mkdocstrings 플러그인으로 자동 문서 생성 가능
+
+---
+
+### EventBus 싱글톤 수정 및 Presenter 계층 구조화 (2025-12-12)
+
+#### 추가 사항 (Added)
+
+- **EventRouter (이벤트 라우터)**
+  - `presenter/event_router.py`: EventBus 이벤트를 PyQt 시그널로 변환하는 라우터 클래스
+  - Port Events: `port_opened`, `port_closed`, `port_error`, `data_received`
+  - Macro Events: `macro_started`, `macro_finished`, `macro_progress`
+  - File Transfer Events: `file_transfer_progress`, `file_transfer_completed`
+  - 스레드 안전한 UI 업데이트 보장
+
+- **MacroPresenter (매크로 프레젠터)**
+  - `presenter/macro_presenter.py`: MacroPanel과 MacroRunner를 연결하는 Presenter
+  - 매크로 시작/정지, 단일 명령 전송 요청 처리
+  - MacroRunner 시그널과 UI 연동
+
+- **FilePresenter (파일 전송 프레젠터)**
+  - `presenter/file_presenter.py`: 파일 전송 로직을 전담하는 Presenter
+  - FileTransferEngine 관리 및 진행률 UI 업데이트
+  - 전송 완료/에러 상태 처리
+
+- **Core Refinement 테스트**
+  - `tests/test_core_refinement.py`: ExpectMatcher 및 ParserType 상수 테스트
+  - 문자열 매칭, 정규식 매칭, 버퍼 크기 제한, 파서 팩토리 생성 테스트
+
+#### 수정 사항 (Fixed)
+
+- **EventBus 싱글톤 패턴**
+  - `core/event_bus.py`: 전역 `event_bus` 인스턴스 도입
+  - `__new__` 메서드 제거, 모듈 레벨 싱글톤으로 단순화
+  - `PortController`, `MacroRunner`, `FileTransferEngine`, `EventRouter`에서 전역 인스턴스 사용
+
+- **PortController 시그널 복구**
+  - 실수로 제거된 시그널 정의 복구
+  - `port_opened`, `port_closed`, `error_occurred`, `data_received`, `data_sent`, `packet_received`
+
+- **MacroRunner 시그널 불일치 수정**
+  - `send_requested` 시그널 (4개 인자)과 `on_manual_cmd_send_requested` (5개 인자) 불일치 해결
+  - `on_macro_cmd_send_requested` 중간 핸들러 추가
+
+- **테스트 파라미터 수정**
+  - `ExpectMatcher` 테스트: `feed()` → `match()` 메서드명 수정
+  - `ExpectMatcher` 테스트: `timeout_ms` 파라미터 제거 (구현에 없음)
+  - `ParserType` 테스트: 상수값 수정 (`"raw"` → `"Raw"` 등)
+
+#### 변경 사항 (Changed)
+
+- **MainPresenter 리팩토링**
+  - `MacroPresenter`, `FilePresenter`, `EventRouter` 초기화 추가
+  - `EventRouter` 시그널을 통한 포트 이벤트 처리로 변경
+  - 파일 전송 로직을 `FilePresenter`로 위임
+
+- **Model 계층 EventBus 통합**
+  - `PortController`: 포트 상태 변경 시 EventBus 이벤트 발행
+  - `MacroRunner`: 매크로 생명주기 이벤트 발행
+  - `FileTransferEngine`: 파일 전송 진행률/완료 이벤트 발행
+
+---
+
+### Core 및 Model 기능 강화 (2025-12-11 - 심야 세션)
+
+#### 추가 사항 (Added)
+
+- **Global Error Handler (전역 에러 핸들러)**
+  - `core/error_handler.py`: 처리되지 않은 예외(Uncaught Exception)를 포착하여 로깅하고 사용자에게 알림
+  - `sys.excepthook` 오버라이딩을 통해 구현
+  - `main.py`에 통합하여 애플리케이션 안정성 확보
+
+- **ExpectMatcher (응답 대기 매처)**
+  - `model/packet_parser.py`: 정규식(Regex) 및 문자열 리터럴 기반 매칭 클래스 구현
+  - 매크로 실행 시 특정 응답을 대기하는 기능의 기반 마련
+
+- **PacketParser 통합**
+  - `model/port_controller.py`: `PacketParser`를 통합하여 수신된 Raw 데이터를 Packet 객체로 변환
+  - `packet_received` 시그널 추가 및 `parsers` 딕셔너리를 통한 포트별 파서 관리
+  - 설정(`parser_type`, `delimiter` 등)에 따른 파서 자동 초기화
+
+- **FileTransferEngine (파일 전송 엔진)**
+  - `model/file_transfer.py`: `QRunnable` 기반의 파일 전송 엔진 구현
+  - 별도 스레드에서 실행되어 UI 블로킹 방지
+  - Baudrate 기반 적응형 청크 전송 및 진행률(Progress) 시그널링
+  - 전송 취소 기능 지원
+
+#### 개선 사항 (Refinement & Hardening)
+
+- **GlobalErrorHandler 스레드 안전성 확보**
+  - `QObject` 상속 및 시그널/슬롯 패턴 적용
+  - 워커 스레드에서 발생한 예외도 메인 UI 스레드에서 안전하게 다이얼로그 표시
+
+- **ExpectMatcher 안정성 강화**
+  - `max_buffer_size` 도입으로 메모리 무한 증가 방지 (기본 1MB)
+  - 버퍼 초과 시 오래된 데이터 자동 삭제
+
+- **PortController 캡슐화 및 확장**
+  - `send_data_to_port` 메서드 추가로 특정 포트 대상 전송 지원
+  - `FileTransferEngine`이 내부 `workers`에 직접 접근하지 않도록 개선
+
+- **PacketParser 코드 품질 개선**
+  - `ParserType` 상수 클래스 도입으로 하드코딩 문자열 제거
+  - `ParserFactory` 및 `PortController`에서 상수 사용으로 유지보수성 향상
+
+---
+
 ### UI 기능 보완 및 사용성 개선 (2025-12-11)
 
 #### 추가 사항 (Added)
@@ -130,6 +277,13 @@
   - `SystemLogWidget`의 전체 높이를 100px로 고정(리스트 높이 고정 제거)하여 우측 패널(`MacroCtrlWidget`)과의 수평 라인 정렬 유도
   - `MacroCtrlWidget`의 `execution_settings_grp` 높이를 100px로 고정하여 좌측 패널(`SystemLogWidget`)과 높이 일치
   - 좌측 패널 구성: `PortTabs(Stretch)` - `ManualCtrl` - `SystemLog(Fixed)`
+
+- **Model 계층 강화 (Phase 4)**
+  - `SerialManager`: 싱글톤 스레드 안전성 강화 (QMutex 적용) 및 포트 관리 로직 개선
+  - `ConnectionWorker`: TX 큐(`ThreadSafeQueue`) 도입으로 비동기 전송 구현, `time.monotonic()` 적용으로 타이밍 정밀도 향상
+  - `SerialTransport`: 예외 처리 강화 (연결 끊김 감지 및 에러 전파)
+  - `PacketParser`: `ATParser`, `DelimiterParser` 버퍼 크기 제한 추가 (메모리 보호), 임포트 최적화
+  - `MacroRunner`: Expect 처리 구조 마련 및 비동기 실행 로직 개선
 
 ---
 

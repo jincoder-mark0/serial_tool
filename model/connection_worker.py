@@ -1,12 +1,34 @@
 """
-통신 I/O 워커 모듈입니다.
-ITransport 인터페이스를 사용하여 하드웨어 독립적으로 동작합니다.
+연결 워커 모듈
+
+ITransport 인터페이스를 사용하여 하드웨어 독립적인 I/O 처리를 수행합니다.
+
+## WHY
+* UI Thread 블로킹 방지 (별도 Thread에서 I/O 처리)
+* 하드웨어 독립성 (ITransport 추상화 활용)
+* 효율적인 데이터 처리 (Batch 처리, Queue 기반 전송)
+* Thread-safe한 송수신 보장
+
+## WHAT
+* 별도 Thread에서 데이터 송수신
+* Batch 처리로 Signal 발행 최적화
+* Thread-safe Queue 기반 비동기 전송
+* DTR/RTS 하드웨어 제어 신호 지원
+* 연결 상태 모니터링 및 이벤트 발행
+
+## HOW
+* QThread 상속으로 별도 Thread 실행
+* ITransport로 하드웨어 추상화
+* ThreadSafeQueue로 비동기 전송 처리
+* Batch buffer로 수신 데이터 집계 후 발행
+* QMutex로 Thread-safe 상태 관리
 """
 
 import time
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QMutexLocker, QObject
 from typing import Optional
 from core.interfaces import ITransport
+from core.utils import ThreadSafeQueue
 from constants import (
     DEFAULT_READ_CHUNK_SIZE,
     BATCH_SIZE_THRESHOLD,
@@ -15,10 +37,12 @@ from constants import (
 
 class ConnectionWorker(QThread):
     """
-    ITransport 구현체를 사용하여 데이터를 송수신하는 워커 스레드입니다.
+    ITransport 기반 데이터 송수신 Worker Thread
+
+    별도 Thread에서 실행되어 UI 블로킹 없이 데이터를 처리합니다.
     """
 
-    # 시그널 정의 (범용적인 이름 사용)
+    # Signal 정의
     data_received = pyqtSignal(bytes)
     error_occurred = pyqtSignal(str)
     connection_opened = pyqtSignal(str)
@@ -26,9 +50,12 @@ class ConnectionWorker(QThread):
 
     def __init__(self, transport: ITransport, connection_name: str, parent: Optional[QObject] = None) -> None:
         """
+        ConnectionWorker 초기화
+
         Args:
-            transport: 실제 통신을 담당할 객체 (SerialTransport 등)
-            connection_name: 식별 이름 (예: 'COM1')
+            transport: ITransport 구현체 (SerialTransport 등)
+            connection_name: 연결 식별 이름 (예: 'COM1')
+            parent: 부모 QObject (선택)
         """
         super().__init__(parent)
         self.transport = transport
@@ -36,9 +63,19 @@ class ConnectionWorker(QThread):
 
         self._is_running = False
         self._mutex = QMutex()
+        self._tx_queue = ThreadSafeQueue() # 비동기 전송용 Queue
 
     def run(self) -> None:
-        """스레드 실행 루프"""
+        """
+        Thread 실행 루프
+
+        Logic:
+            - Transport 열기 및 연결 확인
+            - 수신 데이터 Batch 처리 (크기/시간 기준)
+            - 전송 Queue 처리 (비동기)
+            - CPU 부하 최소화 (sleep 조절)
+            - 에러 발생 시 안전한 종료
+        """
         try:
             # 1. Transport 열기
             if self.transport.open():
@@ -47,20 +84,21 @@ class ConnectionWorker(QThread):
 
                 self.connection_opened.emit(self.connection_name)
 
-                # 배치 처리를 위한 버퍼
+                # Batch 처리용 버퍼 및 타이머
                 batch_buffer = bytearray()
-                last_emit_time = time.time() * 1000
+                last_emit_time = time.monotonic() * 1000 # ms 단위
 
                 while self.is_running():
                     try:
-                        # 2. 데이터 읽기 (Transport 추상화 사용)
+                        # 2. 데이터 읽기 (Transport 추상화)
                         if self.transport.in_waiting > 0:
                             chunk = self.transport.read(DEFAULT_READ_CHUNK_SIZE)
                             if chunk:
                                 batch_buffer.extend(chunk)
 
-                        # 3. 배치 전송 로직
-                        current_time = time.time() * 1000
+                        # 3. Batch 전송 로직
+                        # 조건: 크기 임계값 초과 OR 시간 초과
+                        current_time = time.monotonic() * 1000
                         time_diff = current_time - last_emit_time
 
                         if len(batch_buffer) > 0:
@@ -69,8 +107,15 @@ class ConnectionWorker(QThread):
                                 batch_buffer.clear()
                                 last_emit_time = current_time
 
-                        # CPU 부하 방지
-                        if len(batch_buffer) == 0:
+                        # 4. TX Queue 처리 (비동기 전송)
+                        while not self._tx_queue.is_empty():
+                            data = self._tx_queue.dequeue()
+                            if data:
+                                self.transport.write(data)
+
+                        # 5. CPU 부하 방지
+                        # 데이터가 없으면 긴 sleep, 있으면 짧은 sleep
+                        if len(batch_buffer) == 0 and self._tx_queue.is_empty():
                             self.msleep(1)
                         else:
                             self.usleep(100)
@@ -87,16 +132,25 @@ class ConnectionWorker(QThread):
             self.close_connection()
 
     def is_running(self) -> bool:
+        """Thread 실행 상태 확인 (Thread-safe)"""
         with QMutexLocker(self._mutex):
             return self._is_running
 
     def stop(self) -> None:
+        """Thread 중지 요청 및 대기"""
         with QMutexLocker(self._mutex):
             self._is_running = False
         self.wait()
 
     def close_connection(self) -> None:
-        """연결을 닫습니다."""
+        """
+        연결 종료
+
+        Logic:
+            - Transport가 열려있으면 닫기
+            - connection_closed Signal 발행
+            - 에러 발생 시 error_occurred Signal 발행
+        """
         if self.transport.is_open():
             try:
                 self.transport.close()
@@ -105,20 +159,24 @@ class ConnectionWorker(QThread):
                 self.error_occurred.emit(f"Close Error: {str(e)}")
 
     def send_data(self, data: bytes) -> bool:
-        """데이터를 전송합니다 (Thread-safe delegate)."""
-        # 주의: write가 블로킹일 경우 별도 큐를 사용하는 것이 좋으나,
-        # 현재 구조에서는 직접 호출합니다. (pyserial write는 보통 빠름)
+        """
+        데이터 전송 (Non-blocking)
+
+        Args:
+            data: 전송할 바이트 데이터
+
+        Returns:
+            bool: Queue 추가 성공 여부
+        """
         if self.transport.is_open():
-            try:
-                self.transport.write(data)
-                return True
-            except Exception as e:
-                self.error_occurred.emit(f"Write Error: {str(e)}")
+            return self._tx_queue.enqueue(data)
         return False
 
-    # 하드웨어 제어 메서드 위임
+    # 하드웨어 제어 신호 위임
     def set_dtr(self, state: bool) -> None:
+        """DTR(Data Terminal Ready) 신호 설정"""
         self.transport.set_dtr(state)
 
     def set_rts(self, state: bool) -> None:
+        """RTS(Request To Send) 신호 설정"""
         self.transport.set_rts(state)

@@ -10,6 +10,8 @@
 
 이어서 저녁 세션에서는 **Packet Inspector 설정 UI**, **RX Newline 처리**, **Main Status Bar 동적 업데이트**, **전역 단축키** 등 Phase 2.5의 핵심 목표를 모두 달성했습니다.
 
+심야 세션에서는 **Core 및 Model 계층의 핵심 기능**을 구현하여 시스템의 완성도를 높였습니다. `GlobalErrorHandler`를 통해 애플리케이션의 안정성을 확보하고, `ExpectMatcher`와 `PacketParser` 통합을 통해 매크로 및 패킷 분석 기능을 강화했습니다. 또한 `FileTransferEngine`을 구현하여 파일 전송 기능의 기반을 마련했습니다.
+
 추가적으로 **멀티포트 지원을 위한 리팩토링**과 **전이중(Full Duplex) 레코딩** 기능을 구현했습니다. `PortController`와 `MainPresenter`를 개선하여 다중 포트 연결 및 데이터 브로드캐스팅을 지원하고, 송수신 데이터를 모두 기록할 수 있도록 했습니다. 또한 `ManualCtrlWidget`의 중복된 기능을 제거하고 UI를 정리했습니다.
 
 ## 2. 주요 변경 사항 (Key Changes)
@@ -84,6 +86,30 @@
   - `PortController.open_port` 메서드가 설정 딕셔너리(`config`)를 직접 받도록 수정하여 확장성을 확보했습니다.
   - `MainWindow`의 종료 처리 로직(설정 저장, 리소스 정리)을 `MainPresenter`로 이동했습니다.
 
+### 2.7 Core 및 Model 기능 강화 (심야 세션)
+
+- **Global Error Handler (전역 에러 핸들러)**:
+  - `core/error_handler.py`를 구현하여 처리되지 않은 예외를 포착하고 로깅 및 사용자 알림을 제공하도록 했습니다.
+  - `sys.excepthook`을 오버라이딩하여 애플리케이션의 안정성을 대폭 향상시켰습니다.
+- **ExpectMatcher (응답 대기 매처)**:
+  - `model/packet_parser.py`에 정규식 및 문자열 리터럴 매칭을 지원하는 `ExpectMatcher` 클래스를 추가했습니다.
+  - 향후 매크로 실행 시 특정 응답을 대기하는 기능(`Expect`)에 활용될 예정입니다.
+- **PacketParser 통합**:
+  - `PortController`에 `PacketParser`를 통합하여 수신된 Raw 데이터를 `Packet` 객체로 변환하고 `packet_received` 시그널을 발행하도록 개선했습니다.
+  - 포트별로 파서 인스턴스를 관리하고 설정에 따라 자동으로 초기화되도록 구현했습니다.
+- **FileTransferEngine (파일 전송 엔진)**:
+  - `model/file_transfer.py`에 `QRunnable` 기반의 파일 전송 엔진을 구현했습니다.
+  - 별도 스레드에서 실행되어 UI 블로킹 없이 파일을 전송하며, Baudrate에 따른 적응형 청크 전송과 취소 기능을 지원합니다.
+
+### 2.8 재점검 및 보완 (Refinement & Hardening)
+
+- **스레드 안전성 및 메모리 보호**:
+  - `GlobalErrorHandler`를 리팩토링하여 UI 업데이트의 스레드 안전성을 확보했습니다.
+  - `ExpectMatcher`에 버퍼 크기 제한을 두어 메모리 누수를 방지했습니다.
+- **코드 품질 및 캡슐화**:
+  - `PortController`에 `send_data_to_port`를 추가하여 캡슐화를 강화했습니다.
+  - `PacketParser`에 상수를 도입하여 하드코딩을 제거했습니다.
+
 ### 2.6 버그 수정 (Bug Fixes)
 
 - **RxLogWidget**: 존재하지 않는 `add_logs_batch` 메서드 호출을 `append_batch`로 수정하여 대량 로그 처리 시 발생할 수 있는 오류를 해결했습니다.
@@ -109,7 +135,10 @@
   - `presenter/main_presenter.py`: 상태바 업데이트, 단축키 처리, 종료 로직, Local Echo, 멀티포트 브로드캐스트, 전이중 레코딩
   - `presenter/port_presenter.py`: 설정 조회 로직 변경, 에러 핸들링 개선, 멀티포트 지원
 - **Model/Core**:
-  - `model/port_controller.py`: data_sent 시그널, open_port 리팩토링, 멀티포트 Worker 관리
+  - `model/port_controller.py`: data_sent 시그널, open_port 리팩토링, 멀티포트 Worker 관리, PacketParser 통합
+  - `model/packet_parser.py`: ExpectMatcher 추가
+  - `model/file_transfer.py`: 신규 생성 (FileTransferEngine)
+  - `core/error_handler.py`: 신규 생성 (GlobalErrorHandler)
   - `core/utils.py`: RingBuffer 최적화
   - `resource_path.py`: 신규 생성 (경로 관리)
   - `paths.py`: ResourcePath로 대체
@@ -122,6 +151,10 @@
 
 ## 4. 향후 계획 (Next Steps)
 
-- **Phase 3: 고급 기능 구현 (진행 예정)**
-  - **MacroRunner**: 매크로 실행 로직 및 상태 머신 구현
-  - **PacketInspector**: 패킷 파싱 로직 및 트리 뷰 연동
+- **Phase 3: 고급 기능 구현 (완료)**
+  - Core 유틸리티 및 에러 핸들링 구현 완료
+- **Phase 4: Model 계층 (진행 중)**
+  - MacroRunner와 UI 연동
+  - PacketInspector와 PortController 연동
+- **Phase 6: 자동화 및 고급 기능 (진행 중)**
+  - FileTransferEngine과 UI 연동 (`FilePresenter`)

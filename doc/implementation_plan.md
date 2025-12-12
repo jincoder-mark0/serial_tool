@@ -181,7 +181,7 @@ serial_tool2/
 - **Loader**: `importlib` 기반 동적 로딩 (`plugins/` 디렉토리 스캔)
 - **EventBus Integration**: `register(bus, context)` 필수 구현
 
-#### [진행 필요] `core/error_handler.py`
+#### [진행 예정] `core/error_handler.py`
 
 **전역 에러 핸들러 (Global Error Handler)**
 
@@ -201,19 +201,7 @@ serial_tool2/
 - **ITransport**: 통신 인터페이스 정의 (`open`, `close`, `read`, `write`)
 - **SerialTransport**: PySerial을 래핑하여 ITransport 구현
 
-#### [진행 필요] `model/packet_parser.py`
-
-**패킷 파서 시스템**
-
-- **IPacketParser**: 파싱 인터페이스 (`parse(buffer) -> List[Packet]`)
-- **Implementations**:
-  - `ATParser`: `\r\n` 구분 및 OK/ERROR 응답 처리
-  - `RawParser`: 바이너리 데이터를 그대로 패스
-  - `DelimiterParser`, `FixedLengthParser`, `HexParser` 추가
-- **ParserFactory**: 설정(`AT`, `Hex` 등)에 따라 적절한 파서 인스턴스 생성 (전략 패턴)
-- **Performance**: 1ms 이하 파싱 지연 목표
-
-#### [진행 필요] `model/connection_worker.py`
+#### [완료] `model/connection_worker.py`
 
 - **ConnectionWorker**:
 - **Non-blocking I/O**: `timeout=0` + 반복 읽기 최적화
@@ -228,7 +216,7 @@ serial_tool2/
 - TX 큐 지연: 10ms 이하
 - CPU 사용률: 단일 포트 기준 5% 이하
 
-#### [진행 필요] `model/port_controller.py`
+#### [완료] `model/port_controller.py`
 
 **포트 라이프사이클 관리**
 
@@ -247,19 +235,32 @@ serial_tool2/
 - 포트별 독립 TX 큐
 - 포트별 독립 Worker 스레드
 
-#### [진행 필요] `model/serial_manager.py`
+#### [완료] `model/serial_manager.py`
 
-**PortRegistry 구현**
+**PortRegistry 구현 (싱글톤)**
 
-- 포트 목록 관리 (최대 16개)
+- **역할**: 애플리케이션 전체의 `PortController` 인스턴스를 관리하는 중앙 레지스트리
+- **기능**:
+  - `get_port(port_name) -> PortController`: 포트 컨트롤러 조회 또는 생성
+  - `get_all_ports() -> List[PortController]`: 활성 포트 목록 반환
+  - `close_all_ports()`: 애플리케이션 종료 시 모든 포트 정리
+  - `active_ports` 속성: 현재 열려있는 포트 이름 목록 관리
 
-**Expect/Timeout 처리**
+#### [진행 예정] `model/packet_parser.py` (보완)
 
-- 정규식 기반 매칭
-- 타임아웃 설정 (기본 5초)
-- 매칭 실패 시 재시도 정책
+**패킷 파서 시스템**
 
-#### [진행 필요] `model/macro_runner.py`
+- **IPacketParser**: 파싱 인터페이스 (`parse(buffer) -> List[Packet]`)
+- **Implementations**:
+  - `ATParser`: `\r\n` 구분 및 OK/ERROR 응답 처리
+  - `RawParser`: 바이너리 데이터를 그대로 패스
+  - `DelimiterParser`: 사용자 정의 구분자(예: STX/ETX, Comma) 처리
+  - `FixedLengthParser`: 고정 길이 패킷 처리
+- **ParserFactory**: 설정(`AT`, `Hex` 등)에 따라 적절한 파서 인스턴스 생성 (전략 패턴)
+- **[New] ExpectMatcher**: 정규식 기반 응답 대기 및 매칭 기능 구현
+- **[New] PortController 통합**: Raw Data 수신 시 Parser를 거쳐 Packet 객체로 변환 후 EventBus 발행
+
+#### [완료] `model/macro_runner.py`
 
 **매크로 실행 엔진**
 
@@ -267,9 +268,15 @@ serial_tool2/
 - **State Machine**: `Idle` → `Running` → `Paused` → `Stopped`
 - **Step Execution**: Send → Expect Match (Regex) → Delay → Next/Jump/Repeat
 - **Auto Run**: `AutoTxScheduler` (Global Interval + Loop Count)
-- **Signals**: `step_started`, `step_completed`, `macro_finished`
+- **Signals**: `step_started`, `step_completed`, `macro_finished`, `error_occurred`
+- **기능**:
+  - `load_macro(entries)`: 매크로 리스트 로드
+  - `start()`: 실행 시작
+  - `stop()`: 실행 중지
+  - `pause()` / `resume()`: 일시 정지 및 재개
+  - `set_interval(ms)`: 반복 간격 설정
 
-#### [진행 필요] `model/macro_entry.py`
+#### [완료] `model/macro_entry.py`
 
 **MacroEntry DTO**
 
@@ -291,15 +298,16 @@ class MacroEntry:
 - 스크립트 저장/로드
 - 검증 규칙 (필수 필드, 타입 체크)
 
-#### [진행 필요] `model/file_transfer.py`
+#### [진행 예정] `model/file_transfer.py`
 
 **FileTransferEngine(QRunnable)**
 
-- Chunk 기반 전송 (기본 1KB)
-- 적응형 Chunk Size (baudrate 기반)
-- 진행률 계산 (바이트 단위)
-- 취소 메커니즘 (플래그 체크)
-- 재시도 정책 (최대 3회)
+- **구조**: `QRunnable`을 상속받아 별도 스레드 풀에서 실행
+- **Chunk 기반 전송**: 기본 1KB ~ 4KB (Baudrate에 따라 적응형 조절 가능)
+- **진행률 계산**: 전송된 바이트 / 전체 바이트
+- **취소 메커니즘**: `cancel()` 플래그 체크
+- **재시도 정책**: 전송 실패 시 최대 3회 재시도
+- **EventBus 연동**: `file.progress`, `file.completed`, `file.error` 이벤트 발행
 
 **시그널**
 
@@ -926,6 +934,7 @@ jobs:
 ## 성공 기준 (Success Criteria)
 
 ### 기능적 성공 기준
+
 - [ ] 16개 포트 동시 오픈 및 독립 제어
 - [ ] 2MB/s 연속 스트림 안정 처리
 - [ ] Macro List 자동 실행 (반복, 지연, Expect)
@@ -934,6 +943,7 @@ jobs:
 - [ ] 플러그인 로드 및 실행
 
 ### 비기능적 성공 기준
+
 - [ ] UI 반응성: 60fps 스크롤, Freeze 0
 - [ ] 단위 테스트 커버리지: 70%+
 - [ ] 통합 테스트: 주요 시나리오 100% 통과
@@ -941,6 +951,7 @@ jobs:
 - [ ] 배포 패키지 크기: 50MB 이하 (Windows)
 
 ### 사용자 경험 성공 기준
+
 - [ ] 3-Click Rule 준수 (주요 작업 3번 클릭 이내)
 - [ ] 직관적인 UI (툴팁, 단축키, 상태 표시)
 - [ ] 에러 메시지 명확성 (원인 및 해결 방법 제시)
