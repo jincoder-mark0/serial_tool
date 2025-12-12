@@ -19,7 +19,7 @@
 * Signal/Slot을 통한 이벤트 기반 통신
 """
 from PyQt5.QtCore import QObject, QDateTime, QThreadPool
-from model.port_controller import PortController
+from model.connection_controller import ConnectionController
 from model.file_transfer import FileTransferEngine
 from view.dialogs.file_transfer_dialog import FileTransferDialog
 from core.logger import logger
@@ -32,15 +32,15 @@ class FilePresenter(QObject):
     계산된 진행 정보를 View에 업데이트합니다.
     """
 
-    def __init__(self, port_controller: PortController):
+    def __init__(self, connection_controller: ConnectionController):
         """
         FilePresenter 초기화
 
         Args:
-            port_controller: 포트 제어기 Model (전송 담당)
+            connection_controller: 포트 제어기 Model (전송 담당)
         """
         super().__init__()
-        self.port_controller = port_controller
+        self.connection_controller = connection_controller
         self.current_engine: FileTransferEngine = None
         self.current_dialog: FileTransferDialog = None
 
@@ -83,27 +83,27 @@ class FilePresenter(QObject):
         Args:
             filepath: 전송할 파일 경로
         """
-        if not self.port_controller.is_open:
+        if not self.connection_controller.has_active_connection:
             logger.warning("File Transfer: Port not open")
             if self.current_dialog:
                 self.current_dialog.set_complete(False, "Port not open")
             return
 
-        port_name = self.port_controller.current_port_name
+        port_name = self.connection_controller.current_connection_name
         if not port_name:
             if self.current_dialog:
                 self.current_dialog.set_complete(False, "No active port")
             return
 
         # 포트 설정 가져오기
-        port_config = self.port_controller.get_port_config(port_name)
+        port_config = self.connection_controller.get_connection_config(port_name)
         baudrate = port_config.get('baudrate', 115200)
         flow_control = port_config.get('flowctrl', 'None')
 
         try:
             # 엔진 생성
             self.current_engine = FileTransferEngine(
-                self.port_controller,
+                self.connection_controller,
                 port_name,
                 filepath,
                 baudrate,

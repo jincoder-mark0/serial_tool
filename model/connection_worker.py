@@ -1,24 +1,24 @@
 """
 연결 워커 모듈
 
-ITransport 인터페이스를 사용하여 하드웨어 독립적인 I/O 처리를 수행합니다.
+DeviceTransport 인터페이스를 사용하여 하드웨어 독립적인 I/O 처리를 수행합니다.
 
 ## WHY
 * UI Thread 블로킹 방지 (별도 Thread에서 I/O 처리)
-* 하드웨어 독립성 (ITransport 추상화 활용)
+* 하드웨어 독립성 (DeviceTransport 추상화 활용)
 * 효율적인 데이터 처리 (Batch 처리, Queue 기반 전송)
 * Thread-safe한 송수신 보장
 
 ## WHAT
-* 별도 Thread에서 데이터 송수신
-* Batch 처리로 Signal 발행 최적화
+* 별도 Thread에서 데이터 송수신 루프 실행
+* Batch 처리로 Signal 발행 빈도 최적화
 * Thread-safe Queue 기반 비동기 전송
 * DTR/RTS 하드웨어 제어 신호 지원
 * 연결 상태 모니터링 및 이벤트 발행
 
 ## HOW
 * QThread 상속으로 별도 Thread 실행
-* ITransport로 하드웨어 추상화
+* DeviceTransport로 하드웨어 추상화
 * ThreadSafeQueue로 비동기 전송 처리
 * Batch buffer로 수신 데이터 집계 후 발행
 * QMutex로 Thread-safe 상태 관리
@@ -27,7 +27,7 @@ ITransport 인터페이스를 사용하여 하드웨어 독립적인 I/O 처리�
 import time
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QMutexLocker, QObject
 from typing import Optional
-from core.interfaces import ITransport
+from core.device_transport import DeviceTransport
 from core.utils import ThreadSafeQueue
 from constants import (
     DEFAULT_READ_CHUNK_SIZE,
@@ -37,7 +37,7 @@ from constants import (
 
 class ConnectionWorker(QThread):
     """
-    ITransport 기반 데이터 송수신 Worker Thread
+    DeviceTransport 기반 데이터 송수신 Worker Thread
 
     별도 Thread에서 실행되어 UI 블로킹 없이 데이터를 처리합니다.
     """
@@ -48,14 +48,14 @@ class ConnectionWorker(QThread):
     connection_opened = pyqtSignal(str)
     connection_closed = pyqtSignal(str)
 
-    def __init__(self, transport: ITransport, connection_name: str, parent: Optional[QObject] = None) -> None:
+    def __init__(self, transport: DeviceTransport, connection_name: str, parent: Optional[QObject] = None) -> None:
         """
         ConnectionWorker 초기화
 
         Args:
-            transport: ITransport 구현체 (SerialTransport 등)
-            connection_name: 연결 식별 이름 (예: 'COM1')
-            parent: 부모 QObject (선택)
+            transport (DeviceTransport): 하드웨어 전송 계층 구현체
+            connection_name (str): 연결 식별 이름 (예: 'COM1')
+            parent (Optional[QObject]): 부모 QObject (선택)
         """
         super().__init__(parent)
         self.transport = transport
@@ -72,9 +72,9 @@ class ConnectionWorker(QThread):
         Logic:
             - Transport 열기 및 연결 확인
             - 수신 데이터 Batch 처리 (크기/시간 기준)
-            - 전송 Queue 처리 (비동기)
-            - CPU 부하 최소화 (sleep 조절)
-            - 에러 발생 시 안전한 종료
+            - 전송 Queue 처리 (비동기 Write)
+            - CPU 부하 최소화 (Sleep 조절)
+            - 에러 발생 시 안전한 종료 처리
         """
         try:
             # 1. Transport 열기
@@ -132,7 +132,12 @@ class ConnectionWorker(QThread):
             self.close_connection()
 
     def is_running(self) -> bool:
-        """Thread 실행 상태 확인 (Thread-safe)"""
+        """
+        Thread 실행 상태 확인 (Thread-safe)
+
+        Returns:
+            bool: 실행 중이면 True
+        """
         with QMutexLocker(self._mutex):
             return self._is_running
 
@@ -144,7 +149,7 @@ class ConnectionWorker(QThread):
 
     def close_connection(self) -> None:
         """
-        연결 종료
+        연결 종료 및 리소스 정리
 
         Logic:
             - Transport가 열려있으면 닫기
@@ -162,8 +167,12 @@ class ConnectionWorker(QThread):
         """
         데이터 전송 (Non-blocking)
 
+        Logic:
+            - Transport가 열려있는지 확인
+            - 전송 큐에 데이터 추가
+
         Args:
-            data: 전송할 바이트 데이터
+            data (bytes): 전송할 바이트 데이터
 
         Returns:
             bool: Queue 추가 성공 여부
@@ -176,14 +185,29 @@ class ConnectionWorker(QThread):
         """
         현재 전송 대기 중인 데이터 큐의 크기(청크 개수)를 반환합니다.
         파일 전송 시 Backpressure 제어에 사용됩니다.
+
+        Returns:
+            int: 큐 사이즈
         """
         return self._tx_queue.qsize()
 
+    # ---------------------------------------------------------
     # 하드웨어 제어 신호 위임
+    # ---------------------------------------------------------
     def set_dtr(self, state: bool) -> None:
-        """DTR(Data Terminal Ready) 신호 설정"""
+        """
+        DTR(Data Terminal Ready) 신호 설정
+
+        Args:
+            state (bool): True=ON, False=OFF
+        """
         self.transport.set_dtr(state)
 
     def set_rts(self, state: bool) -> None:
-        """RTS(Request To Send) 신호 설정"""
+        """
+        RTS(Request To Send) 신호 설정
+
+        Args:
+            state (bool): True=ON, False=OFF
+        """
         self.transport.set_rts(state)

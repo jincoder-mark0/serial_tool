@@ -7,11 +7,11 @@
 * 프로토콜별 데이터 파싱 지원
 * 버퍼 오버플로우 방지
 * 패킷 단위 처리로 데이터 무결성 보장
-* 확장 가능한 파서 아키텍처
+* 확장 가능한 파서 아키텍처 (전략 패턴)
 * 매크로의 Expect 기능 지원 (패턴 매칭)
 
 ## WHAT
-* IPacketParser 인터페이스 정의
+* PacketParser 추상 클래스 정의 (구 IPacketParser)
 * RawParser (바이너리 그대로 전달)
 * ATParser (AT Command, \\r\\n 구분)
 * DelimiterParser (사용자 정의 구분자)
@@ -24,7 +24,6 @@
 * 내부 버퍼로 불완전한 패킷 보관
 * 버퍼 크기 제한으로 메모리 보호
 * Packet dataclass로 타임스탬프 및 메타데이터 포함
-* Factory 패턴으로 파서 생성
 """
 from abc import ABC, abstractmethod
 from typing import List, Optional
@@ -53,8 +52,12 @@ class Packet:
     timestamp: float
     metadata: Optional[dict] = None
 
-class IPacketParser(ABC):
-    """패킷 파서 인터페이스"""
+class PacketParser(ABC):
+    """
+    패킷 파서 추상 기본 클래스 (Interface)
+
+    모든 파서는 이 클래스를 상속받아 구현해야 합니다.
+    """
 
     @abstractmethod
     def parse(self, buffer: bytes) -> List[Packet]:
@@ -74,7 +77,7 @@ class IPacketParser(ABC):
         """파서 상태 초기화 (내부 버퍼 클리어)"""
         pass
 
-class RawParser(IPacketParser):
+class RawParser(PacketParser):
     """바이너리 데이터를 그대로 전달하는 파서"""
 
     def parse(self, buffer: bytes) -> List[Packet]:
@@ -87,7 +90,7 @@ class RawParser(IPacketParser):
     def reset(self) -> None:
         pass
 
-class ATParser(IPacketParser):
+class ATParser(PacketParser):
     """
     AT Command 파서
 
@@ -133,7 +136,7 @@ class ATParser(IPacketParser):
     def reset(self) -> None:
         self._buffer = b""
 
-class DelimiterParser(IPacketParser):
+class DelimiterParser(PacketParser):
     """사용자 정의 구분자 기반 파서"""
 
     def __init__(self, delimiter: bytes = b'\n', max_buffer_size: int = 4096):
@@ -167,7 +170,7 @@ class DelimiterParser(IPacketParser):
     def reset(self) -> None:
         self._buffer = b""
 
-class FixedLengthParser(IPacketParser):
+class FixedLengthParser(PacketParser):
     """고정 길이 패킷 파서"""
 
     def __init__(self, length: int, max_buffer_size: int = 4096):
@@ -206,7 +209,7 @@ class ParserFactory:
     """파서 생성 팩토리"""
 
     @staticmethod
-    def create_parser(parser_type: str, **kwargs) -> IPacketParser:
+    def create_parser(parser_type: str, **kwargs) -> PacketParser:
         """
         파서 타입에 따라 적절한 파서 인스턴스 생성
 
@@ -215,7 +218,7 @@ class ParserFactory:
             **kwargs: 파서별 추가 인자
 
         Returns:
-            IPacketParser: 생성된 파서 인스턴스
+            PacketParser: 생성된 파서 인스턴스
         """
         if parser_type == ParserType.AT:
             return ATParser()

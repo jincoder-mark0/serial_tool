@@ -1,7 +1,7 @@
 """
 Model 계층 핵심 로직 테스트
 
-Model 계층의 주요 컴포넌트(PortController, MacroRunner, FileTransferEngine)의
+Model 계층의 주요 컴포넌트(ConnectionController, MacroRunner, FileTransferEngine)의
 비즈니스 로직과 상호작용을 검증합니다.
 
 ## WHY
@@ -10,7 +10,7 @@ Model 계층의 주요 컴포넌트(PortController, MacroRunner, FileTransferEng
 * 데이터 흐름 및 상태 관리 로직의 정확성 보장
 
 ## WHAT
-* PortController: Signal 발생 시 EventBus로의 자동 전파(Bridge) 검증
+* ConnectionController: Signal 발생 시 EventBus로의 자동 전파(Bridge) 검증
 * MacroRunner: QThread 기반 실행 흐름, Expect 대기 로직, 데이터 수신 연동 검증
 * FileTransferEngine: Backpressure(역압) 제어 로직 검증
 
@@ -29,24 +29,24 @@ from PyQt5.QtCore import QObject
 # 프로젝트 루트 경로 설정
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from model.port_controller import PortController
+from model.connection_controller import ConnectionController
 from model.macro_runner import MacroRunner
 from model.macro_entry import MacroEntry
 from model.file_transfer import FileTransferEngine
 from core.event_bus import event_bus
 
-# --- PortController Tests ---
+# --- ConnectionController Tests ---
 
-def test_port_controller_eventbus_bridge(qtbot):
+def test_connection_controller_eventbus_bridge(qtbot):
     """
-    PortController의 시그널이 EventBus로 잘 전파되는지 테스트
+    ConnectionController의 시그널이 EventBus로 잘 전파되는지 테스트
 
     Logic:
-        1. PortController 생성 및 EventBus 구독 설정
+        1. ConnectionController 생성 및 EventBus 구독 설정
         2. `port_opened` 시그널 발생 시 EventBus 수신 확인
         3. `data_received` 시그널 발생 시 데이터 내용 및 포트 정보 확인
     """
-    controller = PortController()
+    controller = ConnectionController()
     received_events = []
 
     # EventBus 구독을 위한 헬퍼
@@ -150,7 +150,7 @@ def test_macro_runner_expect(qtbot):
 
 # --- FileTransferEngine Tests ---
 
-class MockPortController(QObject):
+class MockConnectionController(QObject):
     """FileTransfer 테스트용 Mock Controller"""
     def __init__(self):
         super().__init__()
@@ -183,7 +183,7 @@ def test_file_transfer_backpressure(tmp_path):
     with open(test_file, "wb") as f:
         f.write(b"A" * 10240)
 
-    mock_ctrl = MockPortController()
+    mock_ctrl = MockConnectionController()
     engine = FileTransferEngine(mock_ctrl, "COM1", str(test_file), baudrate=9600)
 
     # 청크 사이즈 강제 축소 (테스트 용이성)

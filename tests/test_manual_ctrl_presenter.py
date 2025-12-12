@@ -18,27 +18,27 @@ from constants import ConfigKeys
 def mock_components():
     """테스트용 Mock 객체 생성"""
     view = MagicMock()
-    port_controller = MagicMock()
+    connection_controller = MagicMock()
     local_echo_callback = MagicMock()
-    return view, port_controller, local_echo_callback
+    return view, connection_controller, local_echo_callback
 
 @pytest.fixture
 def presenter(mock_components):
     """Presenter 인스턴스 생성"""
-    view, port_controller, local_echo_callback = mock_components
+    view, connection_controller, local_echo_callback = mock_components
     # SettingsManager는 싱글톤이므로 설정 주입이 필요함 (여기서는 기본값 사용 가정)
-    return ManualCtrlPresenter(view, port_controller, local_echo_callback)
+    return ManualCtrlPresenter(view, connection_controller, local_echo_callback)
 
 def test_send_text_with_prefix_suffix(presenter, mock_components):
     """텍스트 모드 전송 시 Prefix/Suffix 적용 테스트"""
-    view, port_controller, _ = mock_components
+    view, connection_controller, _ = mock_components
 
     # 설정 Mocking (SettingsManager 내부 동작에 의존하므로 값을 강제 설정)
     presenter.settings_manager.set(ConfigKeys.CMD_PREFIX, "start_")
     presenter.settings_manager.set(ConfigKeys.CMD_SUFFIX, "_end")
 
     # 포트 열림 상태
-    port_controller.is_open = True
+    connection_controller.has_active_connection = True
 
     # 전송 요청 (Prefix=True, Suffix=True)
     presenter.on_manual_cmd_send_requested(
@@ -51,12 +51,12 @@ def test_send_text_with_prefix_suffix(presenter, mock_components):
 
     # 검증: "start_cmd_end"가 인코딩되어 전송되었는지
     expected_data = b"start_cmd_end"
-    port_controller.send_data.assert_called_once_with(expected_data)
+    connection_controller.send_data.assert_called_once_with(expected_data)
 
 def test_send_hex_mode(presenter, mock_components):
     """Hex 모드 전송 및 공백 처리 테스트"""
-    _, port_controller, _ = mock_components
-    port_controller.is_open = True
+    _, connection_controller, _ = mock_components
+    connection_controller.has_active_connection = True
 
     # 전송 요청 ("A1 B2" -> b'\xA1\xB2')
     presenter.on_manual_cmd_send_requested(
@@ -68,22 +68,22 @@ def test_send_hex_mode(presenter, mock_components):
     )
 
     expected_data = b"\xA1\xB2"
-    port_controller.send_data.assert_called_once_with(expected_data)
+    connection_controller.send_data.assert_called_once_with(expected_data)
 
 def test_send_blocked_when_port_closed(presenter, mock_components):
     """포트가 닫혀있을 때 전송 차단 테스트"""
-    _, port_controller, _ = mock_components
-    port_controller.is_open = False  # 포트 닫힘
+    _, connection_controller, _ = mock_components
+    connection_controller.has_active_connection = False  # 포트 닫힘
 
     presenter.on_manual_cmd_send_requested("test", False, False, False, False)
 
     # 전송 메서드가 호출되지 않아야 함
-    port_controller.send_data.assert_not_called()
+    connection_controller.send_data.assert_not_called()
 
 def test_local_echo_callback(presenter, mock_components):
     """Local Echo 콜백 호출 테스트"""
-    _, port_controller, local_echo_callback = mock_components
-    port_controller.is_open = True
+    _, connection_controller, local_echo_callback = mock_components
+    connection_controller.has_active_connection = True
 
     presenter.on_manual_cmd_send_requested(
         text="echo",

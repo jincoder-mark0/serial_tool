@@ -54,7 +54,7 @@ def test_presenter_initialization(main_presenter):
     assert main_presenter.event_router is not None
 
     # 4. Models
-    assert main_presenter.port_controller is not None
+    assert main_presenter.connection_controller is not None
     assert main_presenter.macro_runner is not None
 
 def test_event_router_connection(main_presenter):

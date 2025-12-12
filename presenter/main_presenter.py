@@ -22,7 +22,7 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 """
 from PyQt5.QtCore import QObject, QTimer, QDateTime
 from view.main_window import MainWindow
-from model.port_controller import PortController
+from model.connection_controller import ConnectionController
 from model.macro_runner import MacroRunner
 from .port_presenter import PortPresenter
 from .macro_presenter import MacroPresenter
@@ -49,7 +49,7 @@ class MainPresenter(QObject):
         MainPresenter 생성 및 초기화
 
         Logic:
-            - Model 인스턴스 생성 (PortController, MacroRunner, EventRouter)
+            - Model 인스턴스 생성 (ConnectionController, MacroRunner, EventRouter)
             - 하위 Presenter 초기화 및 의존성 주입
             - EventRouter 및 View 시그널 연결
             - 상태바 업데이트 타이머 시작
@@ -61,20 +61,20 @@ class MainPresenter(QObject):
         self.view = view
 
         # --- 1. Model 초기화 ---
-        self.port_controller = PortController()
+        self.connection_controller = ConnectionController()
         self.macro_runner = MacroRunner()
         self.event_router = EventRouter()
 
         # --- 2. Sub-Presenter 초기화 ---
 
         # 2.1 Port Control (좌측 탭 관리)
-        self.port_presenter = PortPresenter(self.view.port_view, self.port_controller)
+        self.port_presenter = PortPresenter(self.view.port_view, self.connection_controller)
 
         # 2.2 Macro Control (우측 매크로 탭)
         self.macro_presenter = MacroPresenter(self.view.macro_view, self.macro_runner)
 
         # 2.3 File Transfer (파일 전송)
-        self.file_presenter = FilePresenter(self.port_controller)
+        self.file_presenter = FilePresenter(self.connection_controller)
 
         # 2.4 Packet Inspector (우측 패킷 탭)
         self.packet_presenter = PacketPresenter(
@@ -86,7 +86,7 @@ class MainPresenter(QObject):
         # Local Echo 처리를 위해 View의 콜백 메서드(append_local_echo_data) 주입
         self.manual_ctrl_presenter = ManualCtrlPresenter(
             self.view.left_section.manual_ctrl,
-            self.port_controller,
+            self.connection_controller,
             self.view.append_local_echo_data
         )
 
@@ -174,8 +174,8 @@ class MainPresenter(QObject):
         settings_manager.save_settings()
 
         # 4. 리소스 정리 (포트 닫기)
-        if self.port_controller.is_open:
-            self.port_controller.close_port()
+        if self.connection_controller.has_active_connection:
+            self.connection_controller.close_connection()
 
         logger.info("Application shutdown sequence completed.")
 
@@ -231,7 +231,7 @@ class MainPresenter(QObject):
         Logic:
             - 포트 열림 확인
             - CmdProcessor를 사용하여 데이터 가공 (Prefix/Suffix/Hex)
-            - 데이터 전송 (PortController)
+            - 데이터 전송 (ConnectionController)
 
         Args:
             text (str): 전송할 텍스트
@@ -239,7 +239,7 @@ class MainPresenter(QObject):
             cmd_prefix (bool): 접두사 사용 여부
             cmd_suffix (bool): 접미사 사용 여부
         """
-        if not self.port_controller.is_open:
+        if not self.connection_controller.has_active_connection:
             logger.warning("Port not open")
             return
 
@@ -251,7 +251,7 @@ class MainPresenter(QObject):
             return
 
         # 전송
-        self.port_controller.send_data(data)
+        self.connection_controller.send_data(data)
 
     def on_settings_change_requested(self, new_settings: dict) -> None:
         """

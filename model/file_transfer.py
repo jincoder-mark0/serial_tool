@@ -1,7 +1,7 @@
 import os
 import time
 from PyQt5.QtCore import QRunnable, QObject, pyqtSignal
-from model.port_controller import PortController
+from model.connection_controller import ConnectionController
 from core.event_bus import event_bus
 
 class FileTransferSignals(QObject):
@@ -16,11 +16,11 @@ class FileTransferEngine(QRunnable):
     """
     파일 전송을 담당하는 엔진 (QRunnable 기반)
 
-    별도의 스레드 풀에서 실행되며, 파일을 청크 단위로 읽어 PortController를 통해 전송합니다.
+    별도의 스레드 풀에서 실행되며, 파일을 청크 단위로 읽어 ConnectionController를 통해 전송합니다.
 
     ## 흐름 제어 (Flow Control) 및 안정성 개선
 
-    - **Backpressure (역압) 제어**: `PortController`의 송신 큐 크기를 모니터링하여
+    - **Backpressure (역압) 제어**: `ConnectionController`의 송신 큐 크기를 모니터링하여
       PC의 송신 버퍼가 가득 차면 일시 대기합니다. 이는 메모리 폭증과 데이터 유실을 방지합니다.
     - **Flow Control 지원**: 포트 설정에 따라 속도 제어 방식을 달리합니다.
       - RTS/CTS, XON/XOFF: 하드웨어/드라이버 레벨의 흐름 제어를 신뢰하여 불필요한 sleep을 제거합니다.
@@ -30,9 +30,9 @@ class FileTransferEngine(QRunnable):
     - **Y-MODEM**과 같은 프로토콜의 다양화
     """
 
-    def __init__(self, port_controller: PortController, port_name: str, file_path: str, baudrate: int, flow_control: str = "None"):
+    def __init__(self, connection_controller: ConnectionController, port_name: str, file_path: str, baudrate: int, flow_control: str = "None"):
         super().__init__()
-        self.port_controller = port_controller
+        self.connection_controller = connection_controller
         self.port_name = port_name
         self.file_path = file_path
         self.baudrate = baudrate
@@ -81,7 +81,7 @@ class FileTransferEngine(QRunnable):
                 while not self._is_cancelled:
                     # [Logic] Backpressure Control (역압 제어)
                     # ConnectionWorker의 큐가 비워질 때까지 대기하여 메모리 보호 및 유실 방지
-                    while self.port_controller.get_write_queue_size(self.port_name) > self.queue_threshold:
+                    while self.connection_controller.get_write_queue_size(self.port_name) > self.queue_threshold:
                         time.sleep(0.01) # 10ms 대기
                         if self._is_cancelled:
                             break
@@ -94,7 +94,7 @@ class FileTransferEngine(QRunnable):
                         break # EOF
 
                     # 데이터 전송
-                    success = self.port_controller.send_data_to_port(self.port_name, chunk)
+                    success = self.connection_controller.send_data_to_connection(self.port_name, chunk)
                     if not success:
                         raise Exception(f"Port {self.port_name} is not open or unavailable.")
 

@@ -16,12 +16,12 @@
 ## HOW
 * View 시그널 구독 (ManualCtrlPanel -> Widget)
 * CmdProcessor를 통한 데이터 가공
-* PortController 메서드 호출 (send_data, set_rts, set_dtr)
+* ConnectionController 메서드 호출 (send_data, set_rts, set_dtr)
 """
 from PyQt5.QtCore import QObject
 from typing import Callable, Optional
 from view.panels.manual_ctrl_panel import ManualCtrlPanel
-from model.port_controller import PortController
+from model.connection_controller import ConnectionController
 from core.settings_manager import SettingsManager
 from core.cmd_processor import CmdProcessor
 from core.logger import logger
@@ -35,7 +35,7 @@ class ManualCtrlPresenter(QObject):
     def __init__(
         self,
         view: ManualCtrlPanel,
-        port_controller: PortController,
+        connection_controller: ConnectionController,
         local_echo_callback: Optional[Callable[[bytes], None]] = None
     ) -> None:
         """
@@ -43,12 +43,12 @@ class ManualCtrlPresenter(QObject):
 
         Args:
             view (ManualCtrlPanel): 수동 제어 패널 View
-            port_controller (PortController): 포트 제어 Model
+            connection_controller (ConnectionController): 포트 제어 Model
             local_echo_callback (Callable): Local Echo 콜백 (선택)
         """
         super().__init__()
         self.view = view
-        self.port_controller = port_controller
+        self.connection_controller = connection_controller
         self.local_echo_callback = local_echo_callback
         self.settings_manager = SettingsManager()
 
@@ -81,7 +81,7 @@ class ManualCtrlPresenter(QObject):
             cmd_suffix (bool): 접미사 사용 여부
             local_echo (bool): 로컬 에코 사용 여부
         """
-        if not self.port_controller.is_open:
+        if not self.connection_controller.has_active_connection:
             logger.warning("Manual Send: Port not open")
             return
 
@@ -93,7 +93,7 @@ class ManualCtrlPresenter(QObject):
             return
 
         # 데이터 전송
-        self.port_controller.send_data(data)
+        self.connection_controller.send_data(data)
 
         # Local Echo (View에 직접 표시 요청)
         if local_echo and self.local_echo_callback:
@@ -106,8 +106,8 @@ class ManualCtrlPresenter(QObject):
         Args:
             state (bool): RTS 상태 (True=ON, False=OFF)
         """
-        if self.port_controller.is_open:
-            self.port_controller.set_rts(state)
+        if self.connection_controller.has_active_connection:
+            self.connection_controller.set_rts(state)
             logger.info(f"RTS changed to {state}")
 
     def on_dtr_changed(self, state: bool) -> None:
@@ -117,6 +117,6 @@ class ManualCtrlPresenter(QObject):
         Args:
             state (bool): DTR 상태 (True=ON, False=OFF)
         """
-        if self.port_controller.is_open:
-            self.port_controller.set_dtr(state)
+        if self.connection_controller.has_active_connection:
+            self.connection_controller.set_dtr(state)
             logger.info(f"DTR changed to {state}")

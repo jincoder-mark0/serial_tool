@@ -41,7 +41,7 @@ class MacroRunner(QThread):
     macro_finished = pyqtSignal()
     error_occurred = pyqtSignal(str)
 
-    # 실제 전송 요청 시그널 (UI 스레드의 PortController로 전달)
+    # 실제 전송 요청 시그널 (UI 스레드의 ConnectionController로 전달)
     send_requested = pyqtSignal(str, bool, bool, bool) # text, hex, prefix, suffix
 
     def __init__(self):
