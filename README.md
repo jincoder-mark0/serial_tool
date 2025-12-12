@@ -212,6 +212,8 @@ serial_tool/
 
 ## 아키텍처
 
+본 프로젝트는 **Layered MVP (Model-View-Presenter)** 패턴을 엄격히 준수하며, **Event-Driven** 방식으로 컴포넌트 간 결합도를 최소화했습니다.
+
 ### MVP 패턴
 
 ```
@@ -220,6 +222,241 @@ serial_tool/
 │ (UI 전용)   │  Signal │ (비즈니스 로직)│   Data  │ (데이터/통신)│
 └─────────────┘         └────────────────┘         └──────────────┘
 ```
+### A. 계층 구조 (Layers)
+
+| 계층 | 역할 | 주요 구성 요소 | 비고 |
+| :--- | :--- | :--- | :--- |
+| **View** | **UI 표시 및 사용자 입력** | `MainWindow`, `PortSettingsWidget`, `RxLogWidget` | 비즈니스 로직 없음. 오직 시그널(`pyqtSignal`)만 발생시킴. `ConfigKeys` 상수 사용. |
+| **Presenter** | **중재자 (Mediator)** | `MainPresenter`, `PortPresenter`, `MacroPresenter` | View의 시그널을 받아 Model을 제어하고, Model의 이벤트를 View에 반영. |
+| **Model** | **비즈니스 로직 및 데이터** | `PortController`, `MacroRunner`, `FileTransferEngine` | 실제 통신, 파싱, 자동화 로직 수행. UI를 전혀 모르며 `EventBus`로 상태 전파. |
+| **Core** | **인프라 및 유틸리티** | `EventBus`, `DataLogger`, `SettingsManager`, `ResourcePath` | 전역에서 사용되는 공통 기능 제공. |
+
+
+### 아키텍처 다이어그램 (Architecture)
+
+```
+graph TD
+    %% 스타일 정의
+    classDef view fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
+    classDef presenter fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
+    classDef model fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
+    classDef core fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
+    classDef infra fill:#eceff1,stroke:#455a64,stroke-width:1px,stroke-dasharray: 5 5;
+
+    subgraph VIEW_LAYER [View Layer (UI & Input)]
+        direction TB
+        MW[MainWindow]
+
+        subgraph SECTIONS [Sections & Panels]
+            LeftSec[LeftSection]
+            RightSec[RightSection]
+            PortPanel[PortPanel]
+            MacroPanel[MacroPanel]
+        end
+
+        subgraph WIDGETS [Widgets]
+            PortSettings[PortSettingsWidget]
+            RxLog[RxLogWidget]
+            ManualCtrl[ManualCtrlWidget]
+            MacroCtrl[MacroCtrlWidget]
+        end
+
+        MW --> LeftSec
+        MW --> RightSec
+        LeftSec --> PortPanel
+        LeftSec --> ManualCtrl
+        PortPanel --> PortSettings
+        PortPanel --> RxLog
+        RightSec --> MacroPanel
+        MacroPanel --> MacroCtrl
+    end
+
+    subgraph PRESENTER_LAYER [Presenter Layer (Mediator)]
+        direction TB
+        MainP[MainPresenter]
+        PortP[PortPresenter]
+        MacroP[MacroPresenter]
+        FileP[FilePresenter]
+
+        Router[EventRouter]
+    end
+
+    subgraph CORE_LAYER [Core Layer (Infrastructure)]
+        Bus((EventBus))
+        Logger[DataLogger]
+        Settings[SettingsManager]
+    end
+
+    subgraph MODEL_LAYER [Model Layer (Business Logic & Data)]
+        direction TB
+        PortCtrl[PortController]
+        SerialMgr[SerialManager]
+        MacroRun[MacroRunner]
+        FileEng[FileTransferEngine]
+
+        subgraph WORKERS [Background Threads]
+            ConnWorker[ConnectionWorker]
+            Transport[SerialTransport]
+        end
+
+        PacketParser[PacketParser]
+    end
+
+    %% 연결 관계 (Signal/Slot & Method Calls)
+
+    %% View -> Presenter (User Actions via Signals)
+    PortSettings -- "signal: connect_requested" --> PortP
+    ManualCtrl -- "signal: send_requested" --> MainP
+    ManualCtrl -- "signal: file_send_requested" --> FileP
+    MacroCtrl -- "signal: start_requested" --> MacroP
+
+    %% Presenter Composition
+    MainP o--o PortP
+    MainP o--o MacroP
+    MainP o--o FileP
+    MainP o--o Router
+
+    %% Presenter -> Model (Method Calls)
+    PortP -- "open_port()" --> PortCtrl
+    MacroP -- "start()" --> MacroRun
+    FileP -- "start_transfer()" --> FileEng
+    MainP -- "save/load" --> Settings
+
+    %% Model Relationships
+    PortCtrl o--o ConnWorker
+    ConnWorker o--o Transport
+    PortCtrl ..> PacketParser : Uses
+    SerialMgr -- "manages" --> PortCtrl
+
+    %% Event Flow (The Loop)
+    ConnWorker -- "emit: data_received" --> PortCtrl
+    PortCtrl -- "publish: port.data_received" --> Bus
+    MacroRun -- "publish: macro.finished" --> Bus
+    FileEng -- "publish: file.progress" --> Bus
+
+    %% Event Routing
+    Bus -- "subscribe" --> Router
+    Bus -- "subscribe" --> Logger
+    Bus -- "subscribe" --> MacroRun
+
+    %% Feedback Loop (UI Update)
+    Router -- "signal: port_data" --> MainP
+    MainP -- "update_ui()" --> RxLog
+    Router -- "signal: macro_status" --> MacroP
+
+    %% Class Styling
+    class MW,LeftSec,RightSec,PortPanel,MacroPanel,PortSettings,RxLog,ManualCtrl,MacroCtrl view;
+    class MainP,PortP,MacroP,FileP,Router presenter;
+    class PortCtrl,SerialMgr,MacroRun,FileEng,ConnWorker,Transport,PacketParser model;
+    class Bus,Logger,Settings core;
+```
+
+```
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                       VIEW LAYER                                        │
+│  ┌───────────────────────┐   ┌───────────────────────────┐   ┌───────────────────────┐  │
+│  │      MainWindow       │   │      PortSettingsWidget   │   │     RxLogWidget       │  │
+│  └───────────┬───────────┘   └──────────────┬────────────┘   └───────────▲───────────┘  │
+│              │ (Owns)                       │ (Signal: Connect)          │ (Update)     │
+└──────────────┼──────────────────────────────┼────────────────────────────┼──────────────┘
+               │                              │                            │
+               ▼                              ▼                            │
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                    PRESENTER LAYER                                      │
+│                                                                                         │
+│  ┌───────────────────────────────────────────────────────────────────────────────────┐  │
+│  │                                   MainPresenter                                   │  │
+│  │ ┌───────────────┐  ┌───────────────┐  ┌───────────────┐  ┌─────────────────────┐  │  │
+│  │ │ PortPresenter │  │MacroPresenter │  │ FilePresenter │  │     EventRouter     │  │  │
+│  │ └───────┬───────┘  └───────┬───────┘  └───────┬───────┘  └──────────▲──────────┘  │  │
+│  └─────────┼──────────────────┼──────────────────┼─────────────────────┼─────────────┘  │
+└────────────┼──────────────────┼──────────────────┼─────────────────────┼────────────────┘
+             │ (Method Call)    │ (Method Call)    │ (Method Call)       │ (Signals)
+             ▼                  ▼                  ▼                     │
+┌────────────────────────────────────────────────────────────────────────┼────────────────┐
+│                                    MODEL LAYER                         │                │
+│                                                                        │                │
+│  ┌──────────────────┐   ┌──────────────────┐   ┌──────────────────┐    │                │
+│  │  PortController  │   │   MacroRunner    │   │FileTransferEngine│    │                │
+│  │ (Manages Ports)  │   │    (QThread)     │   │   (QRunnable)    │    │                │
+│  └─────────┬────────┘   └────────┬─────────┘   └─────────┬────────┘    │                │
+│            │ (Owns)              │ (Publish)             │ (Publish)   │                │
+│            ▼                     │                       │             │                │
+│  ┌──────────────────┐            │                       │             │                │
+│  │ ConnectionWorker │            │                       │             │                │
+│  │    (QThread)     │────────────┼───────────────────────┼─────────────┘                │
+│  └──────────────────┘            │                       │                              │
+└──────────────────────────────────┼───────────────────────┼──────────────────────────────┘
+                                   │                       │
+                                   ▼                       ▼
+┌─────────────────────────────────────────────────────────────────────────────────────────┐
+│                                     CORE LAYER                                          │
+│                                                                                         │
+│           ┌─────────────────────────────────────────────────────────────┐               │
+│           │                          EventBus                           │               │
+│           │  (Publish / Subscribe Mechanism for Decoupling Layers)      │               │
+│           └──────┬───────────────────────┬──────────────────────────────┘               │
+│                  │ (Subscribe)           │ (Subscribe)                                  │
+│                  ▼                       ▼                                              │
+│        ┌──────────────────┐    ┌──────────────────┐                                     │
+│        │    DataLogger    │    │ SettingsManager  │                                     │
+│        │  (Raw File I/O)  │    │   (Config I/O)   │                                     │
+│        └──────────────────┘    └──────────────────┘                                     │
+└─────────────────────────────────────────────────────────────────────────────────────────┘
+
+```
+
+---
+
+## 데이터 흐름 시나리오 (Data Flow Scenarios)
+
+### A. 포트 연결 및 데이터 수신 (RX Flow)
+> **핵심**: `Worker Thread`와 `EventBus`를 통한 비동기 UI 업데이트
+
+1.  **User**: `PortSettingsWidget`에서 'Connect' 버튼 클릭.
+2.  **View**: `port_open_requested(config)` 시그널 발생.
+3.  **Presenter**: `PortPresenter`가 시그널을 수신하고 `PortController.open_port(config)` 호출.
+4.  **Model**: `PortController`가 `SerialTransport`를 생성하고, 이를 `ConnectionWorker`(QThread)에 주입하여 시작.
+5.  **Worker**: 백그라운드 스레드에서 `SerialTransport.read()` 루프 실행 (Non-blocking).
+6.  **Bridge**: 데이터 수신 시 `PortController`가 Signal을 발생시키고, 이는 자동으로 `EventBus`의 `port.data_received` 토픽으로 발행됨 (SSOT 원칙).
+7.  **Routing**:
+    * `DataLogger`: Raw 데이터를 파일에 기록.
+    * `EventRouter`: 이벤트를 감지하여 `data_received` 시그널로 변환.
+8.  **UI Update**: `MainPresenter`가 시그널을 받아 `RxLogWidget`(`QSmartListView`)에 데이터를 전달하여 렌더링.
+
+### B. 수동 명령어 전송 (Manual TX Flow)
+> **핵심**: Presenter에서의 비즈니스 로직(Prefix/Suffix) 처리
+
+1.  **User**: `ManualCtrlWidget`에서 명령어 입력 후 'Send' 클릭.
+2.  **View**: `manual_cmd_send_requested` 시그널 발생 (입력값, 옵션 상태 전달).
+3.  **Presenter**: `MainPresenter`가 설정(`ConfigKeys`)을 조회하여 Prefix/Suffix를 조합하고 HEX 변환을 수행.
+4.  **Model**: `PortController.send_data()`를 호출하여 활성 포트로 데이터 전송.
+5.  **Feedback**: 전송된 데이터는 `Local Echo` 옵션에 따라 `RxLogWidget`에 표시되고, `DataLogger`에 기록됨.
+
+### C. 매크로 자동화 실행 (Automation Flow)
+> **핵심**: `QThread` 기반 정밀 타이밍 및 `Expect` 대기
+
+1.  **User**: `MacroCtrlWidget`에서 'Repeat Start' 클릭.
+2.  **Presenter**: `MacroPresenter`가 선택된 항목들을 `MacroEntry` 객체로 변환하여 `MacroRunner`에 로드.
+3.  **Model (`MacroRunner`)**:
+    * `QThread` 내부 루프 시작.
+    * **Send**: `send_requested` 시그널 → `MainPresenter` → `PortController`.
+    * **Expect**: `ExpectMatcher`를 설정하고 `QWaitCondition`으로 대기. `EventBus`로 들어오는 수신 데이터를 실시간 검사.
+    * **Delay**: 정밀 타이밍을 위해 `QWaitCondition.wait()` 사용 (Windows Timer 오차 해결).
+4.  **Completion**: 루프 종료 시 `macro_finished` 이벤트 발생 → UI 상태 복구.
+
+### D. 파일 전송 (File Transfer Flow)
+> **핵심**: `Backpressure` 제어 및 스레드 풀 사용
+
+1.  **User**: `ManualCtrlWidget` 파일 탭에서 'Send File' 클릭.
+2.  **Presenter**: `FilePresenter`가 `FileTransferEngine`(`QRunnable`)을 생성하고 `QThreadPool`에서 실행.
+3.  **Model (`FileTransferEngine`)**:
+    * 파일을 Chunk 단위로 읽음.
+    * **Backpressure**: `PortController`의 송신 큐(`TX Queue`) 크기를 모니터링하여 오버플로우 방지.
+    * **Flow Control**: RTS/CTS 설정에 따라 전송 지연(Sleep) 최적화.
+4.  **Update**: 진행률(`progress`) 이벤트를 `EventBus`로 발행 → `FileProgressWidget` 갱신.
+
+---
 
 **설계 원칙**:
 
@@ -243,35 +480,6 @@ serial_tool/
   "logging": { "log_path": "logs/", ... },
   "ui": { "theme": "dark", "font": {...} }
 }
-```
-
-
-### 아키텍처 다이어그램 (Architecture)
-
-```
-┌─────────────────────────────────────────────────────────────┐
-│                        MainPresenter                        │
-│  ┌──────────────┐  ┌──────────────┐  ┌──────────────┐       │
-│  │PortPresenter │  │MacroPresenter│  │FilePresenter │       │
-│  └──────┬───────┘  └──────┬───────┘  └──────┬───────┘       │
-│         │                 │                 │               │
-│  ┌──────┴─────────────────┴─────────────────┴──────────┐    │
-│  │                    EventRouter                       │    │
-│  │  (EventBus Events → PyQt Signals)                    │    │
-│  └──────────────────────┬───────────────────────────────┘    │
-└─────────────────────────┼───────────────────────────────────┘
-                          │
-              ┌───────────┴───────────┐
-              │       event_bus       │  (Global Singleton)
-              │  (Publish/Subscribe)  │
-              └───────────┬───────────┘
-                          │
-    ┌─────────────────────┼─────────────────────┐
-    │                     │                     │
-┌───┴────────┐   ┌────────┴────────┐   ┌───────┴─────────┐
-│PortController│ │   MacroRunner    │ │FileTransferEngine│
-│  (Model)     │ │    (Model)       │ │     (Model)      │
-└──────────────┘ └──────────────────┘ └──────────────────┘
 ```
 
 ---

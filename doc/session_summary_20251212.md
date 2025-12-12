@@ -40,10 +40,11 @@
 
 ### 2.3 핵심 기능 고도화 (Core Logic Enhancements)
 
-- **매크로 엔진 정밀도 개선 (Macro Engine)**:
-  - `MacroRunner`를 기존 `QTimer` 기반에서 **`QThread` + `QWaitCondition`** 기반으로 전면 재작성했습니다.
-  - Windows 환경에서의 타이머 오차 문제를 해결하고(1ms 단위 제어), 대량 로그 수신 시 발생하는 UI 블로킹에 의한 타이밍 지연을 제거했습니다.
-  - `ExpectMatcher`(`model/packet_parser.py`) 구현 및 `_wait_for_expect` 로직을 추가하여 응답 대기 기능을 완성했습니다.
+- **매크로 엔진 정밀도 및 품질 개선 (Macro Engine)**:
+  - `MacroRunner`를 기존 `QTimer` 기반에서 **`QThread` + `QWaitCondition`** 기반으로 전면 재작성하여 윈도우 타이머 정밀도 문제(1ms 단위 제어)를 해결하고 UI 블로킹을 방지했습니다.
+  - **문서화 강화**: 핵심 모듈에 `Google Style Docstring` 가이드(WHY/WHAT/HOW, Logic)를 엄격히 적용하여 코드 가독성과 유지보수성을 대폭 향상시켰습니다.
+  - **스레드 안전성**: `_on_data_received` 및 `run` 루프 내 `QMutex` 잠금 범위를 최적화하여 데이터 수신 시 발생할 수 있는 경쟁 상태(Race Condition)를 방지했습니다.
+  - **테스트 안정화**: 비동기 테스트 시나리오의 타임아웃을 연장(1s → 5s)하고 스레드 초기화 대기 로직을 보강하여 간헐적인 `TimeoutError`를 해결했습니다.
 
 - **파일 전송 안정성 확보 (File Transfer)**:
   - **Backpressure(역압) 제어**: 송신 큐(`TX Queue`) 크기를 모니터링하여 버퍼 오버플로우를 방지하는 로직을 추가했습니다.

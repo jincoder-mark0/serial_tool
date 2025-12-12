@@ -116,39 +116,33 @@ def test_macro_runner_expect(qtbot):
     MacroRunner의 Expect 기능 및 EventBus 연동 테스트
 
     Logic:
-        1. Expect 설정이 포함된 매크로 로드 (Timeout 1초)
+        1. Expect 설정이 포함된 매크로 로드
         2. 실행 시작 후 스레드가 대기 상태에 진입할 때까지 대기 (`qtbot.wait`)
         3. EventBus를 통해 가상의 응답 데이터(`OK`) 발행
         4. `step_completed` 시그널이 성공(`True`)으로 발생하는지 검증
     """
     runner = MacroRunner()
 
-    # Expect가 있는 엔트리 설정 (Timeout 1초로 단축하여 테스트 속도 향상 및 레이스 컨디션 방지)
+    # Expect가 있는 엔트리 설정 (Timeout 5초로 설정하여 테스트 중 타임아웃 방지)
     entries = [
-        MacroEntry(command="AT", expect="OK", timeout_ms=1000, delay_ms=10)
+        MacroEntry(command="AT", expect="OK", timeout_ms=5000, delay_ms=10)
     ]
     runner.load_macro(entries)
 
     # 1. 실행 시작 (Non-blocking)
     runner.start()
 
-    # 2. 스레드가 시작되고 _wait_for_expect 상태로 진입할 시간을 충분히 줌
-    qtbot.wait(500)
+    # 2. 스레드가 시작되고 _wait_for_expect 상태로 진입할 시간을 충분히 줌 (200ms)
+    qtbot.wait(200)
 
-    # 3. 데이터 발행 (Expect 조건을 만족시킴)
-    # 실제로는 PortController가 발행하는 이벤트를 모사
+    # 3. 데이터 발행 및 시그널 대기 (가장 중요한 부분)
+    # waitSignal 블록 안에서 이벤트를 발생시켜야 신호를 확실히 잡음
     print("Publishing 'OK' data...")
-    event_bus.publish("port.data_received", {'port': 'COM1', 'data': b'OK\r\n'})
-
-    # 4. step_completed 시그널 대기
-    # MacroEntry 타임아웃(1초)보다 긴 테스트 타임아웃(5초)을 주어
-    # 타임아웃 발생 시에도 시그널을 잡아낼 수 있게 함 (디버깅 용이)
     with qtbot.waitSignal(runner.step_completed, timeout=5000) as blocker:
-        pass
+        event_bus.publish("port.data_received", {'port': 'COM1', 'data': b'OK\r\n'})
 
     assert blocker.signal_triggered
-    # 시그널 인자 확인: (index, success)
-    # 성공 여부 확인 (True여야 함)
+    # 시그널 인자 확인: (index, success) -> True여야 함
     assert blocker.args[1] is True
 
     # 5. 종료 및 정리

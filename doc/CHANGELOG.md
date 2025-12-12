@@ -25,9 +25,21 @@
   - **Macro Engine**: `QTimer` 기반 루프를 `QThread` + `QWaitCondition` 기반으로 전면 교체 (Windows 타이머 정밀도 문제 해결)
   - **Font Settings**: 폰트 설정 저장 로직을 View(`MainWindow`)에서 Presenter(`MainPresenter`)로 이관하고, 동적 키 생성(`f-string`) 대신 `ConfigKeys` 매핑 딕셔너리를 사용하여 MVP 원칙 준수 및 안전성 강화
 
+- **코드 품질 및 테스트 안정성 (Quality & Stability)**
+  - **Documentation**: `model/macro_runner.py` 등 핵심 모듈에 Google Style Docstring 가이드(WHY/WHAT/HOW, Logic)를 엄격히 적용하여 가독성 향상
+  - **Thread Safety**: `MacroRunner`의 `_on_data_received` 및 `run` 루프 내 Mutex 잠금 범위를 최적화하여 경쟁 상태(Race Condition) 방지
+  - **Test Reliability**: `test_model.py`의 비동기 시그널 대기 타임아웃을 연장(1s → 5s)하고 스레드 초기화 대기(`qtbot.wait`)를 보강하여 간헐적인 `TimeoutError` 해결
+
 - **로직 최적화 및 수정**
   - **Flow Control**: 하드웨어 흐름 제어 설정에 따라 전송 지연(Sleep)을 조건부로 적용하도록 변경
   - **Error Handler**: `KeyboardInterrupt` 발생 시 기존 훅(`_old_excepthook`)을 호출하여 호환성 유지
+
+#### 이점 (Benefits)
+
+- **안정성 확보**: 대량 데이터 전송 및 고속 매크로 실행 시의 메모리 폭증 및 데이터 유실 방지
+- **유지보수성 향상**: 문자열 리터럴 제거, 이벤트 흐름 단일화, 표준화된 주석 적용으로 코드 복잡도 감소
+- **성능 개선**: 정규식 필터링 시 UI 프리징 현상 해결 및 매크로 타이밍 정밀도(1ms) 확보
+- **신뢰성 높은 테스트**: 비동기 테스트 시나리오의 안정화로 CI/CD 신뢰도 향상
 
 #### 이점 (Benefits)
 

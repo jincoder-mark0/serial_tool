@@ -170,7 +170,7 @@ class MacroRunner(QThread):
         수신 데이터 처리 핸들러 (EventBus 콜백).
 
         Logic:
-            1. Mutex 잠금으로 스레드 안전성 확보
+            1. Mutex 잠금으로 스레드 안전성 확보 (Race Condition 방지)
             2. 실행 중이 아니거나 Matcher가 없으면 무시
             3. Matcher에 데이터 전달하여 매칭 시도
             4. 매칭 성공 시 `_expect_found` 플래그 설정 및 대기 스레드 깨움
@@ -178,19 +178,17 @@ class MacroRunner(QThread):
         Args:
             data_dict (dict): {'port': str, 'data': bytes} 구조의 데이터
         """
+        data = data_dict.get('data', b'')
+        if not data:
+            return
+
         self._mutex.lock()
         try:
-            if not self._is_running or self._expect_matcher is None:
-                return
-
-            data = data_dict.get('data', b'')
-            if not data:
-                return
-
-            # Expect 매칭 시도
-            if self._expect_matcher and self._expect_matcher.match(data):
-                self._expect_found = True
-                self._expect_cond.wakeAll() # _wait_for_expect 깨움
+            # 실행 중이고 매처가 있을 때만 처리
+            if self._is_running and self._expect_matcher:
+                if self._expect_matcher.match(data):
+                    self._expect_found = True
+                    self._expect_cond.wakeAll() # _wait_for_expect 깨움
         finally:
             self._mutex.unlock()
 
