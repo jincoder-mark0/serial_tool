@@ -10,7 +10,7 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 * 전역 이벤트 및 설정 관리
 
 ## WHAT
-* 하위 Presenter (Port, Macro, File, Packet) 생성 및 연결
+* 하위 Presenter (Port, Macro, File, Packet, Manual) 생성 및 연결
 * View 이벤트 처리 (시그널 구독)
 * Model 상태 변화에 따른 View 업데이트
 * 설정 저장 및 로드 로직
@@ -26,7 +26,8 @@ from model.macro_runner import MacroRunner
 from .port_presenter import PortPresenter
 from .macro_presenter import MacroPresenter
 from .file_presenter import FilePresenter
-from .packet_presenter import PacketPresenter # Added
+from .packet_presenter import PacketPresenter
+from .manual_control_presenter import ManualControlPresenter
 from .event_router import EventRouter
 from core.settings_manager import SettingsManager
 from core.data_logger import data_logger_manager
@@ -64,17 +65,31 @@ class MainPresenter(QObject):
 
         # --- 2. Sub-Presenter 초기화 ---
         # Strict MVP: View가 노출한 인터페이스를 통해 하위 View 전달
+
+        # 2.1 Port Control
         self.port_presenter = PortPresenter(self.view.port_view, self.port_controller)
+
+        # 2.2 Macro Control
         self.macro_presenter = MacroPresenter(self.view.macro_view, self.macro_runner)
+
+        # 2.3 File Transfer
         self.file_presenter = FilePresenter(self.port_controller)
 
-        # [New] PacketPresenter 초기화
+        # 2.4 Packet Inspector
         # MainWindow는 packet_inspector_panel에 대한 직접적인 프로퍼티가 없으므로 right_section을 통해 접근하거나
         # MainWindow에 packet_view 프로퍼티를 추가하는 것이 Strict MVP에 더 부합함.
         # 여기서는 right_section을 통해 접근 (기존 macro_view 패턴과 동일하게 MainWindow 수정 필요할 수 있음)
         # MainWindow에 packet_view 프로퍼티를 추가했다고 가정하고 사용 (아래 MainWindow 수정 코드 필요)
         # 하지만 이번 턴의 요구사항 범위 내에서 해결하기 위해 직접 접근 방식 사용 (view.right_section.packet_inspector)
         self.packet_presenter = PacketPresenter(self.view.right_section.packet_inspector, self.event_router)
+
+        # 2.5 Manual Control [New]
+        # Local Echo 처리를 위해 view의 append_local_echo_data 메서드를 콜백으로 전달
+        self.manual_control_presenter = ManualControlPresenter(
+            self.view.left_section.manual_ctrl,
+            self.port_controller,
+            self.view.append_local_echo_data
+        )
 
         # --- 3. EventRouter 시그널 연결 (Model -> Presenter) ---
         self.event_router.data_received.connect(self.on_data_received)
@@ -84,11 +99,17 @@ class MainPresenter(QObject):
         self.event_router.data_sent.connect(self.on_data_sent)
 
         # --- 4. 내부 Model 시그널 연결 ---
+        # 매크로 러너의 전송 요청은 ManualControlPresenter 로직과 유사하므로
+        # ManualControlPresenter의 메서드를 호출하거나, 별도로 처리.
+        # 여기서는 매크로 로직이 독립적이므로 MainPresenter에서 중계하되,
+        # 로직 중복을 피하기 위해 ManualControlPresenter의 로직을 재사용할 수도 있음.
+        # 다만 MacroRunner의 시그널 인자가 다르므로(local_echo 없음), 별도 처리 유지.
         self.macro_runner.send_requested.connect(self.on_macro_cmd_send_requested)
 
         # --- 5. View 시그널 연결 (View -> Presenter) ---
-        # 수동 전송 요청 (View 내부 구조 몰라도 됨)
-        self.view.manual_cmd_send_requested.connect(self.on_manual_cmd_send_requested)
+        # 수동 전송 요청은 이제 ManualControlPresenter가 직접 처리하므로
+        # MainPresenter에서는 연결하지 않음.
+        # self.view.manual_cmd_send_requested.connect(...) -> REMOVED
 
         # 설정 및 종료
         self.view.settings_save_requested.connect(self.on_settings_change_requested)
@@ -190,9 +211,12 @@ class MainPresenter(QObject):
         # RX 카운트 증가 (전체 합계)
         self.rx_byte_count += len(data)
 
-    def on_manual_cmd_send_requested(self, text: str, hex_mode: bool, cmd_prefix: bool, cmd_suffix: bool, local_echo: bool) -> None:
+    def on_macro_cmd_send_requested(self, text: str, hex_mode: bool, cmd_prefix: bool, cmd_suffix: bool) -> None:
         """
-        수동 명령 전송 요청 처리
+        매크로 전송 요청 처리
+
+        Note: ManualControlPresenter와 로직이 유사하므로 추후 공통 로직으로 분리 가능.
+        현재는 ManualControlPresenter가 View 인스턴스를 가지고 있어 재사용이 어려우므로 별도 처리.
 
         Logic:
             - 포트 열림 확인
@@ -208,6 +232,8 @@ class MainPresenter(QObject):
             cmd_suffix (bool): 접미사 사용 여부
             local_echo (bool): 로컬 에코 사용 여부
         """
+        # ManualControlPresenter의 메서드를 직접 호출할 수도 있으나, 인자가 약간 다름 (local_echo)
+        # 여기서는 MainPresenter에서 직접 처리 (기존 로직 유지)
         if not self.port_controller.is_open:
             logger.warning("Port not open")
             return
@@ -246,14 +272,6 @@ class MainPresenter(QObject):
         # Local Echo
         if local_echo:
             self.view.append_local_echo_data(data)
-
-    def on_macro_cmd_send_requested(self, text: str, hex_mode: bool, cmd_prefix: bool, cmd_suffix: bool) -> None:
-        """
-        매크로에서 전송 요청을 처리합니다.
-        local_echo는 False로 처리합니다.
-        """
-        self.on_manual_cmd_send_requested(text, hex_mode, cmd_prefix, cmd_suffix, False)
-
     def on_settings_change_requested(self, new_settings: dict) -> None:
         """
         설정 저장 요청을 처리합니다.
@@ -329,7 +347,7 @@ class MainPresenter(QObject):
             except (ValueError, TypeError):
                 logger.warning("Invalid max_log_lines value")
 
-        # [New] PacketPresenter 설정 업데이트 요청
+        # PacketPresenter 설정 업데이트 요청
         # (설정 저장 후 즉시 반영)
         self.packet_presenter.apply_settings()
 

@@ -186,7 +186,6 @@
   - [x] `FilePresenter`: 파일 전송 로직 제어 (신규)
   - [x] `PacketPresenter`: (신규)
   - [x] `ManualControlPresenter`: (신규)
-
 - [ ] **EventRouter 구현**
   - [ ] `EventRouter` 구현 (View-Model 분리)
   - [ ] EventBus 구독 및 View 업데이트 라우팅
