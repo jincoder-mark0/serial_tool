@@ -24,7 +24,7 @@
 * SerialTransport를 Worker에 주입하여 의존성 역전
 """
 from PyQt5.QtCore import QObject, pyqtSignal
-from typing import Optional
+from typing import Optional, Dict, Any
 
 from model.connection_worker import ConnectionWorker
 from model.serial_transport import SerialTransport
@@ -53,7 +53,7 @@ class PortController(QObject):
     def __init__(self) -> None:
         """
         PortController 초기화
-        
+
         Logic:
             - Worker/Parser 저장소 초기화
             - Signal -> EventBus 자동 중계 연결
@@ -63,10 +63,12 @@ class PortController(QObject):
         self.workers: dict[str, ConnectionWorker] = {}
         # 포트 이름(str) -> IPacketParser 매핑
         self.parsers: dict[str, IPacketParser] = {}
+        # 포트 이름(str) -> Config(dict) 매핑 [New]
+        self.port_configs: dict[str, dict] = {}
 
         # EventBus 인스턴스
         self.event_bus = event_bus
-        
+
         # Signal -> EventBus 자동 연결
         self._connect_signals_to_eventbus()
 
@@ -74,19 +76,19 @@ class PortController(QObject):
         """PyQt Signal 발생 시 자동으로 EventBus 이벤트를 발행하도록 연결합니다."""
         self.port_opened.connect(lambda p: self.event_bus.publish("port.opened", p))
         self.port_closed.connect(lambda p: self.event_bus.publish("port.closed", p))
-        
+
         self.error_occurred.connect(
             lambda p, m: self.event_bus.publish("port.error", {'port': p, 'message': m})
         )
-        
+
         self.data_received.connect(
             lambda p, d: self.event_bus.publish("port.data_received", {'port': p, 'data': d})
         )
-        
+
         self.data_sent.connect(
             lambda p, d: self.event_bus.publish("port.data_sent", {'port': p, 'data': d})
         )
-        
+
         self.packet_received.connect(
             lambda p, pkt: self.event_bus.publish("port.packet_received", {'port': p, 'packet': pkt})
         )
@@ -122,6 +124,30 @@ class PortController(QObject):
         """
         worker = self.workers.get(port_name)
         return worker is not None and worker.isRunning()
+
+    def get_port_config(self, port_name: str) -> Dict[str, Any]:
+        """
+        특정 포트의 설정 정보를 반환합니다.
+
+        Args:
+            port_name: 포트 이름
+
+        Returns:
+            dict: 설정 딕셔너리 (없으면 빈 딕셔너리)
+        """
+        return self.port_configs.get(port_name, {})
+
+    def get_write_queue_size(self, port_name: str) -> int:
+        """
+        특정 포트의 전송 대기 큐 크기를 반환합니다.
+
+        Returns:
+            int: 대기 중인 청크 개수 (포트가 없으면 0)
+        """
+        worker = self.workers.get(port_name)
+        if worker:
+            return worker.get_write_queue_size()
+        return 0
 
     def open_port(self, config: dict) -> bool:
         """
@@ -174,6 +200,8 @@ class PortController(QObject):
 
         self.parsers[port_name] = ParserFactory.create_parser(parser_type, **parser_kwargs)
 
+        self.port_configs[port_name] = config
+
         # 4. 시그널 매핑 (Worker 이벤트 -> Controller 시그널)
         worker.connection_opened.connect(lambda p=port_name: self.port_opened.emit(p))
         worker.connection_closed.connect(self.on_worker_closed)
@@ -222,6 +250,8 @@ class PortController(QObject):
             del self.workers[port_name]
         if port_name in self.parsers:
             del self.parsers[port_name]
+        if port_name in self.port_configs:
+            del self.port_configs[port_name]
 
         # 이벤트 발행
         self.port_closed.emit(port_name)

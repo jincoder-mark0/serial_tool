@@ -172,6 +172,13 @@ class ConnectionWorker(QThread):
             return self._tx_queue.enqueue(data)
         return False
 
+    def get_write_queue_size(self) -> int:
+        """
+        현재 전송 대기 중인 데이터 큐의 크기(청크 개수)를 반환합니다.
+        파일 전송 시 Backpressure 제어에 사용됩니다.
+        """
+        return self._tx_queue.qsize()
+
     # 하드웨어 제어 신호 위임
     def set_dtr(self, state: bool) -> None:
         """DTR(Data Terminal Ready) 신호 설정"""
