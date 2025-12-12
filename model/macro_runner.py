@@ -1,3 +1,24 @@
+"""
+매크로 실행 엔진 모듈
+
+이 모듈은 사용자가 정의한 명령어 시퀀스를 자동으로 실행하는 매크로 엔진을 제공합니다.
+
+## WHY
+* 반복적인 명령어 입력 작업을 자동화하여 사용자 편의성 향상
+* 복잡한 테스트 시나리오를 스크립트로 저장하고 재실행 가능
+* 일정한 간격으로 명령어를 반복 전송하여 디바이스 테스트 자동화
+
+## WHAT
+* 매크로 항목(MacroEntry) 리스트를 순차적으로 실행
+* 각 항목의 지연 시간(delay), 반복 횟수, 간격 제어
+* 실행 중 일시정지/재개/중지 기능
+* 실행 상태를 시그널로 외부에 전달
+
+## HOW
+* QTimer 기반 비동기 실행으로 UI 블로킹 방지
+* 상태 머신 패턴으로 실행 흐름 관리
+* PyQt 시그널/슬롯으로 View와 느슨한 결합 유지
+"""
 from PyQt5.QtCore import QObject, pyqtSignal, QTimer
 from typing import List
 from model.macro_entry import MacroEntry
@@ -110,11 +131,21 @@ class MacroRunner(QObject):
 
 
     def _execute_next_step(self) -> None:
-        """다음 스텝 실행"""
+        """
+        다음 스텝 실행
+
+        Logic:
+            - 실행 가능 상태 확인 (running, paused)
+            - 비활성화된 항목은 건너뛰고 다음 유효한 항목 탐색
+            - 모든 항목 완료 시 루프 간격에 따라 다음 루프 예약 또는 즉시 실행
+            - 현재 항목의 명령어를 send_requested 시그널로 전송
+            - Expect 패턴이 있으면 대기 상태로 전환 (향후 구현)
+            - 성공 시 지연 시간 후 다음 스텝 예약
+        """
         if not self._is_running or self._is_paused:
             return
 
-        # 유효한 항목 찾기
+        # 유효한 항목 찾기 (비활성화된 항목 건너뛰기)
         while self._current_index < len(self._entries):
             entry = self._entries[self._current_index]
             if entry.enabled:
@@ -124,14 +155,16 @@ class MacroRunner(QObject):
         # 모든 항목 실행 완료
         if self._current_index >= len(self._entries):
             if self._loop_interval_ms > 0:
+                # 간격을 두고 다음 루프 시작
                 self._loop_timer.start(self._loop_interval_ms)
             else:
-                self._start_loop() # 즉시 다음 루프
+                # 즉시 다음 루프 시작
+                self._start_loop()
             return
 
         entry = self._entries[self._current_index]
         self.step_started.emit(self._current_index, entry)
-        # self.event_bus.publish("macro.step_started", {'index': self._current_index, 'entry': entry}) # Optional
+       # self.event_bus.publish("macro.step_started", {'index': self._current_index, 'entry': entry}) # Optional
 
         # 명령 전송
         try:

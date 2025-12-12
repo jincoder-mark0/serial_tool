@@ -3,6 +3,8 @@
 
 위젯의 속성을 자동으로 탐지하여 번역을 검증합니다.
 명명 규칙(_btn, _lbl, _chk 등)을 활용하여 하드코딩 없이 테스트합니다.
+
+pytest tests\test_ui_translations_dynamic.py -v -s
 """
 import sys
 import os

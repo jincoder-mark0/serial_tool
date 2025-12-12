@@ -1,12 +1,26 @@
 """
-애플리케이션 전역 상수 정의 모듈입니다.
+애플리케이션 전역 상수 정의 모듈
 
-이 모듈은 애플리케이션 전체에서 사용되는 상수, 기본 설정값,
-통신 파라미터 등을 정의합니다.
+애플리케이션 전체에서 사용되는 상수와 기본 설정값을 정의합니다.
 
 ## WHY
-* 매직 넘버(Magic Number)와 하드코딩된 문자열을 제거하여 유지보수성을 높입니다.
-* 설정값을 한곳에서 관리하여 변경이 용이합니다.
+* 매직 넘버(Magic Number) 제거로 코드 가독성 향상
+* 하드코딩된 값을 한곳에서 관리하여 유지보수성 향상
+* 설정값 변경 시 단일 지점 수정으로 전체 반영
+* 타입 힌트로 타입 안전성 보장
+
+## WHAT
+* 시리얼 통신 파라미터 (Baudrate, Timeout, Chunk Size)
+* 버퍼 및 성능 설정 (RingBuffer, Queue, Batch)
+* UI 제한값 및 기본값 (Log Lines, Scan Interval)
+* 타이밍 상수 (Worker Sleep, UI Refresh)
+* 로그 색상 정의
+
+## HOW
+* 대문자 Snake Case로 상수 명명
+* 타입 힌트로 타입 명시
+* 주석으로 단위 및 의미 설명
+* 논리적 그룹으로 섹션 구분
 """
 
 from typing import List
@@ -15,7 +29,7 @@ from typing import List
 # Serial Communication Constants
 # ==========================================
 
-# 지원하는 보드레이트 목록
+# 지원하는 Baudrate 목록
 VALID_BAUDRATES: List[int] = [
     50, 75, 110, 134, 150, 200, 300, 600, 1200, 1800, 2400, 4800,
     9600, 14400, 19200, 38400, 57600, 115200, 128000, 230400, 256000,
@@ -34,11 +48,11 @@ DEFAULT_READ_CHUNK_SIZE: int = 4096  # 한 번에 읽을 바이트 수
 # RingBuffer 기본 크기 (512KB)
 RING_BUFFER_SIZE: int = 512 * 1024
 
-# TX 큐 최대 청크 개수
+# TX Queue 최대 청크 개수
 TX_QUEUE_SIZE: int = 128
 
-# UI 업데이트 배치 설정 (SerialWorker -> UI)
-# 고속 통신 시 UI 프리징을 방지하기 위해 데이터를 모아서 보냅니다.
+# UI 업데이트 Batch 설정 (SerialWorker → UI)
+# 고속 통신 시 UI 프리징 방지를 위해 데이터를 모아서 전송
 BATCH_SIZE_THRESHOLD: int = 1024  # 이 크기가 넘으면 즉시 전송 (bytes)
 BATCH_TIMEOUT_MS: int = 50        # 이 시간이 지나면 크기가 작아도 전송 (ms)
 

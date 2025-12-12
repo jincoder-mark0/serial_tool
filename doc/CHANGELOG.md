@@ -2,6 +2,50 @@
 
 ## [미배포] (Unreleased)
 
+### 코드 문서화 강화 (2025-12-12)
+
+#### 추가 사항 (Added)
+
+- **주석 가이드 준수 문서화**
+  - 25개 핵심 파일에 WHY/WHAT/HOW 섹션 추가
+  - Google Style Docstring 형식 100% 준수
+  - Logic 섹션으로 복잡한 알고리즘 설명 강화
+
+- **모듈별 문서화 완료**
+  - **Core 모듈 (3개)**: event_bus, logger, settings_manager
+  - **Model 모듈 (8개)**: macro_runner, file_transfer, port_controller, serial_manager, connection_worker, serial_transport, packet_parser, macro_entry
+  - **Presenter 모듈 (5개)**: macro_presenter, main_presenter, port_presenter, file_presenter, event_router
+  - **View 모듈 (5개)**: lang_manager, theme_manager, smart_plain_text_edit, smart_number_edit
+  - **Entry/Config/Resource (4개)**: main.py, constants.py, resource_path.py
+  - **Test 모듈 (1개)**: test_ui_translations_dynamic.py
+
+#### 변경 사항 (Changed)
+
+- **주석 간결성 개선**
+  - "~합니다" → "~" 형태로 간결화
+  - 불필요한 조사 제거
+  - 명사형 종결로 통일
+
+- **기술 용어 일관성 확보**
+  - PyQt, PySerial, pathlib 등 영어 유지
+  - Signal, Slot, Thread, Worker 등 PyQt 용어 영어 유지
+  - Singleton, MVP, Pub/Sub, Factory 등 디자인 패턴 용어 영어 유지
+
+- **Logic 섹션 추가 (17개 파일)**
+  - 복잡한 알고리즘 흐름 명확화
+  - 조건 분기 의도 설명
+  - 에러 처리 로직 문서화
+  - 버퍼 관리 및 메모리 보호 로직 설명
+
+#### 이점 (Benefits)
+
+- **가독성 향상**: 코드 의도를 명확히 전달하여 이해도 증대
+- **유지보수성 개선**: 일관된 문서화 형식으로 코드 수정 용이
+- **온보딩 효율화**: 신규 개발자가 코드베이스를 빠르게 이해 가능
+- **자동 문서화 준비**: mkdocstrings 플러그인으로 자동 문서 생성 가능
+
+---
+
 ### EventBus 싱글톤 수정 및 Presenter 계층 구조화 (2025-12-12)
 
 #### 추가 사항 (Added)

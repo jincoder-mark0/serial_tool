@@ -1,3 +1,24 @@
+"""
+매크로 프레젠터 모듈
+
+이 모듈은 매크로 View와 Model 사이의 중재자 역할을 수행하는 Presenter입니다.
+
+## WHY
+* MVP 패턴을 통해 View와 Model의 결합도를 낮춤
+* UI 이벤트를 비즈니스 로직으로 변환하여 전달
+* 매크로 실행 상태를 UI에 반영하여 사용자 피드백 제공
+
+## WHAT
+* MacroPanel(View)의 사용자 입력을 MacroRunner(Model)로 전달
+* MacroRunner의 실행 상태를 MacroPanel에 반영
+* 매크로 리스트 데이터를 MacroEntry 객체로 변환
+* 단일 명령 전송 요청 처리
+
+## HOW
+* PyQt 시그널/슬롯으로 View와 Model 연결
+* MacroEntry 데이터 클래스로 명령어 정보 전달
+* 캡슐화를 위해 Model의 메서드 호출 (시그널 직접 발생 금지)
+"""
 from PyQt5.QtCore import QObject
 from typing import List, Dict, Any
 

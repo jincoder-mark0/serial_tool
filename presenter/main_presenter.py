@@ -1,3 +1,29 @@
+"""
+메인 프레젠터 모듈
+
+애플리케이션의 최상위 Presenter로서 모든 하위 Presenter와 Model을 조율합니다.
+
+## WHY
+* MVP 패턴의 중심 조율자 역할
+* 전역 상태 및 설정 관리
+* 하위 Presenter 간 통신 중재
+* 애플리케이션 생명주기 관리
+
+## WHAT
+* 하위 Presenter 초기화 및 관리 (Port, Macro, File)
+* 전역 이벤트 라우팅 (EventRouter 활용)
+* 설정 저장/로드 처리
+* 상태바 업데이트 및 시스템 로그 관리
+* 단축키 처리
+* 로그 녹화 기능 통합
+
+## HOW
+* PortPresenter, MacroPresenter, FilePresenter 생성 및 조율
+* EventRouter로 Model 이벤트를 중앙 집중식으로 처리
+* SettingsManager로 설정 영속화
+* QTimer로 주기적 상태 업데이트
+* PyQt Signal/Slot으로 View와 통신
+"""
 from PyQt5.QtCore import QObject, QTimer, QDateTime
 from view.main_window import MainWindow
 from model.port_controller import PortController
@@ -42,7 +68,7 @@ class MainPresenter(QObject):
         self.event_router.port_opened.connect(self.on_port_opened)
         self.event_router.port_closed.connect(self.on_port_closed)
         self.event_router.port_error.connect(self.on_port_error)
-        
+
         # PortController 직접 연결 제거 (EventRouter로 대체)
         # self.port_controller.data_received.connect(self.on_data_received)
         self.port_controller.data_sent.connect(self.on_data_sent) # data_sent는 EventRouter에 없음 (추가 가능하지만 일단 유지)
@@ -78,20 +104,20 @@ class MainPresenter(QObject):
         self.view.shortcut_connect_requested.connect(self.on_shortcut_connect)
         self.view.shortcut_disconnect_requested.connect(self.on_shortcut_disconnect)
         self.view.shortcut_clear_requested.connect(self.on_shortcut_clear)
-        
+
         # 파일 전송 다이얼로그 연결
         self.view.file_transfer_dialog_opened.connect(self.file_presenter.on_file_transfer_dialog_opened)
 
         # 상태바 참조 저장 (반복적인 hasattr 확인 방지)
         self.global_status_bar = self.view.global_status_bar
-        
+
         # 녹화 시그널 연결 (LogRecorder 통합)
         self._connect_recording_signals()
-        
+
         # 탭 추가 시그널 연결 (새 탭의 녹화 시그널 연결용)
         self.view.left_section.port_tabs.tab_added.connect(self._on_port_tab_added)
 
-        
+
         # 현재 파일 전송 다이얼로그 (FilePresenter로 이동됨)
         # self._current_transfer_dialog = None
 
@@ -157,7 +183,7 @@ class MainPresenter(QObject):
         # 해당 포트가 녹화 중인지 확인
         if log_recorder_manager.is_recording(port_name):
             log_recorder_manager.record(port_name, data)
-        
+
         # 포트 이름으로 해당 탭 찾기
         for i in range(self.view.left_section.port_tabs.count()):
             widget = self.view.left_section.port_tabs.widget(i)
@@ -260,7 +286,7 @@ class MainPresenter(QObject):
             'port_localecho': 'settings.port_localecho',
             'port_scan_interval': 'settings.port_scan_interval',
             'log_path': 'logging.path',
-            
+
             # Packet Settings
             'parser_type': 'packet.parser_type',
             'delimiters': 'packet.delimiters',
@@ -269,7 +295,7 @@ class MainPresenter(QObject):
             'at_color_error': 'packet.at_color_error',
             'at_color_urc': 'packet.at_color_urc',
             'at_color_prompt': 'packet.at_color_prompt',
-            
+
             # Inspector Settings
             'inspector_buffer_size': 'inspector.buffer_size',
             'inspector_realtime': 'inspector.realtime',
@@ -324,7 +350,7 @@ class MainPresenter(QObject):
         # 녹화 중이면 LogRecorder에 기록
         if log_recorder_manager.is_recording(port_name):
             log_recorder_manager.record(port_name, data)
-            
+
         self.tx_byte_count += len(data)
 
     def on_port_opened(self, port_name: str) -> None:
@@ -393,7 +419,7 @@ class MainPresenter(QObject):
                 rx_widget.recording_stopped.disconnect(self._on_recording_stopped)
             except TypeError:
                 pass
-            
+
             rx_widget.recording_started.connect(self._on_recording_started)
             rx_widget.recording_stopped.connect(self._on_recording_stopped)
 
@@ -409,7 +435,7 @@ class MainPresenter(QObject):
     def _on_recording_started(self, filepath: str) -> None:
         """
         녹화 시작 처리
-        
+
         Args:
             filepath: 녹화 파일 경로
         """
@@ -418,7 +444,7 @@ class MainPresenter(QObject):
             return
 
         port_name = panel.get_port_name()
-        
+
         if not port_name:
             logger.warning("Cannot start recording: No port opened")
             return

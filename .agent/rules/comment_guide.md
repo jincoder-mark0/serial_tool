@@ -23,6 +23,9 @@ Google Style은 Python 코드의 문서화를 위해 Google에서 정의한 표�
 *   모든 Docstring은 삼중 따옴표(`"""`)를 사용합니다.
 *   첫 줄은 요약문으로 작성하고, 한 줄 띄운 후 상세 내용을 작성합니다.
 *   들여쓰기는 스페이스 4칸을 사용합니다.
+*   한글로 작성하되, 기술 용어나 고유명사는 영어 원문을 병기하거나 그대로 사용할 수 있습니다. (예: `WebSocket`, `Queue`, `Backtesting`)
+*   일관성 유지: 동일한 규칙은 동일한 표현으로 반복
+*   불필요한 조사·어미·표현 생략. “설명을 작성합니다(X)” → “설명 작성”
 
 ## 2. 모듈 Docstring (Module Level)
 
@@ -30,10 +33,10 @@ Google Style은 Python 코드의 문서화를 위해 Google에서 정의한 표�
 
 ```python
 """
-모듈의 역할을 한 줄로 요약합니다.
+모듈의 역할을 한 줄로 요약
 
-상세 설명은 여기에 작성합니다. 이 모듈은 ~~ 기능을 제공하며,
-~~ 시스템과 상호작용합니다.
+상세 설명은 여기에 작성 이 모듈은 ~~ 기능을 제공하며,
+~~ 시스템과 상호작용
 
 Attributes:
     DICT_SET (dict): 전역 설정 변수
@@ -62,10 +65,10 @@ Attributes:
 ```python
 class ExampleClass:
     """
-    클래스의 목적을 한 줄로 요약합니다.
+    클래스의 목적을 한 줄로 요약
 
-    클래스에 대한 상세 설명을 작성합니다.
-    여러 줄에 걸쳐서 작성할 수 있습니다.
+    클래스에 대한 상세 설명 작성
+    여러 줄에 걸쳐서 작성가능
 
     Attributes:
         attr1 (str): 속성 1에 대한 설명
@@ -80,9 +83,9 @@ class ExampleClass:
 ```python
 def example_function(param1: int, param2: str = "default") -> bool:
     """
-    함수의 기능을 한 줄로 요약합니다.
+    함수의 기능을 한 줄로 요약
 
-    함수의 동작 방식, 주의사항 등을 상세히 설명합니다.
+    함수의 동작 방식, 주의사항 등을 상세설명
 
     Logic:
         - 로직설명
@@ -94,14 +97,14 @@ def example_function(param1: int, param2: str = "default") -> bool:
         param2 (str, optional): 두 번째 파라미터 설명. 기본값은 "default".
 
     Returns:
-        bool: 성공하면 True, 실패하면 False를 반환합니다.
+        bool: 성공하면 True, 실패하면 False를 반환
 
     Raises:
-        ValueError: param1이 음수일 경우 발생합니다.
-        TypeError: param2가 문자열이 아닐 경우 발생합니다.
+        ValueError: param1이 음수일 경우 발생
+        TypeError: param2가 문자열이 아닐 경우 발생
 
     Examples:
-        함수 사용 예시를 작성할 수 있습니다.
+        함수 사용 예시를 작성
 
         >>> example_function(10, "test")
         True
@@ -127,7 +130,7 @@ def example_function(param1: int, param2: str = "default") -> bool:
 ```python
 def connect(self, host: str, port: int) -> None:
     """
-    서버에 연결합니다.
+    서버에 연결
 
     Args:
         host: 서버 호스트 주소
@@ -140,7 +143,7 @@ def connect(self, host: str, port: int) -> None:
 ```python
 def connect(self, host, port):
     """
-    서버에 연결합니다.
+    서버에 연결
 
     Args:
         host (str): 서버 호스트 주소

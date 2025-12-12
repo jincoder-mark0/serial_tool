@@ -2,9 +2,11 @@
 
 ## 1. 개요 (Overview)
 
-금일 세션은 **EventBus 싱글톤 패턴 수정** 및 **Presenter 계층 구조화**에 집중했습니다.
+금일 오전 세션은 **EventBus 싱글톤 패턴 수정** 및 **Presenter 계층 구조화**에 집중했습니다.
 
 이전 세션에서 발생한 `ModuleNotFoundError` 테스트 실패 문제를 해결하고, EventBus를 올바른 싱글톤 패턴으로 리팩토링했습니다. 또한 `EventRouter`, `MacroPresenter`, `FilePresenter` 등 새로운 Presenter 클래스를 도입하여 Model 계층과 View 계층 간의 이벤트 흐름을 개선했습니다.
+
+추가로 코드 문서화 강화 (주석 가이드 준수)을 진행하였습니다.
 
 ## 2. 주요 변경 사항 (Key Changes)
 

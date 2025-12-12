@@ -3,6 +3,8 @@ UI 번역 테스트
 
 언어 파일(en.json, ko.json)의 내용을 기반으로 UI 위젯의 번역이 올바르게 적용되는지 검증합니다.
 하드코딩된 값 대신 실제 언어 파일을 참조하여 테스트합니다.
+
+pytest tests\test_ui_translations.py -v
 """
 import sys
 import os

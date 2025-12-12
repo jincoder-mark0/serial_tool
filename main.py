@@ -1,8 +1,32 @@
+"""
+SerialTool 애플리케이션 진입점
+
+시리얼 통신 도구의 메인 실행 파일입니다.
+
+## WHY
+* 애플리케이션 초기화 및 실행 관리
+* 전역 설정 및 리소스 경로 구성
+* 에러 핸들링 및 로깅 설정
+* MVP 패턴 초기 연결
+
+## WHAT
+* QApplication 생성 및 설정
+* ResourcePath 초기화
+* MainWindow 및 MainPresenter 생성
+* 전역 에러 핸들러 설치
+* High DPI 지원 설정
+
+## HOW
+* sys.path 조정으로 모듈 import 경로 설정
+* ResourcePath로 개발/배포 환경 자동 감지
+* Logger에 경로 주입
+* MVP 패턴으로 View-Presenter 연결
+* QApplication.exec_()로 이벤트 루프 시작
+"""
 import sys
 import os
 
-# 프로젝트 루트 경로를 sys.path에 추가하여 모듈 import 가능하게 함
-# 이것은 모든 import 전에 실행되어야 합니다
+# 프로젝트 루트 경로를 sys.path에 추가 (모든 import 전에 실행)
 sys.path.insert(0, os.path.dirname(os.path.abspath(__file__)))
 
 import logging
@@ -18,8 +42,12 @@ from core.logger import logger
 
 def setup_logging() -> None:
     """
-    로깅 설정을 초기화합니다.
-    로그 레벨, 포맷, 날짜 형식을 설정합니다.
+    로깅 설정 초기화
+
+    Logic:
+        - 로그 레벨을 INFO로 설정
+        - 타임스탬프, 레벨, 메시지 포맷 정의
+        - 시간 형식을 HH:MM:SS로 설정
     """
     logging.basicConfig(
         level=logging.INFO,
@@ -31,20 +59,28 @@ from core.error_handler import install_global_error_handler
 
 def main() -> None:
     """
-    애플리케이션의 메인 진입점입니다.
-    로깅 설정, QApplication 초기화, 메인 윈도우 생성 및 실행을 담당합니다.
+    애플리케이션 메인 진입점
+
+    Logic:
+        - 로깅 및 에러 핸들러 설치
+        - ResourcePath 초기화 및 경로 검증
+        - Logger에 경로 주입
+        - High DPI 스케일링 설정
+        - QApplication 생성
+        - MainWindow 및 MainPresenter 초기화
+        - 이벤트 루프 시작
     """
     setup_logging()
     install_global_error_handler()
     logging.info(f"Starting Serial Tool v{__version__}")
 
-    # 애플리케이션 설정 초기화
+    # ResourcePath 초기화 (개발/배포 환경 자동 감지)
     resource_path = ResourcePath()
 
-    # 핵심 모듈에 설정 주입
+    # 핵심 모듈에 경로 주입
     logger.configure(resource_path)
 
-    # 경로 검증
+    # 경로 검증 및 경고
     path_status = resource_path.validate_paths()
     for path_name, exists in path_status.items():
         if not exists:
@@ -52,16 +88,16 @@ def main() -> None:
 
     logging.info(f"Base directory: {resource_path.base_dir}")
 
-    # 고해상도(High DPI) 스케일링 설정
+    # High DPI 스케일링 설정
     QApplication.setAttribute(Qt.AA_EnableHighDpiScaling)
     QApplication.setAttribute(Qt.AA_UseHighDpiPixmaps)
 
     app = QApplication(sys.argv)
 
-    # MainWindow 초기화 (resource_path 전달)
+    # MainWindow 초기화 (ResourcePath 전달)
     window = MainWindow(resource_path=resource_path)
 
-    # MainPresenter 초기화 (View와 Model 연결)
+    # MainPresenter 초기화 (MVP 패턴: View와 Model 연결)
     presenter = MainPresenter(window)
 
     window.show()

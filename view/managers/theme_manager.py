@@ -1,3 +1,29 @@
+"""
+테마 관리자 모듈
+
+애플리케이션의 테마와 폰트를 관리합니다.
+
+## WHY
+* 다크/라이트 테마 지원으로 사용자 선호도 반영
+* 플랫폼별 최적화된 폰트 제공
+* 가변폭/고정폭 폰트 분리로 가독성 향상
+* 중앙 집중식 스타일 관리
+
+## WHAT
+* QSS 기반 테마 로드 및 적용
+* 플랫폼별 기본 폰트 설정 (Windows, Linux, macOS)
+* 가변폭 폰트 (UI 요소용)
+* 고정폭 폰트 (데이터 표시용)
+* 테마별 아이콘 제공
+* 설정 저장/복원
+
+## HOW
+* QSS 파일로 테마 정의 (common + theme-specific)
+* QFont로 폰트 관리
+* ResourcePath로 동적 경로 처리
+* Fallback 메커니즘으로 파일 누락 대응
+* 플랫폼 감지로 최적 폰트 자동 선택
+"""
 import os
 import platform
 from PyQt5.QtWidgets import QApplication
@@ -5,7 +31,7 @@ from PyQt5.QtGui import QFont, QIcon
 from core.logger import logger
 
 class ThemeManager:
-    """애플리케이션 테마와 폰트를 관리하는 클래스입니다."""
+    """애플리케이션 테마와 폰트 관리자"""
 
     # 플랫폼별 기본 폰트 설정
     _PROPORTIONAL_FONTS = {

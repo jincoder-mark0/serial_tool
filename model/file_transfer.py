@@ -60,8 +60,19 @@ class FileTransferEngine(QRunnable):
         self._is_cancelled = True
 
     def run(self):
-        """전송 실행 로직"""
+        """
+        파일 전송 실행 로직
+
+        Logic:
+            - 파일 존재 여부 확인
+            - 파일을 청크 단위로 읽어서 전송
+            - 각 청크 전송 후 진행률 업데이트 (시그널 + 이벤트 버스)
+            - Baudrate 기반 지연 시간 계산하여 흐름 제어
+            - 취소 요청 시 즉시 중단
+            - 성공/실패 상태를 시그널과 이벤트로 전달
+        """
         try:
+            # 파일 존재 확인
             if not os.path.exists(self.file_path):
                 self.signals.error_occurred.emit(f"File not found: {self.file_path}")
                 self.signals.transfer_completed.emit(False)
@@ -77,21 +88,22 @@ class FileTransferEngine(QRunnable):
                         break # EOF
 
                     # 데이터 전송
-                    # PortController.send_data_to_port 사용
                     success = self.port_controller.send_data_to_port(self.port_name, chunk)
                     if not success:
                         raise Exception(f"Port {self.port_name} is not open or unavailable.")
 
+                    # 진행률 업데이트
                     sent_bytes += len(chunk)
                     self.signals.progress_updated.emit(sent_bytes, total_size)
                     self.event_bus.publish("file.progress", {'current': sent_bytes, 'total': total_size})
 
-                    # 전송 속도 조절 (Flow Control이 없으므로 Baudrate 기반 지연)
-                    # 1 byte = 10 bits (8N1)
-                    # time = bits / baudrate
+                    # 전송 속도 조절 (Baudrate 기반 지연)
+                    # 1 byte = 10 bits (8N1: 1 start + 8 data + 1 stop)
+                    # wait_time = bits / baudrate
                     wait_time = (len(chunk) * 10) / self.baudrate
                     time.sleep(wait_time)
 
+            # 전송 완료 또는 취소 처리
             if self._is_cancelled:
                 self.signals.error_occurred.emit("Transfer cancelled by user.")
                 self.signals.transfer_completed.emit(False)
@@ -101,6 +113,7 @@ class FileTransferEngine(QRunnable):
                 self.event_bus.publish("file.completed", True)
 
         except Exception as e:
+            # 오류 발생 시 처리
             self.signals.error_occurred.emit(str(e))
             self.signals.transfer_completed.emit(False)
             self.event_bus.publish("file.error", str(e))
