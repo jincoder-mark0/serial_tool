@@ -34,7 +34,6 @@ class ManualCtrlPanel(QWidget):
     manual_cmd_send_requested = pyqtSignal(str, bool, bool, bool, bool)
     rts_changed = pyqtSignal(bool) # RTS 상태 변경 시그널
     dtr_changed = pyqtSignal(bool) # DTR 상태 변경 시그널
-    local_echo_changed = pyqtSignal(bool) # Local Echo 상태 변경 시그널
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -58,7 +57,6 @@ class ManualCtrlPanel(QWidget):
         self.manual_ctrl_widget.manual_cmd_send_requested.connect(self.manual_cmd_send_requested.emit)
         self.manual_ctrl_widget.rts_changed.connect(self.rts_changed.emit)
         self.manual_ctrl_widget.dtr_changed.connect(self.dtr_changed.emit)
-        self.manual_ctrl_widget.local_echo_changed.connect(self.local_echo_changed.emit)
 
         layout.addWidget(self.manual_ctrl_widget)
 

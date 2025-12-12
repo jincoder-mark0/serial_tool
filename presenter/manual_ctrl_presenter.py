@@ -16,7 +16,7 @@
 ## HOW
 * View 시그널 구독 (ManualCtrlPanel -> Widget)
 * CmdProcessor를 통한 데이터 가공
-* PortController 메서드 호출 (send_data, set_rts, set_dtr, set_local_echo)
+* PortController 메서드 호출 (send_data, set_rts, set_dtr)
 """
 from PyQt5.QtCore import QObject
 from typing import Callable, Optional
@@ -52,14 +52,10 @@ class ManualCtrlPresenter(QObject):
         self.local_echo_callback = local_echo_callback
         self.settings_manager = SettingsManager()
 
-        # 패널 내부의 실제 위젯 접근
-        widget = self.view.manual_ctrl_widget
-
-        # 시그널 연결
-        widget.manual_cmd_send_requested.connect(self.on_manual_cmd_send_requested)
-        widget.rts_changed.connect(self.on_rts_changed)
-        widget.dtr_changed.connect(self.on_dtr_changed)
-        widget.local_echo_changed.connect(self.on_local_echo_changed)
+        # View 시그널 연결 (디미터 법칙 준수)
+        self.view.manual_cmd_send_requested.connect(self.on_manual_cmd_send_requested)
+        self.view.rts_changed.connect(self.on_rts_changed)
+        self.view.dtr_changed.connect(self.on_dtr_changed)
 
         # 초기 상태 설정 (전역 설정 반영)
         self._apply_initial_settings()
@@ -124,14 +120,3 @@ class ManualCtrlPresenter(QObject):
         if self.port_controller.is_open:
             self.port_controller.set_dtr(state)
             logger.info(f"DTR changed to {state}")
-
-    def on_local_echo_changed(self, state: bool) -> None:
-        """
-        Local Echo 상태 변경 처리
-
-        Args:
-            state (bool): Local Echo 상태 (True=ON, False=OFF)
-        """
-        if self.port_controller.is_open:
-            self.port_controller.set_local_echo(state)
-            logger.info(f"Local Echo changed to {state}")

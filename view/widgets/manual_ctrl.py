@@ -41,7 +41,6 @@ class ManualCtrlWidget(QWidget):
     manual_cmd_send_requested = pyqtSignal(str, bool, bool, bool, bool) # text, hex, prefix, suffix, local_echo
     rts_changed = pyqtSignal(bool) # RTS 상태 변경
     dtr_changed = pyqtSignal(bool) # DTR 상태 변경
-    local_echo_changed = pyqtSignal(bool) # Local Echo 상태 변경
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -138,9 +137,8 @@ class ManualCtrlWidget(QWidget):
         # DTR 시그널 연결
         self.dtr_chk.stateChanged.connect(lambda state: self.dtr_changed.emit(state == Qt.Checked))
 
-        # 로컬 에코 체크박스 추가
+        # 로컬 에코 체크박스 추가 (상태 변경 시그널 제거 - 전송 시점에 상태 확인)
         self.local_echo_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_local_echo"))
-        self.local_echo_chk.stateChanged.connect(lambda state: self.local_echo_changed.emit(state == Qt.Checked))
 
         option_layout = QGridLayout()
         option_layout.setContentsMargins(0, 5, 0, 0) # 상단 여백 추가

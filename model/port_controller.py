@@ -63,7 +63,7 @@ class PortController(QObject):
         self.workers: dict[str, ConnectionWorker] = {}
         # 포트 이름(str) -> IPacketParser 매핑
         self.parsers: dict[str, IPacketParser] = {}
-        # 포트 이름(str) -> Config(dict) 매핑 [New]
+        # 포트 이름(str) -> Config(dict) 매핑
         self.port_configs: dict[str, dict] = {}
 
         # EventBus 인스턴스
@@ -326,13 +326,3 @@ class PortController(QObject):
         """
         for worker in self.workers.values():
             worker.set_rts(state)
-
-    def set_local_echo(self, state: bool) -> None:
-        """
-        모든 포트의 Local Echo 신호 설정
-
-        Args:
-            state: True면 Local Echo ON, False면 Local Echo OFF
-        """
-        for worker in self.workers.values():
-            worker.set_local_echo(state)

@@ -187,7 +187,3 @@ class ConnectionWorker(QThread):
     def set_rts(self, state: bool) -> None:
         """RTS(Request To Send) 신호 설정"""
         self.transport.set_rts(state)
-
-    def set_local_echo(self, state: bool) -> None:
-        """Local Echo 신호 설정"""
-        self.transport.set_local_echo(state)
