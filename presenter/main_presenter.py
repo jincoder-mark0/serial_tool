@@ -83,6 +83,7 @@ class MainPresenter(QObject):
 
         # 설정 저장 요청 시그널 연결
         self.view.settings_save_requested.connect(self.on_settings_change_requested)
+        self.view.font_settings_changed.connect(self.on_font_settings_changed)
 
         # 종료 요청 시그널 연결
         self.view.close_requested.connect(self.on_close_requested)
@@ -172,7 +173,7 @@ class MainPresenter(QObject):
         # 로깅 중이면 DataLogger에 먼저 기록 (데이터 누락 방지)
         # 해당 포트가 로깅 중인지 확인
         if data_logger_manager.is_logging(port_name):
-            data_logger_manager.record(port_name, data)
+            data_logger_manager.write(port_name, data)
 
         # 포트 이름으로 해당 탭 찾기
         for i in range(self.view.left_section.port_tabs.count()):
@@ -333,6 +334,34 @@ class MainPresenter(QObject):
         self.global_status_bar.show_message("Settings updated", 2000)
         self.log_system_message("Settings updated", "INFO")
 
+    def on_font_settings_changed(self, font_settings: dict) -> None:
+        """
+        폰트 설정 변경 요청을 처리하고 저장합니다.
+
+        Args:
+            font_settings (dict): ThemeManager에서 전달된 폰트 설정 값들.
+        """
+        settings_manager = SettingsManager()
+
+        # ThemeManager 키와 ConfigKeys 상수 매핑
+        key_map = {
+            "proportional_font_family": ConfigKeys.PROP_FONT_FAMILY,
+            "proportional_font_size": ConfigKeys.PROP_FONT_SIZE,
+            "fixed_font_family": ConfigKeys.FIXED_FONT_FAMILY,
+            "fixed_font_size": ConfigKeys.FIXED_FONT_SIZE
+        }
+
+        for tm_key, value in font_settings.items():
+            if tm_key in key_map:
+                config_key = key_map[tm_key]
+                settings_manager.set(config_key, value)
+            else:
+                # 알 수 없는 키에 대한 경고 (유지보수성 확보)
+                logger.warning(f"Unknown font setting key received: {tm_key}")
+
+        settings_manager.save_settings()
+        logger.info("Font settings saved successfully.")
+
     def on_data_sent(self, port_name: str, data: bytes) -> None:
         """
         데이터 전송 시 TX 카운트 증가
@@ -341,7 +370,7 @@ class MainPresenter(QObject):
         """
         # 로깅 중이면 DataLogger에 기록
         if data_logger_manager.is_logging(port_name):
-            data_logger_manager.record(port_name, data)
+            data_logger_manager.write(port_name, data)
 
         self.tx_byte_count += len(data)
 
@@ -386,7 +415,7 @@ class MainPresenter(QObject):
         self.port_presenter.clear_log_current_port()
 
     # -------------------------------------------------------------------------
-    # 로깅 (Log Logging)
+    # 데이터 로깅 (Log Logging)
     # -------------------------------------------------------------------------
     def _connect_logging_signals(self) -> None:
         """모든 포트 패널의 로깅 시그널을 연결합니다."""

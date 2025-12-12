@@ -33,6 +33,8 @@ class MainWindow(QMainWindow):
     close_requested = pyqtSignal()
     settings_save_requested = pyqtSignal(dict)
 
+    font_settings_changed = pyqtSignal(dict)
+
     # 단축키 시그널
     shortcut_connect_requested = pyqtSignal()
     shortcut_disconnect_requested = pyqtSignal()
@@ -297,28 +299,25 @@ class MainWindow(QMainWindow):
         self.global_status_bar.show_message(msg, 2000)
 
     def open_font_settings_dialog(self) -> None:
-        """폰트 설정 대화상자를 엽니다."""
+        """
+        폰트 설정 대화상자를 엽니다.
+
+        Logic:
+            - FontSettingsDialog 실행
+            - 다이얼로그에서 변경된 내용(ThemeManager 상태)을 가져옴
+            - Presenter에 저장 요청 (font_settings_changed 시그널 emit)
+            - UI 업데이트
+        """
         dialog = FontSettingsDialog(self.theme_manager, self)
         if dialog.exec_():
-            # 폰트 설정 저장
+            # 폰트 설정 가져오기 (ThemeManager는 이미 다이얼로그에 의해 업데이트됨)
             font_settings = self.theme_manager.get_font_settings()
-            for key, value in font_settings.items():
-                # ThemeManager는 키를 직접 관리하므로 settings.key 형태로 저장해야 함
-                # 하지만 일관성을 위해 ConfigKeys를 사용하는 것이 좋음
-                # 여기서는 ThemeManager가 반환하는 키가 ConfigKeys와 1:1 매핑된다고 가정
-                # 또는 직접 매핑
-                if key == "proportional_font_family":
-                    self.settings.set(ConfigKeys.PROP_FONT_FAMILY, value)
-                elif key == "proportional_font_size":
-                    self.settings.set(ConfigKeys.PROP_FONT_SIZE, value)
-                elif key == "fixed_font_family":
-                    self.settings.set(ConfigKeys.FIXED_FONT_FAMILY, value)
-                elif key == "fixed_font_size":
-                    self.settings.set(ConfigKeys.FIXED_FONT_SIZE, value)
-                else:
-                    self.settings.set(f'settings.{key}', value)
 
-            # 애플리케이션에 가변폭 폰트 적용
+            # Presenter로 변경 사항 전달 (저장 요청)
+            # MVP: View는 데이터를 전달만 하고 저장은 Presenter가 담당
+            self.font_settings_changed.emit(font_settings)
+
+            # 애플리케이션에 가변폭 폰트 적용 (UI 즉시 반영)
             prop_font = self.theme_manager.get_proportional_font()
             QApplication.instance().setFont(prop_font)
 

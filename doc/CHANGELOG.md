@@ -23,6 +23,7 @@
   - **Data Logger**: `LogRecorder`를 `DataLogger`로 명칭 변경 (시스템 로그와 데이터 로깅의 역할 분리 명확화)
   - **Event System**: `PortController`의 중복된 이벤트 발행 구조를 제거하고 Signal-EventBus 자동 브리지 구현
   - **Macro Engine**: `QTimer` 기반 루프를 `QThread` + `QWaitCondition` 기반으로 전면 교체 (Windows 타이머 정밀도 문제 해결)
+  - **Font Settings**: 폰트 설정 저장 로직을 View(`MainWindow`)에서 Presenter(`MainPresenter`)로 이관하고, 동적 키 생성(`f-string`) 대신 `ConfigKeys` 매핑 딕셔너리를 사용하여 MVP 원칙 준수 및 안전성 강화
 
 - **로직 최적화 및 수정**
   - **Flow Control**: 하드웨어 흐름 제어 설정에 따라 전송 지연(Sleep)을 조건부로 적용하도록 변경

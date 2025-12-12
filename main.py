@@ -14,7 +14,6 @@ SerialTool 애플리케이션 진입점
 * ResourcePath 초기화
 * MainWindow 및 MainPresenter 생성
 * 전역 에러 핸들러 설치
-* High DPI 지원 설정
 
 ## HOW
 * sys.path 조정으로 모듈 import 경로 설정
