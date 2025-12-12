@@ -36,7 +36,6 @@ from core.settings_manager import SettingsManager
 from core.log_recorder import log_recorder_manager
 from view.managers.lang_manager import lang_manager
 from core.logger import logger
-import os
 
 class MainPresenter(QObject):
     """

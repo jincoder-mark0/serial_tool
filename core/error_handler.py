@@ -1,3 +1,24 @@
+"""
+전역 에러 핸들러 모듈
+
+처리되지 않은 예외를 포착하여 애플리케이션의 안정성을 높입니다.
+
+## WHY
+* 예상치 못한 오류로 인해 애플리케이션이 비정상 종료되는 것을 방지합니다.
+* 사용자에게 오류 발생을 명확히 알리고, 개발자가 디버깅할 수 있도록 상세 정보를 로깅합니다.
+* UI 스레드가 아닌 다른 스레드에서 발생한 예외도 안전하게 처리합니다.
+
+## WHAT
+* `sys.excepthook`을 오버라이드하여 처리되지 않은 모든 예외를 가로챕니다.
+* 예외 정보를 로그 파일에 `CRITICAL` 레벨로 기록합니다.
+* PyQt의 시그널/슬롯 메커니즘을 사용하여 UI 스레드에서 안전하게 에러 다이얼로그를 표시합니다.
+* `KeyboardInterrupt`는 기본 동작을 따르도록 예외 처리합니다.
+
+## HOW
+* `QObject`를 상속하고 `pyqtSignal`을 사용하여 스레드 간 안전한 통신을 구현합니다.
+* `install_global_error_handler` 함수를 통해 애플리케이션 시작 시 핸들러를 등록합니다.
+* `traceback` 모듈을 사용하여 상세한 스택 트레이스 정보를 포맷팅합니다.
+"""
 import sys
 import traceback
 from PyQt5.QtWidgets import QMessageBox, QApplication
@@ -19,7 +40,7 @@ class GlobalErrorHandler(QObject):
         self._old_excepthook = sys.excepthook
         # 새 excepthook 등록
         sys.excepthook = self._handle_exception
-        
+
         # 시그널 연결 (QueuedConnection으로 동작하여 UI 스레드에서 실행됨)
         self.show_error_signal.connect(self._show_error_dialog)
 
@@ -34,7 +55,7 @@ class GlobalErrorHandler(QObject):
 
         # 에러 메시지 포맷팅
         error_msg = "".join(traceback.format_exception(exc_type, exc_value, exc_traceback))
-        
+
         # 로깅
         logger.critical(f"Uncaught exception:\n{error_msg}")
 

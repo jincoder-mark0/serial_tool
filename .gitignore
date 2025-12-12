@@ -153,4 +153,4 @@ Thumbs.db
 repomix-output.xml
 
 # Ignore folder (practice/test files)
-ignore/
+_ignore/
