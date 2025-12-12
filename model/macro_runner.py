@@ -29,10 +29,10 @@ from core.event_bus import event_bus
 
 class MacroRunner(QThread):
     """
-    매크로 실행 엔진 (Thread Based)
+    매크로 실행 엔진 클래스
 
-    QThread와 QWaitCondition을 사용하여
-    UI 블로킹에 영향받지 않는 정밀한 타이밍을 보장합니다.
+    QTimer 대신 QThread와 QWaitCondition을 사용하여 UI 프리징을 방지하고
+    정밀한 타이밍 제어를 보장합니다.
     """
 
     # UI 업데이트를 위한 시그널
@@ -150,7 +150,7 @@ class MacroRunner(QThread):
         self._mutex.lock()
         if self._is_running and self._is_paused:
             self._is_paused = False
-            self._cond.wakeAll() # 일시정지 대기 해제
+            self._cond.wakeAll()
         self._mutex.unlock()
 
     def request_single_send(self, command: str, is_hex: bool, prefix: bool, suffix: bool) -> None:
@@ -170,23 +170,23 @@ class MacroRunner(QThread):
         수신 데이터 처리 핸들러 (EventBus 콜백).
 
         Logic:
-            1. 실행 중이 아니거나 Matcher가 없으면 무시
-            2. Mutex 잠금 후 Matcher에 데이터 전달
-            3. 매칭 성공 시 `_expect_found` 플래그 설정 및 대기 스레드 깨움
+            1. Mutex 잠금으로 스레드 안전성 확보
+            2. 실행 중이 아니거나 Matcher가 없으면 무시
+            3. Matcher에 데이터 전달하여 매칭 시도
+            4. 매칭 성공 시 `_expect_found` 플래그 설정 및 대기 스레드 깨움
 
         Args:
             data_dict (dict): {'port': str, 'data': bytes} 구조의 데이터
         """
-        # 실행 중이 아니거나 매처가 없으면 무시
-        if not self._is_running or self._expect_matcher is None:
-            return
-
-        data = data_dict.get('data', b'')
-        if not data:
-            return
-
         self._mutex.lock()
         try:
+            if not self._is_running or self._expect_matcher is None:
+                return
+
+            data = data_dict.get('data', b'')
+            if not data:
+                return
+
             # Expect 매칭 시도
             if self._expect_matcher and self._expect_matcher.match(data):
                 self._expect_found = True
@@ -227,13 +227,12 @@ class MacroRunner(QThread):
                 if not entry.enabled:
                     continue
 
-                # 스텝 시작 알림
                 self.step_started.emit(i, entry)
                 step_success = True
                 error_msg = ""
 
                 try:
-                    # 2-1. 명령 전송 (Signal -> UI Thread -> PortController)
+                    # 2-1. 명령 전송 요청 (Signal)
                     self.send_requested.emit(entry.command, entry.is_hex, entry.prefix, entry.suffix)
 
                     # 2-2. Expect 처리 (응답 대기)
@@ -281,56 +280,6 @@ class MacroRunner(QThread):
         # 완료 시그널 방출
         self.macro_finished.emit()
 
-    def _wait_for_expect(self, pattern: str, timeout_ms: int) -> bool:
-        """
-        Expect 패턴 매칭 대기
-
-        Logic:
-            1. ExpectMatcher 초기화 (EventBus 리스너가 사용할 수 있도록 설정)
-            2. 지정된 시간(`timeout_ms`) 동안 조건 변수 대기
-            3. 데이터 수신 시 리스너가 조건 변수를 깨움(`wakeAll`)
-            4. 매칭 성공 또는 타임아웃 시 결과 반환
-
-        Args:
-            pattern: 매칭할 정규식 또는 문자열 패턴
-            timeout_ms: 대기 시간 제한 (ms)
-
-        Returns:
-            bool: 매칭 성공 여부 (True=성공, False=타임아웃)
-        """
-        self._mutex.lock()
-
-        # Matcher 설정
-        self._expect_matcher = ExpectMatcher(pattern, is_regex=True)
-        self._expect_found = False
-
-        # 타임아웃 계산을 위한 시작 시간
-        start_time = time.monotonic()
-        remaining_time = timeout_ms
-
-        try:
-            # 대기 루프
-            while self._is_running and not self._expect_found:
-                if remaining_time <= 0:
-                    break
-
-                # Mutex를 잠시 풀고 대기, 신호가 오거나 타임아웃되면 다시 잠금
-                if not self._expect_cond.wait(self._mutex, int(remaining_time)):
-                    # 타임아웃 발생
-                    break
-
-                # Spurious Wakeup 대비 남은 시간 재계산
-                elapsed = (time.monotonic() - start_time) * 1000
-                remaining_time = timeout_ms - elapsed
-        finally:
-            # 상태 정리
-            success = self._expect_found
-            self._expect_matcher = None
-            self._expect_found = False
-            self._mutex.unlock()
-
-        return success
-
     def _check_running(self) -> bool:
         """실행 중인지 확인 (Thread-safe)"""
         self._mutex.lock()
@@ -339,7 +288,7 @@ class MacroRunner(QThread):
         return running
 
     def _handle_pause(self) -> None:
-        """일시 정지 상태일 경우 대기 (Thread-safe)"""
+        """일시 정지 상태일 경우 대기"""
         self._mutex.lock()
         try:
             while self._is_paused and self._is_running:
@@ -365,3 +314,51 @@ class MacroRunner(QThread):
                 self._cond.wait(self._mutex, ms)
         finally:
             self._mutex.unlock()
+
+    def _wait_for_expect(self, pattern: str, timeout_ms: int) -> bool:
+        """
+        Expect 패턴 매칭 대기
+
+        Logic:
+            1. ExpectMatcher 초기화 (EventBus 리스너가 사용할 수 있도록 설정)
+            2. 지정된 시간(`timeout_ms`) 동안 조건 변수 대기
+            3. 데이터 수신 시 리스너가 조건 변수를 깨움(`wakeAll`)
+            4. 매칭 성공 또는 타임아웃 시 결과 반환
+
+        Args:
+            pattern: 매칭할 정규식 또는 문자열 패턴
+            timeout_ms: 대기 시간 제한 (ms)
+
+        Returns:
+            bool: 매칭 성공 여부 (True=성공, False=타임아웃)
+        """
+        self._mutex.lock()
+
+        # Matcher 설정
+        self._expect_matcher = ExpectMatcher(pattern, is_regex=True)
+        self._expect_found = False
+
+        start_time = time.monotonic()
+        remaining_time = timeout_ms
+
+        try:
+            while self._is_running and not self._expect_found:
+                if remaining_time <= 0:
+                    break
+
+                # Mutex를 잠시 풀고 대기, 신호가 오거나 타임아웃되면 다시 잠금
+                if not self._expect_cond.wait(self._mutex, int(remaining_time)):
+                    # 타임아웃 발생
+                    break
+
+                # Spurious Wakeup 대비 남은 시간 재계산
+                elapsed = (time.monotonic() - start_time) * 1000
+                remaining_time = timeout_ms - elapsed
+        finally:
+            # 상태 정리
+            success = self._expect_found
+            self._expect_matcher = None
+            self._expect_found = False
+            self._mutex.unlock()
+
+        return success
