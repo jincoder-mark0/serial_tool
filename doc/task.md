@@ -183,7 +183,7 @@
   - [x] `MainPresenter`: 앱 생명주기 및 하위 Presenter 조율
   - [x] `PortPresenter`: 포트 연결/해제/설정 제어 (완성)
   - [x] `MacroPresenter`: 매크로 로드/저장/실행 제어 (신규)
-  - [ ] `FilePresenter`: 파일 전송 로직 제어 (신규)
+  - [x] `FilePresenter`: 파일 전송 로직 제어 (신규)
 - [ ] **EventRouter 구현**
   - [ ] `EventRouter` 구현 (View-Model 분리)
   - [ ] EventBus 구독 및 View 업데이트 라우팅

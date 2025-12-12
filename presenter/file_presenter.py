@@ -1,76 +1,90 @@
 """
 파일 프레젠터 모듈
 
-파일 전송 로직을 담당하는 Presenter입니다.
+파일 전송 로직, 속도 계산, ETA 산출을 담당하는 Presenter입니다.
 
 ## WHY
-* 파일 전송 UI와 비즈니스 로직 분리
-* 전송 진행률 및 속도 계산
-* 에러 처리 및 사용자 피드백
-* Thread Pool 기반 비동기 전송 관리
+* 파일 전송 UI와 비즈니스 로직(계산, 흐름 제어) 분리
+* 전송 상태에 대한 정밀한 제어 및 사용자 피드백 제공
+* MVP 패턴 준수
 
 ## WHAT
 * FileTransferDialog(View)와 FileTransferEngine(Model) 연결
-* 파일 전송 시작/취소 처리
-* 진행률, 속도, ETA 계산 및 UI 업데이트
-* 전송 완료/실패 처리
+* 전송 속도 및 남은 시간(ETA) 계산 알고리즘 구현
+* 전송 시작/취소/완료/에러 처리 루틴
 
 ## HOW
-* QThreadPool로 FileTransferEngine 실행
-* Signal/Slot으로 진행률 업데이트
-* QDateTime으로 경과 시간 및 속도 계산
-* PortController를 통한 데이터 전송
+* QThreadPool을 사용한 비동기 엔진 실행
+* QDateTime을 이용한 시간 경과 측정
+* Signal/Slot을 통한 이벤트 기반 통신
 """
 from PyQt5.QtCore import QObject, QDateTime, QThreadPool
 from model.port_controller import PortController
 from model.file_transfer import FileTransferEngine
+from view.dialogs.file_transfer_dialog import FileTransferDialog
 from core.logger import logger
 
 class FilePresenter(QObject):
     """
-    파일 전송 Presenter
+    파일 전송 Presenter 클래스
 
-    FileTransferDialog와 FileTransferEngine을 연결하여 파일 전송을 관리합니다.
+    View(Dialog)의 이벤트를 처리하고 Model(Engine)을 제어하며,
+    계산된 진행 정보를 View에 업데이트합니다.
     """
+
     def __init__(self, port_controller: PortController):
         """
         FilePresenter 초기화
 
         Args:
-            port_controller: 포트 제어기 Model
+            port_controller: 포트 제어기 Model (전송 담당)
         """
         super().__init__()
         self.port_controller = port_controller
-        self.current_engine = None
-        self.current_dialog = None
+        self.current_engine: df = None
+        self.current_dialog: FileTransferDialog = None
 
-    def on_file_transfer_dialog_opened(self, dialog) -> None:
+        # 상태 변수
+        self._start_time = 0
+        self._last_update_time = 0
+        self._last_sent_bytes = 0
+
+    def on_file_transfer_dialog_opened(self, dialog: FileTransferDialog) -> None:
         """
-        파일 전송 Dialog가 열렸을 때 호출
+        파일 전송 Dialog가 열렸을 때 호출 (View 연결)
 
         Args:
             dialog: FileTransferDialog 인스턴스
         """
         self.current_dialog = dialog
+
+        # View 시그널 연결
         dialog.send_requested.connect(self.start_transfer)
         dialog.cancel_requested.connect(self.cancel_transfer)
 
+        # 다이얼로그가 닫힐 때 참조 정리 (선택적)
+        dialog.finished.connect(self._on_dialog_closed)
+
+    def _on_dialog_closed(self) -> None:
+        """다이얼로그 종료 시 정리"""
+        self.current_dialog = None
+
     def start_transfer(self, filepath: str) -> None:
         """
-        파일 전송 시작
+        파일 전송 시작 로직
 
         Logic:
-            - 포트 열림 상태 확인
-            - Baudrate 및 Flow Control 설정 로드
-            - FileTransferEngine 생성 및 Signal 연결
-            - QThreadPool에서 비동기 실행
-            - 전송 시작 시간 기록
+            - 포트 연결 상태 확인
+            - 전송 파라미터(Baudrate, FlowControl) 로드
+            - 전송 엔진 생성 및 초기화
+            - 상태 변수(시간, 바이트) 초기화
+            - 스레드 풀에서 엔진 실행
 
         Args:
             filepath: 전송할 파일 경로
         """
         if not self.port_controller.is_open:
-            logger.warning("Port not open")
+            logger.warning("File Transfer: Port not open")
             if self.current_dialog:
                 self.current_dialog.set_complete(False, "Port not open")
             return
@@ -81,13 +95,13 @@ class FilePresenter(QObject):
                 self.current_dialog.set_complete(False, "No active port")
             return
 
-        # Baudrate 및 FlowControl 가져오기 (PortController에서 조회)
+        # 포트 설정 가져오기
         port_config = self.port_controller.get_port_config(port_name)
         baudrate = port_config.get('baudrate', 115200)
         flow_control = port_config.get('flowctrl', 'None')
 
         try:
-            # Engine 생성 및 시작 (Flow Control 정보 전달)
+            # 엔진 생성
             self.current_engine = FileTransferEngine(
                 self.port_controller,
                 port_name,
@@ -96,15 +110,19 @@ class FilePresenter(QObject):
                 flow_control
             )
 
-            # Signal 연결
+            # 엔진 시그널 연결
             self.current_engine.signals.progress_updated.connect(self._on_progress)
             self.current_engine.signals.transfer_completed.connect(self._on_completed)
             self.current_engine.signals.error_occurred.connect(self._on_error)
 
-            # QThreadPool에서 실행 (QRunnable)
-            QThreadPool.globalInstance().start(self.current_engine)
+            # 상태 초기화
+            self._start_time = QDateTime.currentMSecsSinceEpoch()
+            self._last_update_time = self._start_time
+            self._last_sent_bytes = 0
 
-            logger.info(f"File transfer started: {filepath} (Flow: {flow_control})")
+            # 비동기 실행
+            QThreadPool.globalInstance().start(self.current_engine)
+            logger.info(f"File transfer started: {filepath} (Baud: {baudrate}, Flow: {flow_control})")
 
         except Exception as e:
             logger.error(f"Failed to start file transfer: {e}")
@@ -112,62 +130,44 @@ class FilePresenter(QObject):
                 self.current_dialog.set_complete(False, str(e))
 
     def cancel_transfer(self) -> None:
-        """전송 취소"""
+        """전송 취소 요청"""
         if self.current_engine:
+            logger.info("Cancelling file transfer...")
             self.current_engine.cancel()
 
     def _on_progress(self, sent: int, total: int) -> None:
         """
-        진행률 업데이트
+        진행률 업데이트 및 메트릭 계산
 
         Logic:
-            - 전송 시작 시간 기록 (최초 1회)
             - 경과 시간 계산
-            - 전송 속도 계산 (bytes/sec)
-            - 남은 시간(ETA) 계산
-            - Dialog에 업데이트 전달
+            - 평균 전송 속도 계산 (Total Sent / Total Time)
+            - 남은 시간(ETA) 추정 (Remaining Bytes / Speed)
+            - View 업데이트 메서드 호출
 
         Args:
             sent: 전송된 바이트 수
             total: 전체 바이트 수
         """
-        if self.current_dialog:
-            # 전송 시작 시간 기록 (최초 1회)
-            # 속도 및 ETA 계산은 여기서 하거나 Engine에서 해서 보내줄 수 있음
-            # Engine은 raw bytes만 보내므로 여기서 계산 필요
-            # 하지만 Engine이 start_time을 가지고 있지 않다면 여기서 계산해야 함
-            # 간단하게 Dialog에 raw data만 넘기고 Dialog가 계산하게 하거나
-            # 여기서 계산해서 넘김.
+        if not self.current_dialog:
+            return
 
-            # 편의상 여기서는 단순 전달 (Dialog가 계산 로직을 가지고 있다고 가정하거나,
-            # MainPresenter의 로직을 가져와야 함)
+        current_time = QDateTime.currentMSecsSinceEpoch()
+        elapsed_total_sec = (current_time - self._start_time) / 1000.0
 
-            # MainPresenter의 로직을 가져오자니 state가 필요함 (start_time 등)
-            # FileTransferEngine이 start_time을 가지고 있지 않음.
-            # FileTransferEngine을 수정하여 start_time을 가지게 하거나
-            # 여기서 관리해야 함.
+        # 속도 계산 (평균 속도)
+        speed = 0.0
+        if elapsed_total_sec > 0:
+            speed = sent / elapsed_total_sec
 
-            # 일단 단순화하여 sent, total만 전달 (Dialog 인터페이스 확인 필요)
-            # MainPresenter를 보면 update_progress(sent, total, speed, eta)를 호출함.
+        # ETA 계산
+        eta = 0.0
+        if speed > 0:
+            remaining_bytes = total - sent
+            eta = remaining_bytes / speed
 
-            # 속도 계산을 위해 start_time 기록 필요
-            if not hasattr(self, '_transfer_start_time'):
-                self._transfer_start_time = QDateTime.currentMSecsSinceEpoch()
-
-            current_time = QDateTime.currentMSecsSinceEpoch()
-            elapsed_sec = (current_time - self._transfer_start_time) / 1000.0
-
-            speed = 0.0
-            eta = 0.0
-
-            # 속도 및 ETA 계산
-            if elapsed_sec > 0:
-                speed = sent / elapsed_sec  # bytes/sec
-                if speed > 0:
-                    remaining = total - sent
-                    eta = remaining / speed  # seconds
-
-            self.current_dialog.update_progress(sent, total, speed, eta)
+        # View 업데이트 (수동적인 뷰)
+        self.current_dialog.update_progress(sent, total, speed, eta)
 
     def _on_completed(self, success: bool) -> None:
         """
@@ -177,19 +177,26 @@ class FilePresenter(QObject):
             success: 성공 여부
         """
         if self.current_dialog:
-            msg = "Finished" if success else "Failed"
+            msg = "Transfer Completed" if success else "Transfer Failed"
             self.current_dialog.set_complete(success, msg)
-        self.current_engine = None
-        if hasattr(self, '_transfer_start_time'):
-            del self._transfer_start_time
 
-    @staticmethod
-    def _on_error(msg: str) -> None:
+        self.current_engine = None
+
+        if success:
+            logger.info("File transfer completed successfully")
+        else:
+            logger.warning("File transfer failed or cancelled")
+
+    def _on_error(self, msg: str) -> None:
         """
-        에러 처리
+        에러 발생 처리
 
         Args:
             msg: 에러 메시지
         """
         logger.error(f"File Transfer Error: {msg}")
-        # _on_completed에서 처리됨 (Engine이 error 후 completed emit)
+        # 엔진이 에러 발생 후 completed(False)를 호출하므로,
+        # 여기서는 로깅 외에 별도 UI 처리는 _on_completed에 위임하거나
+        # 구체적인 에러 메시지를 UI에 전달할 수 있음.
+        if self.current_dialog:
+            self.current_dialog.set_complete(False, msg)
