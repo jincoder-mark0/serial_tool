@@ -41,7 +41,7 @@ class FilePresenter(QObject):
         """
         super().__init__()
         self.port_controller = port_controller
-        self.current_engine: df = None
+        self.current_engine: FileTransferEngine = None
         self.current_dialog: FileTransferDialog = None
 
         # 상태 변수

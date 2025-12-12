@@ -83,7 +83,7 @@ class MainPresenter(QObject):
         # 하지만 이번 턴의 요구사항 범위 내에서 해결하기 위해 직접 접근 방식 사용 (view.right_section.packet_inspector)
         self.packet_presenter = PacketPresenter(self.view.right_section.packet_inspector, self.event_router)
 
-        # 2.5 Manual Control [New]
+        # 2.5 Manual Control
         # Local Echo 처리를 위해 view의 append_local_echo_data 메서드를 콜백으로 전달
         self.manual_control_presenter = ManualControlPresenter(
             self.view.left_section.manual_ctrl,
@@ -92,11 +92,22 @@ class MainPresenter(QObject):
         )
 
         # --- 3. EventRouter 시그널 연결 (Model -> Presenter) ---
+        # Port Events
         self.event_router.data_received.connect(self.on_data_received)
         self.event_router.port_opened.connect(self.on_port_opened)
         self.event_router.port_closed.connect(self.on_port_closed)
         self.event_router.port_error.connect(self.on_port_error)
         self.event_router.data_sent.connect(self.on_data_sent)
+        
+        # [New] Macro Events (Global Log/Status)
+        self.event_router.macro_started.connect(self.on_macro_started)
+        self.event_router.macro_finished.connect(self.on_macro_finished)
+        self.event_router.macro_error.connect(self.on_macro_error)
+
+        # [New] File Transfer Events (Global Log/Status)
+        self.event_router.file_transfer_completed.connect(self.on_file_transfer_completed)
+        self.event_router.file_transfer_error.connect(self.on_file_transfer_error)
+        # Progress는 빈도가 높으므로 MainStatusbar가 아닌 FileDialog에서만 처리 (성능 고려)
 
         # --- 4. 내부 Model 시그널 연결 ---
         # 매크로 러너의 전송 요청은 ManualControlPresenter 로직과 유사하므로
@@ -406,6 +417,38 @@ class MainPresenter(QObject):
     def on_port_error(self, port_name: str, error_msg: str) -> None:
         """포트 에러 알림"""
         self.view.show_status_message(f"Error ({port_name}): {error_msg}", 5000)
+
+    # ---------------------------------------------------------
+    # Macro Event Handlers (New)
+    # ---------------------------------------------------------
+    def on_macro_started(self) -> None:
+        """매크로 시작 알림"""
+        self.view.log_system_message("Macro execution started", "INFO")
+        self.view.show_status_message("Macro Running...", 0)
+
+    def on_macro_finished(self) -> None:
+        """매크로 종료 알림"""
+        self.view.log_system_message("Macro execution finished", "SUCCESS")
+        self.view.show_status_message("Macro Finished", 3000)
+
+    def on_macro_error(self, error_msg: str) -> None:
+        """매크로 에러 알림"""
+        self.view.log_system_message(f"Macro Error: {error_msg}", "ERROR")
+        self.view.show_status_message(f"Macro Error: {error_msg}", 5000)
+
+    # ---------------------------------------------------------
+    # File Transfer Event Handlers (New)
+    # ---------------------------------------------------------
+    def on_file_transfer_completed(self, success: bool) -> None:
+        """파일 전송 완료 알림"""
+        status = "Completed" if success else "Failed"
+        level = "SUCCESS" if success else "WARN"
+        self.view.log_system_message(f"File transfer {status}", level)
+        self.view.show_status_message(f"File Transfer {status}", 3000)
+
+    def on_file_transfer_error(self, error_msg: str) -> None:
+        """파일 전송 에러 알림"""
+        self.view.log_system_message(f"File Transfer Error: {error_msg}", "ERROR")
 
     def update_status_bar(self) -> None:
         """상태바 주기적 업데이트"""
