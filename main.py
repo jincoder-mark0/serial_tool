@@ -71,6 +71,8 @@ def main() -> None:
         - 이벤트 루프 시작
     """
     setup_logging()
+
+    # 전역 에러 핸들러 설치
     install_global_error_handler()
     logging.info(f"Starting Serial Tool v{__version__}")
 
