@@ -59,6 +59,14 @@ class ManualCtrlPresenter(QObject):
         widget.rts_changed.connect(self.on_rts_changed)
         widget.dtr_changed.connect(self.on_dtr_changed)
 
+        # 초기 상태 설정 (전역 설정 반영)
+        self._apply_initial_settings()
+
+    def _apply_initial_settings(self) -> None:
+        """설정 파일에서 Local Echo 기본값을 읽어 View에 적용"""
+        default_echo = self.settings_manager.get(ConfigKeys.PORT_LOCALECHO, False)
+        self.view.set_local_echo_state(default_echo)
+
     def on_manual_cmd_send_requested(self, text: str, hex_mode: bool, cmd_prefix: bool, cmd_suffix: bool, local_echo: bool) -> None:
         """
         수동 명령 전송 요청 처리

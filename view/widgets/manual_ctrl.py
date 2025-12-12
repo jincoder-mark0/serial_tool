@@ -300,6 +300,15 @@ class ManualCtrlWidget(QWidget):
         self.rts_chk.setEnabled(enabled)
         self.dtr_chk.setEnabled(enabled)
 
+    def set_local_echo_state(self, checked: bool) -> None:
+        """
+        Local Echo 체크박스 상태 설정
+
+        Args:
+            checked (bool): 체크 여부
+        """
+        self.local_echo_chk.setChecked(checked)
+
     def save_state(self) -> dict:
         """
         상태 저장
@@ -335,5 +344,5 @@ class ManualCtrlWidget(QWidget):
         self.rts_chk.setChecked(state.get("rts_chk", False))
         self.dtr_chk.setChecked(state.get("dtr_chk", False))
         self.local_echo_chk.setChecked(state.get("local_echo", False))
-        self.manual_cmd_txt.setPlainText(state.get("input_text", ""))  # QTextEdit는 setPlainText() 사용
+        self.manual_cmd_txt.setPlainText(state.get("input_text", ""))
         self.command_history = state.get("command_history", [])

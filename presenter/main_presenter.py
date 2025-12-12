@@ -6,18 +6,19 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 
 ## WHY
 * MVP 패턴 준수 (비즈니스 로직 분리)
-* 하위 Presenter 조율
-* 전역 이벤트 및 설정 관리
+* 하위 Presenter 조율 및 생명주기 관리
+* 전역 이벤트(EventBus) 및 설정(Settings) 중앙 제어
 
 ## WHAT
 * 하위 Presenter (Port, Macro, File, Packet, Manual) 생성 및 연결
 * View 이벤트 처리 (시그널 구독)
-* Model 상태 변화에 따른 View 업데이트
-* 설정 저장 및 로드 로직
+* Model 상태 변화에 따른 View 업데이트 (EventRouter 활용)
+* 설정 저장/로드 및 애플리케이션 종료 처리
 
 ## HOW
 * Signal/Slot 기반 통신
-* EventRouter를 통한 전역 이벤트 수신
+* EventRouter를 통한 전역 이벤트 수신 및 라우팅
+* SettingsManager를 통한 설정 동기화
 """
 from PyQt5.QtCore import QObject, QTimer, QDateTime
 from view.main_window import MainWindow
@@ -39,7 +40,7 @@ class MainPresenter(QObject):
     """
     메인 프레젠터 클래스
 
-    애플리케이션의 전체적인 흐름을 제어합니다.
+    애플리케이션의 전체적인 흐름을 제어하고 하위 Presenter를 관리합니다.
     """
 
     def __init__(self, view: MainWindow) -> None:
@@ -47,10 +48,10 @@ class MainPresenter(QObject):
         MainPresenter 생성 및 초기화
 
         Logic:
-            - 모델 인스턴스 생성
-            - 하위 Presenter 초기화 및 View 연결
-            - 시그널/슬롯 연결 (Model <-> Presenter <-> View)
-            - 상태바 타이머 시작
+            - Model 인스턴스 생성 (PortController, MacroRunner, EventRouter)
+            - 하위 Presenter 초기화 및 의존성 주입
+            - EventRouter 및 View 시그널 연결
+            - 상태바 업데이트 타이머 시작
 
         Args:
             view (MainWindow): 메인 윈도우 뷰 인스턴스
@@ -81,47 +82,46 @@ class MainPresenter(QObject):
         # 여기서는 right_section을 통해 접근 (기존 macro_view 패턴과 동일하게 MainWindow 수정 필요할 수 있음)
         # MainWindow에 packet_view 프로퍼티를 추가했다고 가정하고 사용 (아래 MainWindow 수정 코드 필요)
         # 하지만 이번 턴의 요구사항 범위 내에서 해결하기 위해 직접 접근 방식 사용 (view.right_section.packet_inspector)
-        self.packet_presenter = PacketPresenter(self.view.right_section.packet_inspector, self.event_router)
+        self.packet_presenter = PacketPresenter(
+            self.view.right_section.packet_inspector,
+            self.event_router
+        )
 
         # 2.5 Manual Control
-        # Local Echo 처리를 위해 view의 append_local_echo_data 메서드를 콜백으로 전달
+        # Local Echo 처리를 위해 View의 콜백 메서드(append_local_echo_data) 주입
         self.manual_ctrl_presenter = ManualCtrlPresenter(
             self.view.left_section.manual_ctrl,
             self.port_controller,
             self.view.append_local_echo_data
         )
 
-        # --- 3. EventRouter 시그널 연결 (Model -> Presenter) ---
+        # --- 3. EventRouter 시그널 연결 (Model -> Presenter -> View) ---
         # Port Events
         self.event_router.data_received.connect(self.on_data_received)
         self.event_router.port_opened.connect(self.on_port_opened)
         self.event_router.port_closed.connect(self.on_port_closed)
         self.event_router.port_error.connect(self.on_port_error)
         self.event_router.data_sent.connect(self.on_data_sent)
-        
-        # [New] Macro Events (Global Log/Status)
+
+        # Macro Events (Global Log/Status)
         self.event_router.macro_started.connect(self.on_macro_started)
         self.event_router.macro_finished.connect(self.on_macro_finished)
         self.event_router.macro_error.connect(self.on_macro_error)
 
-        # [New] File Transfer Events (Global Log/Status)
+        # File Transfer Events (Global Log/Status)
         self.event_router.file_transfer_completed.connect(self.on_file_transfer_completed)
         self.event_router.file_transfer_error.connect(self.on_file_transfer_error)
-        # Progress는 빈도가 높으므로 MainStatusbar가 아닌 FileDialog에서만 처리 (성능 고려)
+        # Progress는 빈도가 높으므로 MainStatusbar가 아닌 FileDialog에서만 처리 (성능 최적화)
 
         # --- 4. 내부 Model 시그널 연결 ---
         # 매크로 러너의 전송 요청은 ManualCtrlPresenter 로직과 유사하므로
         # ManualCtrlPresenter의 메서드를 호출하거나, 별도로 처리.
         # 여기서는 매크로 로직이 독립적이므로 MainPresenter에서 중계하되,
         # 로직 중복을 피하기 위해 ManualCtrlPresenter의 로직을 재사용할 수도 있음.
-        # 다만 MacroRunner의 시그널 인자가 다르므로(local_echo 없음), 별도 처리 유지.
+        # MacroRunner의 전송 요청 처리
         self.macro_runner.send_requested.connect(self.on_macro_cmd_send_requested)
 
         # --- 5. View 시그널 연결 (View -> Presenter) ---
-        # 수동 전송 요청은 이제 ManualCtrlPresenter가 직접 처리하므로
-        # MainPresenter에서는 연결하지 않음.
-        # self.view.manual_cmd_send_requested.connect(...) -> REMOVED
-
         # 설정 및 종료
         self.view.settings_save_requested.connect(self.on_settings_change_requested)
         self.view.font_settings_changed.connect(self.on_font_settings_changed)
@@ -132,10 +132,10 @@ class MainPresenter(QObject):
         self.view.shortcut_disconnect_requested.connect(self.on_shortcut_disconnect)
         self.view.shortcut_clear_requested.connect(self.on_shortcut_clear)
 
-        # 파일 전송
+        # 파일 전송 다이얼로그 호출
         self.view.file_transfer_dialog_opened.connect(self.file_presenter.on_file_transfer_dialog_opened)
 
-        # 로깅 및 탭 추가
+        # 로깅 및 탭 추가 이벤트 (동적 연결)
         self._connect_logging_signals()
         self.view.port_tab_added.connect(self._on_port_tab_added)
 
@@ -144,7 +144,7 @@ class MainPresenter(QObject):
         self.tx_byte_count = 0
         self.status_timer = QTimer()
         self.status_timer.timeout.connect(self.update_status_bar)
-        self.status_timer.start(1000)
+        self.status_timer.start(1000) # 1초 주기 업데이트
 
         self.view.log_system_message("Application initialized", "INFO")
 
@@ -153,9 +153,9 @@ class MainPresenter(QObject):
         애플리케이션 종료 처리
 
         Logic:
-            - 윈도우 상태 및 설정 데이터 수집
+            - 윈도우 상태(위치, 크기, 패널 상태) 수집
             - 설정 파일 저장
-            - 포트 및 리소스 정리
+            - 열린 포트 닫기 및 리소스 정리
         """
         # 1. 윈도우 상태 가져오기
         state = self.view.get_window_state()
@@ -182,7 +182,7 @@ class MainPresenter(QObject):
         if ConfigKeys.MACRO_CONTROL_STATE in state:
             settings_manager.set(ConfigKeys.MACRO_CONTROL_STATE, state[ConfigKeys.MACRO_CONTROL_STATE])
 
-        # 3. 파일 쓰기
+        # 3. 파일 저장
         settings_manager.save_settings()
 
         # 4. 리소스 정리 (포트 닫기)
@@ -198,7 +198,7 @@ class MainPresenter(QObject):
 
         Logic:
             - 데이터 로깅 (활성화 시)
-            - 해당 포트의 뷰 위젯에 데이터 전달
+            - 해당 포트의 View(RxLogWidget)에 데이터 전달
             - RX 카운트 증가
 
         Args:
@@ -264,6 +264,7 @@ class MainPresenter(QObject):
             final_text = final_text + suffix
 
         # Convert to bytes
+        data: bytes
         if hex_mode:
             try:
                 # 16진수 문자열을 실제 바이트로 변환 (예: "01 02 FF" -> b'\x01\x02\xff')
@@ -283,10 +284,16 @@ class MainPresenter(QObject):
         # Local Echo
         if local_echo:
             self.view.append_local_echo_data(data)
+
     def on_settings_change_requested(self, new_settings: dict) -> None:
         """
-        설정 저장 요청을 처리합니다.
-        데이터 검증 및 변환 후 설정을 업데이트합니다.
+        설정 저장 요청 처리
+
+        Logic:
+            - 설정값 매핑 및 타입 변환
+            - SettingsManager 업데이트
+            - UI 테마/언어 즉시 적용
+            - 하위 Presenter(PacketPresenter) 설정 전파
 
         Args:
             new_settings (dict): 변경할 설정 딕셔너리
@@ -395,8 +402,15 @@ class MainPresenter(QObject):
 
     def on_data_sent(self, port_name: str, data: bytes) -> None:
         """
-        데이터 전송 시 TX 카운트 증가, 로깅 중이면 데이터 기록
-        EventRouter를 통해 호출
+        데이터 송신 처리
+
+        Logic:
+            - 데이터 로깅 (활성화 시)
+            - TX 카운트 증가
+
+        Args:
+            port_name (str): 송신 포트 이름
+            data (bytes): 송신 데이터
         """
         # 로깅 중이면 DataLogger에 기록
         if data_logger_manager.is_logging(port_name):
@@ -404,6 +418,9 @@ class MainPresenter(QObject):
 
         self.tx_byte_count += len(data)
 
+    # ---------------------------------------------------------
+    # Event Handlers (Port Status)
+    # ---------------------------------------------------------
     def on_port_opened(self, port_name: str) -> None:
         """포트 열림 알림"""
         self.view.update_status_bar_port(port_name, True)
@@ -419,7 +436,7 @@ class MainPresenter(QObject):
         self.view.show_status_message(f"Error ({port_name}): {error_msg}", 5000)
 
     # ---------------------------------------------------------
-    # Macro Event Handlers (New)
+    # Event Handlers (Macro)
     # ---------------------------------------------------------
     def on_macro_started(self) -> None:
         """매크로 시작 알림"""
@@ -437,7 +454,7 @@ class MainPresenter(QObject):
         self.view.show_status_message(f"Macro Error: {error_msg}", 5000)
 
     # ---------------------------------------------------------
-    # File Transfer Event Handlers (New)
+    # Event Handlers (File Transfer)
     # ---------------------------------------------------------
     def on_file_transfer_completed(self, success: bool) -> None:
         """파일 전송 완료 알림"""
@@ -450,8 +467,11 @@ class MainPresenter(QObject):
         """파일 전송 에러 알림"""
         self.view.log_system_message(f"File Transfer Error: {error_msg}", "ERROR")
 
+    # ---------------------------------------------------------
+    # UI Updates & Shortcuts
+    # ---------------------------------------------------------
     def update_status_bar(self) -> None:
-        """상태바 주기적 업데이트"""
+        """상태바 주기적 업데이트 (1초 주기)"""
         # 1. RX/TX 속도 업데이트
         self.view.update_status_bar_stats(self.rx_byte_count, self.tx_byte_count)
         # 카운터 초기화
@@ -463,29 +483,29 @@ class MainPresenter(QObject):
         self.view.update_status_bar_time(current_time)
 
     def on_shortcut_connect(self) -> None:
-        """연결 단축키"""
+        """연결 단축키 (F2)"""
         self.port_presenter.connect_current_port()
 
     def on_shortcut_disconnect(self) -> None:
-        """연결 해제 단축키"""
+        """연결 해제 단축키 (F3)"""
         self.port_presenter.disconnect_current_port()
 
     def on_shortcut_clear(self) -> None:
-        """로그 지우기 단축키"""
+        """로그 지우기 단축키 (F5)"""
         self.port_presenter.clear_log_current_port()
 
     # -------------------------------------------------------------------------
-    # 데이터 로깅 (Log Logging)
+    # Data Logging Integration
     # -------------------------------------------------------------------------
     def _connect_logging_signals(self) -> None:
-        """로깅 시그널 연결"""
+        """모든 포트 탭의 로깅 시그널 연결"""
         count = self.view.get_port_tabs_count()
         for i in range(count):
             widget = self.view.get_port_tab_widget(i)
             self._connect_single_port_logging(widget)
 
     def _on_port_tab_added(self, panel) -> None:
-        """탭 추가 시 로깅 연결"""
+        """새 탭 추가 시 로깅 시그널 연결"""
         self._connect_single_port_logging(panel)
 
     def _connect_single_port_logging(self, panel) -> None:

@@ -83,3 +83,12 @@ class ManualCtrlPanel(QWidget):
             enabled (bool): 활성화 여부
         """
         self.manual_ctrl_widget.set_controls_enabled(enabled)
+
+    def set_local_echo_state(self, checked: bool) -> None:
+        """
+        Local Echo 체크박스 상태 설정 (Presenter -> View)
+
+        Args:
+            checked (bool): 체크 여부
+        """
+        self.manual_ctrl_widget.set_local_echo_state(checked)
