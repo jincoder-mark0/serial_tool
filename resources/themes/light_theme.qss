@@ -260,7 +260,7 @@ QPushButton[class="accent"]:pressed {
 }
 
 QPushButton[class="accent"]:disabled {
-    background-color: #A5D6A7; /* Light Green Tint for Disabled */
+    background-color: #A5D6A7;
     border-color: #81C784;
     color: #E8F5E9;
 }
@@ -281,7 +281,7 @@ QPushButton[class="danger"]:pressed {
 }
 
 QPushButton[class="danger"]:disabled {
-    background-color: #EF9A9A; /* Light Red Tint for Disabled */
+    background-color: #EF9A9A;
     border-color: #E57373;
     color: #FFEBEE;
 }
