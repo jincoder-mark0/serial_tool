@@ -2,7 +2,7 @@
 View 위젯 모듈
 재사용 가능한 UI 위젯들을 포함합니다.
 """
-from .rx_log import RxLogWidget
+from .data_log_view import DataLogViewWidget
 from .system_log import SystemLogWidget
 from .port_settings import PortSettingsWidget
 from .manual_ctrl import ManualCtrlWidget
@@ -12,7 +12,7 @@ from .packet_inspector import PacketInspectorWidget
 from .file_progress import FileProgressWidget
 
 __all__ = [
-    'RxLogWidget',
+    'DataLogViewWidget',
     'SystemLogWidget',
     'PortSettingsWidget',
     'ManualCtrlWidget',

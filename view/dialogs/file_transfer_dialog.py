@@ -112,7 +112,7 @@ class FileTransferDialog(QDialog):
         # ---------------------------------------------------------
         bottom_layout = QHBoxLayout()
         bottom_layout.addStretch()
-        self.close_btn = QPushButton(lang_manager.get_text("about_btn_close"))
+        self.close_btn = QPushButton(lang_manager.get_text("manual_ctrl_btn_close"))
         self.close_btn.clicked.connect(self.reject)
         bottom_layout.addWidget(self.close_btn)
 
@@ -127,7 +127,7 @@ class FileTransferDialog(QDialog):
         self.setWindowTitle(lang_manager.get_text("manual_ctrl_grp_file"))
         self.select_file_btn.setText(lang_manager.get_text("manual_ctrl_btn_select_file"))
         self.send_btn.setText(lang_manager.get_text("manual_ctrl_btn_send_file"))
-        self.close_btn.setText(lang_manager.get_text("about_btn_close"))
+        self.close_btn.setText(lang_manager.get_text("manual_ctrl_btn_close"))
 
         # 기본 텍스트일 경우만 번역
         current_path = self.file_path_lbl.text()

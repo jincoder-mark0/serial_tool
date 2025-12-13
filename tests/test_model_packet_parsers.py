@@ -6,7 +6,7 @@
 - DelimiterParser: 커스텀 구분자 검증
 - FixedLengthParser: 고정 길이 분할 검증
 
-pytest tests/test_packet_parsers.py -v
+pytest tests/test_model_packet_parsers.py -v
 """
 import sys
 import os

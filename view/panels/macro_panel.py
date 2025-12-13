@@ -94,7 +94,7 @@ class MacroPanel(QWidget):
         filter_str = "JSON Files (*.json);;All Files (*)"
         path, _ = QFileDialog.getSaveFileName(
             self,
-            lang_manager.get_text("macro_list_dialog_title_save"),
+            lang_manager.get_text("macro_panel_dialog_title_save"),
             "",
             filter_str
         )
@@ -114,7 +114,7 @@ class MacroPanel(QWidget):
         filter_str = "JSON Files (*.json);;All Files (*)"
         path, _ = QFileDialog.getOpenFileName(
             self,
-            lang_manager.get_text("macro_list_dialog_title_open"),
+            lang_manager.get_text("macro_panel_dialog_title_open"),
             "",
             filter_str
         )

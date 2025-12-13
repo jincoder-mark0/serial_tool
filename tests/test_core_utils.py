@@ -4,7 +4,7 @@
 - RingBuffer: 순환 버퍼 쓰기/읽기, 랩어라운드, 오버라이트 검증
 - ThreadSafeQueue: 스레드 안전 큐 동작 검증
 
-pytest tests/test_utils.py -v
+pytest tests/test_core_utils.py -v
 """
 import sys
 import os

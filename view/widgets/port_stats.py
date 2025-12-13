@@ -17,7 +17,7 @@ class PortStatsWidget(QWidget):
         layout = QGridLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.group_box = QGroupBox(lang_manager.get_text("status_grp_title"))
+        self.group_box = QGroupBox(lang_manager.get_text("port_stats_grp_title"))
         gb_layout = QGridLayout()
 
         self.rx_count_lbl = QLabel("RX: 0 B")
@@ -37,7 +37,7 @@ class PortStatsWidget(QWidget):
         self.setLayout(layout)
 
     def retranslate_ui(self):
-        self.group_box.setTitle(lang_manager.get_text("status_grp_title"))
+        self.group_box.setTitle(lang_manager.get_text("port_stats_grp_title"))
 
     def set_rx_bytes(self, bytes_count: int):
         self.rx_count_lbl.setText(f"RX: {self.format_bytes(bytes_count)}")

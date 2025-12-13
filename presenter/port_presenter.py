@@ -58,8 +58,8 @@ class PortPresenter(QObject):
         # 설정에서 max_lines 읽어서 적용
         settings = SettingsManager()
         max_lines = settings.get(ConfigKeys.RX_MAX_LINES, 2000)
-        if self.current_port_panel and hasattr(self.current_port_panel, 'received_area_widget'):
-            self.current_port_panel.received_area_widget.set_max_lines(max_lines)
+        if self.current_port_panel and hasattr(self.current_port_panel, 'data_log_view_widget'):
+            self.current_port_panel.data_log_view_widget.set_max_lines(max_lines)
 
         # 초기 포트 스캔
         self.scan_ports()
@@ -76,8 +76,8 @@ class PortPresenter(QObject):
         self.left_panel.port_tabs.currentChanged.connect(self.update_current_port_panel)
 
         # Model Signal 연결
-        self.connection_controller.connection_opened.connect(self.on_port_opened)
-        self.connection_controller.connection_closed.connect(self.on_port_closed)
+        self.connection_controller.connection_opened.connect(self.on_connection_opened)
+        self.connection_controller.connection_closed.connect(self.on_connection_closed)
         self.connection_controller.error_occurred.connect(self.on_error)
 
     def _connect_tab_signals(self, widget) -> None:
@@ -112,12 +112,23 @@ class PortPresenter(QObject):
             widget.port_settings_widget.set_port_list(ports)
 
     def update_current_port_panel(self) -> None:
-        """현재 활성 포트 패널 참조 업데이트"""
+        """
+        현재 활성 포트 패널 참조 업데이트 및 Model의 활성 연결 이름 업데이트
+
+        Logic:
+            - View에서 현재 활성 탭의 PortPanel을 가져옴
+            - Model의 `set_active_connection`을 호출하여 활성 연결을 명시적으로 설정
+        """
         index = self.left_panel.port_tabs.currentIndex()
         if index >= 0:
             widget = self.left_panel.port_tabs.widget(index)
             if hasattr(widget, 'port_settings_widget'):
                 self.current_port_panel = widget
+
+                # Model에 현재 활성 연결을 명시적으로 설정
+                port_name = widget.get_port_name()
+                if port_name:
+                    self.connection_controller.set_active_connection(port_name)
 
     def scan_ports(self) -> None:
         """사용 가능한 시리얼 포트 스캔 및 UI 업데이트"""
@@ -145,13 +156,6 @@ class PortPresenter(QObject):
         요청을 보낸 위젯을 찾아 해당 포트를 닫습니다.
         """
         sender = self.sender()
-        # sender(PortSettingsWidget)의 부모(PortPanel)를 통해 포트 이름 확인
-        # 또는 현재 활성 탭 기준 (하지만 sender가 명확하면 더 좋음)
-
-        # 여기서는 간단히 현재 활성 탭의 설정을 닫는다고 가정하거나,
-        # sender를 통해 포트 이름을 찾을 수 있다면 그것을 사용.
-        # PortSettingsWidget은 config를 가지고 있지만, 닫을 때는 이름만 있으면 됨.
-        # sender.get_current_config() 호출 가능.
 
         if sender and hasattr(sender, 'get_current_config'):
             config = sender.get_current_config()
@@ -159,7 +163,7 @@ class PortPresenter(QObject):
             if port_name:
                 self.connection_controller.close_connection(port_name)
 
-    def on_port_opened(self, port_name: str) -> None:
+    def on_connection_opened(self, port_name: str) -> None:
         """
         포트 열림 이벤트 처리
 
@@ -178,6 +182,7 @@ class PortPresenter(QObject):
             if hasattr(widget, 'get_port_name') and widget.get_port_name() == port_name:
                 if hasattr(widget, 'port_settings_widget'):
                     widget.port_settings_widget.set_connected(True)
+
                 # 탭 제목 업데이트
                 self.left_panel.update_tab_title(i, port_name)
                 break
@@ -186,7 +191,7 @@ class PortPresenter(QObject):
         if hasattr(self.left_panel, 'system_log_widget'):
             self.left_panel.system_log_widget.log(f"[{port_name}] Port opened", "SUCCESS")
 
-    def on_port_closed(self, port_name: str) -> None:
+    def on_connection_closed(self, port_name: str) -> None:
         """
         포트 닫힘 이벤트 처리
 
@@ -204,6 +209,7 @@ class PortPresenter(QObject):
             if hasattr(widget, 'get_port_name') and widget.get_port_name() == port_name:
                 if hasattr(widget, 'port_settings_widget'):
                     widget.port_settings_widget.set_connected(False)
+
                 # 탭 제목 초기화
                 self.left_panel.update_tab_title(i, "-")
                 break
@@ -228,7 +234,7 @@ class PortPresenter(QObject):
             self.left_panel.system_log_widget.log(f"[{port_name}] Error: {message}", "ERROR")
 
         # 에러 발생 시 해당 포트 UI 동기화 (필요 시)
-        # on_port_closed가 호출되지 않는 에러 상황(예: 열기 실패)에 대비해 UI 상태 리셋 가능
+        # on_connection_closed가 호출되지 않는 에러 상황(예: 열기 실패)에 대비해 UI 상태 리셋 가능
 
     def connect_current_port(self) -> None:
         """현재 포트 연결 (단축키용)"""
@@ -252,5 +258,5 @@ class PortPresenter(QObject):
     def clear_log_current_port(self) -> None:
         """현재 포트의 로그 지우기 (단축키용)"""
         self.update_current_port_panel()
-        if self.current_port_panel and hasattr(self.current_port_panel, 'received_area_widget'):
-            self.current_port_panel.received_area_widget.on_clear_rx_log_clicked()
+        if self.current_port_panel and hasattr(self.current_port_panel, 'data_log_view_widget'):
+            self.current_port_panel.data_log_view_widget.on_clear_data_log_view_clicked()

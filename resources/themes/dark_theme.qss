@@ -79,8 +79,8 @@ QPushButton#add_row_btn { qproperty-icon: url(resources/icons/dark/add_dark.svg)
 QPushButton#del_row_btn { qproperty-icon: url(resources/icons/dark/delete_dark.svg); }
 QPushButton#up_row_btn { qproperty-icon: url(resources/icons/dark/up_dark.svg); }
 QPushButton#down_row_btn { qproperty-icon: url(resources/icons/dark/down_dark.svg); }
-QPushButton#rx_search_prev_btn { qproperty-icon: url(resources/icons/dark/find_prev_dark.svg); }
-QPushButton#rx_search_next_btn { qproperty-icon: url(resources/icons/dark/find_next_dark.svg); }
+QPushButton#data_log_search_prev_btn { qproperty-icon: url(resources/icons/dark/find_prev_dark.svg); }
+QPushButton#data_log_search_next_btn { qproperty-icon: url(resources/icons/dark/find_next_dark.svg); }
 
 /* QLineEdit, QTextEdit */
 QLineEdit, QTextEdit, QPlainTextEdit {

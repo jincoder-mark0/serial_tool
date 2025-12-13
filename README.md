@@ -206,11 +206,16 @@ serial_tool/
 │   ├── check_lang_keys.py            # 언어 키 검사 도구
 │   └── manage_lang_keys.py           # 언어 키 관리 도구
 │
-├── tests/                            # 테스트 코드
-│   ├── test_view.py
-│   └── test_ui_translations.py
-│
-└── logs/                             # 로그 파일 (gitignore)
+└── tests/                            # 테스트 코드
+    ├── test_core_refinement.py       # Core Refinement 테스트
+    ├── test_core_utiles.py           # Core Utils 테스트
+    ├── test_model_packet_parsers.py  # Model Packet Parsers 테스트
+    ├── test_model.py                 # Model 테스트
+    ├── test_presenter_init.py        # Presenter Init 테스트
+    ├── test_presenter_manual_ctrl.py # Presenter Manual Ctrl 테스트
+    ├── test_presenter_packet.py      # Presenter Packet 테스트
+    ├── test_view_translations.py     # View Translations 테스트
+    └── test_view.py                  # View 테스트
 ```
 
 ---

@@ -31,7 +31,7 @@ class PacketInspectorPanel(QWidget):
         packet_inspector_widget (PacketInspectorWidget): 패킷 뷰 위젯
         clear_btn (QPushButton): 로그 초기화 버튼
     """
-    
+
     # 초기화 요청 시그널
     clear_requested = pyqtSignal()
 
@@ -46,7 +46,7 @@ class PacketInspectorPanel(QWidget):
         self.packet_inspector_widget = None
         self.clear_btn = None
         self.init_ui()
-        
+
         # 언어 변경 연결
         lang_manager.language_changed.connect(self.retranslate_ui)
 
@@ -54,17 +54,17 @@ class PacketInspectorPanel(QWidget):
         """UI 컴포넌트 및 레이아웃 초기화"""
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
-        
+
         # 헤더 영역 (Clear 버튼 배치)
         header_layout = QHBoxLayout()
         header_layout.addStretch()
-        
-        self.clear_btn = QPushButton(lang_manager.get_text("rx_btn_clear")) 
+
+        self.clear_btn = QPushButton(lang_manager.get_text("packet_panel_btn_clear"))
         self.clear_btn.setFixedWidth(60)
         self.clear_btn.clicked.connect(self.clear_requested.emit)
-        
+
         header_layout.addWidget(self.clear_btn)
-        
+
         layout.addLayout(header_layout)
 
         # 패킷 인스펙터 위젯 추가
@@ -75,7 +75,7 @@ class PacketInspectorPanel(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트 업데이트"""
-        self.clear_btn.setText(lang_manager.get_text("rx_btn_clear"))
+        self.clear_btn.setText(lang_manager.get_text("packet_panel_btn_clear"))
 
     def add_packet_to_view(self, time_str: str, packet_type: str, data_hex: str, data_ascii: str) -> None:
         """

@@ -19,7 +19,7 @@ UI 동적 번역 테스트 모듈
 * LangManager를 통해 언어를 강제로 전환하며 테스트
 * 각 위젯의 text(), windowTitle(), toolTip() 등을 예상되는 언어 값과 비교
 
-pytest tests\test_ui_translations_dynamic.py -v -s
+pytest tests\test_view_translations.py -v -s
 """
 import sys
 import os
@@ -94,11 +94,11 @@ def test_dynamic_language_switching(app, qtbot):
 
         # 8. Packet Inspector (Right Panel - Tab 1)
         (lambda: app.right_section.packet_inspector.packet_inspector_widget.title_lbl,
-         lambda w: w.text(), "inspector_grp_title"),
+         lambda w: w.text(), "packet_grp_title"),
 
         # 9. System Log (Left Panel Bottom)
         (lambda: app.left_section.system_log_widget.system_log_title,
-         lambda w: w.text(), "system_title"),
+         lambda w: w.text(), "sys_log_view_title"),
 
         # 10. Status Bar (예외 처리 필요)
         (lambda: app.global_status_bar,
@@ -195,19 +195,19 @@ def test_manual_ctrl_placeholder_translation(app, qtbot):
 
 def test_combobox_translation(app, qtbot):
     """
-    RxLogWidget의 Newline ComboBox 아이템 번역을 테스트합니다.
+    DataLogViewWidget의 Newline ComboBox 아이템 번역을 테스트합니다.
     ComboBox는 setItemText로 인덱스별 갱신이 일어나야 합니다.
     """
-    # 현재 활성 탭의 RxLogWidget
-    rx_widget = app.left_section.port_tabs.currentWidget().received_area_widget
-    combo = rx_widget.rx_newline_combo
+    # 현재 활성 탭의 DataLogViewWidget
+    rx_widget = app.left_section.port_tabs.currentWidget().data_log_view_widget
+    combo = rx_widget.data_log_newline_combo
 
     # 각 아이템의 키 매핑 (순서대로)
     item_keys = [
-        "rx_newline_raw",
-        "rx_newline_lf",
-        "rx_newline_cr",
-        "rx_newline_crlf"
+        "data_log_newline_raw",
+        "data_log_newline_lf",
+        "data_log_newline_cr",
+        "data_log_newline_crlf"
     ]
 
     # English Check

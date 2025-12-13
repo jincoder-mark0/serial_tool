@@ -205,7 +205,10 @@ class MainWindow(QMainWindow):
 
     def manual_save_log(self) -> None:
         """로그 저장 다이얼로그 호출"""
-        self.left_section.manual_ctrl.manual_ctrl_widget.on_save_manual_log_clicked()
+        current_index = self.left_section.port_tabs.currentIndex()
+        current_widget = self.left_section.port_tabs.widget(current_index)
+        if hasattr(current_widget, 'data_log_view_widget'):
+            current_widget.received_area_widget.on_data_log_logging_toggled(True) # 로깅 시작 요청
 
     def append_local_echo_data(self, data: bytes) -> None:
         """
@@ -376,8 +379,8 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'left_section'):
             current_index = self.left_section.port_tabs.currentIndex()
             current_widget = self.left_section.port_tabs.widget(current_index)
-            if current_widget and hasattr(current_widget, 'received_area_widget'):
-                current_widget.received_area_widget.on_clear_rx_log_clicked()
+            if current_widget and hasattr(current_widget, 'data_log_view_widget'):
+                current_widget.data_log_view_widget.on_clear_data_log_view_clicked()
 
     def switch_theme(self, theme_name: str) -> None:
         """

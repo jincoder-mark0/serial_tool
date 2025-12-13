@@ -15,7 +15,7 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QLabel, QTextEdit
 from PyQt5.QtWidgets import QPushButton, QHBoxLayout
 
-from view.widgets.rx_log import RxLogWidget
+from view.widgets.data_log_view import DataLogViewWidget
 from view.widgets.manual_ctrl import ManualCtrlWidget
 from view.widgets.macro_list import MacroListWidget
 from view.widgets.system_log import SystemLogWidget
@@ -59,8 +59,8 @@ class ViewTestWindow(QMainWindow):
         # 테스트용 탭 위젯 (Tab Widget for different tests)
         tabs = QTabWidget()
 
-        # Test 1: ReceivedArea (색상 규칙, Trim, 타임스탬프 테스트)
-        tabs.addTab(self.create_received_area_test(), "ReceivedArea Test")
+        # Test 1: DataLogView (색상 규칙, Trim, 타임스탬프 테스트)
+        tabs.addTab(self.create_data_log_view_test(), "DataLogView Test")
 
         # Test 2: ManualCtrl (입력, 파일 전송 테스트)
         tabs.addTab(self.create_manual_ctrl_test(), "ManualCtrl Test")
@@ -69,7 +69,7 @@ class ViewTestWindow(QMainWindow):
         tabs.addTab(self.create_macro_list_test(), "CommandList Test")
 
         # Test 4: StatusArea (상태 로그 테스트)
-        tabs.addTab(self.create_system_log_widget_test(), "StatusArea Test")
+        tabs.addTab(self.create_system_log_test(), "StatusArea Test")
 
         # Test 5: PortPanel (전체 패널 테스트)
         tabs.addTab(self.create_port_panel_test(), "PortPanel Test")
@@ -92,9 +92,9 @@ class ViewTestWindow(QMainWindow):
         # 상태 표시줄 (Status bar)
         self.statusBar().showMessage("Ready - View Components Test")
 
-    def create_received_area_test(self) -> QWidget:
+    def create_data_log_view_test(self) -> QWidget:
         """
-        ReceivedArea 테스트 위젯을 생성합니다.
+        DataLogViewWidget 테스트 위젯을 생성합니다.
 
         Returns:
             QWidget: 테스트 위젯.
@@ -104,24 +104,24 @@ class ViewTestWindow(QMainWindow):
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
-        # ReceivedArea 인스턴스
-        self.received_area = RxLogWidget()
-        layout.addWidget(self.received_area)
+        # DataLogViewWidget 인스턴스
+        self.data_log_view_widget = DataLogViewWidget()
+        layout.addWidget(self.data_log_view_widget)
 
         # 테스트 버튼 (Test buttons)
         button_layout = QHBoxLayout()
 
         # 테스트 데이터 버튼
         btn_ok = QPushButton("Add OK")
-        btn_ok.clicked.connect(lambda: self.received_area.append_data(b"AT\r\nOK\r\n"))
+        btn_ok.clicked.connect(lambda: self.data_log_view_widget.append_data(b"AT\r\nOK\r\n"))
         button_layout.addWidget(btn_ok)
 
         btn_error = QPushButton("Add ERROR")
-        btn_error.clicked.connect(lambda: self.received_area.append_data(b"AT+TEST\r\nERROR\r\n"))
+        btn_error.clicked.connect(lambda: self.data_log_view_widget.append_data(b"AT+TEST\r\nERROR\r\n"))
         button_layout.addWidget(btn_error)
 
         btn_urc = QPushButton("Add URC")
-        btn_urc.clicked.connect(lambda: self.received_area.append_data(b"+CREG: 1,5\r\n"))
+        btn_urc.clicked.connect(lambda: self.data_log_view_widget.append_data(b"+CREG: 1,5\r\n"))
         button_layout.addWidget(btn_urc)
 
         btn_many = QPushButton("Add 100 Lines")
@@ -129,7 +129,7 @@ class ViewTestWindow(QMainWindow):
         button_layout.addWidget(btn_many)
 
         btn_clear = QPushButton("Clear")
-        btn_clear.clicked.connect(self.received_area.on_clear_rx_log_clicked)
+        btn_clear.clicked.connect(self.data_log_view_widget.on_clear_data_log_view_clicked)
         button_layout.addWidget(btn_clear)
 
         layout.addLayout(button_layout)
@@ -143,7 +143,7 @@ class ViewTestWindow(QMainWindow):
     def add_many_lines(self) -> None:
         """많은 라인을 추가하여 Trim 기능을 테스트합니다."""
         for i in range(100):
-            self.received_area.append_data(f"Line {i+1}: Test data\r\n".encode())
+            self.data_log_view_widget.append_data(f"Line {i+1}: Test data\r\n".encode())
 
     def create_manual_ctrl_test(self) -> QWidget:
         """
@@ -275,7 +275,7 @@ class ViewTestWindow(QMainWindow):
 
         return widget
 
-    def create_system_log_widget_test(self) -> QWidget:
+    def create_system_log_test(self) -> QWidget:
         """
         StatusArea 테스트 위젯을 생성합니다.
 
@@ -335,7 +335,7 @@ class ViewTestWindow(QMainWindow):
         layout.addWidget(self.port_panel)
 
         # 정보 레이블
-        info = QLabel("✅ 테스트: 전체 포트 패널 (설정 + ReceivedArea + StatusArea)")
+        info = QLabel("✅ 테스트: 전체 포트 패널 (설정 + DataLogView + StatusArea)")
         layout.addWidget(info)
 
         return widget

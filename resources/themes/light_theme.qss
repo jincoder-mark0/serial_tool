@@ -79,8 +79,8 @@ QPushButton#add_row_btn { qproperty-icon: url(resources/icons/light/add_light.sv
 QPushButton#del_row_btn { qproperty-icon: url(resources/icons/light/delete_light.svg); }
 QPushButton#up_row_btn { qproperty-icon: url(resources/icons/light/up_light.svg); }
 QPushButton#down_row_btn { qproperty-icon: url(resources/icons/light/down_light.svg); }
-QPushButton#rx_search_prev_btn { qproperty-icon: url(resources/icons/light/find_prev_light.svg); }
-QPushButton#rx_search_next_btn { qproperty-icon: url(resources/icons/light/find_next_light.svg); }
+QPushButton#data_log_search_prev_btn { qproperty-icon: url(resources/icons/light/find_prev_light.svg); }
+QPushButton#data_log_search_next_btn { qproperty-icon: url(resources/icons/light/find_next_light.svg); }
 
 /* QLineEdit, QTextEdit */
 QLineEdit, QTextEdit, QPlainTextEdit {

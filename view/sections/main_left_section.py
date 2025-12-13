@@ -127,7 +127,7 @@ class MainLeftSection(QWidget):
         Logic:
             - 현재 탭 인덱스 조회
             - 해당 위젯이 PortPanel인지 확인
-            - RxLogWidget에 데이터 전달
+            - DataLogViewWidget에 데이터 전달
 
         Args:
             data (bytes): 추가할 데이터
@@ -136,8 +136,8 @@ class MainLeftSection(QWidget):
         current_widget = self.port_tabs.widget(current_index)
 
         if isinstance(current_widget, PortPanel):
-            if hasattr(current_widget, 'received_area_widget'):
-                current_widget.received_area_widget.append_data(data)
+            if hasattr(current_widget, 'data_log_view_widget'):
+                current_widget.data_log_view_widget.append_data(data)
 
     def _on_tab_added(self, panel: PortPanel) -> None:
         """

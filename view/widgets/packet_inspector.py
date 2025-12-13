@@ -48,13 +48,13 @@ class PacketInspectorWidget(QWidget):
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.title_lbl = QLabel(lang_manager.get_text("inspector_grp_title"))
+        self.title_lbl = QLabel(lang_manager.get_text("packet_grp_title"))
         layout.addWidget(self.title_lbl)
 
         self.tree = QTreeWidget()
         self.tree.setHeaderLabels([
-            lang_manager.get_text("inspector_col_field"), # 예: Time, Type
-            lang_manager.get_text("inspector_col_value")  # 예: Data
+            lang_manager.get_text("packet_col_field"), # 예: Time, Type
+            lang_manager.get_text("packet_col_value")  # 예: Data
         ])
         self.tree.setColumnWidth(0, 150)
         self.tree.setRootIsDecorated(False) # 최상위 루트 장식 제거 (리스트처럼 보이게)
@@ -64,10 +64,10 @@ class PacketInspectorWidget(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.title_lbl.setText(lang_manager.get_text("inspector_grp_title"))
+        self.title_lbl.setText(lang_manager.get_text("packet_grp_title"))
         self.tree.setHeaderLabels([
-            lang_manager.get_text("inspector_col_field"),
-            lang_manager.get_text("inspector_col_value")
+            lang_manager.get_text("packet_col_field"),
+            lang_manager.get_text("packet_col_value")
         ])
 
     def add_packet(self, time_str: str, packet_type: str, data_hex: str, data_ascii: str) -> None:

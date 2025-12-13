@@ -49,7 +49,7 @@
             "mode": "0"
           }
         },
-        "received_area_widget": {
+        "data_log_view_widget": {
           "hex_mode": false,
           "timestamp": false,
           "is_paused": false,

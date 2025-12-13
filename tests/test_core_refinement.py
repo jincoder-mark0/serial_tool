@@ -1,7 +1,7 @@
 """
 Core 및 유틸리티 기능 정밀 테스트
 
-- DataLogger (구 LogRecorder) 동작 검증
+- DataLogger 동작 검증
 - ExpectMatcher 패턴 매칭 검증
 - ParserType 상수 일관성 확인
 

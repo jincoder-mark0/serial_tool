@@ -185,7 +185,7 @@ class MainPresenter(QObject):
 
         Logic:
             - 데이터 로깅 (활성화 시)
-            - 해당 포트의 View(RxLogWidget)에 데이터 전달
+            - 해당 포트의 View(DataLogViewWidget)에 데이터 전달
             - RX 카운트 증가
 
         Args:
@@ -201,8 +201,8 @@ class MainPresenter(QObject):
         for i in range(count):
             widget = self.view.get_port_tab_widget(i)
             if hasattr(widget, 'get_port_name') and widget.get_port_name() == port_name:
-                if hasattr(widget, 'received_area_widget'):
-                    widget.received_area_widget.append_data(data)
+                if hasattr(widget, 'data_log_view_widget'):
+                    widget.data_log_view_widget.append_data(data)
                 break
 
         # RX 카운트 증가
@@ -326,15 +326,15 @@ class MainPresenter(QObject):
         if 'language' in new_settings:
             lang_manager.set_language(new_settings['language'])
 
-        # max_log_lines 설정 변경 시 모든 RxLogWidget에 적용
+        # max_log_lines 설정 변경 시 모든 DataLogViewWidget에 적용
         if 'max_log_lines' in new_settings:
             try:
                 max_lines_int = int(new_settings['max_log_lines'])
                 count = self.view.get_port_tabs_count()
                 for i in range(count):
                     widget = self.view.get_port_tab_widget(i)
-                    if hasattr(widget, 'received_area_widget'):
-                        widget.received_area_widget.set_max_lines(max_lines_int)
+                    if hasattr(widget, 'data_log_view_widget'):
+                        widget.data_log_view_widget.set_max_lines(max_lines_int)
             except (ValueError, TypeError):
                 logger.warning("Invalid max_log_lines value")
 
@@ -469,8 +469,8 @@ class MainPresenter(QObject):
         Args:
             panel: 포트 패널 위젯
         """
-        if hasattr(panel, 'received_area_widget'):
-            rx_widget = panel.received_area_widget
+        if hasattr(panel, 'data_log_view_widget'):
+            rx_widget = panel.data_log_view_widget
             # 중복 연결 방지를 위해 disconnect 시도
             try:
                 rx_widget.data_logging_started.disconnect(self._on_data_logging_started)
@@ -487,7 +487,7 @@ class MainPresenter(QObject):
         count = self.view.get_port_tabs_count()
         for i in range(count):
             widget = self.view.get_port_tab_widget(i)
-            if hasattr(widget, 'received_area_widget') and widget.received_area_widget == sender:
+            if hasattr(widget, 'data_log_view_widget') and widget.data_log_view_widget == sender:
                 return widget
         return None
 

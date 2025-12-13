@@ -34,7 +34,7 @@ class SystemLogWidget(QWidget):
 
         self.setFixedHeight(100) # 위젯 전체 높이 고정
 
-        self.system_log_title = QLabel(lang_manager.get_text("system_title"))
+        self.system_log_title = QLabel(lang_manager.get_text("sys_log_view_title"))
         self.system_log_title.setProperty("class", "section-title")  # 섹션 타이틀 스타일 적용
         # system_log_title.setStyleSheet("font-weight: bold; font-size: 10px;")
 
@@ -42,8 +42,8 @@ class SystemLogWidget(QWidget):
         self.system_log_list = QSmartListView()
         self.system_log_list.setReadOnly(True)
         # self.system_log_list.setFixedHeight(100) # 리스트 높이 고정 제거 (위젯 전체 높이에 맞춤)
-        self.system_log_list.setToolTip(lang_manager.get_text("system_list_log_tooltip"))
-        self.system_log_list.setPlaceholderText(lang_manager.get_text("system_list_log_placeholder"))
+        self.system_log_list.setToolTip(lang_manager.get_text("sys_log_view_list_log_tooltip"))
+        self.system_log_list.setPlaceholderText(lang_manager.get_text("sys_log_view_list_log_placeholder"))
         self.system_log_list.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
 
         layout.addWidget(self.system_log_title)
@@ -52,9 +52,9 @@ class SystemLogWidget(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.system_log_title.setText(lang_manager.get_text("system_title"))
-        self.system_log_list.setToolTip(lang_manager.get_text("system_list_log_tooltip"))
-        self.system_log_list.setPlaceholderText(lang_manager.get_text("system_list_log_placeholder"))
+        self.system_log_title.setText(lang_manager.get_text("sys_log_view_title"))
+        self.system_log_list.setToolTip(lang_manager.get_text("sys_log_view_list_log_tooltip"))
+        self.system_log_list.setPlaceholderText(lang_manager.get_text("sys_log_view_list_log_placeholder"))
 
     def log(self, message: str, level: str = "INFO") -> None:
         """

@@ -116,7 +116,7 @@ class MainMenuBar(QMenuBar):
         tools_menu = self.addMenu(lang_manager.get_text("main_menu_tools"))
 
         # 파일 전송 액션
-        file_transfer_action = QAction(lang_manager.get_text("manual_ctrl_grp_file"), self)
+        file_transfer_action = QAction(lang_manager.get_text("main_menu_file_transfer"), self)
         file_transfer_action.triggered.connect(self.file_transfer_requested.emit)
         tools_menu.addAction(file_transfer_action)
 
