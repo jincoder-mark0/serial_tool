@@ -9,23 +9,25 @@
 ### 핵심 기능
 
 * **멀티 프로토콜(시리얼, SPI, I2C) 지원**: 탭 인터페이스로 여러 프로토콜(시리얼, SPI, I2C) 포트 동시 제어
-* **수동 제어**:
+* **송신**:
   * HEX/ASCII 모드
   * Prefix/Suffix
   * 여러 줄 입력 지원 (라인 번호 표시, Ctrl+Enter 전송)
   * 파일 전송 기능
-
-  * 로그 저장 및 화면(newline 설정, max line 수 설정) 클리어
   * Local Echo (송신 데이터 표시) 지원
+  * 테스트를 위한 브로드캐스팅 지원
 * **매크로 자동화**:
   * 여러 명령어를 리스트로 관리
   * 순차 명령 실행
   * Repeat 및 Delay 설정
   * 스크립트 저장 및 불러오기 (JSON 형식)
-* **실시간 모니터링**:
+* **수신**:
+  * HEX/ASCII 모드
   * Tx/Rx 바이트 카운트
+  * 실시간 모니터링
   * 색상 규칙 기반 로그 강조 (OK=녹색, ERROR=빨강)
   * 타임스탬프 표시
+  * 로그 저장 및 화면(newline 설정, max line 수 설정) 클리어
 
 ### UI/UX 특징
 
@@ -102,20 +104,20 @@ serial_tool/
 │   ├── data_logger.py                # 데이터 로깅
 │   ├── error_handler.py              # 에러 핸들러
 │   ├── event_bus.py                  # 이벤트 버스
-│   ├── interface.py                  # 인터페이스 정의
+│   ├── device_transport.py           #
 │   ├── logger.py                     # 로깅 시스템 (Singleton)
 │   ├── port_state.py                 # 포트 상태 관리
 │   ├── settings_manager.py           # 설정 관리 (Singleton)
 │   └── utils.py                      # 유틸리티 함수
 │
 ├── model/                            # 비즈니스 로직
+│   ├── connection_controller.py      #
+│   ├── connection_manager.py         #
 │   ├── connection_worker.py          # 연결 워커
 │   ├── file_transfer.py              # 파일 전송
 │   ├── macro_entry.py                # 매크로 항목
 │   ├── macro_runner.py               # 매크로 실행
 │   ├── packet_parser.py              # 패킷 파싱
-│   ├── port_controller.py            # 포트 제어
-│   ├── serial_manager.py             # 시리얼 관리
 │   └── serial_transport.py           # 전송 관리
 │
 ├── presenter/                        # MVP Presenter 계층
@@ -156,7 +158,7 @@ serial_tool/
 │   │
 │   ├── widgets/                      # 위젯 (소 단위)
 │   │   ├── file_progress.py          # 파일 진행률 위젯
-│   │   ├── manual_ctrl.py            # 수동 제어 위젯
+│   │   ├── macro_ctrl.py             #
 │   │   ├── macro_list.py             # 매크로 리스트 위젯
 │   │   ├── manual_ctrl.py            # 수동 제어 위젯
 │   │   ├── packet_inspector.py       # 패킷 인스펙터 위젯

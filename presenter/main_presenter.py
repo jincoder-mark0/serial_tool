@@ -229,7 +229,7 @@ class MainPresenter(QObject):
         매크로 전송 요청 처리
 
         Logic:
-            - 포트 열림 확인
+            - 연결 열림 확인
             - CmdProcessor를 사용하여 데이터 가공 (Prefix/Suffix/Hex)
             - 데이터 전송 (ConnectionController)
 
@@ -243,9 +243,14 @@ class MainPresenter(QObject):
             logger.warning("Port not open")
             return
 
+        # [Refactor] SettingsManager에서 값 획득 후 CmdProcessor에 주입
+        settings = SettingsManager()
+        prefix = settings.get(ConfigKeys.CMD_PREFIX) if cmd_prefix else None
+        suffix = settings.get(ConfigKeys.CMD_SUFFIX) if cmd_suffix else None
+
         try:
-            # 데이터 가공 위임
-            data = CmdProcessor.process_cmd(text, hex_mode, cmd_prefix, cmd_suffix)
+            # 데이터 가공 위임 (CmdProcessor에 Prefix/Suffix 값 직접 전달)
+            data = CmdProcessor.process_cmd(text, hex_mode, prefix=prefix, suffix=suffix)
         except ValueError:
             logger.error(f"Invalid hex string for sending: {text}")
             return

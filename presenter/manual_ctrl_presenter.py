@@ -5,7 +5,7 @@
 
 ## WHY
 * View와 Model 사이의 중재자 역할
-* 수동 입력 데이터 가공(Prefix, Suffix, Hex) 로직의 분리
+* **CommandProcessor를 호출하기 전에 SettingsManager에서 설정값(Prefix/Suffix)을 가져와 주입**
 * 하드웨어 제어 신호(RTS, DTR) 처리
 
 ## WHAT
@@ -14,7 +14,7 @@
 * 설정 적용 및 Local Echo 처리
 
 ## HOW
-* View 시그널 구독 (ManualCtrlPanel -> Widget)
+* View 시그널 구독
 * CmdProcessor를 통한 데이터 가공
 * ConnectionController 메서드 호출 (send_data, set_rts, set_dtr)
 """
@@ -43,7 +43,7 @@ class ManualCtrlPresenter(QObject):
 
         Args:
             view (ManualCtrlPanel): 수동 제어 패널 View
-            connection_controller (ConnectionController): 포트 제어 Model
+            connection_controller (ConnectionController): 연결 제어 Model
             local_echo_callback (Callable): Local Echo 콜백 (선택)
         """
         super().__init__()
@@ -70,8 +70,9 @@ class ManualCtrlPresenter(QObject):
         수동 명령 전송 요청 처리
 
         Logic:
-            - 포트 열림 확인
-            - CmdProcessor를 사용하여 데이터 변환
+            - 연결 열림 확인
+            - **SettingsManager에서 Prefix/Suffix 값 획득**
+            - CmdProcessor에 값과 함께 전송 요청
             - 데이터 전송 및 Local Echo 처리
 
         Args:
@@ -82,17 +83,21 @@ class ManualCtrlPresenter(QObject):
             local_echo (bool): 로컬 에코 사용 여부
         """
         if not self.connection_controller.has_active_connection:
-            logger.warning("Manual Send: Port not open")
+            logger.warning("Manual Send: No active connection")
             return
 
+        # SettingsManager에서 값 획득 후 CmdProcessor에 주입
+        prefix = self.settings_manager.get(ConfigKeys.CMD_PREFIX) if cmd_prefix else None
+        suffix = self.settings_manager.get(ConfigKeys.CMD_SUFFIX) if cmd_suffix else None
+
         try:
-            # 데이터 가공 위임
-            data = CmdProcessor.process_cmd(text, hex_mode, cmd_prefix, cmd_suffix)
+            # 데이터 가공 위임 (CmdProcessor에 Prefix/Suffix 값 직접 전달)
+            data = CmdProcessor.process_cmd(text, hex_mode, prefix=prefix, suffix=suffix)
         except ValueError:
             logger.error(f"Invalid hex string for sending: {text}")
             return
 
-        # 데이터 전송
+        # 데이터 전송 (Controller)
         self.connection_controller.send_data(data)
 
         # Local Echo (View에 직접 표시 요청)

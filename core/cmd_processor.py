@@ -5,21 +5,21 @@
 
 ## WHY
 * Presenter 계층에 산재된 명령어 가공 로직의 중복 제거 (DRY 원칙)
-* 설정(SettingsManager)에 따른 접두사/접미사 처리의 일관성 보장
+* **숨겨진 의존성(SettingsManager)을 제거**하고 값을 인자로 받아 테스트 용이성 향상
 * Hex 문자열 변환 및 에러 처리 로직의 중앙 집중화
 
 ## WHAT
-* 텍스트 명령어에 Prefix/Suffix 설정 적용
+* 텍스트 명령어에 Prefix/Suffix 설정 적용 (인자로 전달받음)
 * HEX/ASCII 모드에 따른 데이터 인코딩
 * 변환 실패 시 예외 처리
 
 ## HOW
-* 정적 메서드(Static Method)를 통해 상태 없이 순수 로직 수행
-* SettingsManager를 조회하여 현재 설정값 적용
+* 정적 메서드(Static Method)의 시그니처를 변경하여 의존성 제거
+* 인자로 받은 Prefix/Suffix를 적용하여 순수 로직 수행
 """
-from typing import Tuple
-from core.settings_manager import SettingsManager
-from constants import ConfigKeys
+from typing import Optional
+from core.settings_manager import SettingsManager # 주석 참조용으로 유지
+from constants import ConfigKeys # 주석 참조용으로 유지
 
 class CmdProcessor:
     """
@@ -27,20 +27,20 @@ class CmdProcessor:
     """
 
     @staticmethod
-    def process_cmd(text: str, hex_mode: bool, use_prefix: bool, use_suffix: bool) -> bytes:
+    def process_cmd(text: str, hex_mode: bool, prefix: Optional[str] = None, suffix: Optional[str] = None) -> bytes:
         """
         명령어 텍스트를 설정에 맞춰 바이트 데이터로 변환
 
         Logic:
-            - 설정된 Prefix/Suffix 적용
+            - **인자로 전달받은** Prefix/Suffix 적용
             - Hex 모드일 경우 공백 제거 후 bytes 변환
             - ASCII 모드일 경우 UTF-8 인코딩
 
         Args:
             text (str): 원본 명령어 텍스트
             hex_mode (bool): HEX 모드 여부
-            use_prefix (bool): 접두사 사용 여부
-            use_suffix (bool): 접미사 사용 여부
+            prefix (Optional[str]): 적용할 접두사. (None일 경우 무시)
+            suffix (Optional[str]): 적용할 접미사. (None일 경우 무시)
 
         Returns:
             bytes: 전송 가능한 바이트 데이터
@@ -48,17 +48,15 @@ class CmdProcessor:
         Raises:
             ValueError: 유효하지 않은 HEX 문자열일 경우
         """
-        settings = SettingsManager()
+        # [Refactor] SettingsManager 직접 호출 로직 제거됨
         final_text = text
 
         # Prefix 적용
-        if use_prefix:
-            prefix = settings.get(ConfigKeys.CMD_PREFIX, "")
+        if prefix:
             final_text = prefix + final_text
 
         # Suffix 적용
-        if use_suffix:
-            suffix = settings.get(ConfigKeys.CMD_SUFFIX, "")
+        if suffix:
             final_text = final_text + suffix
 
         # 데이터 변환

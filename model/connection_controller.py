@@ -50,6 +50,7 @@ class ConnectionController(QObject):
         Logic:
             - Worker/Parser 저장소 초기화
             - Signal -> EventBus 자동 중계 연결
+            - **_active_connection_name 초기화**
         """
         super().__init__()
         # 연결 이름(str) -> ConnectionWorker 매핑
@@ -58,6 +59,9 @@ class ConnectionController(QObject):
         self.parsers: dict[str, PacketParser] = {}
         # 연결 이름(str) -> Config(dict) 매핑
         self.connection_configs: dict[str, dict] = {}
+
+        # 명시적인 활성 연결 상태 관리 변수 (사용자가 선택한 탭)
+        self._active_connection_name: Optional[str] = None
 
         # EventBus 인스턴스
         self.event_bus = event_bus
@@ -92,16 +96,34 @@ class ConnectionController(QObject):
         return len(self.workers) > 0
 
     @property
-    def current_connection_name(self) -> str:
+    def current_connection_name(self) -> Optional[str]:
         """
-        현재 활성화된 연결 이름 중 하나를 반환
+        현재 **명시적으로 활성화된** 연결 이름을 반환합니다.
+
+        Logic:
+            - `set_active_connection`으로 설정된 이름을 반환
+            - 설정된 이름이 없다면, 첫 번째 워커의 이름을 반환 (Fallback)
 
         Returns:
-            str: 연결 이름 (없으면 빈 문자열)
+            Optional[str]: 활성 연결 이름.
         """
+        if self._active_connection_name and self._active_connection_name in self.workers:
+            return self._active_connection_name
+
+        # Fallback: 명시적으로 설정된 이름이 없으면 첫 번째 워커 이름 반환
         if self.workers:
-            return list(self.workers.keys())[-1]
-        return ""
+            return list(self.workers.keys())[0]
+
+        return None
+
+    def set_active_connection(self, name: str) -> None:
+        """
+        현재 활성 탭에 해당하는 연결을 명시적으로 설정합니다.
+
+        Args:
+            name (str): 활성 연결 이름 (보통 포트 이름).
+        """
+        self._active_connection_name = name
 
     def get_active_connections(self) -> List[str]:
         """
@@ -140,7 +162,7 @@ class ConnectionController(QObject):
     def get_write_queue_size(self, name: str) -> int:
         """
         특정 연결의 전송 대기 큐 크기 반환
-        
+
         Args:
             name: 확인할 연결 이름
 
@@ -180,7 +202,7 @@ class ConnectionController(QObject):
             self.error_occurred.emit(name, "Connection is already open.")
             return False
 
-        # 프로토콜에 따른 Transport 생성 (현재는 Serial 고정)
+        # Transport 생성
         baudrate = config.get('baudrate', DEFAULT_BAUDRATE)
         transport = SerialTransport(name, baudrate, config=config)
 
@@ -206,6 +228,10 @@ class ConnectionController(QObject):
 
         self.workers[name] = worker
         worker.start()
+
+        # 새 연결이 열리면 해당 연결을 활성 연결로 설정 (탭이 열릴 때)
+        self.set_active_connection(name)
+
         return True
 
     def _handle_data_received(self, name: str, data: bytes) -> None:
@@ -231,7 +257,7 @@ class ConnectionController(QObject):
     def on_worker_closed(self, name: str) -> None:
         """
         Worker 종료 시 리소스 정리 핸들러
-        
+
         Args:
             name: 닫힌 연결 이름
         """
@@ -241,6 +267,10 @@ class ConnectionController(QObject):
             del self.parsers[name]
         if name in self.connection_configs:
             del self.connection_configs[name]
+
+        # 닫힌 연결이 활성 연결이었다면, 활성 연결 상태 초기화
+        if self._active_connection_name == name:
+            self._active_connection_name = None
 
         self.connection_closed.emit(name)
 
@@ -263,7 +293,7 @@ class ConnectionController(QObject):
     def send_data(self, data: bytes) -> None:
         """
         모든 활성 연결로 데이터 Broadcasting
-        
+
         Args:
             data: 전송할 바이트 데이터
         """
@@ -279,7 +309,7 @@ class ConnectionController(QObject):
     def send_data_to_connection(self, name: str, data: bytes) -> bool:
         """
         특정 연결로 데이터 전송
-        
+
         Args:
             name: 대상 연결 이름
             data: 전송할 데이터
