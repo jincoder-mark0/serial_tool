@@ -22,7 +22,7 @@
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QWaitCondition
 from typing import List, Optional
 import time
-from common.dtos import MacroEntry, ManualCommand
+from common.dtos import MacroEntry, ManualCommand, MacroStepEvent
 from model.packet_parser import ExpectMatcher
 from core.logger import logger
 from core.event_bus import event_bus
@@ -35,9 +35,10 @@ class MacroRunner(QThread):
     정밀한 타이밍 제어를 보장합니다.
     """
 
-    # UI 업데이트를 위한 시그널
-    step_started = pyqtSignal(int, MacroEntry)
-    step_completed = pyqtSignal(int, bool)
+    # UI 업데이트를 위한 시그널 (DTO 사용)
+    step_started = pyqtSignal(object)   # MacroStepEvent
+    step_completed = pyqtSignal(object) # MacroStepEvent
+
     macro_finished = pyqtSignal()
     error_occurred = pyqtSignal(str)
 
@@ -237,7 +238,9 @@ class MacroRunner(QThread):
                 if not entry.enabled:
                     continue
 
-                self.step_started.emit(i, entry)
+                # DTO 이벤트 발생
+                self.step_started.emit(MacroStepEvent(index=i, entry=entry, type="started"))
+
                 step_success = True
                 error_msg = ""
 
@@ -260,13 +263,13 @@ class MacroRunner(QThread):
 
                     # 2-3. 결과 처리 및 지연
                     if step_success:
-                        self.step_completed.emit(i, True)
+                        self.step_completed.emit(MacroStepEvent(index=i, success=True, type="completed"))
                         # 최소 10ms 지연 보장
                         delay = entry.delay_ms if entry.delay_ms > 0 else 10
                         self._interruptible_sleep(delay)
                     else:
                         # 실패 시 중단 처리
-                        self.step_completed.emit(i, False)
+                        self.step_completed.emit(MacroStepEvent(index=i, success=False, type="completed"))
                         self.error_occurred.emit(error_msg)
                         self.event_bus.publish("macro.error", error_msg)
 

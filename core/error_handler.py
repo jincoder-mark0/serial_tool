@@ -17,15 +17,18 @@
 ## HOW
 * QObject 상속 및 Signal 사용
 * traceback 모듈로 스택 트레이스 추출
+* DTO(ErrorContext)를 사용하여 에러 정보 전달
 """
 import sys
 import threading
 import traceback
+import time
 from typing import Type, Optional
 from types import TracebackType
 from PyQt5.QtWidgets import QMessageBox, QApplication
 from PyQt5.QtCore import QObject, pyqtSignal
 from core.logger import logger
+from common.dtos import ErrorContext
 
 class GlobalErrorHandler(QObject):
     """
@@ -34,7 +37,7 @@ class GlobalErrorHandler(QObject):
     메인 스레드 및 백그라운드 스레드의 처리되지 않은 예외를 포착합니다.
     """
     # UI 스레드에서 다이얼로그를 띄우기 위한 시그널
-    show_error_signal = pyqtSignal(str, str, str)
+    show_error_signal = pyqtSignal(object)
 
     def __init__(self):
         super().__init__()
@@ -124,31 +127,37 @@ class GlobalErrorHandler(QObject):
         # 로깅 (CRITICAL 레벨)
         logger.critical(f"Uncaught exception:\n{error_msg}")
 
+        # DTO 생성
+        error_context = ErrorContext(
+            error_type=exc_type.__name__,
+            message=str(exc_value),
+            traceback=error_msg,
+            timestamp=time.time()
+        )
+
         # UI 스레드에서 메시지 박스 표시 (QApplication이 실행 중일 때만)
         if QApplication.instance():
             # 시그널을 통해 메인 스레드로 전달
-            self.show_error_signal.emit(exc_type.__name__, str(exc_value), error_msg)
+            self.show_error_signal.emit(error_context)
         else:
             # GUI가 없는 경우 콘솔에 출력
             print("Critical Error (No GUI):", error_msg, file=sys.stderr)
 
     @staticmethod
-    def _show_error_dialog(error_type: str, error_message: str, traceback_str: str) -> None:
+    def _show_error_dialog(context: ErrorContext) -> None:
         """
         에러 다이얼로그 표시 (메인 스레드에서 실행됨)
 
         Args:
-            error_type: 에러 클래스 이름
-            error_message: 에러 메시지
-            traceback_str: 전체 스택 트레이스 문자열
+            context (ErrorContext): 에러 정보 DTO
         """
         try:
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Critical)
             msg_box.setWindowTitle("Critical Error")
-            msg_box.setText(f"An unexpected error occurred: {error_type}")
-            msg_box.setInformativeText(error_message)
-            msg_box.setDetailedText(traceback_str)
+            msg_box.setText(f"An unexpected error occurred: {context.error_type}")
+            msg_box.setInformativeText(context.message)
+            msg_box.setDetailedText(context.traceback)
             msg_box.setStandardButtons(QMessageBox.Ok)
             msg_box.exec_()
         except Exception as e:

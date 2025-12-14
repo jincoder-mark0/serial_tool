@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Optional
 from view.managers.language_manager import language_manager
-
+from common.dtos import MacroRepeatOption
 from common.constants import DEFAULT_MACRO_DELAY_MS
 
 class MacroControlWidget(QWidget):
@@ -15,7 +15,7 @@ class MacroControlWidget(QWidget):
     """
 
     # 시그널 정의
-    macro_repeat_start_requested = pyqtSignal(int, int) # delay_ms, max_runs
+    macro_repeat_start_requested = pyqtSignal(object) # MacroRepeatOption DTO
     macro_repeat_stop_requested = pyqtSignal()
     macro_repeat_pause_requested = pyqtSignal()
 
@@ -140,14 +140,20 @@ class MacroControlWidget(QWidget):
         self.macro_repeat_start_btn.setText(language_manager.get_text("macro_control_btn_repeat_start"))
         self.macro_repeat_stop_btn.setText(language_manager.get_text("macro_control_btn_repeat_stop"))
 
-    def on_macro_repeat_start_clicked(self) -> None:
-        """자동 실행 시작 버튼 핸들러"""
+    def get_repeat_option(self) -> MacroRepeatOption:
+        """현재 UI 설정값을 바탕으로 MacroRepeatOption DTO 생성"""
         try:
             delay = int(self.repeat_delay_line_edit.text())
         except ValueError:
             delay = DEFAULT_MACRO_DELAY_MS
         max_runs = self.repeat_count_spin.value()
-        self.macro_repeat_start_requested.emit(delay, max_runs)
+
+        return MacroRepeatOption(delay_ms=delay, max_runs=max_runs)
+
+    def on_macro_repeat_start_clicked(self) -> None:
+        """자동 실행 시작 버튼 핸들러"""
+        option = self.get_repeat_option()
+        self.macro_repeat_start_requested.emit(option)
 
     def on_macro_repeat_stop_clicked(self) -> None:
         """자동 실행 정지 버튼 핸들러"""

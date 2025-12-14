@@ -18,6 +18,7 @@ MacroListWidget과 MacroControlWidget을 조합하여
 * QVBoxLayout으로 상/하위 위젯 배치
 * PyQt 시그널을 통해 Presenter와 통신
 * save_state/load_state로 데이터 직렬화 지원
+* DTO를 사용하여 데이터 전송
 """
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QFileDialog, QMessageBox
 from PyQt5.QtCore import pyqtSignal
@@ -26,6 +27,7 @@ from typing import Optional, Dict, Any
 from view.widgets.macro_list import MacroListWidget
 from view.widgets.macro_control import MacroControlWidget
 from view.managers.language_manager import language_manager
+from common.dtos import MacroScriptData, MacroRepeatOption
 
 class MacroPanel(QWidget):
     """
@@ -36,13 +38,13 @@ class MacroPanel(QWidget):
     """
 
     # 매크로 실행 제어 시그널
-    repeat_start_requested = pyqtSignal(list)  # indices
+    repeat_start_requested = pyqtSignal(list, object)  # indices, MacroRepeatOption DTO
     repeat_stop_requested = pyqtSignal()
     state_changed = pyqtSignal()  # 데이터 변경 알림
 
-    # 파일 저장/로드 요청 시그널 (경로 및 데이터 전달)
-    script_save_requested = pyqtSignal(str, dict) # filepath, data
-    script_load_requested = pyqtSignal(str)       # filepath
+    # 파일 저장/로드 요청 시그널 (DTO 사용)
+    script_save_requested = pyqtSignal(object) # MacroScriptData
+    script_load_requested = pyqtSignal(str)    # filepath
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -89,7 +91,7 @@ class MacroPanel(QWidget):
         Logic:
             1. 파일 저장 다이얼로그 표시
             2. 사용자가 경로 선택 시 현재 상태(save_state) 수집
-            3. Presenter에 저장 요청 시그널(경로, 데이터) 전달
+            3. DTO 생성 후 Presenter에 전달
         """
         filter_str = "JSON Files (*.json);;All Files (*)"
         path, _ = QFileDialog.getSaveFileName(
@@ -101,7 +103,9 @@ class MacroPanel(QWidget):
 
         if path:
             data = self.save_state()
-            self.script_save_requested.emit(path, data)
+            # DTO 생성
+            script_data = MacroScriptData(filepath=path, data=data)
+            self.script_save_requested.emit(script_data)
 
     def on_load_clicked(self) -> None:
         """
@@ -175,20 +179,18 @@ class MacroPanel(QWidget):
             "control_state": self.marco_control.save_state()
         }
 
-    def on_repeat_start_requested(self, delay: int, max_runs: int) -> None:
+    def on_repeat_start_requested(self, option: MacroRepeatOption) -> None:
         """
-        Repeat Start 버튼 클릭 핸들러
+        Repeat Start 버튼 클릭 핸들러 (Widget -> Panel)
 
         Args:
-            delay (int): 지연 시간 (ms)
-            max_runs (int): 최대 실행 횟수
+            option (MacroRepeatOption): 매크로 반복 옵션 DTO
         """
         indices = self.macro_list.get_selected_indices()
         if indices:
-            # Note: delay와 max_runs 파라미터는 현재 시그널에 포함되지 않음
-            # Presenter에서 MacroControlWidget의 상태를 직접 읽어서 사용해야 함
-            self.repeat_start_requested.emit(indices)
-            self.marco_control.set_running_state(True, is_auto=True)
+            # 선택된 인덱스와 옵션 DTO를 함께 전달
+            self.repeat_start_requested.emit(indices, option)
+            self.marco_control.set_running_state(True, is_repeat=True)
 
     def on_repeat_stop_requested(self) -> None:
         """

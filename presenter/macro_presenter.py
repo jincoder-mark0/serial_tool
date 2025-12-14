@@ -18,6 +18,7 @@
 * PyQt 시그널/슬롯으로 View와 Model 연결
 * commentjson(또는 json)을 사용하여 스크립트 파일 처리
 * 예외 처리(try-except)를 통해 안전한 파일 I/O 구현
+* DTO를 사용하여 데이터 전송
 """
 from PyQt5.QtCore import QObject
 from typing import List
@@ -28,7 +29,7 @@ except ImportError:
 
 from view.panels.macro_panel import MacroPanel
 from model.macro_runner import MacroRunner
-from common.dtos import MacroEntry
+from common.dtos import MacroEntry, MacroScriptData, MacroRepeatOption, MacroStepEvent
 from core.logger import logger
 
 class MacroPresenter(QObject):
@@ -68,14 +69,16 @@ class MacroPresenter(QObject):
         self.runner.macro_finished.connect(self.on_macro_finished)
         self.runner.error_occurred.connect(self.on_error)
 
-    def on_script_save(self, filepath: str, data: dict) -> None:
+    def on_script_save(self, script_data: MacroScriptData) -> None:
         """
         스크립트 파일 저장 요청 처리
 
         Args:
-            filepath (str): 저장할 파일 경로
-            data (dict): 저장할 데이터 딕셔너리
+            script_data (MacroScriptData): 저장할 파일 경로와 데이터를 포함한 DTO
         """
+        filepath = script_data.filepath
+        data = script_data.data
+
         try:
             with open(filepath, 'w', encoding='utf-8') as f:
                 commentjson.dump(data, f, indent=4)
@@ -105,20 +108,21 @@ class MacroPresenter(QObject):
             logger.error(f"Failed to load script: {e}")
             self.panel.show_error("Load Error", f"Failed to load script:\n{str(e)}")
 
-    def on_repeat_start(self, indices: List[int]) -> None:
+    def on_repeat_start(self, indices: List[int], option: MacroRepeatOption) -> None:
         """
         반복 실행 시작 요청 처리
 
         Args:
             indices (List[int]): 선택된 행 인덱스 리스트
+            option (MacroRepeatOption): 반복 실행 옵션 (delay, max_runs 등)
         """
         if not indices:
             return
 
-        # UI에서 설정값 가져오기 (MacroControlWidget 상태 조회)
-        control_widget = self.panel.marco_control
-        loop_count = control_widget.get_repeat_count()
-        interval_ms = control_widget.get_interval()
+        # DTO에서 옵션 추출
+        loop_count = option.max_runs
+        interval_ms = option.interval_ms # 현재 UI에는 없지만 DTO에는 존재 (확장성)
+        delay_ms_override = option.delay_ms # 전역 지연 시간 설정이 있다면 (현재는 개별 지연 사용)
 
         # 현재 리스트의 데이터를 MacroEntry로 변환
         raw_list = self.panel.macro_list.get_macro_list()
@@ -126,13 +130,17 @@ class MacroPresenter(QObject):
 
         for i, raw in enumerate(raw_list):
             if i in indices:
+                # DTO의 delay 사용 또는 개별 설정 사용 결정 로직
+                # 여기서는 개별 설정을 우선하고, DTO의 delay는 필요시 사용
+                entry_delay = int(raw['delay']) if raw['delay'].isdigit() else 100
+
                 entry = MacroEntry(
                     enabled=raw['enabled'],
                     command=raw['command'],
                     is_hex=raw['hex_mode'],
                     prefix=raw['prefix'],
                     suffix=raw['suffix'],
-                    delay_ms=int(raw['delay']) if raw['delay'].isdigit() else 100,
+                    delay_ms=entry_delay,
                     # 향후 확장: expect, timeout 등도 여기서 매핑
                 )
                 entries.append(entry)
@@ -167,12 +175,23 @@ class MacroPresenter(QObject):
                 raw['command'], raw['hex_mode'], raw['prefix'], raw['suffix']
             )
 
-    def on_step_started(self, index: int, entry: MacroEntry) -> None:
-        """스텝 시작 시 처리 (UI 하이라이트 등)"""
+    def on_step_started(self, event: MacroStepEvent) -> None:
+        """
+        스텝 시작 시 처리 (UI 하이라이트 등)
+
+        Args:
+            event (MacroStepEvent): 스텝 이벤트 DTO
+        """
+        # TODO: 현재 실행 중인 행 하이라이트 등의 로직 구현 가능
         pass
 
-    def on_step_completed(self, index: int, success: bool) -> None:
-        """스텝 완료 시 처리"""
+    def on_step_completed(self, event: MacroStepEvent) -> None:
+        """
+        스텝 완료 시 처리
+
+        Args:
+            event (MacroStepEvent): 스텝 이벤트 DTO
+        """
         pass
 
     def on_macro_finished(self) -> None:

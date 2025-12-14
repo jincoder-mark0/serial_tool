@@ -19,13 +19,17 @@
 * PortDataEvent: 포트 데이터 이벤트
 * PortErrorEvent: 포트 에러 이벤트
 * PacketEvent: 패킷 수신 이벤트
+* ErrorContext: 시스템 에러 컨텍스트
+* MacroScriptData: 매크로 스크립트 데이터
+* MacroRepeatOption: 매크로 반복 설정 옵션
+* MacroStepEvent: 매크로 실행 스텝 이벤트
 
 ## HOW
 * python dataclasses 활용
 * to_dict/from_dict 메서드를 통해 JSON 직렬화 지원
 """
 from dataclasses import dataclass
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, List
 
 @dataclass
 class ManualCommand:
@@ -185,3 +189,45 @@ class PacketEvent:
     """
     port: str
     packet: Any # model.packet_parser.Packet 객체
+
+@dataclass
+class ErrorContext:
+    """
+    시스템 에러 컨텍스트 DTO
+    GlobalErrorHandler -> UI
+    """
+    error_type: str
+    message: str
+    traceback: str
+    level: str = "CRITICAL"
+    timestamp: float = 0.0
+
+@dataclass
+class MacroScriptData:
+    """
+    매크로 스크립트 데이터 DTO (저장/로드)
+    View -> Presenter
+    """
+    filepath: str
+    data: Dict[str, Any] # commands 리스트와 control_state 포함
+
+@dataclass
+class MacroRepeatOption:
+    """
+    매크로 반복 실행 옵션 DTO
+    View(Widget) -> View(Panel) -> Presenter
+    """
+    delay_ms: int
+    max_runs: int = 0
+    interval_ms: int = 0
+
+@dataclass
+class MacroStepEvent:
+    """
+    매크로 실행 단계 이벤트 DTO
+    Model -> Presenter -> View
+    """
+    index: int
+    entry: Optional[MacroEntry] = None
+    success: bool = False
+    type: str = "started" # "started" or "completed"
