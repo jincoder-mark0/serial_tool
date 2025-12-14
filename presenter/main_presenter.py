@@ -35,7 +35,7 @@ from core.settings_manager import SettingsManager
 from core.data_logger import data_logger_manager
 from view.managers.language_manager import language_manager
 from core.logger import logger
-from constants import ConfigKeys
+from common.constants import ConfigKeys
 
 class MainPresenter(QObject):
     """
@@ -93,7 +93,7 @@ class MainPresenter(QObject):
 
         # 2.5 Manual Control (좌측 수동 제어)
         self.manual_control_presenter = ManualControlPresenter(
-            self.view.left_section.manual_control,
+            self.view.left_section.manual_control_panel,
             self.connection_controller,
             self.view.append_local_echo_data
         )
@@ -114,7 +114,6 @@ class MainPresenter(QObject):
         # File Transfer Events (Global Log/Status)
         self.event_router.file_transfer_completed.connect(self.on_file_transfer_completed)
         self.event_router.file_transfer_error.connect(self.on_file_transfer_error)
-        # Progress는 빈도가 높으므로 MainStatusbar가 아닌 FileDialog에서만 처리 (성능 최적화)
 
         # --- 4. 내부 Model 시그널 연결 ---
         # MacroRunner의 전송 요청 처리
@@ -158,8 +157,8 @@ class MainPresenter(QObject):
         애플리케이션 종료 처리
 
         Logic:
-            - 윈도우 상태 수집
-            - 설정 파일 저장
+            - 윈도우 상태 수집 (View -> Presenter)
+            - 설정 파일 저장 (Presenter -> Model)
             - 열린 포트 닫기 및 리소스 정리
         """
         # 윈도우 상태 가져오기
@@ -173,11 +172,9 @@ class MainPresenter(QObject):
         self.settings_manager.set(ConfigKeys.SPLITTER_STATE, state.get(ConfigKeys.SPLITTER_STATE))
         self.settings_manager.set(ConfigKeys.RIGHT_PANEL_VISIBLE, state.get(ConfigKeys.RIGHT_PANEL_VISIBLE))
 
-        # 저장된 패널 너비 저장
-        if "saved_right_panel_width" in state:
-             # 임의의 키 또는 기존 키에 저장 (여기선 예시로 custom key 사용 가능 여부 확인 필요)
-             # SettingsManager.set은 경로 생성을 지원하므로 문제 없음
-             self.settings_manager.set("ui.saved_right_panel_width", state["saved_right_panel_width"])
+        # 저장된 패널 너비 저장 (Custom Key 사용)
+        if "saved_right_section_width" in state:
+             self.settings_manager.set("ui.saved_right_section_width", state["saved_right_section_width"])
 
         if ConfigKeys.MANUAL_CONTROL_STATE in state:
             self.settings_manager.set(ConfigKeys.MANUAL_CONTROL_STATE, state[ConfigKeys.MANUAL_CONTROL_STATE])
@@ -211,8 +208,6 @@ class MainPresenter(QObject):
         Args:
             new_settings (dict): 변경할 설정 딕셔너리
         """
-        settings_manager = SettingsManager()
-
         # 설정 키 매핑
         settings_map = {
             'theme': ConfigKeys.THEME,
@@ -294,8 +289,6 @@ class MainPresenter(QObject):
         Args:
             font_settings (dict): 폰트 설정 데이터
         """
-        settings_manager = SettingsManager()
-
         # ThemeManager 키와 ConfigKeys 상수 매핑
         key_map = {
             "proportional_font_family": ConfigKeys.PROP_FONT_FAMILY,
@@ -413,10 +406,9 @@ class MainPresenter(QObject):
             logger.warning("Port not open")
             return
 
-        # [Refactor] SettingsManager에서 값 획득 후 CommandProcessor에 주입
-        settings = SettingsManager()
-        prefix = settings.get(ConfigKeys.COMMAND_PREFIX) if command_prefix else None
-        suffix = settings.get(ConfigKeys.COMMAND_SUFFIX) if command_suffix else None
+        # SettingsManager에서 값 획득 후 CommandProcessor에 주입 (Presenter의 책임)
+        prefix = self.settings_manager.get(ConfigKeys.COMMAND_PREFIX) if command_prefix else None
+        suffix = self.settings_manager.get(ConfigKeys.COMMAND_SUFFIX) if command_suffix else None
 
         try:
             # 데이터 가공 위임 (CommandProcessor에 Prefix/Suffix 값 직접 전달)

@@ -12,7 +12,7 @@ from dataclasses import dataclass
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from presenter.packet_presenter import PacketPresenter
-from constants import ConfigKeys
+from common.constants import ConfigKeys
 
 # Packet Mock (model.packet_parser.Packet과 동일 구조)
 @dataclass

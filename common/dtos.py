@@ -1,31 +1,69 @@
 """
-매크로 엔트리 모듈
+공통 데이터 전송 객체(DTO) 모듈
 
-매크로 명령의 데이터 구조를 정의합니다.
+애플리케이션 전반(View, Model, Presenter, Core)에서 공통으로 사용되는
+데이터 구조(Schema)를 정의합니다.
 
 ## WHY
-* 매크로 명령의 속성을 구조화
-* 직렬화/역직렬화 지원 (설정 저장/로드)
-* 타입 안전성 보장
-* 불변 데이터 구조로 안정성 향상
+* 계층 간 데이터 교환 시 타입 안정성 보장 (Type Safety)
+* 딕셔너리 사용 시 발생하는 Key Error 및 오타 방지
+* 순환 참조(Circular Import) 방지를 위한 최하위 계층 위치
 
 ## WHAT
-* 매크로 명령 속성 정의
-  - enabled: 활성화 여부
-  - command: 전송할 명령어
-  - is_hex: HEX 모드 여부
-  - prefix/suffix: 접두사/접미사 사용 여부
-  - delay_ms: 다음 명령까지 대기 시간
-  - expect: 기대하는 응답 패턴
-  - timeout_ms: 응답 대기 시간
-* Dictionary 변환 메서드
+* ManualCommand: 수동 명령어 데이터
+* PortConfig: 포트 연결 설정 데이터
+* FontConfig: 폰트 설정 데이터
+* MacroEntry: 매크로 항목 데이터
 
 ## HOW
-* dataclass로 간결한 정의
-* to_dict/from_dict로 직렬화 지원
-* 기본값 제공으로 편의성 향상
+* python dataclasses 모듈 활용
 """
 from dataclasses import dataclass
+from typing import Optional, Dict, Any
+
+@dataclass
+class ManualCommand:
+    """
+    수동 명령어 전송 데이터
+    View(ManualCtrl) -> Presenter -> Model로 전달됩니다.
+    """
+    text: str
+    hex_mode: bool = False
+    prefix: bool = False
+    suffix: bool = False
+    local_echo: bool = False
+    is_broadcast: bool = False
+
+@dataclass
+class PortConfig:
+    """
+    포트 연결 설정 데이터
+    View(PortSettings) -> Presenter -> Model로 전달됩니다.
+    """
+    port: str
+    protocol: str = "Serial"  # Serial, SPI, I2C
+
+    # Serial Options
+    baudrate: int = 115200
+    bytesize: int = 8
+    parity: str = "N"
+    stopbits: float = 1.0
+    flowctrl: str = "None"
+
+    # SPI Options
+    speed: int = 1000000
+    mode: int = 0
+
+@dataclass
+class FontConfig:
+    """
+    폰트 설정 데이터
+    ThemeManager 및 설정 저장 시 사용됩니다.
+    """
+    prop_family: str
+    prop_size: int
+    fixed_family: str
+    fixed_size: int
 
 @dataclass
 class MacroEntry:

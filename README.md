@@ -93,129 +93,132 @@ python main.py
 
 ```
 serial_tool/
-├── main.py                           # 애플리케이션 진입점
-├── resource_path.py                  # 경로 관리
-├── constants.py                      # 상수 정의
-├── version.py                        # 버전 정보
-├── requirements.txt                  # 의존성 목록
+├── main.py                             # 애플리케이션 진입점
+├── requirements.txt                    # 의존성 목록
 │
-├── core/                             # 핵심 유틸리티
-│   ├── cmd_processor.py              # 명령어 처리
-│   ├── data_logger.py                # 데이터 로깅
-│   ├── error_handler.py              # 에러 핸들러
-│   ├── event_bus.py                  # 이벤트 버스
-│   ├── device_transport.py           #
-│   ├── logger.py                     # 로깅 시스템 (Singleton)
-│   ├── port_state.py                 # 포트 상태 관리
-│   ├── settings_manager.py           # 설정 관리 (Singleton)
-│   └── utils.py                      # 유틸리티 함수
+├── common/                             # 공통 정의 (의존성 최하위)
+│   ├── constants.py                    #
+│   ├── dtos.py                         #
+│   ├── enums.py                        #
+│   └── version.py                      #
 │
-├── model/                            # 비즈니스 로직
-│   ├── connection_controller.py      #
-│   ├── connection_manager.py         #
-│   ├── connection_worker.py          # 연결 워커
-│   ├── file_transfer.py              # 파일 전송
-│   ├── macro_entry.py                # 매크로 항목
-│   ├── macro_runner.py               # 매크로 실행
-│   ├── packet_parser.py              # 패킷 파싱
-│   └── serial_transport.py           # 전송 관리
+├── core/                               # 핵심 유틸리티
+│   ├── command_processor.py            # 명령어 처리
+│   ├── data_logger.py                  # 데이터 로깅
+│   ├── error_handler.py                # 에러 핸들러
+│   ├── event_bus.py                    # 이벤트 버스
+│   ├── device_transport.py             #
+│   ├── logger.py                       # 로깅 시스템 (Singleton)
+│   ├── port_state.py                   # 포트 상태 관리
+│   ├── resource_path.py                # 경로 관리
+│   ├── settings_manager.py             # 설정 관리 (Singleton)
+│   └── utils.py                        # 유틸리티 함수
 │
-├── presenter/                        # MVP Presenter 계층
-│   ├── event_router.py               # 이벤트 라우터
-│   ├── file_presenter.py             # 파일 프레젠터
-│   ├── macro_presenter.py            # 매크로 프레젠터
-│   ├── main_presenter.py             # 메인 프레젠터
-│   ├── manual_ctrl_presenter.py      # 수동 제어 프레젠터
-│   ├── packet_presenter.py           # 패킷 프레젠터
-│   └── port_presenter.py             # 포트 프레젠터
+├── model/                              # 비즈니스 로직
+│   ├── connection_controller.py        #
+│   ├── connection_manager.py           #
+│   ├── connection_worker.py            # 연결 워커
+│   ├── file_transfer.py                # 파일 전송
+│   ├── macro_runner.py                 # 매크로 실행
+│   ├── packet_parser.py                # 패킷 파싱
+│   └── serial_transport.py             # 전송 관리
 │
-├── view/                             # UI 계층
-│   ├── main_window.py                # 메인 윈도우
-│   │
-│   ├── managers/                     # 관리자 계층
-│   │   ├── color_manager.py          # 로그 색상 규칙
-│   │   ├── lang_manager.py           # 다국어 관리
-│   │   └── theme_manager.py          # 테마 관리
-│   │
-│   ├── custom_qt/                    # PyQt5 커스텀 위젯
-│   │   ├── smart_number_edit.py      # 스마트 숫자 편집 위젯
-│   │   ├── smart_list_view.py        # 스마트 리스트 뷰 위젯
-│   │   └── smart_plain_text_edit.py  # 스마트 plain 텍스트 편집 위젯
-│   │
-│   ├── sections/                     # 섹션 (대 분할)
-│   │   ├── main_left_section.py      # 메인 왼쪽 섹션
-│   │   ├── main_menu_bar.py          # 메인 메뉴 바
-│   │   ├── main_right_section.py     # 메인 오른쪽 섹션
-│   │   ├── main_status_bar.py        # 메인 상태 바
-│   │   └── main_tool_bar.py          # 메인 도구 바
-│   │
-│   ├── panels/                       # 패널 (중 단위)
-│   │   ├── macro_panel.py            # 매크로 패널
-│   │   ├── manual_ctrl_panel.py      # 수동 제어 패널
-│   │   ├── packet_inspector_panel.py # 패킷 인스펙터 패널
-│   │   ├── port_panel.py             # 포트 패널
-│   │   └── port_tab_panel.py         # 포트 탭 패널
-│   │
-│   ├── widgets/                      # 위젯 (소 단위)
-│   │   ├── file_progress.py          # 파일 진행률 위젯
-│   │   ├── macro_ctrl.py             #
-│   │   ├── macro_list.py             # 매크로 리스트 위젯
-│   │   ├── manual_ctrl.py            # 수동 제어 위젯
-│   │   ├── packet_inspector.py       # 패킷 인스펙터 위젯
-│   │   ├── port_settings.py          # 포트 설정 위젯
-│   │   ├── port_stats.py             # 포트 통계 위젯
-│   │   ├── rx_log.py                 # 수신 로그 위젯
-│   │   └── system_log.py             # 시스템 로그 위젯
-│   │
-│   └── dialogs/                      # 대화상자
-│       ├── about_dialog.py           # 정보 대화상자
-│       ├── file_transfer_dialog.py   # 파일 전송 대화상자
-│       ├── font_settings_dialog.py   # 폰트 설정 대화상자
-│       └── preferences_dialog.py     # 설정 대화상자
+├── presenter/                          # MVP Presenter 계층
+│   ├── event_router.py                 # 이벤트 라우터
+│   ├── file_presenter.py               # 파일 프레젠터
+│   ├── macro_presenter.py              # 매크로 프레젠터
+│   ├── main_presenter.py               # 메인 프레젠터
+│   ├── manual_control_presenter.py     # 수동 제어 프레젠터
+│   ├── packet_presenter.py             # 패킷 프레젠터
+│   └── port_presenter.py               # 포트 프레젠터
 │
-├── resources/                        # 리소스 파일
-│   ├── languages/                    # 다국어 리소스
-│   │   ├── ko.json                   # 한국어
-│   │   └── en.json                   # 영어
+├── view/                               # UI 계층
+│   ├── main_window.py                  # 메인 윈도우
 │   │
-│   ├── configs/                      # 설정 파일
-│   │   ├── settings.json             # 앱 설정 (논리 그룹: serial, command, logging, ui)
-│   │   └── color_rules.json          # 로그 색상 규칙
+│   ├── managers/                       # 관리자 계층
+│   │   ├── color_manager.py            # 로그 색상 규칙
+│   │   ├── language_manager.py         # 다국어 관리
+│   │   └── theme_manager.py            # 테마 관리
 │   │
-│   ├── icons/                        # SVG 아이콘
-│   │   ├── light/                    # 라이트 테마용
-│   │   └── dark/                     # 다크 테마용
+│   ├── custom_qt/                      # PyQt5 커스텀 위젯
+│   │   ├── smart_number_edit.py        # 스마트 숫자 편집 위젯
+│   │   ├── smart_list_view.py          # 스마트 리스트 뷰 위젯
+│   │   └── smart_plain_text_edit.py    # 스마트 plain 텍스트 편집 위젯
 │   │
-│   └── themes/                       # QSS 스타일시트
-│       ├── common.qss                # 공통 스타일시트
-│       ├── dark_theme.qss            # 다크 테마 스타일시트
-│       └── light_theme.qss           # 라이트 테마 스타일시트
+│   ├── sections/                       # 섹션 (대 분할)
+│   │   ├── main_left_section.py        # 메인 왼쪽 섹션
+│   │   ├── main_menu_bar.py            # 메인 메뉴 바
+│   │   ├── main_right_section.py       # 메인 오른쪽 섹션
+│   │   ├── main_status_bar.py          # 메인 상태 바
+│   │   └── main_tool_bar.py            # 메인 도구 바
+│   │
+│   ├── panels/                         # 패널 (중 단위)
+│   │   ├── macro_panel.py              # 매크로 패널
+│   │   ├── manual_control_panel.py     # 수동 제어 패널
+│   │   ├── packet_inspector_panel.py   # 패킷 인스펙터 패널
+│   │   ├── port_panel.py               # 포트 패널
+│   │   └── port_tab_panel.py           # 포트 탭 패널
+│   │
+│   ├── widgets/                        # 위젯 (소 단위)
+│   │   ├── data_log.py                 # 수신 로그 위젯
+│   │   ├── file_progress.py            # 파일 진행률 위젯
+│   │   ├── macro_control.py            #
+│   │   ├── macro_list.py               # 매크로 리스트 위젯
+│   │   ├── manual_control.py           # 수동 제어 위젯
+│   │   ├── packet_inspector.py         # 패킷 인스펙터 위젯
+│   │   ├── port_settings.py            # 포트 설정 위젯
+│   │   ├── port_stats.py               # 포트 통계 위젯
+│   │   └── system_log.py               # 시스템 로그 위젯
+│   │
+│   └── dialogs/                        # 대화상자
+│       ├── about_dialog.py             # 정보 대화상자
+│       ├── file_transfer_dialog.py     # 파일 전송 대화상자
+│       ├── font_settings_dialog.py     # 폰트 설정 대화상자
+│       └── preferences_dialog.py       # 설정 대화상자
 │
-├── doc/                              # 프로젝트 문서
-│   ├── changelog.md                  # 변경 이력
-│   └── session_summary_YYYYMMDD.md   # 작업 세션 요약
+├── resources/                          # 리소스 파일
+│   ├── languages/                      # 다국어 리소스
+│   │   ├── ko.json                     # 한국어
+│   │   └── en.json                     # 영어
+│   │
+│   ├── configs/                        # 설정 파일
+│   │   ├── settings.json               # 앱 설정 (논리 그룹: serial, command, logging, ui)
+│   │   └── color_rules.json            # 로그 색상 규칙
+│   │
+│   ├── icons/                          # SVG 아이콘
+│   │   ├── light/                      # 라이트 테마용
+│   │   └── dark/                       # 다크 테마용
+│   │
+│   └── themes/                         # QSS 스타일시트
+│       ├── common.qss                  # 공통 스타일시트
+│       ├── dark_theme.qss              # 다크 테마 스타일시트
+│       └── light_theme.qss             # 라이트 테마 스타일시트
 │
-├── .agent/                           # 개발 가이드
-│   └── rules/                        # 규칙
-│       ├── code_style_guide.md       # 코드 스타일 가이드
-│       ├── comment_guide.md          # 주석 가이드
-│       ├── git_guide.md              # git 가이드
-│       └── naming_convention.md      # 명명 규칙 (언어 키, 변수명 등)
+├── doc/                                # 프로젝트 문서
+│   ├── changelog.md                    # 변경 이력
+│   └── session_summary_YYYYMMDD.md     # 작업 세션 요약
 │
-├── tools/                            # 유틸리티 도구
-│   ├── check_lang_keys.py            # 언어 키 검사 도구
-│   └── manage_lang_keys.py           # 언어 키 관리 도구
+├── .agent/                             # 개발 가이드
+│   └── rules/                          # 규칙
+│       ├── code_style_guide.md         # 코드 스타일 가이드
+│       ├── comment_guide.md            # 주석 가이드
+│       ├── git_guide.md                # git 가이드
+│       └── naming_convention.md        # 명명 규칙 (언어 키, 변수명 등)
 │
-└── tests/                            # 테스트 코드
-    ├── test_core_refinement.py       # Core Refinement 테스트
-    ├── test_core_utiles.py           # Core Utils 테스트
-    ├── test_model_packet_parsers.py  # Model Packet Parsers 테스트
-    ├── test_model.py                 # Model 테스트
-    ├── test_presenter_init.py        # Presenter Init 테스트
-    ├── test_presenter_manual_ctrl.py # Presenter Manual Ctrl 테스트
-    ├── test_presenter_packet.py      # Presenter Packet 테스트
-    ├── test_view_translations.py     # View Translations 테스트
-    └── test_view.py                  # View 테스트
+├── tools/                              # 유틸리티 도구
+│   ├── check_language_keys.py          # 언어 키 검사 도구
+│   └── manage_language_keys.py         # 언어 키 관리 도구
+│
+└── tests/                              # 테스트 코드
+    ├── test_core_refinement.py         # Core Refinement 테스트
+    ├── test_core_utiles.py             # Core Utils 테스트
+    ├── test_model_packet_parsers.py    # Model Packet Parsers 테스트
+    ├── test_model.py                   # Model 테스트
+    ├── test_presenter_init.py          # Presenter Init 테스트
+    ├── test_presenter_manual_contol.py # Presenter Manual Ctrl 테스트
+    ├── test_presenter_packet.py        # Presenter Packet 테스트
+    ├── test_view_translations.py       # View Translations 테스트
+    └── test_view.py                    # View 테스트
 ```
 
 ---

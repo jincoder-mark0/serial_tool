@@ -44,7 +44,7 @@ class PacketPanel(QWidget):
         """
         super().__init__(parent)
         self.packet_widget = None
-        self.clear_btn = None
+        self.clear_btn: Optional[QPushButton] = None
         self.init_ui()
 
         # 언어 변경 연결

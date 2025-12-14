@@ -31,7 +31,7 @@ from view.dialogs import (
 )
 from view.managers.theme_manager import ThemeManager
 from view.managers.language_manager import language_manager
-from constants import ConfigKeys
+from common.constants import ConfigKeys
 
 class MainWindow(QMainWindow):
     """
@@ -57,19 +57,19 @@ class MainWindow(QMainWindow):
     file_transfer_dialog_opened = pyqtSignal(object)
 
     # 하위 컴포넌트 시그널 중계
-    command_send_requested = pyqtSignal(dict)
+    send_requested = pyqtSignal(dict)
     port_tab_added = pyqtSignal(object)
 
     def __init__(self) -> None:
         """
         MainWindow 초기화
 
-        MVP 원칙에 따라 Model(SettingsManager)을 직접 생성하지 않습니다.
+        MVP 원칙에 따라 Model/Core(SettingsManager)를 직접 생성하지 않습니다.
         초기 상태 복원은 Presenter가 restore_state()를 호출하여 수행합니다.
         """
         super().__init__()
 
-        # ThemeManager는 View Helper로서 허용 (단, 초기화는 main.py에서 수행됨)
+        # ThemeManager는 View Helper로서 사용 (싱글톤)
         self.theme_manager = ThemeManager()
 
         self.setWindowTitle(f"{language_manager.get_text('main_title')} v1.0")
@@ -111,7 +111,7 @@ class MainWindow(QMainWindow):
         self.splitter.addWidget(self.left_section)
         self.splitter.addWidget(self.right_section)
 
-        # 왼쪽 패널(0)은 가능한 크기를 유지하려 하고, 오른쪽 패널(1)이 남은 공간을 차지
+        # 기본 비율 설정 (나중에 restore_state에서 덮어씌워짐)
         self.splitter.setStretchFactor(0, 0)
         self.splitter.setStretchFactor(1, 1)
 
@@ -120,7 +120,7 @@ class MainWindow(QMainWindow):
         self.splitter.setCollapsible(1, True)
 
         # 시그널 체이닝 (하위 -> 상위)
-        self.left_section.command_send_requested.connect(self.command_send_requested.emit)
+        self.left_section.send_requested.connect(self.send_requested.emit)
         self.left_section.port_tab_added.connect(self.port_tab_added.emit)
 
         main_layout.addWidget(self.splitter)
@@ -145,15 +145,6 @@ class MainWindow(QMainWindow):
         Args:
             settings (dict): 전체 설정 데이터
         """
-        # 1. 폰트 및 테마 복원
-        self.theme_manager.restore_fonts_from_settings(settings)
-        prop_font = self.theme_manager.get_proportional_font()
-        QApplication.instance().setFont(prop_font)
-
-        # get 메서드 대신 dict 접근 또는 ConfigKeys 사용 (settings 딕셔너리 구조 가정)
-        # SettingsManager.get() 로직과 유사하게 접근 필요하나, 여기서는 settings가 dict임.
-        # 편의상 중첩된 딕셔너리 접근을 위한 헬퍼 사용이 좋으나, 간단히 처리
-
         # Helper to safely get nested keys
         def get_val(path, default=None):
             keys = path.split('.')
@@ -164,6 +155,11 @@ class MainWindow(QMainWindow):
                 return val if val != {} else default
             except AttributeError:
                 return default
+
+        # 1. 폰트 및 테마 복원
+        self.theme_manager.restore_fonts_from_settings(settings)
+        prop_font = self.theme_manager.get_proportional_font()
+        QApplication.instance().setFont(prop_font)
 
         theme = get_val(ConfigKeys.THEME, 'dark')
         self.switch_theme(theme)
@@ -179,12 +175,14 @@ class MainWindow(QMainWindow):
             self.move(x, y)
 
         # 3. 우측 패널 표시 상태 복원
-        right_panel_visible = get_val(ConfigKeys.RIGHT_PANEL_VISIBLE, True)
-        self.menu_bar.set_right_panel_checked(right_panel_visible)
-        self.right_section.setVisible(right_panel_visible)
+        right_section_visible = get_val(ConfigKeys.RIGHT_PANEL_VISIBLE, True)
+        self.menu_bar.set_right_section_checked(right_section_visible)
+        self.right_section.setVisible(right_section_visible)
 
         # 4. 저장된 우측 패널 너비 복원
-        self._saved_right_width = settings.get("saved_right_panel_width")
+        # custom key "ui.saved_right_section_width" 사용
+        ui_settings = settings.get("ui", {})
+        self._saved_right_width = ui_settings.get("saved_right_section_width")
 
         # 5. 스플리터 상태 복원
         splitter_state = get_val(ConfigKeys.SPLITTER_STATE)
@@ -230,9 +228,9 @@ class MainWindow(QMainWindow):
         state[ConfigKeys.RIGHT_PANEL_VISIBLE] = self.right_section.isVisible()
 
         if self.right_section.isVisible():
-            state["saved_right_panel_width"] = self.right_section.width()
+            state["saved_right_section_width"] = self.right_section.width()
         else:
-            state["saved_right_panel_width"] = getattr(self, '_saved_right_width', None)
+            state["saved_right_section_width"] = getattr(self, '_saved_right_width', None)
 
         # 2. Left Section 상태
         left_state = self.left_section.save_state()
@@ -265,7 +263,7 @@ class MainWindow(QMainWindow):
 
     def get_port_tabs_count(self) -> int:
         """현재 포트 탭 개수 반환"""
-        return self.left_section.port_tabs.count()
+        return self.left_section.port_tab_panel.count()
 
     def get_port_tab_widget(self, index: int) -> QWidget:
         """
@@ -277,7 +275,7 @@ class MainWindow(QMainWindow):
         Returns:
             QWidget: 포트 패널 위젯
         """
-        return self.left_section.port_tabs.widget(index)
+        return self.left_section.port_tab_panel.widget(index)
 
     def log_system_message(self, message: str, level: str = "INFO") -> None:
         """
@@ -308,8 +306,8 @@ class MainWindow(QMainWindow):
 
     def manual_save_log(self) -> None:
         """로그 저장 다이얼로그 호출"""
-        current_index = self.left_section.port_tabs.currentIndex()
-        current_widget = self.left_section.port_tabs.widget(current_index)
+        current_index = self.left_section.port_tab_panel.currentIndex()
+        current_widget = self.left_section.port_tab_panel.widget(current_index)
         if hasattr(current_widget, 'data_log_widget'):
             current_widget.data_log_widget.on_data_log_logging_toggled(True)
 
@@ -325,7 +323,6 @@ class MainWindow(QMainWindow):
     # --------------------------------------------------------
     # 내부 로직 (Internal Logic)
     # --------------------------------------------------------
-
     def init_shortcuts(self) -> None:
         """전역 단축키를 초기화합니다."""
         self.shortcut_connect = QShortcut(QKeySequence("F2"), self)
@@ -352,20 +349,20 @@ class MainWindow(QMainWindow):
         self.menu_bar.theme_changed.connect(self.switch_theme)
         self.menu_bar.font_settings_requested.connect(self.open_font_settings_dialog)
         self.menu_bar.language_changed.connect(lambda lang: language_manager.set_language(lang))
-        self.menu_bar.preferences_requested.connect(self.open_preferences_dialog)
+        self.menu_bar.preferences_requested.connect(self.preferences_requested.emit)
         self.menu_bar.about_requested.connect(self.open_about_dialog)
 
         self.menu_bar.port_open_requested.connect(self.left_section.open_current_port)
         self.menu_bar.tab_close_requested.connect(self.left_section.close_current_tab)
         self.menu_bar.data_log_save_requested.connect(self.manual_save_log)
-        self.menu_bar.toggle_right_panel_requested.connect(self.set_right_panel_visible)
+        self.menu_bar.toggle_right_section_requested.connect(self.toggle_right_section)
         self.menu_bar.file_transfer_requested.connect(self.open_file_transfer_dialog)
 
     def clear_log(self) -> None:
         """현재 활성 탭의 로그 삭제"""
         if hasattr(self, 'left_section'):
-            current_index = self.left_section.port_tabs.currentIndex()
-            current_widget = self.left_section.port_tabs.widget(current_index)
+            current_index = self.left_section.port_tab_panel.currentIndex()
+            current_widget = self.left_section.port_tab_panel.widget(current_index)
             if current_widget and hasattr(current_widget, 'data_log_widget'):
                 current_widget.data_log_widget.on_clear_data_log_clicked()
 
@@ -463,7 +460,7 @@ class MainWindow(QMainWindow):
         # 언어 변경은 즉시성을 위해 LanguageManager가 Signal을 보냄.
         # 영속성을 위해 Presenter에 알림 필요 (settings_save_requested 사용 가능)
 
-    def set_right_panel_visible(self, visible: bool) -> None:
+    def toggle_right_section(self, visible: bool) -> None:
         """우측 패널 가시성 토글"""
         if visible == self.right_section.isVisible():
             return
@@ -477,7 +474,7 @@ class MainWindow(QMainWindow):
             if hasattr(self, '_saved_right_width') and self._saved_right_width is not None:
                 target_right_width = self._saved_right_width
             else:
-                target_right_width = 400
+                target_right_width = max(int(self.width() * 0.3), 300)
 
             # 현재 왼쪽 패널 너비 사용 (사용자가 조절했을 수 있으므로 저장된 값보다 현재 값 우선)
             left_width = self.left_section.width()

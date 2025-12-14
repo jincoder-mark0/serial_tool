@@ -9,7 +9,7 @@ from view.managers.language_manager import language_manager
 from view.custom_qt.smart_list_view import QSmartListView
 from view.managers.color_manager import color_manager
 
-from constants import (
+from common.constants import (
     DEFAULT_LOG_MAX_LINES
 )
 
@@ -32,15 +32,15 @@ class SystemLogWidget(QWidget):
         # 1. 상태 변수 초기화
         # ---------------------------------------------------------
         # UI Components
-        self.sys_log_title = None
-        self.sys_log_list = None
-        self.sys_log_search_input = None
-        self.sys_log_search_prev_btn = None
-        self.sys_log_search_next_btn = None
+        self.sys_log_title: Optional[QLabel] = None
+        self.sys_log_list: Optional[QSmartListView] = None
+        self.sys_log_search_input: Optional[QLineEdit] = None
+        self.sys_log_search_prev_btn: Optional[QPushButton] = None
+        self.sys_log_search_next_btn: Optional[QPushButton] = None
 
-        self.sys_log_toggle_logging_btn = None
-        self.sys_log_clear_log_btn = None
-        self.sys_log_filter_chk = None  # Filter Checkbox
+        self.sys_log_toggle_logging_btn: Optional[QPushButton] = None
+        self.sys_log_clear_log_btn: Optional[QPushButton] = None
+        self.sys_log_filter_chk: Optional[QCheckBox] = None  # Filter Checkbox
 
         # State Variables
         self.filter_enabled: bool = False # Filter State

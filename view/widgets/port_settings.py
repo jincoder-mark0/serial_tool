@@ -1,3 +1,6 @@
+"""
+PortSettingsWidget 모듈
+"""
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton,
     QLabel, QGroupBox, QStackedWidget
@@ -6,8 +9,9 @@ from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIntValidator
 from view.managers.language_manager import language_manager
 from typing import Optional, List
-from core.port_state import PortState
-from constants import VALID_BAUDRATES, DEFAULT_BAUDRATE
+from common.enums import PortState
+from common.dtos import PortConfig # DTO 임포트
+from common.constants import VALID_BAUDRATES, DEFAULT_BAUDRATE
 
 class PortSettingsWidget(QGroupBox):
     """
@@ -16,10 +20,11 @@ class PortSettingsWidget(QGroupBox):
     """
 
     # 시그널 정의
-    port_open_requested = pyqtSignal(dict)  # config dict (protocol 키 포함)
+    port_open_requested = pyqtSignal(object)
+
     port_close_requested = pyqtSignal()
     port_scan_requested = pyqtSignal()
-    port_connection_changed = pyqtSignal(bool) # connected state
+    port_connection_changed = pyqtSignal(bool)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -29,21 +34,18 @@ class PortSettingsWidget(QGroupBox):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(language_manager.get_text("port_grp_settings"), parent)
-
         # 공통 UI 요소
-        self.protocol_lbl = None
-        self.protocol_combo = None
-        self.port_lbl = None
-        self.port_combo = None
-        self.scan_btn = None
-        self.connect_btn = None
+        self.protocol_lbl: Optional[QLabel] = None
+        self.protocol_combo: Optional[QComboBox] = None
+        self.port_lbl: Optional[QLabel] = None
+        self.port_combo: Optional[QComboBox] = None
+        self.scan_btn: Optional[QPushButton] = None
+        self.connect_btn: Optional[QPushButton] = None
 
         # 하단 레이아웃 스택
-        self.settings_stack = None
-
+        self.settings_stack: Optional[QStackedWidget] = None
         self.serial_controls_ui = {}
         self.spi_controls_ui = {}
-
         self.init_ui()
 
         # 언어 변경 연결
@@ -61,9 +63,6 @@ class PortSettingsWidget(QGroupBox):
         # ---------------------------------------------------------
         # 1. 상단 행 (Top Row): Protocol | Port | Scan | Open
         # ---------------------------------------------------------
-        top_layout = QHBoxLayout()
-        top_layout.setSpacing(5)
-
         # 프로토콜 선택 (Serial / SPI)
         self.protocol_lbl = QLabel(language_manager.get_text("port_lbl_protocol"))
         self.protocol_combo = QComboBox()
@@ -90,17 +89,8 @@ class PortSettingsWidget(QGroupBox):
         self.connect_btn.setToolTip(language_manager.get_text("port_btn_connect_tooltip"))
         self.connect_btn.clicked.connect(self.on_connect_clicked)
 
-        top_layout.addWidget(self.protocol_lbl)
-        top_layout.addWidget(self.protocol_combo)
-        top_layout.addWidget(self.port_lbl)
-        top_layout.addWidget(self.port_combo, 1) # Stretch
-        top_layout.addWidget(self.scan_btn)
-        top_layout.addWidget(self.connect_btn)
-
-        main_layout.addLayout(top_layout)
-
         # ---------------------------------------------------------
-        # 2. 하단 행 (Bottom Row): Stacked Widget (Serial vs SPI)
+        # 2. 하단 설정 스택 (Bottom Stack): Serial/SPI 설정
         # ---------------------------------------------------------
         self.settings_stack = QStackedWidget()
 
@@ -110,6 +100,16 @@ class PortSettingsWidget(QGroupBox):
         # Page 1: SPI Settings
         self.settings_stack.addWidget(self._create_spi_settings_widget())
 
+        top_layout = QHBoxLayout()
+        top_layout.setSpacing(5)
+        top_layout.addWidget(self.protocol_lbl)
+        top_layout.addWidget(self.protocol_combo)
+        top_layout.addWidget(self.port_lbl)
+        top_layout.addWidget(self.port_combo, 1)
+        top_layout.addWidget(self.scan_btn)
+        top_layout.addWidget(self.connect_btn)
+
+        main_layout.addLayout(top_layout)
         main_layout.addWidget(self.settings_stack)
         self.setLayout(main_layout)
 
@@ -205,13 +205,23 @@ class PortSettingsWidget(QGroupBox):
         return widget
 
     def on_protocol_changed(self, index: int) -> None:
-        """프로토콜 변경 시 하단 레이아웃 변경"""
+        """
+        프로토콜 변경 시 하단 레이아웃 변경
+        """
+        self.port_scan_requested.emit()
         self.settings_stack.setCurrentIndex(index)
-        # 필요하다면 프로토콜에 따라 포트 스캔을 다시 요청할 수 있음
-        # self.port_scan_requested.emit()
+
+
+    def on_port_scan_clicked(self) -> None:
+        """
+        포트 스캔 버튼 클릭 핸들러입
+        """
+        self.port_scan_requested.emit()
 
     def on_connect_clicked(self) -> None:
-        """연결 버튼 클릭 처리"""
+        """
+        연결 버튼 클릭 처리
+        """
         if self.connect_btn.isChecked():
             # 연결 요청 (프로토콜에 따라 설정값 분기)
             protocol = self.protocol_combo.currentText()
@@ -237,29 +247,26 @@ class PortSettingsWidget(QGroupBox):
             # 해제 요청 (Request Close)
             self.port_close_requested.emit()
 
-    def get_current_config(self) -> dict:
-        """현재 UI 설정값을 바탕으로 포트 설정 딕셔너리를 반환합니다."""
+    def get_current_config(self) -> PortConfig:
+        """
+        현재 UI 설정값을 바탕으로 PortConfig DTO를 반환합니다.
+        """
         protocol = self.protocol_combo.currentText()
-        config = {"protocol": protocol, "port": self.port_combo.currentText()}
+        port = self.port_combo.currentText()
+
+        config = PortConfig(port=port, protocol=protocol)
 
         if protocol == "Serial":
-            config.update({
-                "baudrate": int(self.serial_controls_ui['baud_combo'].currentText()),
-                "bytesize": int(self.serial_controls_ui['data_combo'].currentText()),
-                "parity": self.serial_controls_ui['parity_combo'].currentText(),
-                "stopbits": float(self.serial_controls_ui['stop_combo'].currentText()),
-                "flowctrl": self.serial_controls_ui['flow_combo'].currentText(),
-            })
+            config.baudrate = int(self.serial_controls_ui['baud_combo'].currentText())
+            config.bytesize = int(self.serial_controls_ui['data_combo'].currentText())
+            config.parity = self.serial_controls_ui['parity_combo'].currentText()
+            config.stopbits = float(self.serial_controls_ui['stop_combo'].currentText())
+            config.flowctrl = self.serial_controls_ui['flow_combo'].currentText()
         elif protocol == "SPI":
-            config.update({
-                "speed": int(self.spi_controls_ui['speed_combo'].currentText()),
-                "mode": int(self.spi_controls_ui['mode_combo'].currentText()),
-            })
-        return config
+            # SPI 설정 매핑 (예시)
+            pass
 
-    def on_port_scan_clicked(self) -> None:
-        """포트 스캔 버튼 클릭 핸들러입니다."""
-        self.port_scan_requested.emit()
+        return config
 
     def set_port_list(self, ports: List[str]) -> None:
         """

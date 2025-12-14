@@ -54,10 +54,10 @@ class FileTransferDialog(QDialog):
         self.setModal(True)
 
         # UI Components
-        self.file_path_lbl = None
-        self.select_file_btn = None
-        self.send_btn = None
-        self.close_btn = None
+        self.file_path_lbl: Optional[QLabel] = None
+        self.select_file_btn: Optional[QPushButton] = None
+        self.send_btn: Optional[QPushButton] = None
+        self.close_btn: Optional[QPushButton] = None
         self.progress_widget = None
 
         self.init_ui()

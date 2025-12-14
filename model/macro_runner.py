@@ -22,7 +22,7 @@
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QWaitCondition
 from typing import List, Optional
 import time
-from model.macro_entry import MacroEntry
+from common.dtos import MacroEntry
 from model.packet_parser import ExpectMatcher
 from core.logger import logger
 from core.event_bus import event_bus

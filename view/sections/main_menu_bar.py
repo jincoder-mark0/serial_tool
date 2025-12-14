@@ -18,7 +18,7 @@ class MainMenuBar(QMenuBar):
     port_open_requested = pyqtSignal()
     tab_close_requested = pyqtSignal()
     data_log_save_requested = pyqtSignal()
-    toggle_right_panel_requested = pyqtSignal(bool)
+    toggle_right_section_requested = pyqtSignal(bool)
     file_transfer_requested = pyqtSignal()
 
     def __init__(self, parent=None):
@@ -68,10 +68,10 @@ class MainMenuBar(QMenuBar):
         view_menu = self.addMenu(language_manager.get_text("main_menu_view"))
 
         # Right Panel Toggle
-        self.toggle_right_panel_action = QAction(language_manager.get_text("main_menu_toggle_right_panel"), self)
-        self.toggle_right_panel_action.setCheckable(True)
-        self.toggle_right_panel_action.triggered.connect(self.toggle_right_panel_requested.emit)
-        view_menu.addAction(self.toggle_right_panel_action)
+        self.toggle_right_section_action = QAction(language_manager.get_text("main_menu_toggle_right_section"), self)
+        self.toggle_right_section_action.setCheckable(True)
+        self.toggle_right_section_action.triggered.connect(self.toggle_right_section_requested.emit)
+        view_menu.addAction(self.toggle_right_section_action)
 
         view_menu.addSeparator()
 
@@ -126,10 +126,10 @@ class MainMenuBar(QMenuBar):
         about_action.triggered.connect(self.about_requested.emit)
         help_menu.addAction(about_action)
 
-    def set_right_panel_checked(self, checked: bool) -> None:
+    def set_right_section_checked(self, checked: bool) -> None:
         """우측 패널 토글 액션의 체크 상태를 설정합니다."""
-        if hasattr(self, 'toggle_right_panel_action'):
-            self.toggle_right_panel_action.setChecked(checked)
+        if hasattr(self, 'toggle_right_section_action'):
+            self.toggle_right_section_action.setChecked(checked)
 
     def set_current_theme(self, theme_name: str) -> None:
         """

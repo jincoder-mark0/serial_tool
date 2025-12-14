@@ -31,7 +31,7 @@ from view.sections.main_left_section import MainLeftSection
 from model.connection_controller import ConnectionController
 from core.settings_manager import SettingsManager
 from core.logger import logger
-from constants import ConfigKeys
+from common.constants import ConfigKeys
 
 class PortPresenter(QObject):
     """
@@ -39,16 +39,16 @@ class PortPresenter(QObject):
 
     PortSettingsWidget(View)와 ConnectionController(Model)를 연결합니다.
     """
-    def __init__(self, left_panel: MainLeftSection, connection_controller: ConnectionController) -> None:
+    def __init__(self, left_section: MainLeftSection, connection_controller: ConnectionController) -> None:
         """
         PortPresenter 초기화
 
         Args:
-            left_panel: 좌측 패널 (포트 탭 및 설정 포함)
+            left_section: 좌측 패널 (포트 탭 및 설정 포함)
             connection_controller: 포트 제어기 Model
         """
         super().__init__()
-        self.left_panel = left_panel
+        self.left_section = left_section
         self.connection_controller = connection_controller
 
         # 현재 활성 포트 패널 가져오기
@@ -65,15 +65,15 @@ class PortPresenter(QObject):
         self.scan_ports()
 
         # 기존 탭들에 대한 시그널 연결 (초기화 시점에 이미 존재하는 탭들)
-        for i in range(self.left_panel.port_tabs.count()):
-            widget = self.left_panel.port_tabs.widget(i)
+        for i in range(self.left_section.port_tab_panel.count()):
+            widget = self.left_section.port_tab_panel.widget(i)
             self._connect_tab_signals(widget)
 
         # 새 탭 추가 시그널 연결
-        self.left_panel.port_tabs.port_tab_added.connect(self._on_port_tab_added)
+        self.left_section.port_tab_panel.port_tab_added.connect(self._on_port_tab_added)
 
         # 탭 변경 시 현재 패널 업데이트
-        self.left_panel.port_tabs.currentChanged.connect(self.update_current_port_panel)
+        self.left_section.port_tab_panel.currentChanged.connect(self.update_current_port_panel)
 
         # Model Signal 연결
         self.connection_controller.connection_opened.connect(self.on_connection_opened)
@@ -119,9 +119,9 @@ class PortPresenter(QObject):
             - View에서 현재 활성 탭의 PortPanel을 가져옴
             - Model의 `set_active_connection`을 호출하여 활성 연결을 명시적으로 설정
         """
-        index = self.left_panel.port_tabs.currentIndex()
+        index = self.left_section.port_tab_panel.currentIndex()
         if index >= 0:
-            widget = self.left_panel.port_tabs.widget(index)
+            widget = self.left_section.port_tab_panel.widget(index)
             if hasattr(widget, 'port_settings_widget'):
                 self.current_port_panel = widget
 
@@ -136,8 +136,8 @@ class PortPresenter(QObject):
 
         # 현재 활성 패널뿐만 아니라 모든 패널의 리스트를 업데이트하는 것이 좋음
         # 사용자가 탭을 전환하지 않고도 최신 리스트를 볼 수 있도록 함
-        for i in range(self.left_panel.port_tabs.count()):
-            widget = self.left_panel.port_tabs.widget(i)
+        for i in range(self.left_section.port_tab_panel.count()):
+            widget = self.left_section.port_tab_panel.widget(i)
             if hasattr(widget, 'port_settings_widget'):
                 widget.port_settings_widget.set_port_list(ports)
 
@@ -177,19 +177,19 @@ class PortPresenter(QObject):
             port_name: 열린 포트 이름
         """
         # 모든 탭을 순회하며 해당 포트를 사용하는 패널 찾기
-        for i in range(self.left_panel.port_tabs.count()):
-            widget = self.left_panel.port_tabs.widget(i)
+        for i in range(self.left_section.port_tab_panel.count()):
+            widget = self.left_section.port_tab_panel.widget(i)
             if hasattr(widget, 'get_port_name') and widget.get_port_name() == port_name:
                 if hasattr(widget, 'port_settings_widget'):
                     widget.port_settings_widget.set_connected(True)
 
                 # 탭 제목 업데이트
-                self.left_panel.update_tab_title(i, port_name)
+                self.left_section.update_tab_title(i, port_name)
                 break
 
         # 시스템 로그 기록
-        if hasattr(self.left_panel, 'system_log_widget'):
-            self.left_panel.system_log_widget.log(f"[{port_name}] Port opened", "SUCCESS")
+        if hasattr(self.left_section, 'system_log_widget'):
+            self.left_section.system_log_widget.log(f"[{port_name}] Port opened", "SUCCESS")
 
     def on_connection_closed(self, port_name: str) -> None:
         """
@@ -204,19 +204,19 @@ class PortPresenter(QObject):
         Args:
             port_name: 닫힌 포트 이름
         """
-        for i in range(self.left_panel.port_tabs.count()):
-            widget = self.left_panel.port_tabs.widget(i)
+        for i in range(self.left_section.port_tab_panel.count()):
+            widget = self.left_section.port_tab_panel.widget(i)
             if hasattr(widget, 'get_port_name') and widget.get_port_name() == port_name:
                 if hasattr(widget, 'port_settings_widget'):
                     widget.port_settings_widget.set_connected(False)
 
                 # 탭 제목 초기화
-                self.left_panel.update_tab_title(i, "-")
+                self.left_section.update_tab_title(i, "-")
                 break
 
         # 시스템 로그 기록
-        if hasattr(self.left_panel, 'system_log_widget'):
-            self.left_panel.system_log_widget.log(f"[{port_name}] Port closed", "INFO")
+        if hasattr(self.left_section, 'system_log_widget'):
+            self.left_section.system_log_widget.log(f"[{port_name}] Port closed", "INFO")
 
     def on_error(self, port_name: str, message: str) -> None:
         """
@@ -227,11 +227,11 @@ class PortPresenter(QObject):
             message: 에러 메시지
         """
         logger.error(f"Port Error ({port_name}): {message}")
-        QMessageBox.critical(self.left_panel, "Error", f"Port Error ({port_name}): {message}")
+        QMessageBox.critical(self.left_section, "Error", f"Port Error ({port_name}): {message}")
 
         # 시스템 로그 기록
-        if hasattr(self.left_panel, 'system_log_widget'):
-            self.left_panel.system_log_widget.log(f"[{port_name}] Error: {message}", "ERROR")
+        if hasattr(self.left_section, 'system_log_widget'):
+            self.left_section.system_log_widget.log(f"[{port_name}] Error: {message}", "ERROR")
 
         # 에러 발생 시 해당 포트 UI 동기화 (필요 시)
         # on_connection_closed가 호출되지 않는 에러 상황(예: 열기 실패)에 대비해 UI 상태 리셋 가능

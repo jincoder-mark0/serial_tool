@@ -35,7 +35,7 @@ class PacketWidget(QWidget):
         """
         super().__init__(parent)
         self.tree = None
-        self.title_lbl = None
+        self.title_lbl: Optional[QLabel] = None
         self.buffer_size = 100 # 기본 버퍼 크기
         self.auto_scroll = True
         self.init_ui()

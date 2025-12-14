@@ -4,12 +4,12 @@ from view.managers.language_manager import language_manager
 class PortStatsWidget(QWidget):
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.last_rx_count_lbl = None
-        self.uptime_lbl = None
-        self.error_count_lbl = None
-        self.tx_count_lbl = None
-        self.rx_count_lbl = None
-        self.group_box = None
+        self.last_rx_count_lbl: Optional[QLabel] = None
+        self.uptime_lbl: Optional[QLabel] = None
+        self.error_count_lbl: Optional[QLabel] = None
+        self.tx_count_lbl: Optional[QLabel] = None
+        self.rx_count_lbl: Optional[QLabel] = None
+        self.group_box: Optional[QGroupBox] = None
         self.init_ui()
         language_manager.language_changed.connect(self.retranslate_ui)
 

@@ -31,12 +31,7 @@ from dataclasses import dataclass
 import time
 import re
 
-class ParserType:
-    """파서 타입 상수"""
-    RAW = "Raw"
-    AT = "AT"
-    DELIMITER = "Delimiter"
-    FIXED_LENGTH = "FixedLength"
+from common.enums import ParserType
 
 @dataclass
 class Packet:

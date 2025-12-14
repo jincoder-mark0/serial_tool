@@ -169,7 +169,7 @@ class ViewTestWindow(QMainWindow):
         layout.addWidget(self.manual_output)
 
         # 시그널 연결
-        self.manual_control.command_send_requested.connect(
+        self.manual_control.send_requested.connect(
             lambda text, hex_mode, prefix, suffix, local_echo: self.manual_output.append(
                 f"✅ Send: '{text}' (hex={hex_mode}, prefix={prefix}, suffix={suffix}, echo={local_echo})"
             )

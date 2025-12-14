@@ -8,7 +8,7 @@
     "proportional_font_size": 9,
     "fixed_font_family": "Consolas",
     "fixed_font_size": 9,
-    "right_panel_visible": false,
+    "right_section_visible": false,
     "command_prefix": "",
     "command_suffix": "",
     "port_baudrate": 200,
@@ -22,7 +22,7 @@
     "window_x": 283,
     "window_y": 53,
     "splitter_state": "AAAA/wAAAAEAAAACAAAEfQAAAcMB/////wEAAAABAA==",
-    "saved_right_panel_width": 451
+    "saved_right_section_width": 451
   },
   "ports": {
     "default_config": {

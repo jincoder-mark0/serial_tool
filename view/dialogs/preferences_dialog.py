@@ -8,7 +8,7 @@ from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Dict, Any, Optional
 import os
 from view.managers.language_manager import language_manager
-from constants import (
+from common.constants import (
     VALID_BAUDRATES,
     DEFAULT_LOG_MAX_LINES,
     MIN_SCAN_INTERVAL_MS,

@@ -33,8 +33,8 @@ import logging
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt
 
-from version import __version__
-from resource_path import ResourcePath
+from common.version import __version__
+from core.resource_path import ResourcePath
 from view.main_window import MainWindow
 from presenter.main_presenter import MainPresenter
 
@@ -106,10 +106,11 @@ def main() -> None:
 
     app = QApplication(sys.argv)
 
-    # MainWindow 초기화 (SettingsManager 의존성 제거됨)
+    # MainWindow 초기화
+    # MainWindow는 이제 resource_path를 직접 받지 않아도 됨
     window = MainWindow()
 
-    # MainPresenter 초기화 (MVP 패턴: View와 Model 연결 및 초기 상태 복원)
+    # MainPresenter 초기화
     presenter = MainPresenter(window)
 
     window.show()

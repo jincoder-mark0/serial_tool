@@ -29,7 +29,7 @@ from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QMutexLocker, QObject
 from typing import Optional
 from core.device_transport import DeviceTransport
 from core.utils import ThreadSafeQueue
-from constants import (
+from common.constants import (
     DEFAULT_READ_CHUNK_SIZE,
     BATCH_SIZE_THRESHOLD,
     BATCH_TIMEOUT_MS

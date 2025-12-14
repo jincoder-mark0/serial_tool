@@ -52,7 +52,7 @@ class ConfigKeys:
     WINDOW_X = "ui.window_x"
     WINDOW_Y = "ui.window_y"
     SPLITTER_STATE = "ui.splitter_state"
-    RIGHT_PANEL_VISIBLE = "settings.right_panel_visible"
+    RIGHT_PANEL_VISIBLE = "settings.right_section_visible"
 
     # Fonts (ThemeManager uses these)
     PROP_FONT_FAMILY = "ui.proportional_font_family"

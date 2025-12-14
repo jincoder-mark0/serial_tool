@@ -30,7 +30,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from view.main_window import MainWindow
 from view.managers.language_manager import language_manager
-from resource_path import ResourcePath
+from core.resource_path import ResourcePath
 
 # 테스트에 사용할 리소스 경로 설정 (실제 런타임과 동일 환경)
 resource_path = ResourcePath()
@@ -67,7 +67,7 @@ def test_dynamic_language_switching(app, qtbot):
         (lambda: app, lambda w: w.windowTitle(), "main_title"),
 
         # 2. Menu Bar (Actions)
-        (lambda: app.menu_bar.toggle_right_panel_action, lambda w: w.text(), "main_menu_toggle_right_panel"),
+        (lambda: app.menu_bar.toggle_right_section_action, lambda w: w.text(), "main_menu_toggle_right_section"),
 
         # 3. Tool Bar
         (lambda: app.main_toolbar.open_action, lambda w: w.text(), "toolbar_btn_open"),

@@ -22,7 +22,7 @@ from PyQt5.QtCore import QObject, QDateTime
 from view.panels.packet_panel import PacketPanel
 from presenter.event_router import EventRouter
 from core.settings_manager import SettingsManager
-from constants import ConfigKeys
+from common.constants import ConfigKeys
 
 class PacketPresenter(QObject):
     """

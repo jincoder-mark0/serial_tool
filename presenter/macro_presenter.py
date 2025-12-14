@@ -28,7 +28,7 @@ except ImportError:
 
 from view.panels.macro_panel import MacroPanel
 from model.macro_runner import MacroRunner
-from model.macro_entry import MacroEntry
+from common.dtos import MacroEntry
 from core.logger import logger
 
 class MacroPresenter(QObject):

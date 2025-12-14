@@ -31,13 +31,13 @@ class MainLeftSection(QWidget):
     좌측 섹션 관리 클래스
 
     Attributes:
-        port_tabs (PortTabPanel): 포트 탭 관리 패널
-        manual_control (ManualControlPanel): 수동 제어 패널
+        port_tab_panel (PortTabPanel): 포트 탭 관리 패널
+        manual_control_panel (ManualControlPanel): 수동 제어 패널
         system_log_widget (SystemLogWidget): 시스템 로그 위젯
     """
 
     # 하위 패널 이벤트 상위 전달 시그널
-    command_send_requested = pyqtSignal(str, bool, bool, bool, bool)
+    send_requested = pyqtSignal(str, bool, bool, bool, bool)
     port_tab_added = pyqtSignal(object) # PortPanel 객체 전달
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
@@ -48,8 +48,8 @@ class MainLeftSection(QWidget):
             parent (Optional[QWidget]): 부모 위젯
         """
         super().__init__(parent)
-        self.port_tabs = None
-        self.manual_control = None
+        self.port_tab_panel = None
+        self.manual_control_panel = None
         self.system_log_widget = None
         self.init_ui()
 
@@ -64,23 +64,23 @@ class MainLeftSection(QWidget):
         # ---------------------------------------------------------
         # 1. 포트 탭 (Port Tabs)
         # ---------------------------------------------------------
-        self.port_tabs = PortTabPanel()
-        self.port_tabs.port_tab_added.connect(self._on_port_tab_added)
-        self.port_tabs.port_tab_added.connect(self.port_tab_added.emit) # 외부 전달
+        self.port_tab_panel = PortTabPanel()
+        self.port_tab_panel.port_tab_added.connect(self._on_port_tab_added)
+        self.port_tab_panel.port_tab_added.connect(self.port_tab_added.emit) # 외부 전달
 
         # ---------------------------------------------------------
         # 2. 수동 제어 패널 (Manual Control)
         # ---------------------------------------------------------
-        self.manual_control = ManualControlPanel()
-        self.manual_control.command_send_requested.connect(self.command_send_requested.emit)
+        self.manual_control_panel = ManualControlPanel()
+        self.manual_control_panel.send_requested.connect(self.send_requested.emit)
 
         # ---------------------------------------------------------
         # 3. 시스템 로그 (System Log)
         # ---------------------------------------------------------
         self.system_log_widget = SystemLogWidget()
 
-        layout.addWidget(self.port_tabs, 1)
-        layout.addWidget(self.manual_control)
+        layout.addWidget(self.port_tab_panel, 1)
+        layout.addWidget(self.manual_control_panel)
         layout.addWidget(self.system_log_widget)
 
         self.setLayout(layout)
@@ -92,33 +92,33 @@ class MainLeftSection(QWidget):
 
     def add_new_port_tab(self) -> None:
         """새 포트 탭 추가"""
-        self.port_tabs.add_new_port_tab()
+        self.port_tab_panel.add_new_port_tab()
 
     def open_current_port(self) -> None:
         """현재 활성 탭의 포트 열기"""
-        current_index = self.port_tabs.currentIndex()
-        current_widget = self.port_tabs.widget(current_index)
+        current_index = self.port_tab_panel.currentIndex()
+        current_widget = self.port_tab_panel.widget(current_index)
         if isinstance(current_widget, PortPanel):
             if not current_widget.is_connected():
                 current_widget.toggle_connection()
 
     def close_current_port(self) -> None:
         """현재 활성 탭의 포트 닫기"""
-        current_index = self.port_tabs.currentIndex()
-        current_widget = self.port_tabs.widget(current_index)
+        current_index = self.port_tab_panel.currentIndex()
+        current_widget = self.port_tab_panel.widget(current_index)
         if isinstance(current_widget, PortPanel):
             if current_widget.is_connected():
                 current_widget.toggle_connection()
 
     def close_current_tab(self) -> None:
         """현재 활성 탭 닫기"""
-        current_index = self.port_tabs.currentIndex()
+        current_index = self.port_tab_panel.currentIndex()
         # 마지막 탭(플러스 탭)은 닫을 수 없음
-        if current_index == self.port_tabs.count() - 1:
+        if current_index == self.port_tab_panel.count() - 1:
             return
 
         if current_index >= 0:
-            self.port_tabs.removeTab(current_index)
+            self.port_tab_panel.removeTab(current_index)
 
     def append_data_to_current_port(self, data: bytes) -> None:
         """
@@ -132,8 +132,8 @@ class MainLeftSection(QWidget):
         Args:
             data (bytes): 추가할 데이터
         """
-        current_index = self.port_tabs.currentIndex()
-        current_widget = self.port_tabs.widget(current_index)
+        current_index = self.port_tab_panel.currentIndex()
+        current_widget = self.port_tab_panel.widget(current_index)
 
         if isinstance(current_widget, PortPanel):
             if hasattr(current_widget, 'data_log_widget'):
@@ -157,21 +157,21 @@ class MainLeftSection(QWidget):
         Returns:
             Dict[str, Any]: 통합된 상태 데이터
         """
-        manual_state = self.manual_control.save_state()
+        manual_state = self.manual_control_panel.save_state()
         port_states = []
-        count = self.port_tabs.count()
+        count = self.port_tab_panel.count()
 
         for i in range(count):
             # 마지막 탭(+) 제외
             if i == count - 1:
                 continue
-            widget = self.port_tabs.widget(i)
+            widget = self.port_tab_panel.widget(i)
             if isinstance(widget, PortPanel):
                 port_states.append(widget.save_state())
 
         # 통합된 상태 반환
         return {
-            "manual_control": manual_state,
+            "manual_control_panel": manual_state,
             "ports": port_states
         }
 
@@ -188,33 +188,33 @@ class MainLeftSection(QWidget):
             state (Dict[str, Any]): 복원할 상태 데이터
         """
         # 1. ManualControl 상태 복원
-        manual_state = state.get("manual_control", {})
+        manual_state = state.get("manual_control_panel", {})
         if manual_state:
-            self.manual_control.load_state(manual_state)
+            self.manual_control_panel.load_state(manual_state)
 
         # 2. Port Tabs 상태 복원
         port_states = state.get("ports", [])
 
         # 시그널 차단
-        self.port_tabs.blockSignals(True)
+        self.port_tab_panel.blockSignals(True)
         try:
             # 기존 탭 제거 (플러스 탭 제외하고 역순으로 제거)
             # 역순으로 제거해야 인덱스 문제 없음, 단 플러스 탭은 유지
-            count = self.port_tabs.count()
+            count = self.port_tab_panel.count()
             for i in range(count - 2, -1, -1): # 마지막 탭(count-1)은 +탭이므로 제외
-                self.port_tabs.removeTab(i)
+                self.port_tab_panel.removeTab(i)
 
             # 저장된 상태가 없으면 기본 탭 하나 추가
             if not port_states:
-                self.port_tabs.add_new_port_tab()
+                self.port_tab_panel.add_new_port_tab()
                 return
 
             # 상태 복원
             for state in port_states:
-                panel = self.port_tabs.add_new_port_tab()
+                panel = self.port_tab_panel.add_new_port_tab()
                 panel.load_state(state)
         finally:
-            self.port_tabs.blockSignals(False)
+            self.port_tab_panel.blockSignals(False)
 
     def _on_port_connection_changed(self, connected: bool) -> None:
         """
@@ -231,9 +231,9 @@ class MainLeftSection(QWidget):
         sender_widget = self.sender()
         if sender_widget:
             # sender의 부모를 찾아서 현재 활성 탭인지 확인
-            current_index = self.port_tabs.currentIndex()
-            current_widget = self.port_tabs.widget(current_index)
+            current_index = self.port_tab_panel.currentIndex()
+            current_widget = self.port_tab_panel.widget(current_index)
             if current_widget and hasattr(current_widget, 'port_settings_widget'):
                 if current_widget.port_settings_widget == sender_widget:
                     # 현재 탭의 변경이면 ManualControl 업데이트
-                    self.manual_control.set_controls_enabled(connected)
+                    self.manual_control_panel.set_controls_enabled(connected)

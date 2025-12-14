@@ -19,7 +19,7 @@ from view.main_window import MainWindow
 from presenter.main_presenter import MainPresenter
 from presenter.packet_presenter import PacketPresenter
 from presenter.manual_control_presenter import ManualControlPresenter
-from resource_path import ResourcePath
+from core.resource_path import ResourcePath
 from core.data_logger import data_logger_manager
 
 @pytest.fixture

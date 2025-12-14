@@ -32,7 +32,7 @@ from view.managers.language_manager import language_manager
 
 from view.custom_qt.smart_list_view import QSmartListView
 
-from constants import (
+from common.constants import (
     DEFAULT_LOG_MAX_LINES,
     UI_REFRESH_INTERVAL_MS
 )
@@ -63,17 +63,17 @@ class DataLogWidget(QWidget):
         # UI Components
         self.data_log_title = None
         self.data_log_list = None
-        self.data_log_search_prev_btn = None
-        self.data_log_search_next_btn = None
-        self.data_log_tx_broadcast_chk = None
+        self.data_log_search_prev_btn: Optional[QPushButton] = None
+        self.data_log_search_next_btn: Optional[QPushButton] = None
+        self.data_log_tx_broadcast_chk: Optional[QCheckBox] = None
         self.data_log_search_input = None
-        self.data_log_toggle_logging_btn = None
-        self.data_log_clear_log_btn = None
-        self.data_log_pause_chk = None
-        self.data_log_timestamp_chk = None
-        self.data_log_hex_chk = None
-        self.data_log_filter_chk = None
-        self.data_log_newline_combo = None
+        self.data_log_toggle_logging_btn: Optional[QPushButton] = None
+        self.data_log_clear_log_btn: Optional[QPushButton] = None
+        self.data_log_pause_chk: Optional[QCheckBox] = None
+        self.data_log_timestamp_chk: Optional[QCheckBox] = None
+        self.data_log_hex_chk: Optional[QCheckBox] = None
+        self.data_log_filter_chk: Optional[QCheckBox] = None
+        self.data_log_newline_combo: Optional[QComboBox] = None
 
         # State Variables
         self.tx_broadcast_enabled: bool = True

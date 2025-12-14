@@ -6,7 +6,7 @@ from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Optional
 from view.managers.language_manager import language_manager
 
-from constants import DEFAULT_MACRO_DELAY_MS
+from common.constants import DEFAULT_MACRO_DELAY_MS
 
 class MacroControlWidget(QWidget):
     """
@@ -30,16 +30,16 @@ class MacroControlWidget(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
-        self.macro_repeat_count_lbl = None
-        self.macro_repeat_stop_btn = None
-        self.macro_repeat_start_btn = None
+        self.macro_repeat_count_lbl: Optional[QLabel] = None
+        self.macro_repeat_stop_btn: Optional[QPushButton] = None
+        self.macro_repeat_start_btn: Optional[QPushButton] = None
         self.repeat_count_spin = None
-        self.repeat_max_lbl = None
+        self.repeat_max_lbl: Optional[QLabel] = None
         self.repeat_delay_line_edit = None
-        self.interval_lbl = None
+        self.interval_lbl: Optional[QLabel] = None
         self.execution_settings_grp = None
-        self.script_load_btn = None
-        self.script_save_btn = None
+        self.script_load_btn: Optional[QPushButton] = None
+        self.script_save_btn: Optional[QPushButton] = None
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결

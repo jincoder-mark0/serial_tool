@@ -18,7 +18,7 @@ from PyQt5.QtGui import (
 )
 from PyQt5.QtCore import QDateTime
 
-from constants import DEFAULT_LOG_MAX_LINES, TRIM_CHUNK_RATIO
+from common.constants import DEFAULT_LOG_MAX_LINES, TRIM_CHUNK_RATIO
 import datetime
 
 class QSmartListView(QListView):

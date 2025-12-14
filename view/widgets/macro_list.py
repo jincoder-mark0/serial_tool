@@ -27,11 +27,11 @@ class MacroListWidget(QWidget):
         super().__init__(parent)
         self.macro_table_model = None
         self.macro_table = None
-        self.down_row_btn = None
-        self.up_row_btn = None
-        self.del_row_btn = None
-        self.add_row_btn = None
-        self.select_all_chk = None
+        self.down_row_btn: Optional[QPushButton] = None
+        self.up_row_btn: Optional[QPushButton] = None
+        self.del_row_btn: Optional[QPushButton] = None
+        self.add_row_btn: Optional[QPushButton] = None
+        self.select_all_chk: Optional[QCheckBox] = None
         self._send_enabled = False # Send 버튼 활성화 상태 추적
         self.init_ui()
 

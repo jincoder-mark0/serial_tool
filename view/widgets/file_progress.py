@@ -13,11 +13,11 @@ class FileProgressWidget(QWidget):
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
-        self.cancel_btn = None
-        self.eta_lbl = None
-        self.speed_lbl = None
+        self.cancel_btn: Optional[QPushButton] = None
+        self.eta_lbl: Optional[QLabel] = None
+        self.speed_lbl: Optional[QLabel] = None
         self.progress_bar = None
-        self.status_lbl = None
+        self.status_lbl: Optional[QLabel] = None
         self.init_ui()
         self.reset()
 

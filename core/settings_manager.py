@@ -29,7 +29,7 @@ except ImportError:
     import json
 from pathlib import Path
 from typing import Dict, Any
-from constants import DEFAULT_BAUDRATE, DEFAULT_LOG_MAX_LINES
+from common.constants import DEFAULT_BAUDRATE, DEFAULT_LOG_MAX_LINES
 from core.logger import logger
 import os
 

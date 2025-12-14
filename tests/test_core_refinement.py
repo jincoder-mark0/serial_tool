@@ -18,7 +18,9 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.data_logger import DataLogger, DataLoggerManager
-from model.packet_parser import ExpectMatcher, ParserType
+from model.packet_parser import ExpectMatcher
+
+from common.enums import ParserType
 
 # --- DataLogger Tests ---
 

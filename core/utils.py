@@ -12,7 +12,7 @@
 import threading
 from collections import deque
 from typing import Optional, Any
-from constants import RING_BUFFER_SIZE
+from common.constants import RING_BUFFER_SIZE
 
 class ThreadSafeQueue:
     """
