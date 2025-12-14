@@ -21,7 +21,7 @@
     "window_height": 860,
     "window_x": 283,
     "window_y": 53,
-    "splitter_state": "AAAA/wAAAAEAAAACAAAEfQAAAcMB/////wEAAAABAA==",
+    "splitter_state": "AAAA/wAAAAEAAAACAAAC/QAAAcMB/////wEAAAABAA==",
     "saved_right_section_width": 451,
     "proportional_font_size": 10
   },
@@ -52,7 +52,7 @@
           }
         },
         "data_log_widget": {
-          "tx_broadcast_enabled": true,
+          "tx_broadcast_allow_enabled": true,
           "hex_mode": false,
           "timestamp": false,
           "is_paused": false,

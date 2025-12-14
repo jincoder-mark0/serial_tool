@@ -52,7 +52,7 @@ class GlobalErrorHandler(QObject):
 
     def report_error(self, exc_type: Type[BaseException], exc_value: BaseException, tb: Optional[TracebackType]) -> None:
         """
-        [NEW] 수동으로 예외를 보고하는 메서드
+        수동으로 예외를 보고하는 메서드
 
         try-except 블록 내에서 잡힌 예외라도, 전역적으로 알릴 필요가 있을 때 사용합니다.
 
@@ -166,5 +166,5 @@ def install_global_error_handler() -> None:
         logger.info("Global error handler installed (Sys & Threading hooks).")
 
 def get_error_handler() -> Optional[GlobalErrorHandler]:
-    """[NEW] 핸들러 인스턴스 반환 (수동 호출용)"""
+    """핸들러 인스턴스 반환 (수동 호출용)"""
     return global_error_handler

@@ -4,8 +4,6 @@
 사용자 입력 문자열을 전송 가능한 바이트 데이터로 변환합니다.
 
 ## WHY
-* Presenter 계층에 산재된 명령어 가공 로직의 중복 제거 (DRY 원칙)
-* **숨겨진 의존성(SettingsManager)을 제거**하고 값을 인자로 받아 테스트 용이성 향상
 * Hex 문자열 변환 및 에러 처리 로직의 중앙 집중화
 
 ## WHAT
@@ -14,7 +12,6 @@
 * 변환 실패 시 예외 처리
 
 ## HOW
-* 정적 메서드(Static Method)의 시그니처를 변경하여 의존성 제거
 * 인자로 받은 Prefix/Suffix를 적용하여 순수 로직 수행
 """
 from typing import Optional
@@ -48,7 +45,6 @@ class CommandProcessor:
         Raises:
             ValueError: 유효하지 않은 HEX 문자열일 경우
         """
-        # [Refactor] SettingsManager 직접 호출 로직 제거됨
         final_text = text
 
         # Prefix 적용

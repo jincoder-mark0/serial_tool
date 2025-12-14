@@ -54,9 +54,6 @@ class PortPanel(QWidget):
         # 중간: 로그 (Middle: Log)
         layout.addWidget(self.data_log_widget, 1) # Stretch 1
 
-        # 하단: 상태 로그 영역 (Bottom: Status Log Area)
-        # layout.addWidget(self.system_log_widget) # Global로 이동
-
         self.setLayout(layout)
 
     def toggle_connection(self) -> None:

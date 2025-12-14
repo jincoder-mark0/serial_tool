@@ -92,7 +92,6 @@ class Logger:
             - 로그 디렉토리 생성 (없으면)
             - 날짜별 로그 파일명 생성 (serial_tool_YYYYMMDD.log)
             - RotatingFileHandler 생성 (10MB, 5개 백업)
-            - 기존 파일 핸들러 제거 후 새 핸들러 추가 (중복 방지)
 
         Args:
             log_dir_path: 로그 파일을 저장할 디렉토리 경로
@@ -110,10 +109,9 @@ class Logger:
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 
-        # 기존 파일 핸들러 제거 후 추가 (중복 방지)
-        for h in self.logger.handlers[:]:
-            if isinstance(h, RotatingFileHandler):
-                self.logger.removeHandler(h)
+        for  handler in self.logger. handlers[:]:
+            if isinstance( handler, RotatingFileHandler):
+                self.logger.removeHandler( handler)
 
         self.logger.addHandler(file_handler)
 

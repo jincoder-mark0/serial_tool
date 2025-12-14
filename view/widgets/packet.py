@@ -57,7 +57,7 @@ class PacketWidget(QWidget):
             language_manager.get_text("packet_col_value")  # 예: Data
         ])
         self.tree.setColumnWidth(0, 150)
-        self.tree.setRootIsDecorated(False) # 최상위 루트 장식 제거 (리스트처럼 보이게)
+        self.tree.setRootIsDecorated(False)
 
         layout.addWidget(self.tree)
         self.setLayout(layout)

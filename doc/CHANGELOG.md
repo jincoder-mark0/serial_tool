@@ -2,6 +2,54 @@
 
 ## [미배포] (Unreleased)
 
+### 아키텍처 정밀화 및 안정성 강화 (2025-12-14)
+
+#### 수정 사항 (Fixed)
+
+- **설정 동기화 버그 수정**
+  - `PreferencesDialog`에서 변경한 'Local Echo' 설정이 `ManualControlWidget` 체크박스에 즉시 반영되지 않는 문제 해결
+  - `ManualControlWidget` 및 `Panel`에 `set_local_echo_state` 메서드 추가하여 외부 제어 허용
+  - `ManualControlPresenter`에 `update_local_echo_setting` 추가 및 `MainPresenter`와 연동
+
+#### 리팩토링 (Refactoring)
+
+- **데이터 전송 객체(DTO) 도입**
+  - `common/dtos.py` 신설: `ManualCommand`, `PortConfig`, `FontConfig` 데이터 클래스 정의
+  - 딕셔너리(`dict`) 대신 명시적인 DTO를 사용하여 컴포넌트 간 데이터 전달 (View ↔ Presenter ↔ Model)
+  - `ManualControlWidget`, `PortSettingsWidget` 등 주요 위젯에 적용하여 타입 안전성(Type Safety) 확보 및 오타 방지
+
+- **MVP 아키텍처 위반 수정 (Strict MVP)**
+  - **MainWindow**: `SettingsManager`(Model) 직접 생성 및 의존성 제거
+  - **MainPresenter**: 설정 로드 책임 이관 및 `View.restore_state()` 메서드를 통해 초기 상태 주입
+  - **Main Entry**: `main.py`에서 모든 Manager(`Settings`, `Theme`, `Lang`, `Color`)를 사전 초기화하여 전역 상태 보장
+  - View는 수동적(Passive) 뷰로 전환하고, 데이터 처리는 Presenter가 전담하도록 구조 개선
+
+#### 기능 추가 (Feat)
+
+- **초기 기능 구현 통합**
+  - 수동 제어(Manual Control) 및 매크로(Macro) 기능을 위한 UI, Presenter, Model, Test 코드 통합 구현
+  - MVP 아키텍처 기반의 핵심 시리얼 통신 도구 기능 완성
+
+---
+
+### 명명 규칙 표준화 및 디커플링 (2025-12-13)
+
+#### 리팩토링 (Refactoring)
+
+- **DataLogViewer 리네이밍**
+  - `RxLogWidget`을 **`DataLogViewer`**로 클래스명 변경
+  - 송신(TX) 데이터와 수신(RX) 데이터를 모두 표시하는 역할에 맞게 이름 현실화
+  - Model 계층의 `DataLogger`와 이름의 톤앤매너 일치
+
+- **ConnectionController 활성 연결 명시화**
+  - `set_active_connection(name)` 메서드 추가로 명시적인 제어권 확보
+  - `current_connection_name` 속성이 모호함 없이 현재 활성 탭의 연결을 반환하도록 로직 개선
+
+- **CommandProcessor 디커플링 (Decoupling)**
+  - `process_cmd` 메서드 내부의 `SettingsManager` 직접 참조(Hidden Dependency) 제거
+  - Prefix/Suffix 설정을 외부(Presenter)에서 주입받도록 변경하여 순수 함수(Pure Function)에 가깝게 전환
+  - 테스트 용이성 및 아키텍처 투명성 향상
+
 ---
 
 ### 아키텍처 안정화 및 핵심 기능 고도화 (2025-12-12)

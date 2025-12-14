@@ -148,7 +148,9 @@ class MainPresenter(QObject):
         self.view.log_system_message("Application initialized", "INFO")
 
     def on_preferences_requested(self):
-        """Preferences 다이얼로그 요청 처리"""
+        """
+        Preferences 다이얼로그 요청 처리
+        """
         current_settings = self.settings_manager.get_all_settings()
         self.view.open_preferences_dialog(current_settings)
 
@@ -271,6 +273,10 @@ class MainPresenter(QObject):
                         widget.data_log_widget.set_max_lines(max_lines_int)
             except (ValueError, TypeError):
                 logger.warning("Invalid max_log_lines value")
+
+        # Local Echo 설정 변경 반영
+        if 'port_local_echo' in new_settings:
+            self.manual_control_presenter.update_local_echo_setting(new_settings['port_local_echo'])
 
         # PacketPresenter 설정 업데이트 요청
         self.packet_presenter.apply_settings()

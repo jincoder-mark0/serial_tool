@@ -16,7 +16,6 @@ except ImportError:
 
 from core.logger import logger
 
-# 상수 임포트 (하드코딩 제거)
 from common.constants import (
     LOG_COLOR_SUCCESS,
     LOG_COLOR_ERROR,

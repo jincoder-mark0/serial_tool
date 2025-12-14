@@ -225,7 +225,9 @@ class PortSettingsWidget(QGroupBox):
         if self.connect_btn.isChecked():
             # 연결 요청 (프로토콜에 따라 설정값 분기)
             protocol = self.protocol_combo.currentText()
-            config = {"protocol": protocol, "port": self.port_combo.currentText()}
+
+            # config = {"protocol": protocol, "port": self.port_combo.currentText()}
+            config = self.get_current_config()
 
             if protocol == "Serial":
                 config.update({

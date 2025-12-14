@@ -52,6 +52,7 @@ class ManualControlPresenter(QObject):
         self.connection_controller = connection_controller
         self.local_echo_callback = local_echo_callback
         self.settings_manager = SettingsManager()
+
         # View 시그널 연결
         self.view.send_requested.connect(self.on_send_requested)
         self.view.rts_changed.connect(self.on_rts_changed)
@@ -60,9 +61,18 @@ class ManualControlPresenter(QObject):
         self._apply_initial_settings()
 
     def _apply_initial_settings(self) -> None:
+        """초기 실행 시 설정값 적용"""
         default_echo = self.settings_manager.get(ConfigKeys.PORT_LOCAL_ECHO, False)
-        if hasattr(self.view.manual_control_widget, 'local_echo_chk'):
-            self.view.manual_control_widget.local_echo_chk.setChecked(default_echo)
+        self.update_local_echo_setting(default_echo)
+
+    def update_local_echo_setting(self, enabled: bool) -> None:
+        """
+        설정 변경 시 Local Echo 상태를 View에 반영합니다.
+
+        Args:
+            enabled (bool): Local Echo 활성화 여부
+        """
+        self.view.set_local_echo_state(enabled)
 
     def on_send_requested(self, command: ManualCommand) -> None:
         """
@@ -81,7 +91,7 @@ class ManualControlPresenter(QObject):
             logger.warning("Manual Send: No active connection")
             return
 
-        # [Refactor] DTO 속성 접근 (오타 방지 및 타입 힌트 지원)
+        # DTO 속성 접근 (오타 방지 및 타입 힌트 지원)
         if not command.text:
             return
         # SettingsManager에서 값 획득 후 CommandProcessor에 주입

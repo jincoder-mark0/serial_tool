@@ -92,7 +92,8 @@ class ManualControlPanel(QWidget):
         Args:
             checked (bool): 체크 여부
         """
-        self.manual_control_widget.set_local_echo_state(checked)
+        if self.manual_control_widget:
+            self.manual_control_widget.set_local_echo_state(checked)
 
     def save_state(self) -> dict:
         """

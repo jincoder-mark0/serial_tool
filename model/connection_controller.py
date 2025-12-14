@@ -324,7 +324,7 @@ class ConnectionController(QObject):
             return
 
         for name, worker in self.workers.items():
-            if worker.isRunning():
+            if worker.isRunning() and worker.is_broadcasting():
                 # TODO : broadcasting 설정 확인 로직 추가 필요
                 self.send_data_to_connection(name, data)
 
