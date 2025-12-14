@@ -22,8 +22,9 @@ DeviceTransport 인터페이스의 구체적인 구현체를 제공합니다.
 * 설정 Dictionary로 유연한 파라미터 전달
 """
 import serial
-from typing import Dict, Any, Optional
+from typing import Optional
 from core.device_transport import DeviceTransport
+from common.dtos import PortConfig
 
 class SerialTransport(DeviceTransport):
     """
@@ -32,18 +33,14 @@ class SerialTransport(DeviceTransport):
     시리얼 포트 통신을 위한 구체적인 전송 계층 구현입니다.
     """
 
-    def __init__(self, port: str, baudrate: int, config: Optional[Dict[str, Any]] = None):
+    def __init__(self, config: PortConfig):
         """
         SerialTransport 초기화
 
         Args:
-            port (str): 포트 이름 (예: 'COM1', '/dev/ttyUSB0')
-            baudrate (int): 통신 속도
-            config (Optional[Dict[str, Any]]): 추가 설정 (bytesize, parity, stopbits, flowctrl 등)
+            config (PortConfig): 포트 연결 설정 DTO
         """
-        self.port = port
-        self.baudrate = baudrate
-        self.config = config or {}
+        self.config = config
         self._serial: Optional[serial.Serial] = None
 
     def open(self) -> bool:
@@ -51,7 +48,7 @@ class SerialTransport(DeviceTransport):
         시리얼 포트 열기
 
         Logic:
-            - 설정값 파싱 (기본값 적용)
+            - DTO에서 설정값 로드
             - 흐름 제어 설정 (RTS/CTS)
             - Non-blocking I/O 설정 (timeout=0)
             - serial.Serial 객체 생성
@@ -64,21 +61,19 @@ class SerialTransport(DeviceTransport):
             serial.SerialException: 포트 열기 실패 시
         """
         try:
-            # 설정값 파싱 (기본값 설정)
-            bytesize = self.config.get('bytesize', serial.EIGHTBITS)
-            parity = self.config.get('parity', serial.PARITY_NONE)
-            stopbits = self.config.get('stopbits', serial.STOPBITS_ONE)
-            flowctrl = self.config.get('flowctrl', 'None')
+            # DTO 속성 사용 (타입 안전성 확보)
+            flowctrl = self.config.flowctrl
             rtscts = (flowctrl == 'RTS/CTS')
+            xonxoff = (flowctrl == 'XON/XOFF')
 
             self._serial = serial.Serial(
-                port=self.port,
-                baudrate=self.baudrate,
-                bytesize=bytesize,
-                parity=parity,
-                stopbits=stopbits,
+                port=self.config.port,
+                baudrate=self.config.baudrate,
+                bytesize=self.config.bytesize,
+                parity=self.config.parity,
+                stopbits=self.config.stopbits,
                 timeout=0,  # Non-blocking I/O
-                xonxoff=False,
+                xonxoff=xonxoff,
                 rtscts=rtscts,
                 dsrdtr=False
             )
@@ -156,6 +151,12 @@ class SerialTransport(DeviceTransport):
             except Exception:
                 return 0
         return 0
+
+    def set_broadcast(self, state: bool) -> None:
+        """
+        broadcasting 설정 (시리얼에서는 특별한 하드웨어 동작 없음)
+        """
+        pass
 
     def set_dtr(self, state: bool) -> None:
         """

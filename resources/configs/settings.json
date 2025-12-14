@@ -8,7 +8,7 @@
     "proportional_font_size": 9,
     "fixed_font_family": "Consolas",
     "fixed_font_size": 9,
-    "right_section_visible": false,
+    "right_section_visible": true,
     "command_prefix": "",
     "command_suffix": "",
     "port_baudrate": 200,
@@ -21,7 +21,7 @@
     "window_height": 860,
     "window_x": 283,
     "window_y": 53,
-    "splitter_state": "AAAA/wAAAAEAAAACAAAC/QAAAcMB/////wEAAAABAA==",
+    "splitter_state": "AAAA/wAAAAEAAAACAAACtQAAAcMB/////wEAAAABAA==",
     "saved_right_section_width": 451,
     "proportional_font_size": 10
   },
@@ -72,6 +72,7 @@
       "rts_chk": false,
       "dtr_chk": false,
       "local_echo_chk": true,
+      "broadcast_chk": false,
       "command_history": []
     }
   },

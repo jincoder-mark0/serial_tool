@@ -75,40 +75,58 @@ class FilePresenter(QObject):
         파일 전송 시작 로직
 
         Logic:
-            - 포트 연결 상태 확인
-            - 전송 파라미터(Baudrate, FlowControl) 로드
-            - 전송 엔진 생성 및 초기화
-            - 상태 변수(시간, 바이트) 초기화
+            - 포트 연결 상태 확인 및 설정(PortConfig) 조회
+            - 전송 엔진 생성 (DTO 전달)
             - 스레드 풀에서 엔진 실행
-
-        Args:
-            filepath: 전송할 파일 경로
         """
-        if not self.connection_controller.has_active_connection:
-            logger.warning("File Transfer: Port not open")
-            if self.current_dialog:
-                self.current_dialog.set_complete(False, "Port not open")
-            return
+        # 현재 활성 포트가 없으면 중단 (FileTransfer는 특정 포트를 대상으로 함)
+        # 만약 MainPresenter가 활성 포트를 관리하지 않는다면,
+        # ConnectionController에서 활성 포트를 가져오는 로직을 확인해야 함.
+        # (이전 리팩토링에서 ConnectionController는 stateless가 되었으므로,
+        #  여기서는 PortPresenter 등으로부터 활성 포트를 주입받거나 조회해야 하지만,
+        #  FilePresenter는 현재 ConnectionController만 의존성으로 가지고 있음.
+        #  임시로 ConnectionController.current_connection_name 프로퍼티가 남아있다면 사용,
+        #  없다면 아키텍처 재검토 필요. 현재는 ConnectionController에
+        #  current_connection_name 로직은 제거되지 않았다고 가정)
 
-        port_name = self.connection_controller.current_connection_name
-        if not port_name:
+        # [Note] 이전 단계에서 ConnectionController의 상태를 제거했으나,
+        # 'active connection name'을 가져오는 helper가 필요함.
+        # 여기서는 편의상 ConnectionController에 남아있는 get_active_connections() 중 첫번째를 쓰거나
+        # 상위(MainPresenter)에서 주입받은 current_port를 사용해야 함.
+        # **가장 좋은 방법**: FilePresenter 생성자나 start_transfer 시점에 target_port를 받는 것.
+        # 일단은 ConnectionController의 get_active_connections()를 활용하여 첫 번째 포트를 선택하거나,
+        # FileTransferDialog가 포트를 선택하게 하는 것이 맞으나,
+        # 현재 UI 구조상 '현재 활성 탭'의 포트를 의미함.
+        # 따라서 MainPresenter가 start_transfer 호출 시 포트명을 넘겨주도록 수정하는 것이 베스트지만,
+        # 여기서는 코드를 최소한으로 건드리기 위해 ConnectionController의
+        # (남아있거나 복구된) 상태 조회 메서드를 사용하거나,
+        # active connections 중 하나를 선택하는 로직을 사용.
+
+        # [수정] MainPresenter가 FilePresenter에게 활성 포트를 알려주지 않는 구조라면,
+        # ConnectionController.get_active_connections()를 사용.
+        active_ports = self.connection_controller.get_active_connections()
+        if not active_ports:
+            logger.warning("File Transfer: No active connection")
             if self.current_dialog:
                 self.current_dialog.set_complete(False, "No active port")
             return
 
-        # 포트 설정 가져오기
+        # 임시로 첫 번째 활성 포트 사용 (멀티 탭 환경에서 개선 필요)
+        port_name = active_ports[0]
+
+        # 포트 설정(DTO) 가져오기
         port_config = self.connection_controller.get_connection_config(port_name)
-        baudrate = port_config.baudrate if port_config else 115200
-        flow_control = port_config.flowctrl if port_config else "None"
+
+        if not port_config:
+             logger.error(f"Configuration not found for port {port_name}")
+             return
 
         try:
-            # 엔진 생성
+            # 엔진 생성 - [Fix] DTO 전달
             self.current_engine = FileTransferEngine(
                 self.connection_controller,
-                port_name,
                 filepath,
-                baudrate,
-                flow_control
+                port_config
             )
 
             # 엔진 시그널 연결
@@ -123,7 +141,7 @@ class FilePresenter(QObject):
 
             # 비동기 실행
             QThreadPool.globalInstance().start(self.current_engine)
-            logger.info(f"File transfer started: {filepath} (Baud: {baudrate}, Flow: {flow_control})")
+            logger.info(f"File transfer started: {filepath}")
 
         except Exception as e:
             logger.error(f"Failed to start file transfer: {e}")

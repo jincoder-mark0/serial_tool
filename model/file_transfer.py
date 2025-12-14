@@ -6,14 +6,13 @@ import time
 from PyQt5.QtCore import QRunnable, QObject, pyqtSignal
 from model.connection_controller import ConnectionController
 from core.event_bus import event_bus
-from common.dtos import FileProgressState, FileProgressEvent
-from common.constants import EventTopics # 상수 임포트
+from common.dtos import FileProgressState, FileProgressEvent, PortConfig
+from common.constants import EventTopics
 
 class FileTransferSignals(QObject):
     """
     파일 전송 엔진에서 사용하는 시그널 정의
     """
-    # DTO 사용 (FileProgressState)
     progress_updated = pyqtSignal(object)
     transfer_completed = pyqtSignal(bool)
     error_occurred = pyqtSignal(str)
@@ -36,21 +35,29 @@ class FileTransferEngine(QRunnable):
     - **Y-MODEM**과 같은 프로토콜의 다양화
     """
 
-    def __init__(self, connection_controller: ConnectionController, port_name: str, file_path: str, baudrate: int, flow_control: str = "None"):
+    def __init__(self, connection_controller: ConnectionController, file_path: str, config: PortConfig):
+        """
+        FileTransferEngine 초기화
+
+        Args:
+            connection_controller: 전송을 수행할 컨트롤러
+            file_path: 전송할 파일 경로
+            config: 포트 설정 DTO (baudrate, flowctrl 등 정보 포함)
+        """
         super().__init__()
         self.connection_controller = connection_controller
-        self.port_name = port_name
         self.file_path = file_path
-        self.baudrate = baudrate
-        self.flow_control = flow_control
+        self.config = config
+        self.port_name = config.port # DTO에서 포트 이름 추출
+
         self.signals = FileTransferSignals()
         self.event_bus = event_bus
         self._is_cancelled = False
 
-        # 설정값
-        self.chunk_size = 1024 # 1KB
-        if self.baudrate > 115200:
-            self.chunk_size = 4096 # 고속 통신 시 청크 크기 증가
+        # 설정값 (DTO에서 조회)
+        self.chunk_size = 1024
+        if self.config.baudrate > 115200:
+            self.chunk_size = 4096
 
         # Backpressure 임계값 (큐에 쌓인 청크 개수)
         self.queue_threshold = 50
@@ -85,7 +92,7 @@ class FileTransferEngine(QRunnable):
 
             with open(self.file_path, 'rb') as f:
                 while not self._is_cancelled:
-                    # [Logic] Backpressure Control (역압 제어)
+                    # Backpressure Control (역압 제어)
                     # ConnectionWorker의 큐가 비워질 때까지 대기하여 메모리 보호 및 유실 방지
                     while self.connection_controller.get_write_queue_size(self.port_name) > self.queue_threshold:
                         time.sleep(0.01) # 10ms 대기
@@ -120,16 +127,16 @@ class FileTransferEngine(QRunnable):
                     # 2. EventBus용 이벤트 (FileProgressEvent DTO 사용)
                     self.event_bus.publish(EventTopics.FILE_PROGRESS, FileProgressEvent(current=sent_bytes, total=total_size))
 
-                    # [Logic] Speed Control (속도 제어)
+                    # Speed Control (속도 제어)
                     # Flow Control이 활성화된 경우(RTS/CTS 등), 드라이버 레벨의 블로킹을 신뢰하고 sleep을 건너뜀
                     # Flow Control이 없는 경우, Baudrate에 맞춰 소프트웨어적으로 속도 조절 (Pacing)
-                    if self.flow_control in ["RTS/CTS", "XON/XOFF"]:
+                    if self.config.flowctrl in ["RTS/CTS", "XON/XOFF"]:
                         # 하드웨어/소프트웨어 흐름 제어에 맡김 (최대 속도)
                         pass
                     else:
                         # 전송 속도 조절 (Baudrate 기반 지연)
                         # 1 byte = 10 bits (8N1: 1 start + 8 data + 1 stop)
-                        wait_time = (len(chunk) * 10) / self.baudrate
+                        wait_time = (len(chunk) * 10) / self.config.baudrate
                         time.sleep(wait_time)
 
             # 전송 완료 또는 취소 처리

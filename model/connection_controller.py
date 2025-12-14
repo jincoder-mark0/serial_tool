@@ -174,16 +174,8 @@ class ConnectionController(QObject):
             self.error_occurred.emit(name, "Connection is already open.")
             return False
 
-        # SerialTransport 생성 (Config DTO 속성 사용)
-        transport_config = {
-            "bytesize": config.bytesize,
-            "parity": config.parity,
-            "stopbits": config.stopbits,
-            "flowctrl": config.flowctrl
-        }
-
-        # 추후 SerialTransport도 DTO를 받도록 리팩토링 권장
-        transport = SerialTransport(name, config.baudrate, config=transport_config)
+        # DTO를 직접 SerialTransport에 전달
+        transport = SerialTransport(config)
 
         # Worker에 Transport 주입
         worker = ConnectionWorker(transport, name)
