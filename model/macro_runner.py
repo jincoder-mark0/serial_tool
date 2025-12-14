@@ -264,9 +264,14 @@ class MacroRunner(QThread):
 
                     # 2-2. Expect 처리 (응답 대기)
                     if entry.expect:
-                        step_success = self._wait_for_expect(entry.expect, entry.timeout_ms)
-                        if not step_success:
-                            error_msg = f"Expect timeout: pattern '{entry.expect}' not found."
+                        # [안전 장치] 브로드캐스트 모드에서는 동기화 문제로 인해 Expect를 무시하고 경고 로그 출력
+                        if self._is_broadcast:
+                            logger.warning(f"Macro: Expect pattern '{entry.expect}' ignored in broadcast mode.")
+                            step_success = True # 무조건 성공 처리하고 Delay로 넘어감
+                        else:
+                            step_success = self._wait_for_expect(entry.expect, entry.timeout_ms)
+                            if not step_success:
+                                error_msg = f"Expect timeout: pattern '{entry.expect}' not found."
 
                     # 2-3. 결과 처리 및 지연
                     if step_success:

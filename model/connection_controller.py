@@ -21,7 +21,7 @@
 * EventBus로 데이터 브로드캐스팅
 """
 from PyQt5.QtCore import QObject, pyqtSignal
-from typing import Optional, Dict, Any, List
+from typing import Optional, Dict, Any, List, TYPE_CHECKING
 
 from model.connection_worker import ConnectionWorker
 from model.serial_transport import SerialTransport
@@ -30,6 +30,10 @@ from common.enums import ParserType
 from common.dtos import PortConfig, PortDataEvent, PortErrorEvent, PacketEvent
 from common.constants import DEFAULT_BAUDRATE, EventTopics
 from core.event_bus import event_bus
+from core.logger import logger
+
+if TYPE_CHECKING:
+    from model.file_transfer import FileTransferEngine
 
 class ConnectionController(QObject):
     """
@@ -63,6 +67,10 @@ class ConnectionController(QObject):
         # 연결 이름(str) -> Config(dict) 매핑
         self.connection_configs: dict[str, PortConfig] = {}
 
+        # 진행 중인 파일 전송 엔진 추적 (Race Condition 방지)
+        # 연결 이름(str) -> FileTransferEngine 매핑
+        self._active_file_transfers: Dict[str, 'FileTransferEngine'] = {}
+
         # EventBus 인스턴스
         self.event_bus = event_bus
 
@@ -90,6 +98,34 @@ class ConnectionController(QObject):
             lambda n, pkt: self.event_bus.publish(EventTopics.PORT_PACKET_RECEIVED, PacketEvent(port=n, packet=pkt))
         )
 
+    # -------------------------------------------------------------------------
+    # File Transfer Lifecycle Management (Race Condition Prevention)
+    # -------------------------------------------------------------------------
+    def register_file_transfer(self, port_name: str, engine: 'FileTransferEngine') -> None:
+        """
+        파일 전송 시작 시 엔진을 등록합니다.
+
+        Args:
+            port_name: 포트 이름
+            engine: 실행 중인 FileTransferEngine 인스턴스
+        """
+        self._active_file_transfers[port_name] = engine
+        logger.debug(f"File transfer registered for port {port_name}")
+
+    def unregister_file_transfer(self, port_name: str) -> None:
+        """
+        파일 전송 종료 시 엔진 등록을 해제합니다.
+
+        Args:
+            port_name: 포트 이름
+        """
+        if port_name in self._active_file_transfers:
+            del self._active_file_transfers[port_name]
+            logger.debug(f"File transfer unregistered for port {port_name}")
+
+    # -------------------------------------------------------------------------
+    # Connection Management
+    # -------------------------------------------------------------------------
     @property
     def has_active_connection(self) -> bool:
         """
@@ -235,10 +271,25 @@ class ConnectionController(QObject):
         """
         연결을 종료합니다.
 
+        Logic:
+            - **[Safety]** 해당 포트에서 진행 중인 파일 전송이 있다면 강제 취소 요청
+            - Worker 스레드 종료 및 리소스 해제
+
         Args:
             name: 종료할 연결 이름. None이면 모든 연결 종료.
         """
         if name:
+            # [Race Condition Prevention]
+            # 파일 전송이 진행 중이라면 즉시 중단 요청을 보냅니다.
+            # QRunnable은 wait()가 없으므로 cancel 플래그를 세팅하여 엔진이
+            # 다음 청크 전송 시도 전에 스스로 루프를 탈출하도록 합니다.
+            if name in self._active_file_transfers:
+                logger.warning(f"Closing port {name} while file transfer is active. Cancelling transfer...")
+                transfer_engine = self._active_file_transfers[name]
+                transfer_engine.cancel()
+                # 엔진이 등록 해제할 때까지 기다릴 수도 있지만, UI 블로킹 우려로 비동기 취소 처리
+                # 엔진은 send_data 실패 시 예외 처리로 종료되거나 cancel 플래그 확인 후 종료됨.
+
             worker = self.workers.get(name)
             if worker:
                 worker.stop()

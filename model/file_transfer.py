@@ -71,15 +71,14 @@ class FileTransferEngine(QRunnable):
         파일 전송 실행 로직
 
         Logic:
-            - 파일 존재 여부 확인
-            - 파일을 청크 단위로 읽어서 전송
-            - **Backpressure Check**: 송신 큐가 가득 차면 대기
-            - **Flow Control Check**:
-                - 하드웨어 흐름 제어 시: Blocking Write에 의존 (Sleep 없음)
-                - 흐름 제어 없음: Baudrate 기반 Sleep 적용
-            - 각 청크 전송 후 진행률 업데이트
-            - 취소/완료/에러 처리
+            - **[Safety]** 시작 시 ConnectionController에 자신을 등록
+            - 파일 읽기 및 전송 루프
+            - Backpressure 및 Flow Control 적용
+            - **[Safety]** 종료 시(finally) 등록 해제
         """
+        # [Safety] 전송 시작 등록 (Race Condition 방지)
+        self.connection_controller.register_file_transfer(self.port_name, self)
+
         try:
             # 파일 존재 확인
             if not os.path.exists(self.file_path):
@@ -109,6 +108,7 @@ class FileTransferEngine(QRunnable):
                     # 데이터 전송
                     success = self.connection_controller.send_data_to_connection(self.port_name, chunk)
                     if not success:
+                        # 포트가 닫혔거나 워커가 없는 경우
                         raise Exception(f"Port {self.port_name} is not open or unavailable.")
 
                     # 진행률 업데이트
@@ -149,7 +149,12 @@ class FileTransferEngine(QRunnable):
                 self.event_bus.publish(EventTopics.FILE_COMPLETED, True)
 
         except Exception as e:
+            # 오류 발생 시 처리
             self.signals.error_occurred.emit(str(e))
             self.signals.transfer_completed.emit(False)
             self.event_bus.publish(EventTopics.FILE_ERROR, str(e))
             self.event_bus.publish(EventTopics.FILE_COMPLETED, False)
+
+        finally:
+            # [Safety] 전송 종료 등록 해제
+            self.connection_controller.unregister_file_transfer(self.port_name)
