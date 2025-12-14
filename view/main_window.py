@@ -234,8 +234,8 @@ class MainWindow(QMainWindow):
 
         # 2. Left Section 상태
         left_state = self.left_section.save_state()
-        if 'manual_control' in left_state:
-            state[ConfigKeys.MANUAL_CONTROL_STATE] = left_state['manual_control']
+        if 'manual_control_panel' in left_state:
+            state[ConfigKeys.MANUAL_CONTROL_STATE] = left_state['manual_control_panel']
         if 'ports' in left_state:
             state[ConfigKeys.PORTS_TABS_STATE] = left_state['ports']
 

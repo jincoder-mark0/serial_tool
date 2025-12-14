@@ -150,7 +150,7 @@ class ConnectionController(QObject):
         worker = self.workers.get(name)
         return worker is not None and worker.isRunning()
 
-    def get_config(self, name: str) -> Optional[PortConfig]:
+    def get_connection_config(self, name: str) -> Optional[PortConfig]:
         """
         특정 연결의 설정 정보를 반환
 
@@ -308,6 +308,26 @@ class ConnectionController(QObject):
             else:
                 self.error_occurred.emit("", "Cannot send data: No active connection selected.")
 
+    def send_data_to_broadcasting(self, data: bytes) -> None:
+        """
+        broadcasting 활성 연결로 데이터 Broadcasting
+
+        Logic:
+            - 현재 broadcasting 활성화된 워커 리스트를 순회하며 데이터를 전송
+            - send_data_to 메서드를 호출하여 실제 전송 수행
+
+        Args:
+            data: 전송할 바이트 데이터
+        """
+        if not self.workers:
+            self.error_occurred.emit("", "No active connections.")
+            return
+
+        for name, worker in self.workers.items():
+            if worker.isRunning():
+                # TODO : broadcasting 설정 확인 로직 추가 필요
+                self.send_data_to_connection(name, data)
+
     def send_data_to_all(self, data: bytes) -> None:
         """
         모든 활성 연결로 데이터 Broadcasting
@@ -326,6 +346,7 @@ class ConnectionController(QObject):
         for name, worker in self.workers.items():
             if worker.isRunning():
                 self.send_data_to_connection(name, data)
+
     def send_data_to_connection(self, name: str, data: bytes) -> bool:
         """
         특정 연결로 데이터 전송
@@ -368,3 +389,13 @@ class ConnectionController(QObject):
         """
         for worker in self.workers.values():
             worker.set_rts(state)
+
+    def set_broadcast(self, state: bool) -> None:
+        """
+        모든 포트의 broadcasting 설정
+
+        Args:
+            state: True면 broadcasting ON, False면 broadcasting OFF
+        """
+        for worker in self.workers.values():
+            worker.set_broadcast(state)

@@ -44,6 +44,9 @@ class DataLogWidget(QWidget):
 
     데이터(RX/TX)를 표시하고 HEX/ASCII 전환, 일시 정지 등의 기능을 제공합니다.
     """
+
+    tx_broadcast_changed = pyqtSignal(bool)
+
     # 로깅 시그널 (포트명은 Presenter에서 관리)
     data_logging_started = pyqtSignal(str)  # filepath
     data_logging_stopped = pyqtSignal()
@@ -384,6 +387,7 @@ class DataLogWidget(QWidget):
             state (int): 체크박스 상태.
         """
         self.tx_broadcast_enabled = (state == Qt.Checked)
+        self.tx_broadcast_changed.emit(self.tx_broadcast_enabled)
 
     @pyqtSlot(int)
     def on_data_log_filter_changed(self, state: int) -> None:

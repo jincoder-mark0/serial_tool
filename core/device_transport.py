@@ -87,6 +87,18 @@ class DeviceTransport(ABC):
         pass
 
     # ---------------------------------------------------------
+    # 전송 제어 신호
+    # ---------------------------------------------------------
+    def set_broadcast(self, state: bool) -> None:
+        """
+        broadcasting 설정
+
+        Args:
+            state: True면 broadcasting ON, False면 broadcasting OFF
+        """
+        pass
+
+    # ---------------------------------------------------------
     # 하드웨어 제어 신호 (선택적 구현)
     # ---------------------------------------------------------
     def set_dtr(self, state: bool) -> None:

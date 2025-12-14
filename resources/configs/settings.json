@@ -22,7 +22,8 @@
     "window_x": 283,
     "window_y": 53,
     "splitter_state": "AAAA/wAAAAEAAAACAAAEfQAAAcMB/////wEAAAABAA==",
-    "saved_right_section_width": 451
+    "saved_right_section_width": 451,
+    "proportional_font_size": 10
   },
   "ports": {
     "default_config": {
@@ -63,14 +64,16 @@
     ]
   },
   "manual_control": {
-    "input_text": "xxzc\nsdf\ndf\nd\n",
-    "hex_mode": true,
-    "prefix_chk": true,
-    "suffix_chk": true,
-    "rts_chk": true,
-    "dtr_chk": true,
-    "local_echo_chk": false,
-    "command_history": []
+    "manual_control_widget": {
+      "input_text": "",
+      "hex_mode": false,
+      "prefix_chk": false,
+      "suffix_chk": false,
+      "rts_chk": false,
+      "dtr_chk": false,
+      "local_echo_chk": true,
+      "command_history": []
+    }
   },
   "macro_list": {
     "commands": [
@@ -146,5 +149,19 @@
   },
   "logging": {
     "path": "E:\\_Python\\serial_tool2"
+  },
+  "packet": {
+    "parser_type": 0,
+    "delimiters": [
+      "\\r\\n"
+    ],
+    "packet_length": 64,
+    "at_color_ok": true,
+    "at_color_error": true,
+    "at_color_urc": true,
+    "at_color_prompt": true,
+    "buffer_size": 100,
+    "realtime": true,
+    "autoscroll": true
   }
 }

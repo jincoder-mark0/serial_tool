@@ -51,7 +51,7 @@ class ResourcePath:
                 self.base_dir = Path(os._MEIPASS)
             else:
                 # 개발 모드: resource_path.py가 있는 디렉토리가 루트
-                self.base_dir = Path(__file__).parent
+                self.base_dir = Path(__file__).parent.parent
         else:
             self.base_dir = Path(base_dir)
 

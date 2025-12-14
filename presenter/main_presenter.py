@@ -180,7 +180,6 @@ class MainPresenter(QObject):
             self.settings_manager.set(ConfigKeys.MANUAL_CONTROL_STATE, state[ConfigKeys.MANUAL_CONTROL_STATE])
         if ConfigKeys.PORTS_TABS_STATE in state:
             self.settings_manager.set(ConfigKeys.PORTS_TABS_STATE, state[ConfigKeys.PORTS_TABS_STATE])
-
         if ConfigKeys.MACRO_COMMANDS in state:
             self.settings_manager.set(ConfigKeys.MACRO_COMMANDS, state[ConfigKeys.MACRO_COMMANDS])
         if ConfigKeys.MACRO_CONTROL_STATE in state:

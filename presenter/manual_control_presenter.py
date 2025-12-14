@@ -86,8 +86,8 @@ class ManualControlPresenter(QObject):
             return
         # SettingsManager에서 값 획득 후 CommandProcessor에 주입
 
-        prefix = self.settings_manager.get(ConfigKeys.CMD_PREFIX) if command.prefix else None
-        suffix = self.settings_manager.get(ConfigKeys.CMD_SUFFIX) if command.suffix else None
+        prefix = self.settings_manager.get(ConfigKeys.COMMAND_PREFIX) if command.prefix else None
+        suffix = self.settings_manager.get(ConfigKeys.COMMAND_SUFFIX) if command.suffix else None
 
         try:
             data = CommandProcessor.process_command(command.text, command.hex_mode, prefix=prefix, suffix=suffix)
@@ -96,7 +96,7 @@ class ManualControlPresenter(QObject):
             return
 
         # Controller에 DTO의 브로드캐스트 플래그 전달
-        self.connection_controller.send_manual_command(data, command.is_broadcast)
+        self.connection_controller.send_data_to_broadcasting(data)
 
         mode_str = "Broadcast" if command.is_broadcast else "Unicast"
         logger.info(f"Manual command sent ({mode_str}): {command.text}")

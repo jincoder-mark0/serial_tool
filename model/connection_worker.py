@@ -211,3 +211,12 @@ class ConnectionWorker(QThread):
             state (bool): True=ON, False=OFF
         """
         self.transport.set_rts(state)
+
+    def set_broadcast(self, state: bool) -> None:
+        """
+        broadcasting 설정
+
+        Args:
+            state: True면 broadcasting ON, False면 broadcasting OFF
+        """
+        self.transport.set_broadcast(state)
