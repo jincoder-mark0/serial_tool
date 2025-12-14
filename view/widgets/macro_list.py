@@ -9,8 +9,8 @@ from view.managers.language_manager import language_manager
 
 class MacroListWidget(QWidget):
     """
-    명령어 목록(Macro List)을 관리하는 위젯 클래스입니다.
-    명령어의 추가, 삭제, 순서 변경 및 선택 기능을 제공합니다.
+    Command 목록(Macro List)을 관리하는 위젯 클래스입니다.
+    Command의 추가, 삭제, 순서 변경 및 선택 기능을 제공합니다.
     """
 
     # 시그널 정의
@@ -89,7 +89,7 @@ class MacroListWidget(QWidget):
         self.macro_table = QTableView()
         self.macro_table.setProperty("class", "fixed-font")  # 테이블에 고정폭 폰트 적용
         self.macro_table_model = QStandardItemModel()
-        # 컬럼: 선택, 접두사, 명령어, 접미사, HEX, 지연시간, 전송버튼
+        # 컬럼: 선택, 접두사, Command, 접미사, HEX, 지연시간, 전송버튼
         self.update_header_labels()
         self.macro_table.setModel(self.macro_table_model)
         self.macro_table.setToolTip(language_manager.get_text("macro_list_table_command"))
@@ -275,7 +275,7 @@ class MacroListWidget(QWidget):
             # 옵션 복사
             enabled = self.macro_table_model.item(copy_source_row, 0).checkState() == Qt.Checked
             prefix = self.macro_table_model.item(copy_source_row, 1).checkState() == Qt.Checked
-            command = "" # 명령어는 복사하지 않음 (빈 칸)
+            command = "" # Command는 복사하지 않음 (빈 칸)
             suffix = self.macro_table_model.item(copy_source_row, 3).checkState() == Qt.Checked
             hex_mode = self.macro_table_model.item(copy_source_row, 4).checkState() == Qt.Checked
             delay = self.macro_table_model.item(copy_source_row, 5).text()
@@ -291,7 +291,7 @@ class MacroListWidget(QWidget):
 
         Args:
             row_idx (int): 삽입할 행 인덱스.
-            command (str): 명령어.
+            command (str): Command.
             prefix (bool): 접두사 사용 여부.
             hex_mode (bool): HEX 모드 여부.
             suffix (bool): 접미사 사용 여부.
@@ -479,20 +479,20 @@ class MacroListWidget(QWidget):
 
     def save_state(self) -> list:
         """
-        현재 명령어 목록을 리스트로 반환합니다.
+        현재 Command 목록을 리스트로 반환합니다.
 
         Returns:
-            list: 명령어 목록 데이터.
+            list: Command 목록 데이터.
         """
         commands = self.get_macro_list()
         return commands
 
     def load_state(self, state: list) -> None:
         """
-        저장된 명령어 목록을 위젯에 적용합니다.
+        저장된 Command 목록을 위젯에 적용합니다.
 
         Args:
-            state (list): 명령어 목록 데이터.
+            state (list): Command 목록 데이터.
         """
         if not state:
             return

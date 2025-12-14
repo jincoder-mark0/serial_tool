@@ -32,7 +32,7 @@ from view.dialogs import (
 from view.managers.theme_manager import ThemeManager
 from view.managers.language_manager import language_manager
 from common.constants import ConfigKeys
-from common.dtos import FontConfig, ManualCommand # DTO 임포트
+from common.dtos import FontConfig, ManualCommand, MainWindowState, PreferencesState
 
 class MainWindow(QMainWindow):
     """
@@ -44,7 +44,7 @@ class MainWindow(QMainWindow):
 
     # Presenter 전달용 시그널
     close_requested = pyqtSignal()
-    settings_save_requested = pyqtSignal(dict)
+    settings_save_requested = pyqtSignal(object) # Changed to object (PreferencesState)
     preferences_requested = pyqtSignal()
 
     # FontConfig DTO 전달을 위해 object로 변경
@@ -135,9 +135,9 @@ class MainWindow(QMainWindow):
     # --------------------------------------------------------
     # State Management (MVP Support)
     # --------------------------------------------------------
-    def restore_state(self, settings: dict) -> None:
+    def apply_state(self, state: MainWindowState, font_config: FontConfig) -> None:
         """
-        Presenter로부터 설정을 전달받아 UI 상태를 복원합니다.
+        Presenter로부터 전달받은 상태 DTO를 UI에 적용합니다.
 
         Logic:
             - 폰트, 테마 적용
@@ -146,107 +146,67 @@ class MainWindow(QMainWindow):
             - 하위 섹션 상태 복원
 
         Args:
-            settings (dict): 전체 설정 데이터
+            state (MainWindowState): 메인 윈도우 상태 DTO
+            font_config (FontConfig): 폰트 설정 DTO (별도 분리 가능)
         """
-        # Helper to safely get nested keys
-        def get_val(path, default=None):
-            keys = path.split('.')
-            val = settings
-            try:
-                for k in keys:
-                    val = val.get(k, {})
-                return val if val != {} else default
-            except AttributeError:
-                return default
+        # 1. 폰트 적용
+        # ThemeManager의 restore 기능 대신 DTO 값으로 직접 설정
+        self.theme_manager.set_proportional_font(font_config.prop_family, font_config.prop_size)
+        self.theme_manager.set_fixed_font(font_config.fixed_family, font_config.fixed_size)
 
-        # 1. 폰트 및 테마 복원
-        self.theme_manager.restore_fonts_from_settings(settings)
         prop_font = self.theme_manager.get_proportional_font()
         QApplication.instance().setFont(prop_font)
 
-        theme = get_val(ConfigKeys.THEME, 'dark')
-        self.switch_theme(theme)
+        # 2. 윈도우 지오메트리
+        self.resize(state.width, state.height)
+        if state.x is not None and state.y is not None:
+            self.move(state.x, state.y)
 
-        # 2. 윈도우 지오메트리 복원
-        width = get_val(ConfigKeys.WINDOW_WIDTH, 1400)
-        height = get_val(ConfigKeys.WINDOW_HEIGHT, 900)
-        self.resize(width, height)
+        # 3. 우측 패널 표시 상태
+        self.menu_bar.set_right_section_checked(state.right_panel_visible)
+        self.right_section.setVisible(state.right_panel_visible)
+        self._saved_right_width = state.saved_right_width
 
-        x = get_val(ConfigKeys.WINDOW_X)
-        y = get_val(ConfigKeys.WINDOW_Y)
-        if x is not None and y is not None:
-            self.move(x, y)
-
-        # 3. 우측 패널 표시 상태 복원
-        right_section_visible = get_val(ConfigKeys.RIGHT_PANEL_VISIBLE, True)
-        self.menu_bar.set_right_section_checked(right_section_visible)
-        self.right_section.setVisible(right_section_visible)
-
-        # 4. 저장된 우측 패널 너비 복원
-        ui_settings = settings.get("ui", {})
-        self._saved_right_width = ui_settings.get("saved_right_section_width")
-
-        # 5. 스플리터 상태 복원
-        splitter_state = get_val(ConfigKeys.SPLITTER_STATE)
-        if splitter_state:
+        # 4. 스플리터 상태
+        if state.splitter_state:
             try:
-                self.splitter.restoreState(QByteArray.fromBase64(splitter_state.encode()))
+                self.splitter.restoreState(QByteArray.fromBase64(state.splitter_state.encode()))
             except Exception:
                 pass
         else:
             self.splitter.setStretchFactor(0, 1)
             self.splitter.setStretchFactor(1, 1)
 
-        # 6. 하위 섹션 상태 복원
-        left_section_state = {
-            "manual_control": get_val(ConfigKeys.MANUAL_CONTROL_STATE, {}),
-            "ports": get_val(ConfigKeys.PORTS_TABS_STATE, [])
-        }
-        self.left_section.load_state(left_section_state)
+        # 5. 하위 섹션 상태 복원
+        # Sub-panel 상태는 딕셔너리로 전달됨 (DTO 내부 field)
+        self.left_section.load_state(state.left_section_state)
+        self.right_section.load_state(state.right_section_state)
 
-        right_section_state = {
-            "macro_panel": {
-                "commands": get_val(ConfigKeys.MACRO_COMMANDS, []),
-                "control_state": get_val(ConfigKeys.MACRO_CONTROL_STATE, {})
-            }
-        }
-        self.right_section.load_state(right_section_state)
-
-    def get_window_state(self) -> dict:
+    def get_window_state(self) -> MainWindowState:
         """
-        현재 윈도우 상태 반환
+        현재 윈도우 상태를 DTO로 반환
 
         Returns:
-            dict: 윈도우 및 하위 위젯 상태
+            MainWindowState: 윈도우 및 하위 위젯 상태 DTO
         """
-        state = {}
+        state = MainWindowState()
 
         # 1. 윈도우 기본 설정
-        state[ConfigKeys.WINDOW_WIDTH] = self.width()
-        state[ConfigKeys.WINDOW_HEIGHT] = self.height()
-        state[ConfigKeys.WINDOW_X] = self.x()
-        state[ConfigKeys.WINDOW_Y] = self.y()
-        state[ConfigKeys.SPLITTER_STATE] = self.splitter.saveState().toBase64().data().decode()
-        state[ConfigKeys.RIGHT_PANEL_VISIBLE] = self.right_section.isVisible()
+        state.width = self.width()
+        state.height = self.height()
+        state.x = self.x()
+        state.y = self.y()
+        state.splitter_state = self.splitter.saveState().toBase64().data().decode()
+        state.right_panel_visible = self.right_section.isVisible()
 
         if self.right_section.isVisible():
-            state["saved_right_section_width"] = self.right_section.width()
+            state.saved_right_width = self.right_section.width()
         else:
-            state["saved_right_section_width"] = getattr(self, '_saved_right_width', None)
+            state.saved_right_width = getattr(self, '_saved_right_width', None)
 
-        # 2. Left Section 상태
-        left_state = self.left_section.save_state()
-        if 'manual_control_panel' in left_state:
-            state[ConfigKeys.MANUAL_CONTROL_STATE] = left_state['manual_control_panel']
-        if 'ports' in left_state:
-            state[ConfigKeys.PORTS_TABS_STATE] = left_state['ports']
-
-        # 3. Right Section 상태
-        right_state = self.right_section.save_state()
-        if 'macro_panel' in right_state:
-            macro_data = right_state['macro_panel']
-            state[ConfigKeys.MACRO_COMMANDS] = macro_data.get('commands', [])
-            state[ConfigKeys.MACRO_CONTROL_STATE] = macro_data.get('control_state', {})
+        # 2. 하위 섹션 상태 (딕셔너리로 수집)
+        state.left_section_state = self.left_section.save_state()
+        state.right_section_state = self.right_section.save_state()
 
         return state
 
@@ -410,14 +370,14 @@ class MainWindow(QMainWindow):
 
             self.show_status_message("Font settings updated", 2000)
 
-    def open_preferences_dialog(self, settings: dict) -> None:
+    def open_preferences_dialog(self, state: PreferencesState) -> None:
         """
-        설정 다이얼로그 열기
+        설정 다이얼로그 열기 (DTO 주입)
 
         Args:
-            settings (dict): Presenter가 전달한 현재 설정
+            state (PreferencesState): 설정 상태
         """
-        dialog = PreferencesDialog(self, settings)
+        dialog = PreferencesDialog(self, state)
         dialog.settings_changed.connect(self.on_settings_change_requested)
         dialog.exec_()
 
@@ -437,9 +397,14 @@ class MainWindow(QMainWindow):
 
         dialog.exec_()
 
-    def on_settings_change_requested(self, settings: dict) -> None:
-        """설정 변경 요청 처리"""
-        self.settings_save_requested.emit(settings)
+    def on_settings_change_requested(self, new_state: PreferencesState) -> None:
+        """
+        설정 변경 요청 처리
+
+        Args:
+            new_state (PreferencesState): 변경된 설정 상태
+        """
+        self.settings_save_requested.emit(new_state)
 
     def on_language_changed(self, language_code: str) -> None:
         """
@@ -491,14 +456,13 @@ class MainWindow(QMainWindow):
         else:
             # 숨기기: 윈도우 폭 감소
             # 현재 패널 너비 저장
-            self._saved_left_width = self.left_section.width()
             self._saved_right_width = self.right_section.width()
 
             # 왼쪽 패널의 현재 너비를 기준으로 윈도우 크기 재조정
             # 중앙 위젯의 좌우 마진을 동적으로 계산
             margins = self.centralWidget().layout().contentsMargins()
             total_margin = margins.left() + margins.right()
-            new_window_width = self._saved_left_width + total_margin
 
+            new_window_width = self.left_section.width() + total_margin
             self.right_section.setVisible(False)
             self.resize(new_window_width, self.height())

@@ -21,6 +21,7 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 * EventRouter를 통한 전역 이벤트 수신 및 라우팅
 * SettingsManager를 통한 설정 동기화 및 View 초기 상태 복원
 * QTimer & defaultdict: UI 업데이트 스로틀링 구현
+* DTO를 활용한 데이터 교환 (View 로직 제거)
 """
 from collections import defaultdict
 from PyQt5.QtCore import QObject, QTimer, QDateTime
@@ -39,7 +40,10 @@ from core.data_logger import data_logger_manager
 from view.managers.language_manager import language_manager
 from core.logger import logger
 from common.constants import ConfigKeys, EventTopics
-from common.dtos import ManualCommand, PortDataEvent, PortErrorEvent, PacketEvent, FontConfig
+from common.dtos import (
+    ManualCommand, PortDataEvent, PortErrorEvent, PacketEvent, FontConfig,
+    MainWindowState, PreferencesState, ManualControlState
+)
 
 class MainPresenter(QObject):
     """
@@ -54,11 +58,12 @@ class MainPresenter(QObject):
 
         Logic:
             - SettingsManager를 통해 설정 로드
-            - View 상태 복원 (restore_state 호출)
+            - DTO 변환 및 View 상태 복원 (apply_state 호출)
             - Model 인스턴스 생성
             - 하위 Presenter 초기화 및 의존성 주입
+            - ManualControl 상태 복원
             - EventRouter 및 View 시그널 연결
-            - 데이터 수신 직접 연결 및 UI 버퍼링 타이머 설정
+            - 데이터 수신 직접 연결(Fast Path) 및 UI 버퍼링 타이머 설정
             - 상태바 업데이트 타이머 시작
 
         Args:
@@ -69,10 +74,17 @@ class MainPresenter(QObject):
 
         # --- 0. 설정 로드 및 View 초기화 (MVP) ---
         self.settings_manager = SettingsManager()
-        all_settings = self.settings_manager.get_all_settings()
 
-        # View에 설정 주입하여 초기 상태 복원
-        self.view.restore_state(all_settings)
+        # 설정 로드 및 DTO 변환
+        all_settings = self.settings_manager.get_all_settings()
+        window_state, font_config = self._create_initial_states(all_settings)
+
+        # View에 설정 주입하여 초기 상태 복원 (DTO 전달)
+        self.view.apply_state(window_state, font_config)
+
+        # 테마 적용 (초기화 후 별도 적용)
+        theme = self.settings_manager.get(ConfigKeys.THEME, 'dark')
+        self.view.switch_theme(theme)
 
         # --- 1. Model 초기화 ---
         self.connection_controller = ConnectionController()
@@ -80,7 +92,6 @@ class MainPresenter(QObject):
         self.event_router = EventRouter()
 
         # --- 2. Sub-Presenter 초기화 ---
-
         # 2.1 Port Control (좌측 탭 관리)
         self.port_presenter = PortPresenter(self.view.port_view, self.connection_controller)
 
@@ -104,6 +115,21 @@ class MainPresenter(QObject):
             self.port_presenter.get_active_port_name
         )
 
+        # ManualControl 상태 복원 (View 복원 후 추출된 상태 주입)
+        # WindowState 내의 딕셔너리에서 데이터 추출
+        manual_settings_dict = window_state.left_section_state.get("manual_control", {}).get("manual_control_widget", {})
+        manual_state_dto = ManualControlState(
+            input_text=manual_settings_dict.get("input_text", ""),
+            hex_mode=manual_settings_dict.get("hex_mode", False),
+            prefix_chk=manual_settings_dict.get("prefix_chk", False),
+            suffix_chk=manual_settings_dict.get("suffix_chk", False),
+            rts_chk=manual_settings_dict.get("rts_chk", False),
+            dtr_chk=manual_settings_dict.get("dtr_chk", False),
+            local_echo_chk=manual_settings_dict.get("local_echo_chk", False),
+            broadcast_chk=manual_settings_dict.get("broadcast_chk", False)
+        )
+        self.manual_control_presenter.load_state(manual_state_dto)
+
         # --- 3. 데이터 수신 최적화 ---
         # EventBus를 거치지 않고 Controller 시그널을 직접 구독하여 오버헤드 감소
         self.connection_controller.data_received.connect(self._on_fast_data_received)
@@ -119,18 +145,17 @@ class MainPresenter(QObject):
 
         # --- 4. EventRouter 시그널 연결 (Model -> Presenter -> View) ---
         # Port Events
-        # [Note] data_received는 Fast Path(_on_fast_data_received)에서 처리하므로 여기서 연결하지 않거나, 로직을 비워둠
         self.event_router.port_opened.connect(self.on_port_opened)
         self.event_router.port_closed.connect(self.on_port_closed)
         self.event_router.port_error.connect(self.on_port_error)
         self.event_router.data_sent.connect(self.on_data_sent)
 
-        # Macro Events (Global Log/Status)
+        # Macro Events
         self.event_router.macro_started.connect(self.on_macro_started)
         self.event_router.macro_finished.connect(self.on_macro_finished)
         self.event_router.macro_error.connect(self.on_macro_error)
 
-        # File Transfer Events (Global Log/Status)
+        # File Transfer Events
         self.event_router.file_transfer_completed.connect(self.on_file_transfer_completed)
         self.event_router.file_transfer_error.connect(self.on_file_transfer_error)
 
@@ -166,8 +191,60 @@ class MainPresenter(QObject):
 
         self.view.log_system_message("Application initialized", "INFO")
 
+    def _create_initial_states(self, settings: dict) -> tuple[MainWindowState, FontConfig]:
+        """
+        설정 딕셔너리를 DTO로 변환하는 헬퍼 메서드
+
+        Args:
+            settings (dict): SettingsManager에서 로드한 Raw 설정
+
+        Returns:
+            tuple[MainWindowState, FontConfig]: 생성된 DTO 튜플
+        """
+        # Helper to safely get nested keys
+        def get_val(path, default=None):
+            keys = path.split('.')
+            val = settings
+            try:
+                for k in keys:
+                    val = val.get(k, {})
+                return val if val != {} else default
+            except AttributeError:
+                return default
+
+        # MainWindowState 생성
+        window_state = MainWindowState(
+            width=get_val(ConfigKeys.WINDOW_WIDTH, 1400),
+            height=get_val(ConfigKeys.WINDOW_HEIGHT, 900),
+            x=get_val(ConfigKeys.WINDOW_X),
+            y=get_val(ConfigKeys.WINDOW_Y),
+            splitter_state=get_val(ConfigKeys.SPLITTER_STATE),
+            right_panel_visible=get_val(ConfigKeys.RIGHT_PANEL_VISIBLE, True),
+            saved_right_width=get_val(ConfigKeys.SAVED_RIGHT_WIDTH),
+            left_section_state={
+                "manual_control": get_val(ConfigKeys.MANUAL_CONTROL_STATE, {}),
+                "ports": get_val(ConfigKeys.PORTS_TABS_STATE, [])
+            },
+            right_section_state={
+                "macro_panel": {
+                    "commands": get_val(ConfigKeys.MACRO_COMMANDS, []),
+                    "control_state": get_val(ConfigKeys.MACRO_CONTROL_STATE, {})
+                }
+            }
+        )
+
+        # FontConfig 생성
+        font_config = FontConfig(
+            prop_family=get_val(ConfigKeys.PROP_FONT_FAMILY, "Segoe UI"),
+            prop_size=get_val(ConfigKeys.PROP_FONT_SIZE, 9),
+            fixed_family=get_val(ConfigKeys.FIXED_FONT_FAMILY, "Consolas"),
+            fixed_size=get_val(ConfigKeys.FIXED_FONT_SIZE, 9)
+        )
+
+        return window_state, font_config
+
     # -------------------------------------------------------------------------
-    # High-Performance Data Handling
+    # [Fast Path] High-Performance Data Handling
     # -------------------------------------------------------------------------
     def _on_fast_data_received(self, port_name: str, data: bytes) -> None:
         """
@@ -185,15 +262,14 @@ class MainPresenter(QObject):
         if not data:
             return
 
-        # 1. 파일 로깅 (Critical Path)
+        # 1. 파일 로깅
         if data_logger_manager.is_logging(port_name):
             data_logger_manager.write(port_name, data)
 
         # 2. 통계 집계
         self.rx_byte_count += len(data)
 
-        # 3. UI 업데이트 버퍼링 (Throttling)
-        # bytearray는 가변 객체이므로 append 대신 extend 사용
+        # 3. UI 업데이트 버퍼링
         self._rx_buffer[port_name].extend(data)
 
     def _flush_rx_buffer_to_ui(self) -> None:
@@ -238,9 +314,35 @@ class MainPresenter(QObject):
     # Standard Event Handlers
     # -------------------------------------------------------------------------
     def on_preferences_requested(self):
-        """Preferences 다이얼로그 요청 처리"""
-        current_settings = self.settings_manager.get_all_settings()
-        self.view.open_preferences_dialog(current_settings)
+        """Preferences 다이얼로그 요청 처리 (DTO 생성)"""
+        settings = self.settings_manager
+
+        # PreferencesState DTO 생성
+        state = PreferencesState(
+            theme=settings.get(ConfigKeys.THEME, "Dark").capitalize(),
+            language=settings.get(ConfigKeys.LANGUAGE, "en"),
+            font_size=settings.get(ConfigKeys.PROP_FONT_SIZE, 10),
+            max_log_lines=settings.get(ConfigKeys.RX_MAX_LINES, 2000),
+            baudrate=settings.get(ConfigKeys.PORT_BAUDRATE, 115200),
+            newline=str(s.get(ConfigKeys.PORT_NEWLINE, "\n")),
+            local_echo=settings.get(ConfigKeys.PORT_LOCAL_ECHO, False),
+            scan_interval=settings.get(ConfigKeys.PORT_SCAN_INTERVAL, 1000),
+            cmd_prefix=settings.get(ConfigKeys.COMMAND_PREFIX, ""),
+            cmd_suffix=settings.get(ConfigKeys.COMMAND_SUFFIX, ""),
+            log_path=settings.get(ConfigKeys.LOG_PATH, ""),
+            parser_type=settings.get(ConfigKeys.PACKET_PARSER_TYPE, 0),
+            delimiters=settings.get(ConfigKeys.PACKET_DELIMITERS, ["\\r\\n"]),
+            packet_length=settings.get(ConfigKeys.PACKET_LENGTH, 64),
+            at_color_ok=settings.get(ConfigKeys.AT_COLOR_OK, True),
+            at_color_error=settings.get(ConfigKeys.AT_COLOR_ERROR, True),
+            at_color_urc=settings.get(ConfigKeys.AT_COLOR_URC, True),
+            at_color_prompt=settings.get(ConfigKeys.AT_COLOR_PROMPT, True),
+            packet_buffer_size=settings.get(ConfigKeys.PACKET_BUFFER_SIZE, 100),
+            packet_realtime=settings.get(ConfigKeys.PACKET_REALTIME, True),
+            packet_autoscroll=settings.get(ConfigKeys.PACKET_AUTOSCROLL, True)
+        )
+
+        self.view.open_preferences_dialog(state)
 
     def on_close_requested(self) -> None:
         """
@@ -255,21 +357,40 @@ class MainPresenter(QObject):
         self._ui_refresh_timer.stop()
         self.status_timer.stop()
 
-        # 윈도우 상태 가져오기
+        # View 상태 가져오기
         state = self.view.get_window_state()
 
-        # 설정 값 업데이트
-        self.settings_manager.set(ConfigKeys.WINDOW_WIDTH, state.get(ConfigKeys.WINDOW_WIDTH))
-        self.settings_manager.set(ConfigKeys.WINDOW_HEIGHT, state.get(ConfigKeys.WINDOW_HEIGHT))
-        self.settings_manager.set(ConfigKeys.WINDOW_X, state.get(ConfigKeys.WINDOW_X))
-        self.settings_manager.set(ConfigKeys.WINDOW_Y, state.get(ConfigKeys.WINDOW_Y))
-        self.settings_manager.set(ConfigKeys.SPLITTER_STATE, state.get(ConfigKeys.SPLITTER_STATE))
-        self.settings_manager.set(ConfigKeys.RIGHT_PANEL_VISIBLE, state.get(ConfigKeys.RIGHT_PANEL_VISIBLE))
+        # ManualControl 상태는 Presenter에서 최신 데이터(History 포함) 가져오기
+        manual_state_dto = self.manual_control_presenter.get_state()
+
+        # DTO -> Dict 변환 (설정 파일 포맷 호환성 유지)
+        manual_state_dict = {
+            "manual_control_widget": {
+                "input_text": manual_state_dto.input_text,
+                "hex_mode": manual_state_dto.hex_mode,
+                "prefix_chk": manual_state_dto.prefix_chk,
+                "suffix_chk": manual_state_dto.suffix_chk,
+                "rts_chk": manual_state_dto.rts_chk,
+                "dtr_chk": manual_state_dto.dtr_chk,
+                "local_echo_chk": manual_state_dto.local_echo_chk,
+                "broadcast_chk": manual_state_dto.broadcast_chk
+            }
+        }
+
+        # State 객체의 left_section_state 업데이트
+        state.left_section_state["manual_control"] = manual_state_dict
+
+        # SettingsManager 업데이트
+        self.settings_manager.set(ConfigKeys.WINDOW_WIDTH, state.width)
+        self.settings_manager.set(ConfigKeys.WINDOW_HEIGHT, state.height)
+        self.settings_manager.set(ConfigKeys.WINDOW_X, state.x)
+        self.settings_manager.set(ConfigKeys.WINDOW_Y, state.y)
+        self.settings_manager.set(ConfigKeys.SPLITTER_STATE, state.splitter_state)
+        self.settings_manager.set(ConfigKeys.RIGHT_PANEL_VISIBLE, state.right_panel_visible)
 
         # 저장된 패널 너비 저장 (Custom Key 사용)
-        if "saved_right_section_width" in state:
-             self.settings_manager.set("ui.saved_right_section_width", state["saved_right_section_width"])
-
+        if state.saved_right_width is not None:
+             self.settings_manager.set(ConfigKeys.SAVED_RIGHT_WIDTH, state.saved_right_width)
         if ConfigKeys.MANUAL_CONTROL_STATE in state:
             self.settings_manager.set(ConfigKeys.MANUAL_CONTROL_STATE, state[ConfigKeys.MANUAL_CONTROL_STATE])
         if ConfigKeys.PORTS_TABS_STATE in state:
@@ -288,7 +409,7 @@ class MainPresenter(QObject):
 
         logger.info("Application shutdown sequence completed.")
 
-    def on_settings_change_requested(self, new_settings: dict) -> None:
+    def on_settings_change_requested(self, new_state: PreferencesState) -> None:
         """
         설정 저장 요청 처리
 
@@ -299,82 +420,52 @@ class MainPresenter(QObject):
             - 하위 Presenter(PacketPresenter) 설정 전파
 
         Args:
-            new_settings (dict): 변경할 설정 딕셔너리
+            new_state (PreferenceState) : 변경할 설정
         """
-        # 설정 키 매핑
-        settings_map = {
-            'theme': ConfigKeys.THEME,
-            'language': ConfigKeys.LANGUAGE,
-            'proportional_font_size': ConfigKeys.PROP_FONT_SIZE,
-            'max_log_lines': ConfigKeys.RX_MAX_LINES,
-            'command_prefix': ConfigKeys.COMMAND_PREFIX,
-            'command_suffix': ConfigKeys.COMMAND_SUFFIX,
-            'port_baudrate': ConfigKeys.PORT_BAUDRATE,
-            'port_newline': ConfigKeys.PORT_NEWLINE,
-            'port_local_echo': ConfigKeys.PORT_LOCAL_ECHO,
-            'port_scan_interval': ConfigKeys.PORT_SCAN_INTERVAL,
-            'log_path': ConfigKeys.LOG_PATH,
+        # 1. SettingsManager 업데이트
+        settings = self.settings_manager
+        settings.set(ConfigKeys.THEME, new_state.theme.lower())
+        settings.set(ConfigKeys.LANGUAGE, new_state.language)
+        settings.set(ConfigKeys.PROP_FONT_SIZE, new_state.font_size)
+        settings.set(ConfigKeys.RX_MAX_LINES, new_state.max_log_lines)
+        settings.set(ConfigKeys.PORT_BAUDRATE, new_state.baudrate)
+        settings.set(ConfigKeys.PORT_NEWLINE, new_state.newline)
+        settings.set(ConfigKeys.PORT_LOCAL_ECHO, new_state.local_echo)
+        settings.set(ConfigKeys.PORT_SCAN_INTERVAL, new_state.scan_interval)
+        settings.set(ConfigKeys.COMMAND_PREFIX, new_state.cmd_prefix)
+        settings.set(ConfigKeys.COMMAND_SUFFIX, new_state.cmd_suffix)
+        settings.set(ConfigKeys.LOG_PATH, new_state.log_path)
 
-            # Packet Settings
-            'parser_type': ConfigKeys.PACKET_PARSER_TYPE,
-            'delimiters': ConfigKeys.PACKET_DELIMITERS,
-            'packet_length': ConfigKeys.PACKET_LENGTH,
-            'at_color_ok': ConfigKeys.AT_COLOR_OK,
-            'at_color_error': ConfigKeys.AT_COLOR_ERROR,
-            'at_color_urc': ConfigKeys.AT_COLOR_URC,
-            'at_color_prompt': ConfigKeys.AT_COLOR_PROMPT,
+        # Packet Settings
+        settings.set(ConfigKeys.PACKET_PARSER_TYPE, new_state.parser_type)
+        settings.set(ConfigKeys.PACKET_DELIMITERS, new_state.delimiters)
+        settings.set(ConfigKeys.PACKET_LENGTH, new_state.packet_length)
+        settings.set(ConfigKeys.AT_COLOR_OK, new_state.at_color_ok)
+        settings.set(ConfigKeys.AT_COLOR_ERROR, new_state.at_color_error)
+        settings.set(ConfigKeys.AT_COLOR_URC, new_state.at_color_urc)
+        settings.set(ConfigKeys.AT_COLOR_PROMPT, new_state.at_color_prompt)
+        settings.set(ConfigKeys.PACKET_BUFFER_SIZE, new_state.packet_buffer_size)
+        settings.set(ConfigKeys.PACKET_REALTIME, new_state.packet_realtime)
+        settings.set(ConfigKeys.PACKET_AUTOSCROLL, new_state.packet_autoscroll)
 
-            # Inspector Settings
-            'packet_buffer_size': ConfigKeys.PACKET_BUFFER_SIZE,
-            'packet_realtime': ConfigKeys.PACKET_REALTIME,
-            'packet_autoscroll': ConfigKeys.PACKET_AUTOSCROLL,
-        }
+        settings.save_settings()
 
-        # 데이터 변환 및 저장
-        for key, value in new_settings.items():
-            final_value = value
+        # 2. UI 및 로직 즉시 반영
+        self.view.switch_theme(new_state.theme.lower())
+        language_manager.set_language(new_state.language)
 
-            # 데이터 변환 (Data Transformation)
-            if key == 'theme':
-                final_value = value.lower()
-            elif key == 'port_baudrate':
-                try:
-                    final_value = int(value)
-                except ValueError:
-                    continue
+        count = self.view.get_port_tabs_count()
+        for i in range(count):
+            widget = self.view.get_port_tab_widget(i)
+            if hasattr(widget, 'data_log_widget'):
+                widget.data_log_widget.set_max_lines(new_state.max_log_lines)
 
-            setting_path = settings_map.get(key)
-            if setting_path:
-                self.settings_manager.set(setting_path, final_value)
+        self.manual_control_presenter.update_local_echo_setting(new_state.local_echo)
 
-        # UI 업데이트
-        if 'theme' in new_settings:
-            self.view.switch_theme(new_settings['theme'].lower())
-
-        if 'language' in new_settings:
-            language_manager.set_language(new_settings['language'])
-
-        # max_log_lines 설정 변경 시 모든 DataLogWidget에 적용
-        if 'max_log_lines' in new_settings:
-            try:
-                max_lines_int = int(new_settings['max_log_lines'])
-                count = self.view.get_port_tabs_count()
-                for i in range(count):
-                    widget = self.view.get_port_tab_widget(i)
-                    if hasattr(widget, 'data_log_widget'):
-                        widget.data_log_widget.set_max_lines(max_lines_int)
-            except (ValueError, TypeError):
-                logger.warning("Invalid max_log_lines value")
-
-        # Local Echo 설정 변경 반영
-        if 'port_local_echo' in new_settings:
-            self.manual_control_presenter.update_local_echo_setting(new_settings['port_local_echo'])
-
-        # PacketPresenter 설정 업데이트 요청
-        self.packet_presenter.apply_settings()
-
-        # 즉시 저장
-        self.settings_manager.save_settings()
+        # PacketPresenter 직접 호출 제거 -> EventBus 발행
+        # 설정 변경 이벤트 발행 (확장성)
+        from core.event_bus import event_bus
+        event_bus.publish(EventTopics.SETTINGS_CHANGED, new_state)
 
         self.view.show_status_message("Settings updated", 2000)
         self.view.log_system_message("Settings updated", "INFO")
@@ -434,6 +525,7 @@ class MainPresenter(QObject):
     def on_data_received(self, event: PortDataEvent) -> None:
         """
         데이터 수신 처리 (EventBus)
+        Fast Path 사용으로 인해 이곳은 비워둡니다.
 
         [Note] UI 업데이트 로직은 _on_fast_data_received 및
         _flush_rx_buffer_to_ui로 이관되었습니다.
@@ -514,7 +606,7 @@ class MainPresenter(QObject):
             - 데이터 전송 (ConnectionController)
 
         Args:
-            command (ManualCommand): 매크로 명령어
+            command (ManualCommand): 매크로 Command
         """
         active_port = self.port_presenter.get_active_port_name()
         if not active_port or not self.connection_controller.is_connection_open(active_port):
@@ -601,53 +693,51 @@ class MainPresenter(QObject):
             rx_widget = panel.data_log_widget
             # 중복 연결 방지를 위해 disconnect 시도
             try:
-                rx_widget.data_logging_started.disconnect(self._on_data_logging_started)
-                rx_widget.data_logging_stopped.disconnect(self._on_data_logging_stopped)
+                rx_widget.logging_start_requested.disconnect()
+                rx_widget.logging_stop_requested.disconnect()
             except TypeError:
                 pass
 
-            rx_widget.data_logging_started.connect(self._on_data_logging_started)
-            rx_widget.data_logging_stopped.connect(self._on_data_logging_stopped)
+            # 시그널 연결 (인자 없이 호출되므로 lambda로 panel 전달)
+            rx_widget.logging_start_requested.connect(lambda: self._on_logging_start_requested(panel))
+            rx_widget.logging_stop_requested.connect(lambda: self._on_logging_stop_requested(panel))
 
-    def _get_port_panel_from_sender(self):
-        """시그널 발신 패널 찾기"""
-        sender = self.sender()
-        count = self.view.get_port_tabs_count()
-        for i in range(count):
-            widget = self.view.get_port_tab_widget(i)
-            if hasattr(widget, 'data_log_widget') and widget.data_log_widget == sender:
-                return widget
-        return None
-
-    def _on_data_logging_started(self, filepath: str) -> None:
+    def _on_logging_start_requested(self, panel) -> None:
         """
-        로깅 시작 처리
+        로깅 시작 요청 처리
 
-        Args:
-            filepath: 로깅 파일 경로
+        Logic:
+            1. View의 다이얼로그 호출 메서드 사용 (파일명 획득)
+            2. Model(DataLoggerManager) 호출
+            3. 성공 시 View 상태 업데이트
         """
-        panel = self._get_port_panel_from_sender()
-        if not panel:
+        # 1. 파일 경로 획득 (View Helper)
+        filepath = panel.data_log_widget.show_save_log_dialog()
+        if not filepath:
+            panel.data_log_widget.set_logging_active(False)
             return
 
         port_name = panel.get_port_name()
-
         if not port_name:
             logger.warning("Cannot start logging: No port opened")
+            panel.data_log_widget.set_logging_active(False)
             return
 
+        # 2. Model 호출
         if data_logger_manager.start_logging(port_name, filepath):
             logger.info(f"Logging started: {port_name} -> {filepath}")
+            # 3. View 업데이트
+            panel.data_log_widget.set_logging_active(True)
         else:
             logger.error(f"Failed to start logging: {filepath}")
+            panel.data_log_widget.set_logging_active(False)
 
-    def _on_data_logging_stopped(self) -> None:
-        """로깅 중단 핸들러"""
-        panel = self._get_port_panel_from_sender()
-        if not panel:
-            return
-
+    def _on_logging_stop_requested(self, panel) -> None:
+        """로깅 중단 요청 처리"""
         port_name = panel.get_port_name()
         if port_name and data_logger_manager.is_logging(port_name):
             data_logger_manager.stop_logging(port_name)
             logger.info(f"Logging stopped: {port_name}")
+
+        # View 상태 업데이트
+        panel.data_log_widget.set_logging_active(False)

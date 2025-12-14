@@ -22,7 +22,7 @@ from PyQt5.QtCore import QObject
 from typing import Callable, Optional
 from view.panels.manual_control_panel import ManualControlPanel
 from model.connection_controller import ConnectionController
-from common.dtos import ManualCommand
+from common.dtos import ManualCommand, ManualControlState
 from core.settings_manager import SettingsManager
 from core.command_processor import CommandProcessor
 from core.logger import logger
@@ -61,6 +61,13 @@ class ManualControlPresenter(QObject):
         self.view.rts_changed.connect(self.on_rts_changed)
         self.view.dtr_changed.connect(self.on_dtr_changed)
 
+        # # Panel을 통해 위젯 시그널에 접근
+        # if self.view.manual_control_widget:
+        #     widget = self.view.manual_control_widget
+        #     widget.send_requested.connect(self.on_send_requested)
+        #     widget.rts_changed.connect(self.on_rts_changed)
+        #     widget.dtr_changed.connect(self.on_dtr_changed)
+
         self._apply_initial_settings()
 
     def _apply_initial_settings(self) -> None:
@@ -90,7 +97,7 @@ class ManualControlPresenter(QObject):
             - 데이터 전송 및 Local Echo 처리
 
         Args:
-            command (ManualCommand): 전송할 명령어 및 옵션이 담긴 DTO
+            command (ManualCommand): 전송할 Command 및 옵션이 담긴 DTO
         """
         if not self.connection_controller.has_active_connection:
             logger.warning("Manual Send: No active connection")
@@ -152,3 +159,46 @@ class ManualControlPresenter(QObject):
         if self.connection_controller.has_active_connection:
             self.connection_controller.set_dtr(state)
             logger.info(f"DTR changed to {state}")
+
+    # -------------------------------------------------------------------------
+    # State Management (Persistence)
+    # -------------------------------------------------------------------------
+    def get_state(self) -> ManualControlState:
+        """
+        현재 상태(UI 상태)를 DTO로 반환
+        """
+        # View의 UI 상태 가져오기 (dict)
+        ui_state = self.view.manual_control_widget.save_state() if self.view.manual_control_widget else {}
+
+        # DTO 생성
+        return ManualControlState(
+            input_text=ui_state.get("input_text", ""),
+            hex_mode=ui_state.get("hex_mode", False),
+            prefix_chk=ui_state.get("prefix_chk", False),
+            suffix_chk=ui_state.get("suffix_chk", False),
+            rts_chk=ui_state.get("rts_chk", False),
+            dtr_chk=ui_state.get("dtr_chk", False),
+            local_echo_chk=ui_state.get("local_echo_chk", False),
+            broadcast_chk=ui_state.get("broadcast_chk", False)
+        )
+
+    def load_state(self, state: ManualControlState) -> None:
+        """
+        저장된 상태 DTO를 복원
+        """
+        if not state:
+            return
+
+        # View 상태 복원 (Dict로 변환하여 전달)
+        view_state = {
+            "input_text": state.input_text,
+            "hex_mode": state.hex_mode,
+            "prefix_chk": state.prefix_chk,
+            "suffix_chk": state.suffix_chk,
+            "rts_chk": state.rts_chk,
+            "dtr_chk": state.dtr_chk,
+            "local_echo_chk": state.local_echo_chk,
+            "broadcast_chk": state.broadcast_chk
+        }
+        if self.view.manual_control_widget:
+            self.view.manual_control_widget.load_state(view_state)

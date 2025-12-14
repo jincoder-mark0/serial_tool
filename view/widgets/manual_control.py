@@ -1,19 +1,19 @@
 """
 ManualControlWidget 모듈
 
-사용자 명령어 입력, 전송 제어 및 포트 신호(RTS/DTR) 설정을 담당합니다.
+사용자 Command 입력, 전송 제어 및 포트 신호(RTS/DTR) 설정을 담당합니다.
 
 ## WHY
-* 사용자가 직접 포트에 명령어를 전송할 수 있는 인터페이스 필요
+* 사용자가 직접 포트에 Command를 전송할 수 있는 인터페이스 필요
 * HEX/ASCII 모드, 흐름 제어 등 전송 옵션의 직관적인 설정 필요
-* 명령어 히스토리 기능을 통한 반복 작업 효율성 증대
+* Command History 기능을 통한 반복 작업 효율성 증대
 
 ## WHAT
-* 명령어 입력(QSmartTextEdit) 및 전송 버튼
+* Command 입력(QSmartTextEdit) 및 전송 버튼
 * 제어 옵션(HEX, Prefix, Suffix, Local Echo) 체크박스
 * Broadcast 체크박스 추가
 * 하드웨어 흐름 제어(RTS, DTR) 체크박스 및 시그널 발생
-* 명령어 히스토리(MRU) 관리
+* Command History(MRU) 관리
 
 ## HOW
 * QVBoxLayout 및 QGridLayout을 사용한 컴팩트 레이아웃 구성
@@ -34,13 +34,15 @@ from common.constants import MAX_COMMAND_HISTORY_SIZE
 
 class ManualControlWidget(QWidget):
     """
-    수동 명령어 입력 및 전송 위젯 클래스
+    수동 Command 입력 및 전송 위젯 클래스
 
     사용자 입력을 받아 시그널을 방출하며, 포트 제어 신호를 설정
     """
 
     # 시그널 정의
-    send_requested = pyqtSignal(object)
+    send_requested = pyqtSignal(object) # ManualCommand DTO
+    history_up_requested = pyqtSignal()
+    history_down_requested = pyqtSignal()
 
     # 하드웨어 제어 신호 변경 시그널
     rts_changed = pyqtSignal(bool)
@@ -68,7 +70,7 @@ class ManualControlWidget(QWidget):
         self.local_echo_chk: Optional[QCheckBox] = None
         self.broadcast_chk: Optional[QCheckBox] = None
 
-        # History State
+        # History State - 저장/복원 안함
         self.command_history: List[str] = []
         self.history_index: int = -1
 
@@ -126,6 +128,7 @@ class ManualControlWidget(QWidget):
         self.broadcast_chk = QCheckBox(language_manager.get_text("manual_control_chk_broadcast"))
         self.broadcast_chk.setToolTip(language_manager.get_text("manual_control_chk_broadcast_tooltip"))
 
+        # 레이아웃 배치
         btn_layout = QVBoxLayout()
         btn_layout.setSpacing(2)
         btn_layout.setContentsMargins(0, 0, 0, 0)
@@ -191,7 +194,7 @@ class ManualControlWidget(QWidget):
 
         Logic:
             - Ctrl+Enter: 전송
-            - Ctrl+Up/Down: 히스토리 탐색
+            - Ctrl+Up/Down: History 탐색
             - 기타: 기본 동작
 
         Args:
@@ -223,29 +226,43 @@ class ManualControlWidget(QWidget):
         """
         전송 버튼 클릭 슬롯
         """
-        text = self.manual_command_txt.text()
+        text = self.manual_command_txt.toPlainText()
+
+        # History에 추가
         if text:
-            # 히스토리에 추가
             self.add_to_history(text)
         if not text:
             return
 
         # 전송 데이터 패키징 (DTO)
         # View(Widget) 내부의 체크박스 상태로 DTO를 완결성 있게 생성합니다.
+
         command = ManualCommand(
             text=text,
             hex_mode=self.hex_chk.isChecked(),
             prefix=self.prefix_chk.isChecked(),
             suffix=self.suffix_chk.isChecked(),
             local_echo=self.local_echo_chk.isChecked(),
-            is_broadcast=self.broadcast_chk.isChecked() # Broadcast 상태 반영
+            is_broadcast=self.broadcast_chk.isChecked()
         )
-
         self.send_requested.emit(command)
+
+    def set_input_text(self, text: str) -> None:
+        """입력창 텍스트 설정 (Presenter용)"""
+        self.manual_command_txt.setPlainText(text)
+        cursor = self.manual_command_txt.textCursor()
+        cursor.movePosition(cursor.End)
+        self.manual_command_txt.setTextCursor(cursor)
+
+    def get_input_text(self) -> str:
+        return self.manual_command_txt.toPlainText()
+
+    def clear_input(self) -> None:
+        self.manual_command_txt.clear()
 
     def add_to_history(self, command: str) -> None:
         """
-        명령어 히스토리 추가
+        Command History 추가
 
         Logic:
             - 중복 제거 (기존 항목 있으면 삭제 후 뒤로 이동)
@@ -253,7 +270,7 @@ class ManualControlWidget(QWidget):
             - 인덱스 초기화
 
         Args:
-            command (str): 명령어 텍스트
+            command (str): Command 텍스트
         """
         if command in self.command_history:
             self.command_history.remove(command)
@@ -262,11 +279,11 @@ class ManualControlWidget(QWidget):
         if len(self.command_history) > MAX_COMMAND_HISTORY_SIZE:
             self.command_history.pop(0) # 가장 오래된 항목 제거
 
-        # 인덱스 초기화 (새 명령 입력 시 히스토리 탐색 중단)
+        # 인덱스 초기화 (새 명령 입력 시 History 탐색 중단)
         self.history_index = -1
 
     def on_history_up_clicked(self) -> None:
-        """이전 히스토리 탐색"""
+        """이전 History 탐색"""
         if not self.command_history: return
 
         if self.history_index == -1:
@@ -278,7 +295,7 @@ class ManualControlWidget(QWidget):
         self._update_input_from_history()
 
     def on_history_down_clicked(self) -> None:
-        """다음 히스토리 탐색"""
+        """다음 History 탐색"""
         if not self.command_history or self.history_index == -1: return
 
         if self.history_index < len(self.command_history) - 1:
@@ -290,7 +307,7 @@ class ManualControlWidget(QWidget):
             self.manual_command_txt.clear()
 
     def _update_input_from_history(self) -> None:
-        """히스토리 내용을 입력창에 반영"""
+        """History 내용을 입력창에 반영"""
         if 0 <= self.history_index < len(self.command_history):
             command = self.command_history[self.history_index]
             self.manual_command_txt.setPlainText(command)
@@ -334,8 +351,7 @@ class ManualControlWidget(QWidget):
             "rts_chk": self.rts_chk.isChecked(),
             "dtr_chk": self.dtr_chk.isChecked(),
             "local_echo_chk": self.local_echo_chk.isChecked(),
-            "broadcast_chk": self.broadcast_chk.isChecked(), # 상태 저장
-            "command_history": self.command_history
+            "broadcast_chk": self.broadcast_chk.isChecked()
         }
         return state
 
@@ -356,4 +372,3 @@ class ManualControlWidget(QWidget):
         self.dtr_chk.setChecked(state.get("dtr_chk", False))
         self.local_echo_chk.setChecked(state.get("local_echo_chk", False))
         self.broadcast_chk.setChecked(state.get("broadcast_chk", False))
-        self.command_history = state.get("command_history", [])

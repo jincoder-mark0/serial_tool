@@ -76,12 +76,27 @@ class PreferencesDialog(QDialog):
         ui_group = QGroupBox(language_manager.get_text("pref_grp_ui"))
         ui_layout = QFormLayout()
 
+        # 테마 목록 동적 로드
         self.theme_combo = QComboBox()
-        self.theme_combo.addItems(["Dark", "Light", "System"])
+        theme_manager = ThemeManager() # 싱글톤
+        themes = theme_manager.get_available_themes()
+        if not themes:
+            themes = ["Dark", "Light"]
+        self.theme_combo.addItems(themes)
 
+        # 언어 목록 동적 로드
         self.language_combo = QComboBox()
-        self.language_combo.addItem("English", "en")
-        self.language_combo.addItem("Korean", "ko")
+        languages = language_manager.get_available_languages()
+
+        # 정렬하여 추가 (영어 우선 등 필요한 경우 로직 추가 가능)
+        # 여기서는 단순히 추가
+        for code, name in languages.items():
+            self.language_combo.addItem(name, code)
+
+        # Fallback if empty
+        if self.language_combo.count() == 0:
+            self.language_combo.addItem("English", "en")
+            self.language_combo.addItem("Korean", "ko")
 
         self.proportional_font_size_spin = QSpinBox()
         self.proportional_font_size_spin.setRange(8, 24)

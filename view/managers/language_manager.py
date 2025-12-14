@@ -13,7 +13,7 @@
 * JSON 기반 언어 리소스 로드
 * 현재 언어 설정 및 변경 Signal 발행
 * 언어 키 기반 텍스트 조회
-* 지원 언어 목록 제공
+* 지원 언어 목록 제공 (동적 스캔)
 * Fallback 언어 지원 (영어)
 
 ## HOW
@@ -103,7 +103,7 @@ class LanguageManager(QObject):
 
         # 모든 JSON 파일 로드
         for filename in os.listdir(language_dir):
-            if filename.endswith('.json'):
+            if filename.endswith('.json') and not filename.startswith('template'):
                 language_code = os.path.splitext(filename)[0]
                 file_path = os.path.join(language_dir, filename)
                 try:
@@ -150,6 +150,21 @@ class LanguageManager(QObject):
 
         # 여전히 없으면 키 자체 반환
         return text if text is not None else key
+
+    def get_available_languages(self) -> Dict[str, str]:
+        """
+        사용 가능한 언어 목록 반환
+
+        Returns:
+            Dict[str, str]: {언어코드: 표시이름} 딕셔너리
+            예: {'en': 'English', 'ko': '한국어'}
+        """
+        languages = {}
+        for code, data in self.resources.items():
+            # 메타데이터 키 확인, 없으면 코드를 대문자로 표시
+            name = data.get("_meta_lang_name", code.upper())
+            languages[code] = name
+        return languages
 
     def get_supported_languages(self) -> list:
         """

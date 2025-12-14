@@ -10,7 +10,7 @@
 * 순환 참조(Circular Import) 방지를 위한 최하위 계층 위치
 
 ## WHAT
-* ManualCommand: 수동 제어 명령어
+* ManualCommand: 수동 제어 Command
 * PortConfig: 포트 연결 설정
 * FontConfig: 폰트 설정
 * MacroEntry: 매크로(자동화) 항목
@@ -23,6 +23,9 @@
 * MacroScriptData: 매크로 스크립트 데이터
 * MacroRepeatOption: 매크로 반복 설정 옵션
 * MacroStepEvent: 매크로 실행 스텝 이벤트
+* PreferencesState: 환경 설정 상태
+* MainWindowState: 메인 윈도우 상태
+* ManualControlState: 수동 제어 상태
 
 ## HOW
 * python dataclasses 활용
@@ -51,6 +54,8 @@ def _safe_cast(value: Any, target_type: type, default: Any) -> Any:
             return float(value)
         if target_type is str:
             return str(value)
+        if target_type is list:
+            return list(value) if isinstance(value, (list, tuple)) else default
         return value
     except (ValueError, TypeError):
         return default
@@ -58,7 +63,7 @@ def _safe_cast(value: Any, target_type: type, default: Any) -> Any:
 @dataclass
 class ManualCommand:
     """
-    수동 명령어 전송 데이터
+    수동 Command 전송 데이터
     View(ManualCtrl) -> Presenter -> Model로 전달됩니다.
     """
     text: str
@@ -131,7 +136,7 @@ class MacroEntry:
 
     Attributes:
         enabled: 활성화 여부
-        command: 전송할 명령어
+        command: 전송할 Command
         is_hex: HEX 모드 여부
         prefix: 접두사 사용 여부
         suffix: 접미사 사용 여부
@@ -293,3 +298,73 @@ class MacroStepEvent:
     entry: Optional[MacroEntry] = None
     success: bool = False
     type: str = "started" # "started" or "completed"
+
+@dataclass
+class PreferencesState:
+    """
+    환경 설정 상태 DTO
+    PreferencesDialog와 Presenter 간 데이터 교환용
+    """
+    # General
+    theme: str = "Dark"
+    language: str = "en"
+    font_size: int = 10
+    max_log_lines: int = 1000
+
+    # Serial Defaults
+    baudrate: int = 115200
+    newline: str = "LF"
+    local_echo: bool = False
+    scan_interval: int = 1000
+
+    # Command
+    cmd_prefix: str = ""
+    cmd_suffix: str = ""
+
+    # Logging
+    log_path: str = ""
+
+    # Packet
+    parser_type: int = 0
+    delimiters: List[str] = field(default_factory=lambda: ["\\r\\n"])
+    packet_length: int = 64
+    at_color_ok: bool = True
+    at_color_error: bool = True
+    at_color_urc: bool = True
+    at_color_prompt: bool = True
+    packet_buffer_size: int = 100
+    packet_realtime: bool = True
+    packet_autoscroll: bool = True
+
+@dataclass
+class MainWindowState:
+    """
+    메인 윈도우 상태 DTO
+    윈도우 복원 및 종료 시 상태 저장용
+    """
+    width: int = 1200
+    height: int = 800
+    x: Optional[int] = None
+    y: Optional[int] = None
+    splitter_state: Optional[str] = None
+    right_panel_visible: bool = True
+    saved_right_width: Optional[int] = None
+
+    # Sub-component states (딕셔너리로 유지하여 유연성 확보)
+    left_section_state: Dict[str, Any] = field(default_factory=dict)
+    right_section_state: Dict[str, Any] = field(default_factory=dict)
+
+@dataclass
+class ManualControlState:
+    """
+    수동 제어 위젯의 상태 DTO
+    """
+    input_text: str = ""
+    hex_mode: bool = False
+    prefix_chk: bool = False
+    suffix_chk: bool = False
+    rts_chk: bool = False
+    dtr_chk: bool = False
+    local_echo_chk: bool = False
+    broadcast_chk: bool = False
+    command_history: List[str] = field(default_factory=list)

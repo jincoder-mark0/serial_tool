@@ -28,7 +28,7 @@
   * **Local Echo**: 송신 데이터 실시간 표시
   * **Broadcast**: 연결된 모든 포트에 동시 명령 전송 (매크로/수동)
 * **매크로 자동화**:
-  * 여러 명령어를 리스트로 관리
+  * 여러 Command를 리스트로 관리
   * 순차 명령 실행
   * Repeat 및 Delay 설정
   * 스크립트 저장 및 불러오기 (JSON 형식)
@@ -114,7 +114,7 @@ serial_tool/
 │   └── version.py                      # 버전 정보
 │
 ├── core/                               # 인프라 및 유틸리티
-│   ├── command_processor.py            # 명령어 전처리 (Prefix/Suffix/Hex)
+│   ├── command_processor.py            # Command 전처리 (Prefix/Suffix/Hex)
 │   ├── data_logger.py                  # Raw 데이터 로깅
 │   ├── device_transport.py             # 하드웨어 통신 추상화 인터페이스
 │   ├── error_handler.py                # 전역 예외 처리 (GlobalErrorHandler)
@@ -344,11 +344,11 @@ graph TD
 7. **Throttling**: `MainPresenter`는 데이터를 내부 버퍼(`_rx_buffer`)에 쌓고, `QTimer`에 의해 30ms마다 `DataLogWidget`으로 일괄 전송.
 8. **Logging**: 파일 로깅은 지연 없이 즉시 수행.
 
-### B. 수동 명령어 전송 (Manual TX Flow)
+### B. 수동 Command 전송 (Manual TX Flow)
 >
 > **핵심**: Presenter에서의 비즈니스 로직(Prefix/Suffix) 처리
 
-1. **User**: `ManualCtrlWidget`에서 명령어 입력 후 'Send' 클릭.
+1. **User**: `ManualCtrlWidget`에서 Command 입력 후 'Send' 클릭.
 2. **View**: `send_requested` 시그널 발생 (DTO `ManualCommand` 전달).
 3. **Presenter**: `ManualControlPresenter`가 `SettingsManager`를 조회하여 Prefix/Suffix 및 Hex 변환 수행.
 4. **Model**: `PortController.send_data()` 호출.

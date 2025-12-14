@@ -13,6 +13,7 @@ EventBus와 Presenter/View 사이의 이벤트를 라우팅합니다.
 * 포트 이벤트 라우팅 (Open, Close, Error, RX/TX Data, Packet)
 * 매크로 이벤트 라우팅 (Start, Finish, Error)
 * 파일 전송 이벤트 라우팅 (Progress, Complete, Error)
+* 설정 변경 이벤트 라우팅 [New]
 
 ## HOW
 * QObject 상속으로 PyQt Signal 제공
@@ -21,8 +22,8 @@ EventBus와 Presenter/View 사이의 이벤트를 라우팅합니다.
 """
 from PyQt5.QtCore import QObject, pyqtSignal
 from core.event_bus import event_bus
-from common.dtos import PortDataEvent, PortErrorEvent, PacketEvent, FileProgressEvent
-from common.constants import EventTopics # 상수 임포트
+from common.dtos import PortDataEvent, PortErrorEvent, PacketEvent, FileProgressEvent, PreferencesState
+from common.constants import EventTopics
 
 class EventRouter(QObject):
     """
@@ -56,6 +57,11 @@ class EventRouter(QObject):
     file_transfer_completed = pyqtSignal(bool)
     file_transfer_error = pyqtSignal(str)
 
+    # ---------------------------------------------------------
+    # 4. System Events [New]
+    # ---------------------------------------------------------
+    settings_changed = pyqtSignal(object) # PreferencesState DTO
+
     def __init__(self):
         """EventRouter 초기화 및 이벤트 구독"""
         super().__init__()
@@ -67,7 +73,7 @@ class EventRouter(QObject):
         EventBus 이벤트 구독 설정
 
         Logic:
-            - 각 도메인별(Port, Macro, File) 이벤트 토픽 구독
+            - 각 도메인별(Port, Macro, File, System) 이벤트 토픽 구독
             - 핸들러 메서드 연결
         """
         # Port Events
@@ -89,6 +95,9 @@ class EventRouter(QObject):
         self.bus.subscribe(EventTopics.FILE_PROGRESS, self._on_file_progress)
         self.bus.subscribe(EventTopics.FILE_COMPLETED, self._on_file_completed)
         self.bus.subscribe(EventTopics.FILE_ERROR, self._on_file_error)
+
+        # System Events [New]
+        self.bus.subscribe(EventTopics.SETTINGS_CHANGED, self._on_settings_changed)
 
     # ---------------------------------------------------------
     # Event Handlers (Port)
@@ -158,3 +167,10 @@ class EventRouter(QObject):
     def _on_file_error(self, error_msg: str):
         """파일 전송 에러 이벤트 처리"""
         self.file_transfer_error.emit(str(error_msg))
+
+    # ---------------------------------------------------------
+    # Event Handlers (System)
+    # ---------------------------------------------------------
+    def _on_settings_changed(self, state: PreferencesState):
+        """설정 변경 이벤트 처리"""
+        self.settings_changed.emit(state)

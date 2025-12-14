@@ -1,7 +1,7 @@
 """
 매크로 실행 엔진 모듈
 
-사용자가 정의한 명령어 시퀀스를 별도 스레드에서 순차적으로 실행하는 엔진입니다.
+사용자가 정의한 Command 시퀀스를 별도 스레드에서 순차적으로 실행하는 엔진입니다.
 
 ## WHY
 * UI 스레드(Main Thread)의 블로킹 없이 장시간 매크로를 실행해야 함
@@ -166,7 +166,7 @@ class MacroRunner(QThread):
         단일 명령 전송을 요청합니다 (Presenter에서 사용).
 
         Args:
-            command (str): 명령어 텍스트
+            command (str): Command 텍스트
             is_hex (bool): HEX 모드 여부
             prefix (bool): 접두사 사용 여부
             suffix (bool): 접미사 사용 여부

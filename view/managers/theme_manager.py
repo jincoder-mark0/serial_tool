@@ -16,7 +16,7 @@
 * 고정폭 폰트 (데이터 표시용)
 * 테마별 아이콘 제공
 * 설정 저장/복원
-
+* 테마 목록 자동 감지
 ## HOW
 * QSS 파일로 테마 정의 (common + theme-specific)
 * QFont로 폰트 관리
@@ -29,7 +29,7 @@ import platform
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QFont, QIcon
 from core.logger import logger
-from common.dtos import FontConfig # DTO 임포트
+from common.dtos import FontConfig
 
 class ThemeManager:
     """애플리케이션 테마와 폰트 관리자"""
@@ -74,7 +74,7 @@ class ThemeManager:
         지정된 테마의 QSS 콘텐츠를 로드합니다. 공통 스타일을 먼저 로드합니다.
 
         Args:
-            theme_name (str): 로드할 테마 이름 ("dark" 또는 "light"). 기본값은 "dark".
+            theme_name (str): 로드할 테마 이름 (예: "dark", "light"). 기본값은 "dark".
 
         Returns:
             str: 결합된 QSS 문자열.
@@ -83,6 +83,12 @@ class ThemeManager:
             # AppConfig가 제공되었으면 그것을 사용
             common_path = self._resource_path.get_theme_file('common')
             theme_path = self._resource_path.get_theme_file(theme_name)
+
+            # 리소스 경로에 등록되지 않은 새 테마일 수 있으므로 직접 구성 시도
+            if not theme_path:
+                 theme_file = f"{theme_name}_theme.qss"
+                 theme_path = self._resource_path.themes_dir / theme_file
+
         else:
             # 하위 호환성: 기존 경로 사용
             common_path = "resources/themes/common.qss"
@@ -91,6 +97,8 @@ class ThemeManager:
                 "light": "resources/themes/light_theme.qss"
             }
             theme_path = theme_files.get(theme_name)
+            if not theme_path:
+                 theme_path = f"resources/themes/{theme_name}_theme.qss"
 
         qss_content = ""
 
@@ -208,7 +216,8 @@ class ThemeManager:
         QTextEdit.fixed-font,
         QPlainTextEdit.fixed-font,
         QLineEdit.fixed-font,
-        QTableView.fixed-font {{
+        QSmartListView.fixed-font,
+        QSmartTextEdit.fixed-font {{
             font-family: "{fixed_family}", monospace;
             font-size: {fixed_size}pt;
         }}
@@ -222,6 +231,39 @@ class ThemeManager:
             str: 현재 테마 이름.
         """
         return self._current_theme
+
+    def get_available_themes(self) -> list[str]:
+        """
+        사용 가능한 테마 목록 반환
+
+        Logic:
+            - themes 디렉토리의 .qss 파일 스캔
+            - 파일명(확장자 제외, '_theme' 접미사 제외 등) 반환
+            - 대문자로 변환하여 반환 (UI 표시용)
+
+        Returns:
+            list[str]: 테마 이름 리스트 (예: ['Dark', 'Light'])
+        """
+        themes = []
+
+        # ResourcePath 확인
+        if self._resource_path:
+            themes_dir = self._resource_path.themes_dir
+        else:
+            # Fallback
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            themes_dir = os.path.join(base_dir, 'resources', 'themes')
+
+        if not os.path.exists(themes_dir):
+            return ["Dark", "Light"] # 기본값
+
+        for filename in os.listdir(themes_dir):
+            if filename.endswith(".qss") and filename != "common.qss":
+                # dark_theme.qss -> Dark
+                name = filename.replace("_theme.qss", "").replace(".qss", "")
+                themes.append(name.capitalize())
+
+        return sorted(themes)
 
     # 가변폭(Proportional) 폰트 메서드
     def set_proportional_font(self, family: str, size: int):
@@ -386,4 +428,3 @@ class ThemeManager:
                 return QIcon()
 
             return QIcon(icon_path)
-

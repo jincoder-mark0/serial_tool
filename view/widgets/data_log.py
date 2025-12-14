@@ -40,17 +40,16 @@ from core.logger import logger
 
 class DataLogWidget(QWidget):
     """
-    데이터를 표시하는 뷰어 위젯 클래스 (구 RxLogWidget)
+    데이터를 표시하는 뷰어 위젯 클래스
 
     데이터(RX/TX)를 표시하고 HEX/ASCII 전환, 일시 정지 등의 기능을 제공합니다.
     """
 
     tx_broadcast_allow_changed = pyqtSignal(bool)
 
-    # 로깅 시그널 (포트명은 Presenter에서 관리)
-    data_logging_started = pyqtSignal(str)  # filepath
-    data_logging_stopped = pyqtSignal()
-
+    # 로깅 시그널 변경: 파일명 없이 의도만 전달
+    logging_start_requested = pyqtSignal()
+    logging_stop_requested = pyqtSignal()
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
         DataLogWidget를 초기화합니다.
@@ -344,39 +343,58 @@ class DataLogWidget(QWidget):
     @pyqtSlot(bool)
     def on_data_log_logging_toggled(self, checked: bool) -> None:
         """
-        로깅 시작/중단 토글을 처리합니다.
+        로깅 버튼 토글 핸들러
 
-        Args:
-            checked: 버튼 체크 상태 (True=로깅 시작, False=로깅 중단)
+        Logic:
+            - UI 상태 변경 없이 오직 시그널만 발행
+            - 실제 UI 변경은 Presenter가 set_logging_active를 호출할 때 수행
         """
+        # 버튼 상태를 일단 원복 (Presenter의 응답 대기)
+        # 사용자가 눌렀을 때 checked 상태가 되지만,
+        # 로직 성공 여부를 모르므로 여기서 색상을 바꾸지 않음.
+        # 다만 QPushButon(checkable)은 자동으로 상태가 바뀌므로,
+        # 여기서는 시그널만 보내고, 실패 시 Presenter가 다시 끄도록 유도하거나
+        # 성공 시 스타일을 적용하도록 함.
+
         if checked:
-            # 파일 저장 대화상자
-            title = language_manager.get_text("data_log_btn_toggle_logging")
-            if self.tab_name:
-                title = f"{self.tab_name}::{title}"
-
-            filename, _ = QFileDialog.getSaveFileName(
-                self,
-                title,
-                "",
-                "Binary Files (*.bin);;All Files (*)"
-            )
-
-            if filename:
-                # 로깅 시작 시그널
-                self.data_logging_started.emit(filename)
-                # 버튼 스타일 변경
-                self.data_log_toggle_logging_btn.setText("● REC")
-                self.data_log_toggle_logging_btn.setStyleSheet("color: red;")
-            else:
-                # 취소 시 버튼 복구
-                self.data_log_toggle_logging_btn.setChecked(False)
+            self.logging_start_requested.emit()
         else:
-            # 로깅 중단 시그널
-            self.data_logging_stopped.emit()
-            # 버튼 스타일 복구
+            self.logging_stop_requested.emit()
+
+    def set_logging_active(self, active: bool) -> None:
+        """
+        외부(Presenter)에서 로깅 상태를 설정
+        성공적으로 시작/중지되었을 때 호출됨
+        """
+        self.data_log_toggle_logging_btn.blockSignals(True)
+        self.data_log_toggle_logging_btn.setChecked(active)
+        self.data_log_toggle_logging_btn.blockSignals(False)
+
+        if active:
+            self.data_log_toggle_logging_btn.setText("● REC")
+            self.data_log_toggle_logging_btn.setStyleSheet("color: red;")
+        else:
             self.data_log_toggle_logging_btn.setText(language_manager.get_text("data_log_btn_toggle_logging"))
             self.data_log_toggle_logging_btn.setStyleSheet("")
+
+    def show_save_log_dialog(self) -> str:
+        """
+        파일 저장 다이얼로그 표시 (Presenter가 호출)
+
+        Returns:
+            str: 선택된 파일 경로 (취소 시 빈 문자열)
+        """
+        title = language_manager.get_text("data_log_btn_toggle_logging")
+        if self.tab_name:
+            title = f"{self.tab_name}::{title}"
+
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            title,
+            "",
+            "Binary Files (*.bin);;All Files (*)"
+        )
+        return filename
 
     @pyqtSlot(int)
     def on_data_log_tx_broadcast_allow_changed(self, state: int) -> None:

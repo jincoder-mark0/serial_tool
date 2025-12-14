@@ -50,20 +50,27 @@ class EventTopics:
     FILE_COMPLETED = "file.completed"
     FILE_ERROR = "file.error"
 
+    # System Events
+    SETTINGS_CHANGED = "system.settings_changed"
+
 
 # ==========================================
 # Configuration Keys (설정 키 상수)
 # ==========================================
 class ConfigKeys:
-    """settings.json의 키 경로를 관리하는 상수 클래스입니다."""
+    """
+    settings.json의 키 경로를 관리하는 상수 클래스입니다.
+    CORE_SETTINGS_SCHEMA 구조와 일치해야 합니다.
+    """
 
-    # Global / Settings
     THEME = "settings.theme"
     LANGUAGE = "settings.language"
-    FONT_SIZE = "settings.proportional_font_size"
-    RX_MAX_LINES = "settings.rx_max_lines"
-    COMMAND_PREFIX = "settings.command_prefix"
-    COMMAND_SUFFIX = "settings.command_suffix"
+
+    # Fonts (ThemeManager uses these)
+    PROP_FONT_FAMILY = "settings.proportional_font_family"
+    PROP_FONT_SIZE = "settings.proportional_font_size"
+    FIXED_FONT_FAMILY = "settings.fixed_font_family"
+    FIXED_FONT_SIZE = "settings.fixed_font_size"
 
     # Port Defaults
     PORT_BAUDRATE = "settings.port_baudrate"
@@ -71,19 +78,21 @@ class ConfigKeys:
     PORT_LOCAL_ECHO = "settings.port_local_echo"
     PORT_SCAN_INTERVAL = "settings.port_scan_interval"
 
-    # UI State
+    # UI (화면 표시 관련)
+    RX_MAX_LINES = "settings.rx_max_lines"
+
+    # Command (Command 형식)
+    COMMAND_PREFIX = "settings.command_prefix"
+    COMMAND_SUFFIX = "settings.command_suffix"
+
+    # UI State (윈도우 상태 저장)
     WINDOW_WIDTH = "ui.window_width"
     WINDOW_HEIGHT = "ui.window_height"
     WINDOW_X = "ui.window_x"
     WINDOW_Y = "ui.window_y"
     SPLITTER_STATE = "ui.splitter_state"
-    RIGHT_PANEL_VISIBLE = "settings.right_section_visible"
-
-    # Fonts (ThemeManager uses these)
-    PROP_FONT_FAMILY = "ui.proportional_font_family"
-    PROP_FONT_SIZE = "ui.proportional_font_size"
-    FIXED_FONT_FAMILY = "ui.fixed_font_family"
-    FIXED_FONT_SIZE = "ui.fixed_font_size"
+    RIGHT_PANEL_VISIBLE = "ui.right_section_visible"
+    SAVED_RIGHT_WIDTH = "ui.saved_right_section_width"
 
     # Packet Inspector
     PACKET_PARSER_TYPE = "packet.parser_type"
@@ -156,7 +165,7 @@ MAX_PACKET_SIZE: int = 4096
 MIN_SCAN_INTERVAL_MS: int = 1000
 MAX_SCAN_INTERVAL_MS: int = 60000
 DEFAULT_MACRO_DELAY_MS: int = 1000
-MAX_COMMAND_HISTORY_SIZE: int = 50    # 수동 명령 히스토리 최대 크기
+MAX_COMMAND_HISTORY_SIZE: int = 50    # 수동 명령 History 최대 크기
 
 # ==========================================
 # Colors (For Text Logs)

@@ -30,6 +30,7 @@ class FileTransferEngine(QRunnable):
     - Flow Control 지원: 포트 설정에 따라 속도 제어 방식을 달리합니다.
       - RTS/CTS, XON/XOFF: 하드웨어/드라이버 레벨의 흐름 제어를 신뢰하여 불필요한 sleep을 제거합니다.
       - None: Baudrate 기반의 타이밍 계산을 통해 전송 속도를 제한(Pacing)합니다.
+    - 예외 안전망: 실행 중 발생하는 모든 예외를 포착하여 GlobalErrorHandler에 보고합니다.
 
     ## 향후 개선 계획
     - Y-MODEM과 같은 프로토콜의 다양화
@@ -71,15 +72,17 @@ class FileTransferEngine(QRunnable):
         파일 전송 실행 로직
 
         Logic:
+            - 전체 로직을 try-except로 감싸 예외 누락 방지
             - 시작 시 ConnectionController에 자신을 등록
             - 파일 읽기 및 전송 루프
             - Backpressure 및 Flow Control 적용
             - 종료 시(finally) 등록 해제
         """
-        # [Safety] 전송 시작 등록 (Race Condition 방지)
-        self.connection_controller.register_file_transfer(self.port_name, self)
-
         try:
+            # 전송 시작 등록 (Race Condition 방지)
+            # 등록 과정에서 에러가 나더라도 포착하기 위해 try 블록 내부로 이동
+            self.connection_controller.register_file_transfer(self.port_name, self)
+
             # 파일 존재 확인
             if not os.path.exists(self.file_path):
                 self.signals.error_occurred.emit(f"File not found: {self.file_path}")
@@ -149,12 +152,23 @@ class FileTransferEngine(QRunnable):
                 self.event_bus.publish(EventTopics.FILE_COMPLETED, True)
 
         except Exception as e:
-            # 오류 발생 시 처리
+            # 예외 발생 시 전역 에러 핸들러에 보고
+            # QRunnable은 sys.excepthook을 타지 않을 수 있으므로 명시적 호출 필요
+            try:
+                from core.error_handler import get_error_handler
+                handler = get_error_handler()
+                if handler:
+                    handler.report_error(type(e), e, e.__traceback__)
+            except Exception:
+                # 에러 핸들러 호출 실패 시 최소한의 출력 (순환 참조 등 방지)
+                pass
+
+            # 오류 발생 시그널 및 이벤트 발행
             self.signals.error_occurred.emit(str(e))
             self.signals.transfer_completed.emit(False)
             self.event_bus.publish(EventTopics.FILE_ERROR, str(e))
             self.event_bus.publish(EventTopics.FILE_COMPLETED, False)
 
         finally:
-            # [Safety] 전송 종료 등록 해제
+            # 전송 종료 등록 해제
             self.connection_controller.unregister_file_transfer(self.port_name)

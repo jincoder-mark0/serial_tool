@@ -1,5 +1,5 @@
 """
-명령어 처리기 모듈
+Command 처리기 모듈
 
 사용자 입력 문자열을 전송 가능한 바이트 데이터로 변환합니다.
 
@@ -7,7 +7,7 @@
 * Hex 문자열 변환 및 에러 처리 로직의 중앙 집중화
 
 ## WHAT
-* 텍스트 명령어에 Prefix/Suffix 설정 적용 (인자로 전달받음)
+* 텍스트 Command에 Prefix/Suffix 설정 적용 (인자로 전달받음)
 * HEX/ASCII 모드에 따른 데이터 인코딩
 * 변환 실패 시 예외 처리
 
@@ -18,13 +18,13 @@ from typing import Optional
 
 class CommandProcessor:
     """
-    명령어 가공 및 변환 유틸리티 클래스
+    Command 가공 및 변환 유틸리티 클래스
     """
 
     @staticmethod
     def process_command(text: str, hex_mode: bool, prefix: Optional[str] = None, suffix: Optional[str] = None) -> bytes:
         """
-        명령어 텍스트를 설정에 맞춰 바이트 데이터로 변환
+        Command 텍스트를 설정에 맞춰 바이트 데이터로 변환
 
         Logic:
             - 인자로 전달받은 Prefix/Suffix 적용
@@ -32,7 +32,7 @@ class CommandProcessor:
             - ASCII 모드일 경우 UTF-8 인코딩
 
         Args:
-            text (str): 원본 명령어 텍스트
+            text (str): 원본 Command 텍스트
             hex_mode (bool): HEX 모드 여부
             prefix (Optional[str]): 적용할 접두사. (None일 경우 무시)
             suffix (Optional[str]): 적용할 접미사. (None일 경우 무시)

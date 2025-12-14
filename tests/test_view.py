@@ -164,7 +164,7 @@ class ViewTestWindow(QMainWindow):
         self.manual_output = QTextEdit()
         self.manual_output.setReadOnly(True)
         self.manual_output.setMaximumHeight(150)
-        self.manual_output.setPlaceholderText("전송된 명령어 출력 및 이벤트 로그")
+        self.manual_output.setPlaceholderText("전송된 Command 출력 및 이벤트 로그")
         layout.addWidget(QLabel("📤 Output Log:"))
         layout.addWidget(self.manual_output)
 
@@ -181,7 +181,7 @@ class ViewTestWindow(QMainWindow):
             lambda path: self.manual_output.append(f"📤 Send file requested: {path}")
         )
 
-        # 히스토리 테스트 버튼들
+        # History 테스트 버튼들
         history_layout = QHBoxLayout()
 
         btn_add_at = QPushButton("Add 'AT'")
@@ -206,9 +206,9 @@ class ViewTestWindow(QMainWindow):
         # 정보 레이블
         info = QLabel(
             "✅ 테스트:\n"
-            "1. Send 버튼: 명령어 전송 및 시그널 확인\n"
+            "1. Send 버튼: Command 전송 및 시그널 확인\n"
             "2. HEX 모드: 체크박스로 전환\n"
-            "3. 히스토리: Up/Down 버튼으로 이전 명령어 탐색 (Ctrl+Up/Down 키보드 단축키)\n"
+            "3. History: Up/Down 버튼으로 이전 Command 탐색 (Ctrl+Up/Down 키보드 단축키)\n"
             "4. 파일 선택/전송: Transfer 버튼들 테스트\n"
             "5. 제어 활성화/비활성화: Enable/Disable Controls 버튼"
         )
@@ -229,7 +229,7 @@ class ViewTestWindow(QMainWindow):
         return widget
 
     def show_manual_history(self) -> None:
-        """히스토리 목록을 출력 영역에 표시합니다."""
+        """History 목록을 출력 영역에 표시합니다."""
         history = self.manual_control.command_history
         if history:
             self.manual_output.append("\n📜 Command History:")
