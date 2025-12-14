@@ -92,6 +92,8 @@
     "manual_control_chk_hex": "HEX",
     "manual_control_chk_hex_tooltip": "HEX 형식으로 전송",
     "manual_control_chk_local_echo": "로컬 에코",
+    "manual_control_chk_broadcast": "브로드캐스트",
+    "manual_control_chk_broadcast_tooltip": "브로드캐스트가 설정된 모든 활성 포트에 명령어 전송",
     "manual_control_chk_prefix": "접두사",
     "manual_control_chk_rts": "RTS",
     "manual_control_chk_rts_tooltip": "송신 요청 신호",

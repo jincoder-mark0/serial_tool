@@ -36,6 +36,7 @@ class ConnectionController(QObject):
     개별 연결 세션 관리 클래스
 
     하나의 물리적/논리적 연결에 대한 Worker, Parser, 설정을 총괄합니다.
+    특정 탭의 활성 상태를 저장하지 않으며, 메서드 호출 시 대상 포트를 인자로 받습니다.
     """
     # 시그널 정의
     connection_opened = pyqtSignal(str)
@@ -61,9 +62,6 @@ class ConnectionController(QObject):
         self.parsers: dict[str, PacketParser] = {}
         # 연결 이름(str) -> Config(dict) 매핑
         self.connection_configs: dict[str, PortConfig] = {}
-
-        # 명시적인 활성 연결 상태 관리 변수
-        self._active_connection_name: Optional[str] = None
 
         # EventBus 인스턴스
         self.event_bus = event_bus
@@ -98,36 +96,6 @@ class ConnectionController(QObject):
         하나라도 활성화된 연결이 있는지 확인
         """
         return len(self.workers) > 0
-
-    @property
-    def current_connection_name(self) -> Optional[str]:
-        """
-        현재 **명시적으로 활성화된** 연결 이름을 반환합니다.
-
-        Logic:
-            - `set_active_connection`으로 설정된 이름을 반환
-            - 설정된 이름이 없다면, 첫 번째 워커의 이름을 반환 (Fallback)
-
-        Returns:
-            Optional[str]: 활성 연결 이름.
-        """
-        if self._active_connection_name and self._active_connection_name in self.workers:
-            return self._active_connection_name
-
-        # Fallback: 명시적으로 설정된 이름이 없으면 첫 번째 워커 이름 반환
-        if self.workers:
-            return list(self.workers.keys())[0]
-
-        return None
-
-    def set_active_connection(self, name: str) -> None:
-        """
-        현재 활성 탭에 해당하는 연결을 명시적으로 설정합니다.
-
-        Args:
-            name (str): 활성 연결 이름 (보통 포트 이름).
-        """
-        self._active_connection_name = name
 
     def get_active_connections(self) -> List[str]:
         """
@@ -233,9 +201,6 @@ class ConnectionController(QObject):
         self.workers[name] = worker
         worker.start()
 
-        # 새 연결이 열리면 해당 연결을 활성 연결로 설정 (탭이 열릴 때)
-        self.set_active_connection(name)
-
         return True
 
     def _handle_data_received(self, name: str, data: bytes) -> None:
@@ -272,10 +237,6 @@ class ConnectionController(QObject):
         if name in self.connection_configs:
             del self.connection_configs[name]
 
-        # 닫힌 연결이 활성 연결이었다면, 활성 연결 상태 초기화
-        if self._active_connection_name == name:
-            self._active_connection_name = None
-
         self.connection_closed.emit(name)
 
     def close_connection(self, name: Optional[str] = None) -> None:
@@ -294,25 +255,23 @@ class ConnectionController(QObject):
             for name in list(self.workers.keys()):
                 self.close_connection(name)
 
-    def send_data(self, data: bytes, is_broadcast: bool = False) -> None:
+    def send_data(self, port_name: str, data: bytes) -> None:
         """
-        데이터 전송
+        특정 포트로 데이터를 전송합니다.
 
         Args:
-            data: 전송할 바이트 데이터
-            is_broadcast: 브로드캐스팅 여부
+            port_name (str): 대상 포트 이름 (필수)
+            data (bytes): 전송할 데이터
         """
-        if not self.workers:
-            self.error_occurred.emit("", "No active connections.")
+        if not port_name:
+            self.error_occurred.emit("", "Cannot send data: Port name is not specified.")
             return
-        if is_broadcast:
-            self.send_data_to_all(data)
-        else:
-            active_name = self.current_connection_name
-            if active_name:
-                self.send_data_to_connection(active_name, data)
-            else:
-                self.error_occurred.emit("", "Cannot send data: No active connection selected.")
+
+        if not self.is_connection_open(port_name):
+            self.error_occurred.emit(port_name, "Cannot send data: Port is not open.")
+            return
+
+        self.send_data_to_connection(port_name, data)
 
     def send_data_to_broadcasting(self, data: bytes) -> None:
         """
@@ -336,8 +295,7 @@ class ConnectionController(QObject):
                 sent_any = True
 
         if not sent_any:
-            # 브로드캐스팅 대상이 없으면 현재 탭으로라도 보내거나, 에러 로그?
-            # 여기서는 아무 동작도 하지 않거나 로그를 남길 수 있음.
+            # 브로드캐스팅 대상이 없으면 ?
             pass
 
     def send_data_to_all(self, data: bytes) -> None:

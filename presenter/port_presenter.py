@@ -26,6 +26,7 @@
 from PyQt5.QtCore import QObject
 from PyQt5.QtWidgets import QMessageBox
 import serial.tools.list_ports
+from typing import Optional
 
 from view.sections.main_left_section import MainLeftSection
 from model.connection_controller import ConnectionController
@@ -80,6 +81,17 @@ class PortPresenter(QObject):
         self.connection_controller.connection_opened.connect(self.on_connection_opened)
         self.connection_controller.connection_closed.connect(self.on_connection_closed)
         self.connection_controller.error_occurred.connect(self.on_error)
+
+    def get_active_port_name(self) -> Optional[str]:
+        """
+        현재 활성화된 탭의 포트 이름을 반환합니다.
+
+        Returns:
+            Optional[str]: 포트 이름 (없으면 None)
+        """
+        if self.current_port_panel and hasattr(self.current_port_panel, 'get_port_name'):
+            return self.current_port_panel.get_port_name()
+        return None
 
     def _connect_tab_signals(self, widget) -> None:
         """
@@ -148,11 +160,6 @@ class PortPresenter(QObject):
             if hasattr(widget, 'port_settings_widget'):
                 self.current_port_panel = widget
 
-                # Model에 현재 활성 연결을 명시적으로 설정
-                port_name = widget.get_port_name()
-                if port_name:
-                    self.connection_controller.set_active_connection(port_name)
-
     def scan_ports(self) -> None:
         """사용 가능한 시리얼 포트 스캔 및 UI 업데이트"""
         ports = [port.device for port in serial.tools.list_ports.comports()]
@@ -182,7 +189,7 @@ class PortPresenter(QObject):
 
         if sender and hasattr(sender, 'get_current_config'):
             config = sender.get_current_config()
-            port_name = config.get('port')
+            port_name = config.port
             if port_name:
                 self.connection_controller.close_connection(port_name)
 
@@ -264,7 +271,7 @@ class PortPresenter(QObject):
         self.update_current_port_panel()
         if self.current_port_panel:
             config = self.current_port_panel.port_settings_widget.get_current_config()
-            port_name = config.get('port')
+            port_name = config.port
             if port_name and not self.connection_controller.is_connection_open(port_name):
                 self.connection_controller.open_connection(config)
             elif not port_name:

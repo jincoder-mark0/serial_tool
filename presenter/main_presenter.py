@@ -35,7 +35,7 @@ from core.settings_manager import SettingsManager
 from core.data_logger import data_logger_manager
 from view.managers.language_manager import language_manager
 from core.logger import logger
-from common.constants import ConfigKeys
+from common.constants import ConfigKeys, EventTopics
 from common.dtos import ManualCommand, PortDataEvent, PortErrorEvent, PacketEvent, FontConfig
 
 class MainPresenter(QObject):
@@ -295,9 +295,6 @@ class MainPresenter(QObject):
         Args:
             font_config (FontConfig): 폰트 설정 DTO
         """
-        # [Refactor] DTO 사용 및 상수 키 매핑
-        # SettingsManager는 내부적으로 dict 구조를 사용하므로 DTO 값을 개별적으로 설정
-
         self.settings_manager.set(ConfigKeys.PROP_FONT_FAMILY, font_config.prop_family)
         self.settings_manager.set(ConfigKeys.PROP_FONT_SIZE, font_config.prop_size)
         self.settings_manager.set(ConfigKeys.FIXED_FONT_FAMILY, font_config.fixed_family)
@@ -378,8 +375,13 @@ class MainPresenter(QObject):
         self.view.update_status_bar_port(port_name, False)
         self.view.show_status_message(f"Disconnected from {port_name}", 3000)
 
-    def on_port_error(self, port_name: str, error_msg: str) -> None:
-        """포트 에러 알림"""
+    def on_port_error(self, event: PortErrorEvent) -> None:
+        if isinstance(event, PortErrorEvent):
+            port_name = event.port
+            error_msg = event.message
+        else:
+            port_name = event.get('port')
+            error_msg = event.get('message')
         self.view.show_status_message(f"Error ({port_name}): {error_msg}", 5000)
 
     # ---------------------------------------------------------
@@ -412,8 +414,9 @@ class MainPresenter(QObject):
         Args:
             command (ManualCommand): 매크로 명령어
         """
-        if not self.connection_controller.has_active_connection:
-            logger.warning("Port not open")
+        active_port = self.port_presenter.get_active_port_name()
+        if not active_port or not self.connection_controller.is_connection_open(active_port):
+            logger.warning("Macro: No active port open")
             return
 
         # SettingsManager에서 값 획득 후 CommandProcessor에 주입 (Presenter의 책임)
@@ -424,11 +427,11 @@ class MainPresenter(QObject):
             # 데이터 가공 위임 (CommandProcessor에 Prefix/Suffix 값 직접 전달)
             data = CommandProcessor.process_command(command.text, command.hex_mode, prefix=prefix, suffix=suffix)
         except ValueError:
-            logger.error(f"Invalid hex string for sending: {text}")
+            logger.error(f"Invalid hex string for sending: {command.text}")
             return
 
         # 전송
-        self.connection_controller.send_data(data)
+        self.connection_controller.send_data(active_port, data)
 
     # ---------------------------------------------------------
     # Event Handlers (File Transfer)

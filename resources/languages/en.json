@@ -92,6 +92,8 @@
     "manual_control_chk_hex": "HEX",
     "manual_control_chk_hex_tooltip": "Send as HEX format",
     "manual_control_chk_local_echo": "Local Echo",
+    "manual_control_chk_broadcast": "Broadcast",
+    "manual_control_chk_broadcast_tooltip": "Send command to all active ports that allow broadcasting",
     "manual_control_chk_prefix": "Prefix",
     "manual_control_chk_rts": "RTS",
     "manual_control_chk_rts_tooltip": "Request To Send signal",

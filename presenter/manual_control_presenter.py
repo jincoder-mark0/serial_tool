@@ -37,7 +37,8 @@ class ManualControlPresenter(QObject):
         self,
         view: ManualControlPanel,
         connection_controller: ConnectionController,
-        local_echo_callback: Optional[Callable[[bytes], None]] = None
+        local_echo_callback: Optional[Callable[[bytes], None]] = None,
+        get_active_port_callback: Optional[Callable[[], Optional[str]]] = None # [New]
     ) -> None:
         """
         ManualControlPresenter 초기화
@@ -45,12 +46,14 @@ class ManualControlPresenter(QObject):
         Args:
             view (ManualControlPanel): 수동 제어 패널 View
             connection_controller (ConnectionController): 연결 제어 Model
-            local_echo_callback (Callable): Local Echo 콜백 (선택)
+            local_echo_callback (Callable): Local Echo 콜백
+            get_active_port_callback (Callable): 현재 활성 포트 이름을 반환하는 콜백
         """
         super().__init__()
         self.view = view
         self.connection_controller = connection_controller
         self.local_echo_callback = local_echo_callback
+        self.get_active_port = get_active_port_callback # [New]
         self.settings_manager = SettingsManager()
 
         # View 시그널 연결
@@ -79,9 +82,11 @@ class ManualControlPresenter(QObject):
         수동 명령 전송 요청 처리
 
         Logic:
+            - 활성 포트 조회
             - 연결 열림 확인
             - SettingsManager에서 Prefix/Suffix 값 획득
             - CommandProcessor에 값과 함께 전송 요청
+            - Broadcast 여부에 따라 Controller 메서드 분기 호출
             - 데이터 전송 및 Local Echo 처리
 
         Args:
@@ -91,7 +96,7 @@ class ManualControlPresenter(QObject):
             logger.warning("Manual Send: No active connection")
             return
 
-        # DTO 속성 접근 (오타 방지 및 타입 힌트 지원)
+        # DTO 속성 접근
         if not command.text:
             return
 
@@ -105,15 +110,22 @@ class ManualControlPresenter(QObject):
             logger.error(f"Invalid hex string for sending: {command.text}")
             return
 
-        # [Logic] Broadcast 여부에 따른 전송 처리
+        # Broadcast 여부에 따른 전송 처리
         if command.is_broadcast:
             # 브로드캐스팅 허용된 모든 포트로 전송
             self.connection_controller.send_data_to_broadcasting(data)
             logger.info(f"Manual command broadcasted: {command.text}")
         else:
-            # 현재 활성 포트로만 전송
-            self.connection_controller.send_data(data, is_broadcast=False)
-            logger.info(f"Manual command sent (Unicast): {command.text}")
+            # 현재 활성 포트 조회
+            active_port = self.get_active_port() if self.get_active_port else None
+
+            if active_port:
+                # 명시적으로 포트 이름을 지정하여 전송
+                self.connection_controller.send_data(active_port, data)
+                logger.info(f"Manual command sent to {active_port}: {command.text}")
+            else:
+                logger.warning("No active port selected for transmission.")
+                return
 
         # Local Echo (송신 데이터를 화면에 표시)
         if command.local_echo and self.local_echo_callback:

@@ -123,8 +123,8 @@ class ManualControlWidget(QWidget):
         self.local_echo_chk = QCheckBox(language_manager.get_text("manual_control_chk_local_echo"))
 
         # Broadcast 체크박스
-        self.broadcast_chk = QCheckBox("Broadcast") # 추후 언어 키 추가 권장
-        self.broadcast_chk.setToolTip("Send command to all active ports that allow broadcasting")
+        self.broadcast_chk = QCheckBox(language_manager.get_text("manual_control_chk_broadcast"))
+        self.broadcast_chk.setToolTip(language_manager.get_text("manual_control_chk_broadcast_tooltip"))
 
         btn_layout = QVBoxLayout()
         btn_layout.setSpacing(2)
