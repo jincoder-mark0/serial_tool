@@ -2,11 +2,14 @@
 
 **최종 업데이트**: 2025-12-10
 
-**SerialTool**은 Python과 PyQt5로 개발된 강력한 통신 유틸리티입니다. MVP(Model-View-Presenter) 패턴 기반의 깔끔한 아키텍처와 현대적인 UI/UX를 제공하며, Serial 통신뿐만 아니라 향후 SPI, I2C 등 다양한 프로토콜로 확장 예정입니다.
+**SerialTool**은 Python과 PyQt5로 개발된 강력한 통신 유틸리티입니다.
+**Strict MVP (Model-View-Presenter)** 아키텍처를 기반으로 설계되어 유지보수성과 확장성이 뛰어나며,
+Serial 통신뿐만 아니라 향후 SPI, I2C 등 다양한 프로토콜로의 확장을 고려한 현대적인 구조를 갖추고 있습니다.
 
-## 주요 기능 (Key Features)
+---
+## 1. 주요 기능 (Key Features)
 
-### 핵심 기능
+### 1.1 핵심 기능
 
 * **멀티 프로토콜(시리얼, SPI, I2C) 지원**: 탭 인터페이스로 여러 프로토콜(시리얼, SPI, I2C) 포트 동시 제어
 * **송신**:
@@ -29,7 +32,7 @@
   * 타임스탬프 표시
   * 로그 저장 및 화면(newline 설정, max line 수 설정) 클리어
 
-### UI/UX 특징
+### 1.2 UI/UX 특징
 
 * **현대적 인터페이스**:
   * 다크/라이트 테마 전환
@@ -45,7 +48,7 @@
   * 중앙 집중식 경로 관리 (AppConfig)
   * Package-level imports (**init**.py)
 
-### 다국어 지원
+### 1.3 다국어 지원
 
 * **한국어/영어** 실시간 전환
 * CommentJSON 기반 번역 관리
@@ -53,14 +56,14 @@
 
 ---
 
-## 설치 및 실행
+## 2. 설치 및 실행 가이드
 
-### 요구 사항
+### 2.1 요구 사항 (Requirements)
 
 * Python 3.8+
 * PyQt5, pyserial, commentjson
 
-### 설치
+### 2.2 설치 방법 (Installation)
 
 ```bash
 # 1. 저장소 클론
@@ -89,92 +92,92 @@ python main.py
 
 ---
 
-## 프로젝트 구조
+## 3. 프로젝트 구조 (Project Structure)
+
+본 프로젝트는 역할과 책임에 따라 엄격하게 디렉토리가 구분되어 있습니다.
 
 ```
 serial_tool/
 ├── main.py                             # 애플리케이션 진입점
 ├── requirements.txt                    # 의존성 목록
 │
-├── common/                             # 공통 정의 (의존성 최하위)
-│   ├── constants.py                    #
-│   ├── dtos.py                         #
-│   ├── enums.py                        #
-│   └── version.py                      #
+├── common/                             # 공통 데이터 및 상수 (의존성 최하위, 로직 없음)
+│   ├── constants.py                    # 전역 상수 및 설정 키(ConfigKeys) 정의
+│   ├── dtos.py                         # 데이터 전송 객체 (ManualCommand, PortConfig 등)
+│   ├── enums.py                        # 열거형 (PortState, ParserType 등)
+│   └── version.py                      # 버전 정보 관리
 │
-├── core/                               # 핵심 유틸리티
+├── core/                               # 인프라 및 유틸리티 (비즈니스 로직과 무관한 기능)
 │   ├── command_processor.py            # 명령어 처리
 │   ├── data_logger.py                  # 데이터 로깅
+│   ├── device_transport.py             # 하드웨어 통신 추상화 인터페이스
 │   ├── error_handler.py                # 에러 핸들러
 │   ├── event_bus.py                    # 이벤트 버스
-│   ├── device_transport.py             #
 │   ├── logger.py                       # 로깅 시스템 (Singleton)
-│   ├── port_state.py                   # 포트 상태 관리
 │   ├── resource_path.py                # 경로 관리
 │   ├── settings_manager.py             # 설정 관리 (Singleton)
 │   └── utils.py                        # 유틸리티 함수
 │
-├── model/                              # 비즈니스 로직
-│   ├── connection_controller.py        #
-│   ├── connection_manager.py           #
-│   ├── connection_worker.py            # 연결 워커
-│   ├── file_transfer.py                # 파일 전송
-│   ├── macro_runner.py                 # 매크로 실행
-│   ├── packet_parser.py                # 패킷 파싱
-│   └── serial_transport.py             # 전송 관리
+├── model/                              # [Model] 비즈니스 로직 및 상태 관리
+│   ├── connection_controller.py        # 연결 세션 제어, 데이터 흐름 중재, Worker 관리
+│   ├── connection_manager.py           # 전체 연결 인스턴스 관리 (Registry)
+│   ├── connection_worker.py            # 실제 I/O를 수행하는 워커 스레드 (QThread)
+│   ├── file_transfer.py                # 파일 전송 엔진 (QRunnable, Backpressure 포함)
+│   ├── macro_runner.py                 # 매크로 실행 엔진 (QThread, 정밀 타이밍)
+│   ├── packet_parser.py                # 패킷 파싱 전략 및 Expect 매처 구현
+│   └── serial_transport.py             # PySerial 기반 DeviceTransport 구현체
 │
-├── presenter/                          # MVP Presenter 계층
-│   ├── event_router.py                 # 이벤트 라우터
-│   ├── file_presenter.py               # 파일 프레젠터
-│   ├── macro_presenter.py              # 매크로 프레젠터
-│   ├── main_presenter.py               # 메인 프레젠터
-│   ├── manual_control_presenter.py     # 수동 제어 프레젠터
-│   ├── packet_presenter.py             # 패킷 프레젠터
-│   └── port_presenter.py               # 포트 프레젠터
+├── presenter/                          # [Presenter] View와 Model의 중재자
+│   ├── event_router.py                 # EventBus 이벤트를 PyQt Signal로 변환하여 라우팅
+│   ├── file_presenter.py               # 파일 전송 로직, 진행률 계산, UI 업데이트 요청
+│   ├── macro_presenter.py              # 매크로 로드/저장/실행 제어
+│   ├── main_presenter.py               # 메인 화면 로직, 앱 수명주기, 하위 Presenter 조율
+│   ├── manual_control_presenter.py     # 수동 제어(입력/전송) 로직 처리
+│   ├── packet_presenter.py             # 패킷 뷰 데이터 포맷팅 및 업데이트
+│   └── port_presenter.py               # 포트 스캔, 연결/해제 설정 처리
 │
-├── view/                               # UI 계층
-│   ├── main_window.py                  # 메인 윈도우
-│   │
-│   ├── managers/                       # 관리자 계층
-│   │   ├── color_manager.py            # 로그 색상 규칙
-│   │   ├── language_manager.py         # 다국어 관리
-│   │   └── theme_manager.py            # 테마 관리
+├── view/                               # [View] 사용자 인터페이스 (Passive View)
+│   ├── main_window.py                  # 메인 윈도우 셸
 │   │
 │   ├── custom_qt/                      # PyQt5 커스텀 위젯
-│   │   ├── smart_number_edit.py        # 스마트 숫자 편집 위젯
-│   │   ├── smart_list_view.py          # 스마트 리스트 뷰 위젯
-│   │   └── smart_plain_text_edit.py    # 스마트 plain 텍스트 편집 위젯
+│   │   ├── smart_list_view.py          # 고성능 로그 뷰어 (QListView 확장)
+│   │   ├── smart_number_edit.py        # 스마트 숫자 입력기 (자릿수 증감, Alt 코드)
+│   │   └── smart_plain_text_edit.py    # 라인 번호가 있는 텍스트 에디터
 │   │
-│   ├── sections/                       # 섹션 (대 분할)
-│   │   ├── main_left_section.py        # 메인 왼쪽 섹션
-│   │   ├── main_menu_bar.py            # 메인 메뉴 바
-│   │   ├── main_right_section.py       # 메인 오른쪽 섹션
-│   │   ├── main_status_bar.py          # 메인 상태 바
-│   │   └── main_tool_bar.py            # 메인 도구 바
+│   ├── dialogs/                        # 팝업 대화상자
+│   │   ├── about_dialog.py             # 정보창
+│   │   ├── file_transfer_dialog.py     # 파일 전송 진행창
+│   │   ├── font_settings_dialog.py     # 폰트 설정창
+│   │   └── preferences_dialog.py       # 환경 설정창
 │   │
-│   ├── panels/                         # 패널 (중 단위)
+│   ├── managers/                       # 관리자 계층
+│   │   ├── color_manager.py            # 로그 색상 규칙 관리
+│   │   ├── language_manager.py         # 다국어 리소스 관리
+│   │   └── theme_manager.py            # 테마 및 폰트 관리
+│   │
+│   ├── panels/                         # 위젯을 그룹화한 패널 (중 단위)
 │   │   ├── macro_panel.py              # 매크로 패널
 │   │   ├── manual_control_panel.py     # 수동 제어 패널
-│   │   ├── packet_inspector_panel.py   # 패킷 인스펙터 패널
+│   │   ├── packet_panel.py             # 패킷 인스펙터 패널
 │   │   ├── port_panel.py               # 포트 패널
 │   │   └── port_tab_panel.py           # 포트 탭 패널
 │   │
-│   ├── widgets/                        # 위젯 (소 단위)
-│   │   ├── data_log.py                 # 수신 로그 위젯
-│   │   ├── file_progress.py            # 파일 진행률 위젯
-│   │   ├── macro_control.py            #
-│   │   ├── macro_list.py               # 매크로 리스트 위젯
-│   │   ├── manual_control.py           # 수동 제어 위젯
-│   │   ├── packet_inspector.py         # 패킷 인스펙터 위젯
-│   │   ├── port_settings.py            # 포트 설정 위젯
-│   │   ├── port_stats.py               # 포트 통계 위젯
-│   │   └── system_log.py               # 시스템 로그 위젯
+│   ├── sections/                       # 메인 윈도우 레이아웃 구획 (대 분할)
+│   │   ├── main_left_section.py        # 메인 왼쪽 섹션
+│   │   ├── main_right_section.py       # 메인 오른쪽 섹션
+│   │   ├── main_menu_bar.py            # 메인 메뉴 바
+│   │   └── main_status_bar.py          # 메인 상태 바
 │   │
-│   └── dialogs/                        # 대화상자
-│       ├── about_dialog.py             # 정보 대화상자
-│       ├── file_transfer_dialog.py     # 파일 전송 대화상자
-│       ├── font_settings_dialog.py     # 폰트 설정 대화상자
-│       └── preferences_dialog.py       # 설정 대화상자
+│   └─── widgets/                       # 개별 기능 단위 위젯 (소 단위)
+│       ├── data_log.py                 # (구 RxLogWidget) 데이터 로그 뷰어
+│       ├── file_progress.py            # 파일 전송 프로그레스바
+│       ├── macro_control.py            # 매크로 제어 위젯
+│       ├── macro_list.py               # 매크로 리스트 위젯
+│       ├── manual_control.py           # (구 ManualControlWidget) 수동 제어 위젯
+│       ├── packet.py                   # 패킷 트리 뷰
+│       ├── port_settings.py            # 포트 설정 위젯
+│       ├── port_stats.py               # 통계 위젯
+│       └── system_log.py               # 시스템 로그 위젯
 │
 ├── resources/                          # 리소스 파일
 │   ├── languages/                      # 다국어 리소스
@@ -223,20 +226,32 @@ serial_tool/
 
 ---
 
-## 아키텍처
+## 4. 아키텍처 (Architecture)
 
-본 프로젝트는 **MVP (Model-View-Presenter)** 패턴을 엄격히 준수하며, **Event-Driven** 방식으로 컴포넌트 간 결합도를 최소화했습니다.
 
-### MVP 패턴
+### 4.1 MVP 패턴 & 데이터 흐름 (Data Flow)
+
+본 프로젝트는 **Strict MVP (Model-View-Presenter)** 패턴을 준수합니다.
+View와 Model은 서로 직접 통신하지 않으며,
+**DTO(Data Transfer Object)**를 통한 데이터 교환과
+**EventBus**를 통한 느슨한 결합(Decoupling)을 지향합니다.
+데이터 흐름은 단방향성을 유지하며, 각 계층은 정의된 인터페이스(DTO)를 통해서만 소통합니다.
+
 
 ```
-┌─────────────┐         ┌────────────────┐         ┌──────────────┐
-│    View     │◄───────►│    Presenter   │◄───────►│     Model    │
-│ (UI 전용)   │  Signal │ (비즈니스 로직)│   Data  │ (데이터/통신)│
-└─────────────┘         └────────────────┘         └──────────────┘
+┌─────────────┐  (DTO)   ┌────────────────┐  (DTO)   ┌──────────────┐
+│    View     │─────────►│    Presenter   │─────────►│     Model    │
+│ (Passive)   │          │    (Logic)     │          │ (Biz/State)  │
+└─────────────┘◄─────────└────────────────┘◄─────────└──────┬───────┘
+       ▲                                                    │
+       │ (UI Update via Interface Methods)                  │ (EventBus Publish)
+       │                                                    ▼
+┌──────┴───────┐                                   ┌────────────────┐
+│ EventRouter  │◄────────(Subscribe/Route)─────────┤    EventBus    │
+└──────────────┘                                   └────────────────┘
 ```
 
-### A. 계층 구조 (Layers)
+### 4.2 계층 구조 (Layers)
 
 | 계층 | 역할 | 주요 구성 요소 | 비고 |
 | :--- | :--- | :--- | :--- |
@@ -245,52 +260,36 @@ serial_tool/
 | **Model** | **비즈니스 로직 및 데이터** | `PortController`, `MacroRunner`, `FileTransferEngine` | 실제 통신, 파싱, 자동화 로직 수행. UI를 전혀 모르며 `EventBus`로 상태 전파. |
 | **Core** | **인프라 및 유틸리티** | `EventBus`, `DataLogger`, `SettingsManager`, `ResourcePath` | 전역에서 사용되는 공통 기능 제공. |
 
-### 아키텍처 다이어그램 (Architecture)
+### 4.3 컴포넌트 관계도 (Component Diagram)
 
-```
+```mermaid
 graph TD
     %% 스타일 정의
     classDef view fill:#e1f5fe,stroke:#01579b,stroke-width:2px;
     classDef presenter fill:#fff9c4,stroke:#fbc02d,stroke-width:2px;
     classDef model fill:#e8f5e9,stroke:#2e7d32,stroke-width:2px;
     classDef core fill:#f3e5f5,stroke:#7b1fa2,stroke-width:2px;
-    classDef infra fill:#eceff1,stroke:#455a64,stroke-width:1px,stroke-dasharray: 5 5;
 
     subgraph VIEW_LAYER [View Layer (UI & Input)]
         direction TB
         MW[MainWindow]
-
-        subgraph SECTIONS [Sections & Panels]
-            LeftSec[LeftSection]
-            RightSec[RightSection]
-            PortPanel[PortPanel]
-            MacroPanel[MacroPanel]
-        end
-
-        subgraph WIDGETS [Widgets]
+        
+        subgraph WIDGETS [Key Widgets]
+            DataLog[DataLogViewer]
             PortSettings[PortSettingsWidget]
-            RxLog[RxLogWidget]
             ManualCtrl[ManualCtrlWidget]
-            MacroCtrl[MacroCtrlWidget]
         end
-
-        MW --> LeftSec
-        MW --> RightSec
-        LeftSec --> PortPanel
-        LeftSec --> ManualCtrl
-        PortPanel --> PortSettings
-        PortPanel --> RxLog
-        RightSec --> MacroPanel
-        MacroPanel --> MacroCtrl
+        
+        MW --> PortSettings
+        MW --> DataLog
+        MW --> ManualCtrl
     end
 
     subgraph PRESENTER_LAYER [Presenter Layer (Mediator)]
         direction TB
         MainP[MainPresenter]
         PortP[PortPresenter]
-        MacroP[MacroPresenter]
-        FileP[FilePresenter]
-
+        ManualP[ManualCtrlPresenter]
         Router[EventRouter]
     end
 
@@ -302,65 +301,43 @@ graph TD
 
     subgraph MODEL_LAYER [Model Layer (Business Logic & Data)]
         direction TB
-        PortCtrl[PortController]
-        SerialMgr[SerialManager]
+        PortCtrl[ConnectionController]
         MacroRun[MacroRunner]
-        FileEng[FileTransferEngine]
-
+        
         subgraph WORKERS [Background Threads]
             ConnWorker[ConnectionWorker]
             Transport[SerialTransport]
         end
-
-        PacketParser[PacketParser]
     end
 
-    %% 연결 관계 (Signal/Slot & Method Calls)
-
-    %% View -> Presenter (User Actions via Signals)
-    PortSettings -- "signal: connect_requested" --> PortP
-    ManualCtrl -- "signal: send_requested" --> MainP
-    ManualCtrl -- "signal: file_send_requested" --> FileP
-    MacroCtrl -- "signal: start_requested" --> MacroP
-
-    %% Presenter Composition
+    %% 연결 관계
+    PortSettings -- "signal: open_requested (DTO)" --> PortP
+    ManualCtrl -- "signal: send_requested (DTO)" --> ManualP
+    
     MainP o--o PortP
-    MainP o--o MacroP
-    MainP o--o FileP
+    MainP o--o ManualP
     MainP o--o Router
 
-    %% Presenter -> Model (Method Calls)
-    PortP -- "open_port()" --> PortCtrl
-    MacroP -- "start()" --> MacroRun
-    FileP -- "start_transfer()" --> FileEng
-    MainP -- "save/load" --> Settings
+    PortP -- "open_connection(config)" --> PortCtrl
+    ManualP -- "send_data(cmd)" --> PortCtrl
 
-    %% Model Relationships
     PortCtrl o--o ConnWorker
     ConnWorker o--o Transport
-    PortCtrl ..> PacketParser : Uses
-    SerialMgr -- "manages" --> PortCtrl
 
-    %% Event Flow (The Loop)
     ConnWorker -- "emit: data_received" --> PortCtrl
     PortCtrl -- "publish: port.data_received" --> Bus
-    MacroRun -- "publish: macro.finished" --> Bus
-    FileEng -- "publish: file.progress" --> Bus
 
-    %% Event Routing
     Bus -- "subscribe" --> Router
     Bus -- "subscribe" --> Logger
     Bus -- "subscribe" --> MacroRun
 
-    %% Feedback Loop (UI Update)
     Router -- "signal: port_data" --> MainP
-    MainP -- "update_ui()" --> RxLog
-    Router -- "signal: macro_status" --> MacroP
+    MainP -- "append_data()" --> DataLog
 
     %% Class Styling
-    class MW,LeftSec,RightSec,PortPanel,MacroPanel,PortSettings,RxLog,ManualCtrl,MacroCtrl view;
-    class MainP,PortP,MacroP,FileP,Router presenter;
-    class PortCtrl,SerialMgr,MacroRun,FileEng,ConnWorker,Transport,PacketParser model;
+    class MW,DataLog,PortSettings,ManualCtrl view;
+    class MainP,PortP,ManualP,Router presenter;
+    class PortCtrl,ConnWorker,Transport,MacroRun model;
     class Bus,Logger,Settings core;
 ```
 
@@ -501,81 +478,9 @@ graph TD
 
 ---
 
-## 현재 개발 상태
+## 5. 개발 가이드 (Development Guide)
 
-### ✅ 완료 항목
-
-**Model 계층 (Phase 4)**:
-
-* [x] `SerialManager` (포트 레지스트리)
-* [x] `ConnectionWorker` (비동기 I/O, TX 큐)
-* [x] `SerialTransport` (통신 추상화)
-* [x] `PacketParser` (AT, Delimiter, Fixed)
-* [x] `MacroRunner` (자동화 엔진)
-* [x] `MacroEntry` (DTO)
-
-**Core 유틸리티 (Phase 3)**:
-
-* [x] `RingBuffer`, `ThreadSafeQueue`
-* [x] `EventBus`
-* [x] `Logger`
-* [x] `SettingsManager` (Singleton, 논리 그룹)
-* [x] 폴백 메커니즘 (설정 파일 복구)
-
-**View 계층 (Phase 2)**:
-
-* [x] UI 골격 및 위젯 구현
-* [x] 테마/폰트/아이콘 시스템
-* [x] 다국어 지원
-* [x] 설정 관리 시스템
-* [x] MVP 패턴 적용
-* [x] StatusPanel 위젯
-* [x] 상태바 상세 정보
-* [x] Connect 버튼 색상 변경
-* [x] 단축키 시스템
-* [x] 레이아웃 비율 조정
-* [x] 색상 코드 표준화
-* [x] Splitter 비율 복원
-* [x] Tooltip 개선
-
-**프로젝트 기반 (Phase 1)**:
-
-* [x] 프로젝트 구조 및 기본 설정
-* [x] Git 버전 관리 체계
-* [x] 문서화 시스템
-* [x] MVP 아키텍처 기반 리팩토링
-
-### 🔄 진행 중
-
-**Presenter 계층 (Phase 5)**:
-
-* [ ] `MainPresenter` 로직 확장
-* [ ] `MacroPresenter` 구현
-* [ ] `FilePresenter` 구현
-* [ ] `EventRouter` 구현
-
-### ⏳ 예정
-
-**단기 (Current Sprint)**:
-
-* [ ] Macro(list 순차 반복 전송) 자동화 엔진 연동
-* [ ] 파일 전송 기능 연동
-* [ ] 패킷 파서 시스템 연동
-
-**중장기 (Future)**:
-
-* [ ] 플러그인 시스템
-* [ ] **통신 프로토콜 확장**:
-  * [ ] SPI 지원 (FT4222 칩 등)
-  * [ ] I2C 지원 (FT4222 칩 등)
-  * [ ] 멀티 프로토콜 동시 지원 (Serial + SPI + I2C)
-* [ ] 스크립트 언어 지원 (Python/Lua 임베딩)
-
----
-
-## 개발 가이드라인
-
-### 문서 참조
+### 5.1 문서 참조
 
 | 문서 | 목적 | 위치 |
 |------|------|------|
@@ -588,17 +493,23 @@ graph TD
 | 변경 이력 | 세션별 변경 사항 | `doc/changelog.md` |
 | 세션 요약 | 2025-12-09 작업 요약 | `doc/session_summary_20251209.md` |
 
-### 코드 스타일
+### 5.2 코드 스타일
 
 * **PEP 8** 준수
 * **한국어** 주석 및 Docstring
 * **타입 힌트** 필수
 * **MVP 패턴** 준수 (View는 시그널만 emit)
 
-### Git 버전 관리
+### 5.3 네이밍 규칙 (Naming Convention)
+* **클래스**: `PascalCase` (e.g., `DataLogWidget`)
+* **함수/변수**: `snake_case` (e.g., `connect_port`)
+* **언어 키**: `[context]_[type]_[name]` (e.g., `port_btn_connect`)
+* **DTO**: `PascalCase` (e.g., `ManualCommand`)
+
+### 5.4 Git 버전 관리
 
 * 본 프로젝트는 **Git을 통한 지속적인 백업**을 권장합니다:
-* 모든 메시지는 한국어로 작성합니다.
+* 모든 메시지는 **한국어**로 작성합니다.
 
 ```bash
 # 커밋 메시지 형식 (한국어)
@@ -621,37 +532,25 @@ Style: 스타일 변경
 
 ---
 
-## 도구 및 유틸리티
+## 6. 도구 및 테스트 (Tools & Tests)
 
-### 언어 키 관리
-
+### 6.1 유틸리티 도구
 ```bash
-# UI 파일에서 언어 키 자동 추출
+# 소스 코드에서 언어 키 추출 및 JSON 업데이트
 python tools/manage_lang_keys.py extract
 
-# 누락/미사용 키 확인
+# 누락되거나 사용되지 않는 언어 키 검사
 python tools/manage_lang_keys.py check
 ```
 
-### 테스트 실행
-
+### 6.2 테스트 실행
 ```bash
-# 전체 테스트
+# 전체 테스트 실행
 pytest
 
-# 특정 테스트
-pytest tests/test_view.py
+# 특정 모듈 테스트
+pytest tests/test_model.py
+
+# 상세 출력 모드
+pytest -v -s
 ```
-
----
-
-## 기여 (Contributing)
-
-버그 신고 및 기능 제안은 Issue를 통해 환영합니다.
-Pull Request도 언제나 환영합니다.
-
----
-
-## 라이선스
-
-MIT License

@@ -22,6 +22,7 @@ EventBus와 Presenter/View 사이의 이벤트를 라우팅합니다.
 from PyQt5.QtCore import QObject, pyqtSignal
 from core.event_bus import event_bus
 from common.dtos import PortDataEvent, PortErrorEvent, PacketEvent, FileProgressEvent
+from common.constants import EventTopics # 상수 임포트
 
 class EventRouter(QObject):
     """
@@ -36,24 +37,24 @@ class EventRouter(QObject):
     # ---------------------------------------------------------
     port_opened = pyqtSignal(str)
     port_closed = pyqtSignal(str)
-    port_error = pyqtSignal(object)          # PortErrorEvent
-    data_received = pyqtSignal(object)       # PortDataEvent
-    data_sent = pyqtSignal(object)           # PortDataEvent
-    packet_received = pyqtSignal(object)     # PacketEvent
+    port_error = pyqtSignal(object)
+    data_received = pyqtSignal(object)
+    data_sent = pyqtSignal(object)
+    packet_received = pyqtSignal(object)
 
     # ---------------------------------------------------------
     # 2. Macro Events
     # ---------------------------------------------------------
     macro_started = pyqtSignal()
     macro_finished = pyqtSignal()
-    macro_error = pyqtSignal(str)              # error_message
+    macro_error = pyqtSignal(str)
 
     # ---------------------------------------------------------
     # 3. File Transfer Events
     # ---------------------------------------------------------
-    file_transfer_progress = pyqtSignal(int, int)  # current_bytes, total_bytes
-    file_transfer_completed = pyqtSignal(bool)     # success
-    file_transfer_error = pyqtSignal(str)          # error_message
+    file_transfer_progress = pyqtSignal(int, int)
+    file_transfer_completed = pyqtSignal(bool)
+    file_transfer_error = pyqtSignal(str)
 
     def __init__(self):
         """EventRouter 초기화 및 이벤트 구독"""
@@ -70,24 +71,24 @@ class EventRouter(QObject):
             - 핸들러 메서드 연결
         """
         # Port Events
-        self.bus.subscribe("port.opened", self._on_port_opened)
-        self.bus.subscribe("port.closed", self._on_port_closed)
+        self.bus.subscribe(EventTopics.PORT_OPENED, self._on_port_opened)
+        self.bus.subscribe(EventTopics.PORT_CLOSED, self._on_port_closed)
 
         # DTO를 그대로 emit
-        self.bus.subscribe("port.error", self._on_port_error)
-        self.bus.subscribe("port.data_received", self._on_data_received)
-        self.bus.subscribe("port.data_sent", self._on_data_sent)
-        self.bus.subscribe("port.packet_received", self._on_packet_received)
+        self.bus.subscribe(EventTopics.PORT_ERROR, self._on_port_error)
+        self.bus.subscribe(EventTopics.PORT_DATA_RECEIVED, self._on_data_received)
+        self.bus.subscribe(EventTopics.PORT_DATA_SENT, self._on_data_sent)
+        self.bus.subscribe(EventTopics.PORT_PACKET_RECEIVED, self._on_packet_received)
 
         # Macro Events
-        self.bus.subscribe("macro.started", lambda _: self.macro_started.emit())
-        self.bus.subscribe("macro.finished", lambda _: self.macro_finished.emit())
-        self.bus.subscribe("macro.error", self._on_macro_error)
+        self.bus.subscribe(EventTopics.MACRO_STARTED, lambda _: self.macro_started.emit())
+        self.bus.subscribe(EventTopics.MACRO_FINISHED, lambda _: self.macro_finished.emit())
+        self.bus.subscribe(EventTopics.MACRO_ERROR, self._on_macro_error)
 
         # File Transfer Events
-        self.bus.subscribe("file.progress", self._on_file_progress)
-        self.bus.subscribe("file.completed", self._on_file_completed)
-        self.bus.subscribe("file.error", self._on_file_error)
+        self.bus.subscribe(EventTopics.FILE_PROGRESS, self._on_file_progress)
+        self.bus.subscribe(EventTopics.FILE_COMPLETED, self._on_file_completed)
+        self.bus.subscribe(EventTopics.FILE_ERROR, self._on_file_error)
 
     # ---------------------------------------------------------
     # Event Handlers (Port)

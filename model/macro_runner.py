@@ -26,6 +26,7 @@ from common.dtos import MacroEntry, ManualCommand, MacroStepEvent
 from model.packet_parser import ExpectMatcher
 from core.logger import logger
 from core.event_bus import event_bus
+from common.constants import EventTopics # 상수 임포트
 
 class MacroRunner(QThread):
     """
@@ -36,9 +37,8 @@ class MacroRunner(QThread):
     """
 
     # UI 업데이트를 위한 시그널 (DTO 사용)
-    step_started = pyqtSignal(object)   # MacroStepEvent
-    step_completed = pyqtSignal(object) # MacroStepEvent
-
+    step_started = pyqtSignal(object)
+    step_completed = pyqtSignal(object)
     macro_finished = pyqtSignal()
     error_occurred = pyqtSignal(str)
 
@@ -65,11 +65,11 @@ class MacroRunner(QThread):
         # Expect 처리 변수
         self._expect_matcher: Optional[ExpectMatcher] = None
         self._expect_found = False
-        self._expect_cond = QWaitCondition() # Expect 대기 전용 조건 변수
+        self._expect_cond = QWaitCondition()
 
         self.event_bus = event_bus
-        # 데이터 수신 이벤트 구독 (Expect 매칭용)
-        self.event_bus.subscribe("port.data_received", self._on_data_received)
+        # 데이터 수신 이벤트 구독 (Expect 매칭용
+        self.event_bus.subscribe(EventTopics.PORT_DATA_RECEIVED, self._on_data_received)
 
     def load_macro(self, entries: List[MacroEntry]) -> None:
         """
@@ -105,7 +105,7 @@ class MacroRunner(QThread):
         self._loop_interval_ms = interval_ms
         self._mutex.unlock()
 
-        self.event_bus.publish("macro.started")
+        self.event_bus.publish(EventTopics.MACRO_STARTED)
 
         # QThread의 start 호출
         super().start()
@@ -131,7 +131,7 @@ class MacroRunner(QThread):
         self.wait()
 
         self.macro_finished.emit()
-        self.event_bus.publish("macro.finished")
+        self.event_bus.publish(EventTopics.MACRO_FINISHED)
 
     def pause(self) -> None:
         """
@@ -245,7 +245,7 @@ class MacroRunner(QThread):
                 error_msg = ""
 
                 try:
-                    # [Refactor] DTO 생성 및 전송
+                    # DTO 생성 및 전송
                     cmd = ManualCommand(
                         text=entry.command,
                         hex_mode=entry.is_hex,
@@ -271,7 +271,7 @@ class MacroRunner(QThread):
                         # 실패 시 중단 처리
                         self.step_completed.emit(MacroStepEvent(index=i, success=False, type="completed"))
                         self.error_occurred.emit(error_msg)
-                        self.event_bus.publish("macro.error", error_msg)
+                        self.event_bus.publish(EventTopics.MACRO_ERROR, error_msg)
 
                         # 실행 플래그 해제
                         self._mutex.lock()

@@ -27,10 +27,9 @@ from model.connection_worker import ConnectionWorker
 from model.serial_transport import SerialTransport
 from model.packet_parser import ParserFactory, PacketParser
 from common.enums import ParserType
-from common.dtos import PortConfig # DTO 사용
-from common.constants import DEFAULT_BAUDRATE
+from common.dtos import PortConfig, PortDataEvent, PortErrorEvent, PacketEvent
+from common.constants import DEFAULT_BAUDRATE, EventTopics
 from core.event_bus import event_bus
-from common.dtos import PortDataEvent, PortErrorEvent, PacketEvent, PortConfig
 
 class ConnectionController(QObject):
     """
@@ -61,9 +60,9 @@ class ConnectionController(QObject):
         # 연결 이름(str) -> PacketParser 매핑
         self.parsers: dict[str, PacketParser] = {}
         # 연결 이름(str) -> Config(dict) 매핑
-        self.connection_configs: dict[str, PortConfig] = {} # Dict[str, dict] -> Dict[str, PortConfig]
+        self.connection_configs: dict[str, PortConfig] = {}
 
-        # 명시적인 활성 연결 상태 관리 변수 (사용자가 선택한 탭)
+        # 명시적인 활성 연결 상태 관리 변수
         self._active_connection_name: Optional[str] = None
 
         # EventBus 인스턴스
@@ -74,23 +73,23 @@ class ConnectionController(QObject):
 
     def _connect_signals_to_eventbus(self) -> None:
         """Signal -> EventBus (DTO 발행)"""
-        self.connection_opened.connect(lambda n: self.event_bus.publish("port.opened", n)) # 단순 문자열은 그대로
-        self.connection_closed.connect(lambda n: self.event_bus.publish("port.closed", n))
+        self.connection_opened.connect(lambda n: self.event_bus.publish(EventTopics.PORT_OPENED, n))
+        self.connection_closed.connect(lambda n: self.event_bus.publish(EventTopics.PORT_CLOSED, n))
 
         self.error_occurred.connect(
-            lambda n, m: self.event_bus.publish("port.error", PortErrorEvent(port=n, message=m))
+            lambda n, m: self.event_bus.publish(EventTopics.PORT_ERROR, PortErrorEvent(port=n, message=m))
         )
 
         self.data_received.connect(
-            lambda n, d: self.event_bus.publish("port.data_received", PortDataEvent(port=n, data=d))
+            lambda n, d: self.event_bus.publish(EventTopics.PORT_DATA_RECEIVED, PortDataEvent(port=n, data=d))
         )
 
         self.data_sent.connect(
-            lambda n, d: self.event_bus.publish("port.data_sent", PortDataEvent(port=n, data=d))
+            lambda n, d: self.event_bus.publish(EventTopics.PORT_DATA_SENT, PortDataEvent(port=n, data=d))
         )
 
         self.packet_received.connect(
-            lambda n, pkt: self.event_bus.publish("port.packet_received", PacketEvent(port=n, packet=pkt))
+            lambda n, pkt: self.event_bus.publish(EventTopics.PORT_PACKET_RECEIVED, PacketEvent(port=n, packet=pkt))
         )
 
     @property
@@ -296,6 +295,13 @@ class ConnectionController(QObject):
                 self.close_connection(name)
 
     def send_data(self, data: bytes, is_broadcast: bool = False) -> None:
+        """
+        데이터 전송
+
+        Args:
+            data: 전송할 바이트 데이터
+            is_broadcast: 브로드캐스팅 여부
+        """
         if not self.workers:
             self.error_occurred.emit("", "No active connections.")
             return

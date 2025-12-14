@@ -1,9 +1,13 @@
+"""
+파일 전송 모델
+"""
 import os
 import time
 from PyQt5.QtCore import QRunnable, QObject, pyqtSignal
 from model.connection_controller import ConnectionController
 from core.event_bus import event_bus
 from common.dtos import FileProgressState, FileProgressEvent
+from common.constants import EventTopics # 상수 임포트
 
 class FileTransferSignals(QObject):
     """
@@ -11,8 +15,8 @@ class FileTransferSignals(QObject):
     """
     # DTO 사용 (FileProgressState)
     progress_updated = pyqtSignal(object)
-    transfer_completed = pyqtSignal(bool)    # success
-    error_occurred = pyqtSignal(str)         # error_message
+    transfer_completed = pyqtSignal(bool)
+    error_occurred = pyqtSignal(str)
 
 class FileTransferEngine(QRunnable):
     """
@@ -114,7 +118,7 @@ class FileTransferEngine(QRunnable):
                     self.signals.progress_updated.emit(state)
 
                     # 2. EventBus용 이벤트 (FileProgressEvent DTO 사용)
-                    self.event_bus.publish("file.progress", FileProgressEvent(current=sent_bytes, total=total_size))
+                    self.event_bus.publish(EventTopics.FILE_PROGRESS, FileProgressEvent(current=sent_bytes, total=total_size))
 
                     # [Logic] Speed Control (속도 제어)
                     # Flow Control이 활성화된 경우(RTS/CTS 등), 드라이버 레벨의 블로킹을 신뢰하고 sleep을 건너뜀
@@ -132,14 +136,13 @@ class FileTransferEngine(QRunnable):
             if self._is_cancelled:
                 self.signals.error_occurred.emit("Transfer cancelled by user.")
                 self.signals.transfer_completed.emit(False)
-                self.event_bus.publish("file.completed", False)
+                self.event_bus.publish(EventTopics.FILE_COMPLETED, False)
             else:
                 self.signals.transfer_completed.emit(True)
-                self.event_bus.publish("file.completed", True)
+                self.event_bus.publish(EventTopics.FILE_COMPLETED, True)
 
         except Exception as e:
-            # 오류 발생 시 처리
             self.signals.error_occurred.emit(str(e))
             self.signals.transfer_completed.emit(False)
-            self.event_bus.publish("file.error", str(e))
-            self.event_bus.publish("file.completed", False)
+            self.event_bus.publish(EventTopics.FILE_ERROR, str(e))
+            self.event_bus.publish(EventTopics.FILE_COMPLETED, False)

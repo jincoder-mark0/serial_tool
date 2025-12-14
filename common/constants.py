@@ -14,7 +14,8 @@
 * UI 제한값 및 기본값 (Log Lines, Scan Interval)
 * 타이밍 상수 (Worker Sleep, UI Refresh)
 * 로그 색상 정의
-* [New] ConfigKeys: 설정 키 상수 모음
+* ConfigKeys: 설정 키 상수 모음
+* EventTopics: 이벤트 버스 토픽 상수 모음
 
 ## HOW
 * 대문자 Snake Case로 상수 명명
@@ -24,6 +25,31 @@
 """
 
 from typing import List
+
+# ==========================================
+# Event Bus Topics (이벤트 토픽 상수)
+# ==========================================
+class EventTopics:
+    """EventBus에서 사용하는 토픽 상수 클래스입니다."""
+
+    # Port Events
+    PORT_OPENED = "port.opened"
+    PORT_CLOSED = "port.closed"
+    PORT_ERROR = "port.error"
+    PORT_DATA_RECEIVED = "port.data_received"
+    PORT_DATA_SENT = "port.data_sent"
+    PORT_PACKET_RECEIVED = "port.packet_received"
+
+    # Macro Events
+    MACRO_STARTED = "macro.started"
+    MACRO_FINISHED = "macro.finished"
+    MACRO_ERROR = "macro.error"
+
+    # File Transfer Events
+    FILE_PROGRESS = "file.progress"
+    FILE_COMPLETED = "file.completed"
+    FILE_ERROR = "file.error"
+
 
 # ==========================================
 # Configuration Keys (설정 키 상수)
@@ -115,16 +141,6 @@ BATCH_SIZE_THRESHOLD: int = 1024  # 이 크기가 넘으면 즉시 전송 (bytes
 BATCH_TIMEOUT_MS: int = 50        # 이 시간이 지나면 크기가 작아도 전송 (ms)
 
 # ==========================================
-# UI Constants
-# ==========================================
-
-# 로그 뷰 최대 라인 수 (기본값)
-DEFAULT_LOG_MAX_LINES: int = 2000
-
-# 로그 삭제 청크 크기 (Trim 시 제거할 비율)
-TRIM_CHUNK_RATIO: float = 0.2  # 20%
-
-# ==========================================
 # Performance & Timings
 # ==========================================
 WORKER_IDLE_WAIT_MS: int = 1      # 데이터 없을 때 대기 시간 (CPU 방어)
@@ -134,6 +150,8 @@ UI_REFRESH_INTERVAL_MS: int = 50  # 로그 뷰 갱신 주기
 # ==========================================
 # UI Limits & Defaults
 # ==========================================
+DEFAULT_LOG_MAX_LINES: int = 2000
+TRIM_CHUNK_RATIO: float = 0.2  # 20%
 MAX_PACKET_SIZE: int = 4096
 MIN_SCAN_INTERVAL_MS: int = 1000
 MAX_SCAN_INTERVAL_MS: int = 60000

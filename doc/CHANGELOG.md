@@ -11,6 +11,19 @@
   - `ManualControlWidget` 및 `Panel`에 `set_local_echo_state` 메서드 추가하여 외부 제어 허용
   - `ManualControlPresenter`에 `update_local_echo_setting` 추가 및 `MainPresenter`와 연동
 
+- **PortSettingsWidget 런타임 오류 수정**
+  - `on_connect_clicked` 메서드에서 `PortConfig` DTO 객체에 딕셔너리 메서드인 `.update()`를 호출하여 발생하던 `AttributeError`를 수정했습니다.
+  - `get_current_config` 메서드 내부에서 객체 생성 시 데이터를 완벽하게 조립하여 반환하도록 로직을 개선했습니다.
+
+#### 추가 사항 (Added)
+
+- **EventBus 기능 강화**
+  - **와일드카드 구독 지원**: `fnmatch`를 도입하여 `port.*`와 같은 패턴으로 이벤트를 구독할 수 있는 기능을 추가했습니다.
+  - **디버깅 모드**: `set_debug_mode(True)` 호출 시 모든 발행 이벤트를 로그로 출력하는 기능을 추가했습니다.
+- **EventTopics 상수 도입**
+  - `common/constants.py`에 `EventTopics` 클래스를 신설했습니다.
+  - `PORT_OPENED`, `MACRO_STARTED`, `FILE_PROGRESS` 등 시스템 전반의 이벤트 토픽을 한곳에서 관리합니다.
+
 #### 리팩토링 (Refactoring)
 
 - **데이터 전송 객체(DTO) 도입**
@@ -23,6 +36,14 @@
   - **MainPresenter**: 설정 로드 책임 이관 및 `View.restore_state()` 메서드를 통해 초기 상태 주입
   - **Main Entry**: `main.py`에서 모든 Manager(`Settings`, `Theme`, `Lang`, `Color`)를 사전 초기화하여 전역 상태 보장
   - View는 수동적(Passive) 뷰로 전환하고, 데이터 처리는 Presenter가 전담하도록 구조 개선
+
+- **전면적인 DTO(Data Transfer Object) 적용**
+  - **매크로**: `MacroScriptData` (파일 저장/로드), `MacroRepeatOption` (반복 설정), `MacroStepEvent` (실행 단계) DTO를 도입하여 `dict` 사용을 제거했습니다.
+  - **에러 핸들링**: `ErrorContext` DTO를 도입하여 에러 타입, 메시지, 트레이스백 정보를 구조화했습니다.
+  - **파일 전송**: `FileProgressEvent` DTO를 도입하여 EventBus를 통한 진행률 전달 시 타입 안전성을 확보했습니다.
+- **매직 스트링(Magic String) 제거**
+  - `ConnectionController`, `MacroRunner`, `FileTransferEngine`, `EventRouter` 등 핵심 모듈에서 문자열 리터럴로 사용되던 이벤트 토픽을 `EventTopics` 상수로 전면 교체했습니다.
+  - 이를 통해 오타로 인한 버그 발생 가능성을 원천 차단하고 IDE의 자동 완성 지원을 강화했습니다.
 
 #### 기능 추가 (Feat)
 
