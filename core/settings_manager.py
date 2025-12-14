@@ -174,7 +174,10 @@ class SettingsManager:
 
             logger.info("Settings loaded and validated successfully.")
 
-        except (FileNotFoundError, json.JSONDecodeError) as e:
+        except (FileNotFoundError, ValueError) as e:
+            # json.JSONDecodeError 대신 ValueError를 사용하여
+            # commentjson 라이브러리 사용 시 발생하는 AttributeError 방지
+            # (JSONDecodeError는 ValueError의 하위 클래스임)
             logger.warning(f"Settings load failed ({type(e).__name__}): {e}. Using fallback.")
             self.settings = fallback_settings
             self.save_settings() # 복구된 설정 저장
