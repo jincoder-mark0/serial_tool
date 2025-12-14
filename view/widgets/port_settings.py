@@ -221,28 +221,15 @@ class PortSettingsWidget(QGroupBox):
     def on_connect_clicked(self) -> None:
         """
         연결 버튼 클릭 처리
+
+        Logic:
+            - get_current_config()를 호출하여 PortConfig DTO 생성
+            - 시그널로 DTO 전달 (Presenter가 처리)
         """
         if self.connect_btn.isChecked():
-            # 연결 요청 (프로토콜에 따라 설정값 분기)
-            protocol = self.protocol_combo.currentText()
-
-            # config = {"protocol": protocol, "port": self.port_combo.currentText()}
             config = self.get_current_config()
 
-            if protocol == "Serial":
-                config.update({
-                    "baudrate": int(self.serial_controls_ui['baud_combo'].currentText()),
-                    "bytesize": int(self.serial_controls_ui['data_combo'].currentText()),
-                    "parity": self.serial_controls_ui['parity_combo'].currentText(),
-                    "stopbits": float(self.serial_controls_ui['stop_combo'].currentText()),
-                    "flowctrl": self.serial_controls_ui['flow_combo'].currentText(),
-                })
-            elif protocol == "SPI":
-                config.update({
-                    "speed": int(self.spi_controls_ui['speed_combo'].currentText()),
-                    "mode": int(self.spi_controls_ui['mode_combo'].currentText()),
-                })
-
+            # 연결 요청 시그널 발행
             self.port_open_requested.emit(config)
             self.connect_btn.setText(language_manager.get_text("port_btn_disconnect"))
         else:
@@ -256,8 +243,10 @@ class PortSettingsWidget(QGroupBox):
         protocol = self.protocol_combo.currentText()
         port = self.port_combo.currentText()
 
+        # DTO 생성
         config = PortConfig(port=port, protocol=protocol)
 
+        # 프로토콜별 설정값 주입
         if protocol == "Serial":
             config.baudrate = int(self.serial_controls_ui['baud_combo'].currentText())
             config.bytesize = int(self.serial_controls_ui['data_combo'].currentText())
@@ -265,8 +254,9 @@ class PortSettingsWidget(QGroupBox):
             config.stopbits = float(self.serial_controls_ui['stop_combo'].currentText())
             config.flowctrl = self.serial_controls_ui['flow_combo'].currentText()
         elif protocol == "SPI":
-            # SPI 설정 매핑 (예시)
-            pass
+            # SPI 설정 매핑
+            config.speed = int(self.spi_controls_ui['speed_combo'].currentText())
+            config.mode = int(self.spi_controls_ui['mode_combo'].currentText())
 
         return config
 
