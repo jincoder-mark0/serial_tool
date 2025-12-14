@@ -7,18 +7,19 @@ SerialTool 애플리케이션 진입점
 * 애플리케이션 초기화 및 실행 관리
 * 전역 설정 및 리소스 경로 구성
 * 에러 핸들링 및 로깅 설정
-* MVP 패턴 초기 연결
+* MVP 패턴 초기 연결 및 Manager 초기화 보장
 
 ## WHAT
 * QApplication 생성 및 설정
 * ResourcePath 초기화
+* 핵심 Manager(Settings, Theme, Language, Color) 사전 초기화
 * MainWindow 및 MainPresenter 생성
 * 전역 에러 핸들러 설치
 
 ## HOW
 * sys.path 조정으로 모듈 import 경로 설정
 * ResourcePath로 개발/배포 환경 자동 감지
-* Logger에 경로 주입
+* 싱글톤 Manager들을 미리 인스턴스화하여 전역 상태 설정
 * MVP 패턴으로 View-Presenter 연결
 * QApplication.exec_()로 이벤트 루프 시작
 """
@@ -38,6 +39,11 @@ from view.main_window import MainWindow
 from presenter.main_presenter import MainPresenter
 
 from core.logger import logger
+from core.error_handler import install_global_error_handler
+from core.settings_manager import SettingsManager
+from view.managers.theme_manager import ThemeManager
+from view.managers.language_manager import LanguageManager
+from view.managers.color_manager import ColorManager
 
 def setup_logging() -> None:
     """
@@ -54,8 +60,6 @@ def setup_logging() -> None:
         datefmt='%H:%M:%S'
     )
 
-from core.error_handler import install_global_error_handler
-
 def main() -> None:
     """
     애플리케이션 메인 진입점
@@ -63,7 +67,7 @@ def main() -> None:
     Logic:
         - 로깅 및 에러 핸들러 설치
         - ResourcePath 초기화 및 경로 검증
-        - Logger에 경로 주입
+        - 모든 Manager 클래스 사전 초기화 (View 생성 전 필수)
         - High DPI 스케일링 설정
         - QApplication 생성
         - MainWindow 및 MainPresenter 초기화
@@ -78,8 +82,15 @@ def main() -> None:
     # ResourcePath 초기화 (개발/배포 환경 자동 감지)
     resource_path = ResourcePath()
 
-    # 핵심 모듈에 경로 주입
+    # 핵심 모듈에 경로 주입 및 초기화
     logger.configure(resource_path)
+
+    # [중요] Manager들 사전 초기화 (순서 중요: Settings -> Theme/Lang -> View)
+    # MainWindow 내부에서 직접 생성하지 않도록 외부에서 주입/초기화 보장
+    SettingsManager(resource_path)
+    ThemeManager(resource_path)
+    LanguageManager(resource_path)
+    ColorManager(resource_path)
 
     # 경로 검증 및 경고
     path_status = resource_path.validate_paths()
@@ -95,10 +106,10 @@ def main() -> None:
 
     app = QApplication(sys.argv)
 
-    # MainWindow 초기화 (ResourcePath 전달)
-    window = MainWindow(resource_path=resource_path)
+    # MainWindow 초기화 (SettingsManager 의존성 제거됨)
+    window = MainWindow()
 
-    # MainPresenter 초기화 (MVP 패턴: View와 Model 연결)
+    # MainPresenter 초기화 (MVP 패턴: View와 Model 연결 및 초기 상태 복원)
     presenter = MainPresenter(window)
 
     window.show()

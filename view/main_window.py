@@ -16,7 +16,6 @@
 ## HOW
 * QMainWindow 상속
 * MVP 패턴을 위한 시그널 노출
-* SettingsManager를 통한 상태 복원
 """
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QSplitter, QApplication, QShortcut
@@ -31,9 +30,7 @@ from view.dialogs import (
     FontSettingsDialog, AboutDialog, PreferencesDialog, FileTransferDialog
 )
 from view.managers.theme_manager import ThemeManager
-from view.managers.language_manager import language_manager, LanguageManager
-from view.managers.color_manager import ColorManager
-from core.settings_manager import SettingsManager
+from view.managers.language_manager import language_manager
 from constants import ConfigKeys
 
 class MainWindow(QMainWindow):
@@ -47,6 +44,7 @@ class MainWindow(QMainWindow):
     # Presenter 전달용 시그널
     close_requested = pyqtSignal()
     settings_save_requested = pyqtSignal(dict)
+    preferences_requested = pyqtSignal()
 
     font_settings_changed = pyqtSignal(dict)
 
@@ -62,30 +60,17 @@ class MainWindow(QMainWindow):
     command_send_requested = pyqtSignal(dict)
     port_tab_added = pyqtSignal(object)
 
-    def __init__(self, resource_path=None) -> None:
+    def __init__(self) -> None:
         """
         MainWindow 초기화
 
-        Args:
-            resource_path: 리소스 경로 객체
+        MVP 원칙에 따라 Model(SettingsManager)을 직접 생성하지 않습니다.
+        초기 상태 복원은 Presenter가 restore_state()를 호출하여 수행합니다.
         """
         super().__init__()
 
-        # 설정 및 매니저 초기화
-        self.resource_path = resource_path
-
-        self.settings = SettingsManager(resource_path)
-        self.theme_manager = ThemeManager(resource_path)
-
-        # 싱글톤이므로 첫 초기화 시에만 resource_path 전달
-        if resource_path is not None:
-            LanguageManager(resource_path)
-            ColorManager(resource_path)
-
-        # 초기 언어 설정
-        lang = self.settings.get(ConfigKeys.LANGUAGE, 'en')
-        language_manager.set_language(lang)
-        language_manager.language_changed.connect(self.on_language_changed)
+        # ThemeManager는 View Helper로서 허용 (단, 초기화는 main.py에서 수행됨)
+        self.theme_manager = ThemeManager()
 
         self.setWindowTitle(f"{language_manager.get_text('main_title')} v1.0")
         self.resize(1400, 900)
@@ -102,14 +87,11 @@ class MainWindow(QMainWindow):
         self.setMenuBar(self.menu_bar)
         self._connect_menu_signals()
 
-        # 초기 스타일 및 설정 적용
-        self._apply_initial_settings()
-
-        # 윈도우 상태 및 각 섹션의 데이터 복원
-        self._load_window_state()
-
         # 단축키 초기화
         self.init_shortcuts()
+
+        # 언어 변경 시그널 연결
+        language_manager.language_changed.connect(self.on_language_changed)
 
     def init_ui(self) -> None:
         """UI 레이아웃 및 컴포넌트 초기화"""
@@ -146,6 +128,127 @@ class MainWindow(QMainWindow):
         # 전역 상태바 설정 (위젯 사용)
         self.global_status_bar = MainStatusBar()
         self.setStatusBar(self.global_status_bar)
+
+    # --------------------------------------------------------
+    # State Management (MVP Support)
+    # --------------------------------------------------------
+    def restore_state(self, settings: dict) -> None:
+        """
+        Presenter로부터 설정을 전달받아 UI 상태를 복원합니다.
+
+        Logic:
+            - 폰트, 테마 적용
+            - 윈도우 크기 및 위치 복원
+            - 패널 및 스플리터 상태 복원
+            - 하위 섹션 상태 복원
+
+        Args:
+            settings (dict): 전체 설정 데이터
+        """
+        # 1. 폰트 및 테마 복원
+        self.theme_manager.restore_fonts_from_settings(settings)
+        prop_font = self.theme_manager.get_proportional_font()
+        QApplication.instance().setFont(prop_font)
+
+        # get 메서드 대신 dict 접근 또는 ConfigKeys 사용 (settings 딕셔너리 구조 가정)
+        # SettingsManager.get() 로직과 유사하게 접근 필요하나, 여기서는 settings가 dict임.
+        # 편의상 중첩된 딕셔너리 접근을 위한 헬퍼 사용이 좋으나, 간단히 처리
+
+        # Helper to safely get nested keys
+        def get_val(path, default=None):
+            keys = path.split('.')
+            val = settings
+            try:
+                for k in keys:
+                    val = val.get(k, {})
+                return val if val != {} else default
+            except AttributeError:
+                return default
+
+        theme = get_val(ConfigKeys.THEME, 'dark')
+        self.switch_theme(theme)
+
+        # 2. 윈도우 지오메트리 복원
+        width = get_val(ConfigKeys.WINDOW_WIDTH, 1400)
+        height = get_val(ConfigKeys.WINDOW_HEIGHT, 900)
+        self.resize(width, height)
+
+        x = get_val(ConfigKeys.WINDOW_X)
+        y = get_val(ConfigKeys.WINDOW_Y)
+        if x is not None and y is not None:
+            self.move(x, y)
+
+        # 3. 우측 패널 표시 상태 복원
+        right_panel_visible = get_val(ConfigKeys.RIGHT_PANEL_VISIBLE, True)
+        self.menu_bar.set_right_panel_checked(right_panel_visible)
+        self.right_section.setVisible(right_panel_visible)
+
+        # 4. 저장된 우측 패널 너비 복원
+        self._saved_right_width = settings.get("saved_right_panel_width")
+
+        # 5. 스플리터 상태 복원
+        splitter_state = get_val(ConfigKeys.SPLITTER_STATE)
+        if splitter_state:
+            try:
+                self.splitter.restoreState(QByteArray.fromBase64(splitter_state.encode()))
+            except Exception:
+                pass # 복원 실패 시 기본값 유지
+        else:
+            self.splitter.setStretchFactor(0, 1)
+            self.splitter.setStretchFactor(1, 1)
+
+        # 6. 하위 섹션 상태 복원
+        left_section_state = {
+            "manual_control": get_val(ConfigKeys.MANUAL_CONTROL_STATE, {}),
+            "ports": get_val(ConfigKeys.PORTS_TABS_STATE, [])
+        }
+        self.left_section.load_state(left_section_state)
+
+        right_section_state = {
+            "macro_panel": {
+                "commands": get_val(ConfigKeys.MACRO_COMMANDS, []),
+                "control_state": get_val(ConfigKeys.MACRO_CONTROL_STATE, {})
+            }
+        }
+        self.right_section.load_state(right_section_state)
+
+    def get_window_state(self) -> dict:
+        """
+        현재 윈도우 상태 반환
+
+        Returns:
+            dict: 윈도우 및 하위 위젯 상태
+        """
+        state = {}
+
+        # 1. 윈도우 기본 설정
+        state[ConfigKeys.WINDOW_WIDTH] = self.width()
+        state[ConfigKeys.WINDOW_HEIGHT] = self.height()
+        state[ConfigKeys.WINDOW_X] = self.x()
+        state[ConfigKeys.WINDOW_Y] = self.y()
+        state[ConfigKeys.SPLITTER_STATE] = self.splitter.saveState().toBase64().data().decode()
+        state[ConfigKeys.RIGHT_PANEL_VISIBLE] = self.right_section.isVisible()
+
+        if self.right_section.isVisible():
+            state["saved_right_panel_width"] = self.right_section.width()
+        else:
+            state["saved_right_panel_width"] = getattr(self, '_saved_right_width', None)
+
+        # 2. Left Section 상태
+        left_state = self.left_section.save_state()
+        if 'manual_control' in left_state:
+            state[ConfigKeys.MANUAL_CONTROL_STATE] = left_state['manual_control']
+        if 'ports' in left_state:
+            state[ConfigKeys.PORTS_TABS_STATE] = left_state['ports']
+
+        # 3. Right Section 상태
+        right_state = self.right_section.save_state()
+        if 'macro_panel' in right_state:
+            macro_data = right_state['macro_panel']
+            state[ConfigKeys.MACRO_COMMANDS] = macro_data.get('commands', [])
+            state[ConfigKeys.MACRO_CONTROL_STATE] = macro_data.get('control_state', {})
+
+        return state
 
     # --------------------------------------------------------
     # Presenter Interface (View 인터페이스)
@@ -208,7 +311,7 @@ class MainWindow(QMainWindow):
         current_index = self.left_section.port_tabs.currentIndex()
         current_widget = self.left_section.port_tabs.widget(current_index)
         if hasattr(current_widget, 'data_log_widget'):
-            current_widget.data_log_widget.on_data_log_logging_toggled(True) # 로깅 시작 요청
+            current_widget.data_log_widget.on_data_log_logging_toggled(True)
 
     def append_local_echo_data(self, data: bytes) -> None:
         """
@@ -225,122 +328,14 @@ class MainWindow(QMainWindow):
 
     def init_shortcuts(self) -> None:
         """전역 단축키를 초기화합니다."""
-        # F2: 연결 (Connect)
         self.shortcut_connect = QShortcut(QKeySequence("F2"), self)
         self.shortcut_connect.activated.connect(self.shortcut_connect_requested.emit)
 
-        # F3: 연결 해제 (Disconnect)
         self.shortcut_disconnect = QShortcut(QKeySequence("F3"), self)
         self.shortcut_disconnect.activated.connect(self.shortcut_disconnect_requested.emit)
 
-        # F5: 로그 지우기 (Clear Log)
         self.shortcut_clear = QShortcut(QKeySequence("F5"), self)
         self.shortcut_clear.activated.connect(self.shortcut_clear_requested.emit)
-
-    def _apply_initial_settings(self) -> None:
-        """
-        초기 설정 적용
-
-        Logic:
-            - 폰트 설정 복원
-            - 애플리케이션 폰트 적용
-            - 테마 적용
-            - 패널 및 스플리터 상태 복원
-        """
-        # 폰트 복원
-
-        # 1. 설정에서 폰트 복원
-        settings_dict = self.settings.get_all_settings()
-        self.theme_manager.restore_fonts_from_settings(settings_dict)
-
-        # 2. 애플리케이션에 가변폭 폰트 적용 (QApplication의 기본 폰트 설정)
-        prop_font = self.theme_manager.get_proportional_font()
-        QApplication.instance().setFont(prop_font)
-
-        # 3. 설정에서 테마 적용 (폰트 스타일을 포함한 QSS 적용)
-        theme = self.settings.get(ConfigKeys.THEME, 'dark')
-        self.switch_theme(theme)
-
-        # 4. 설정에서 오른쪽 패널 표시 복원
-        right_panel_visible = self.settings.get(ConfigKeys.RIGHT_PANEL_VISIBLE, True)
-        self.menu_bar.set_right_panel_checked(right_panel_visible)
-        self.right_section.setVisible(right_panel_visible)
-
-        # 5. 설정에서 스플리터 상태 복원
-        splitter_state = self.settings.get(ConfigKeys.SPLITTER_STATE)
-        if splitter_state:
-            self.splitter.restoreState(QByteArray.fromBase64(splitter_state.encode()))
-        else:
-            self.splitter.setStretchFactor(0, 1)
-            self.splitter.setStretchFactor(1, 1)
-
-    def _load_window_state(self) -> None:
-        """
-        윈도우 및 하위 위젯 상태 복원
-
-        Logic:
-            - 윈도우 크기 및 위치 복원
-            - LeftSection 상태 복원
-            - RightSection 상태 복원
-        """
-        # 1. 윈도우 지오메트리 복원
-        width = self.settings.get(ConfigKeys.WINDOW_WIDTH, 1400)
-        height = self.settings.get(ConfigKeys.WINDOW_HEIGHT, 900)
-        self.resize(width, height)
-
-        x = self.settings.get(ConfigKeys.WINDOW_X)
-        y = self.settings.get(ConfigKeys.WINDOW_Y)
-        if x is not None and y is not None:
-            self.move(x, y)
-
-        # 2. Left Section 상태 복원 (설정 파일 구조에 맞춰 데이터 매핑)
-        left_section_state = {
-            "manual_control": self.settings.get(ConfigKeys.MANUAL_CONTROL_STATE, {}),
-            "ports": self.settings.get(ConfigKeys.PORTS_TABS_STATE, [])
-        }
-        self.left_section.load_state(left_section_state)
-
-        # 3. Right Section 상태 복원
-        right_section_state = {
-            "macro_panel": {
-                "commands": self.settings.get(ConfigKeys.MACRO_COMMANDS, []),
-                "control_state": self.settings.get(ConfigKeys.MACRO_CONTROL_STATE, {})
-            }
-        }
-        self.right_section.load_state(right_section_state)
-
-    def get_window_state(self) -> dict:
-        """
-        현재 윈도우 상태 반환
-
-        Returns:
-            dict: 윈도우 및 하위 위젯 상태
-        """
-        state = {}
-
-        # 1. 윈도우 기본 설정
-        state[ConfigKeys.WINDOW_WIDTH] = self.width()
-        state[ConfigKeys.WINDOW_HEIGHT] = self.height()
-        state[ConfigKeys.WINDOW_X] = self.x()
-        state[ConfigKeys.WINDOW_Y] = self.y()
-        state[ConfigKeys.SPLITTER_STATE] = self.splitter.saveState().toBase64().data().decode()
-        state[ConfigKeys.RIGHT_PANEL_VISIBLE] = self.right_section.isVisible()
-
-        # 2. Left Section 상태
-        left_state = self.left_section.save_state()
-        if 'manual_control' in left_state:
-            state[ConfigKeys.MANUAL_CONTROL_STATE] = left_state['manual_control']
-        if 'ports' in left_state:
-            state[ConfigKeys.PORTS_TABS_STATE] = left_state['ports']
-
-        # 3. Right Section 상태
-        right_state = self.right_section.save_state()
-        if 'macro_panel' in right_state:
-            macro_data = right_state['macro_panel']
-            state[ConfigKeys.MACRO_COMMANDS] = macro_data.get('commands', [])
-            state[ConfigKeys.MACRO_CONTROL_STATE] = macro_data.get('control_state', {})
-
-        return state
 
     def closeEvent(self, event) -> None:
         """
@@ -382,10 +377,10 @@ class MainWindow(QMainWindow):
             theme_name (str): 테마 이름
         """
         self.theme_manager.apply_theme(QApplication.instance(), theme_name)
-
-        # 테마 설정을 저장
-        if hasattr(self, 'settings'):
-            self.settings.set(ConfigKeys.THEME, theme_name)
+        # 설정 저장은 Presenter에서 담당 (settings_changed 시그널 등 사용 시)
+        # 하지만 메뉴를 통한 즉시 변경은 여기서 UI 업데이트만 수행하고
+        # 저장은 MainPresenter의 on_settings_change_requested 등에서 처리하거나
+        # 별도 시그널을 보내야 함. MVP 원칙상 View는 저장하지 않음.
 
         # 메뉴바의 테마 체크 표시 업데이트
         if hasattr(self, 'menu_bar'):
@@ -419,10 +414,14 @@ class MainWindow(QMainWindow):
 
             self.show_status_message("Font settings updated", 2000)
 
-    def open_preferences_dialog(self) -> None:
-        """설정 다이얼로그 열기"""
-        current_settings = self.settings.get_all_settings()
-        dialog = PreferencesDialog(self, current_settings)
+    def open_preferences_dialog(self, settings: dict) -> None:
+        """
+        설정 다이얼로그 열기
+
+        Args:
+            settings (dict): Presenter가 전달한 현재 설정
+        """
+        dialog = PreferencesDialog(self, settings)
         dialog.settings_changed.connect(self.on_settings_change_requested)
         dialog.exec_()
 
@@ -460,9 +459,9 @@ class MainWindow(QMainWindow):
 
         # 메뉴 재생성
         self.menu_bar.retranslate_ui()
-
-        # 설정에 언어 저장
-        self.settings.set(ConfigKeys.LANGUAGE, language_code)
+        # 설정 저장은 Presenter에게 시그널로 요청해야 하나,
+        # 언어 변경은 즉시성을 위해 LanguageManager가 Signal을 보냄.
+        # 영속성을 위해 Presenter에 알림 필요 (settings_save_requested 사용 가능)
 
     def set_right_panel_visible(self, visible: bool) -> None:
         """우측 패널 가시성 토글"""

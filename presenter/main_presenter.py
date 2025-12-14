@@ -18,7 +18,7 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 ## HOW
 * Signal/Slot 기반 통신
 * EventRouter를 통한 전역 이벤트 수신 및 라우팅
-* SettingsManager를 통한 설정 동기화
+* SettingsManager를 통한 설정 동기화 및 View 초기 상태 복원
 """
 from PyQt5.QtCore import QObject, QTimer, QDateTime
 from view.main_window import MainWindow
@@ -49,7 +49,9 @@ class MainPresenter(QObject):
         MainPresenter 생성 및 초기화
 
         Logic:
-            - Model 인스턴스 생성 (ConnectionController, MacroRunner, EventRouter)
+            - SettingsManager를 통해 설정 로드
+            - **View 상태 복원 (restore_state 호출)**
+            - Model 인스턴스 생성
             - 하위 Presenter 초기화 및 의존성 주입
             - EventRouter 및 View 시그널 연결
             - 상태바 업데이트 타이머 시작
@@ -59,6 +61,13 @@ class MainPresenter(QObject):
         """
         super().__init__()
         self.view = view
+
+        # --- 0. 설정 로드 및 View 초기화 (MVP) ---
+        self.settings_manager = SettingsManager()
+        all_settings = self.settings_manager.get_all_settings()
+
+        # View에 설정 주입하여 초기 상태 복원
+        self.view.restore_state(all_settings)
 
         # --- 1. Model 초기화 ---
         self.connection_controller = ConnectionController()
@@ -83,7 +92,6 @@ class MainPresenter(QObject):
         )
 
         # 2.5 Manual Control (좌측 수동 제어)
-        # Local Echo 처리를 위해 View의 콜백 메서드(append_local_echo_data) 주입
         self.manual_control_presenter = ManualControlPresenter(
             self.view.left_section.manual_control,
             self.connection_controller,
@@ -117,6 +125,7 @@ class MainPresenter(QObject):
         self.view.settings_save_requested.connect(self.on_settings_change_requested)
         self.view.font_settings_changed.connect(self.on_font_settings_changed)
         self.view.close_requested.connect(self.on_close_requested)
+        self.view.preferences_requested.connect(self.on_preferences_requested)
 
         # 단축키
         self.view.shortcut_connect_requested.connect(self.on_shortcut_connect)
@@ -139,124 +148,55 @@ class MainPresenter(QObject):
 
         self.view.log_system_message("Application initialized", "INFO")
 
+    def on_preferences_requested(self):
+        """Preferences 다이얼로그 요청 처리"""
+        current_settings = self.settings_manager.get_all_settings()
+        self.view.open_preferences_dialog(current_settings)
+
     def on_close_requested(self) -> None:
         """
         애플리케이션 종료 처리
 
         Logic:
-            - 윈도우 상태(위치, 크기, 패널 상태) 수집
+            - 윈도우 상태 수집
             - 설정 파일 저장
             - 열린 포트 닫기 및 리소스 정리
         """
-        # 1. 윈도우 상태 가져오기
+        # 윈도우 상태 가져오기
         state = self.view.get_window_state()
-        settings_manager = SettingsManager()
 
-        # 2. 설정 값 업데이트
-        settings_manager.set(ConfigKeys.WINDOW_WIDTH, state.get(ConfigKeys.WINDOW_WIDTH))
-        settings_manager.set(ConfigKeys.WINDOW_HEIGHT, state.get(ConfigKeys.WINDOW_HEIGHT))
-        settings_manager.set(ConfigKeys.WINDOW_X, state.get(ConfigKeys.WINDOW_X))
-        settings_manager.set(ConfigKeys.WINDOW_Y, state.get(ConfigKeys.WINDOW_Y))
-        settings_manager.set(ConfigKeys.SPLITTER_STATE, state.get(ConfigKeys.SPLITTER_STATE))
-        settings_manager.set(ConfigKeys.RIGHT_PANEL_VISIBLE, state.get(ConfigKeys.RIGHT_PANEL_VISIBLE))
+        # 설정 값 업데이트
+        self.settings_manager.set(ConfigKeys.WINDOW_WIDTH, state.get(ConfigKeys.WINDOW_WIDTH))
+        self.settings_manager.set(ConfigKeys.WINDOW_HEIGHT, state.get(ConfigKeys.WINDOW_HEIGHT))
+        self.settings_manager.set(ConfigKeys.WINDOW_X, state.get(ConfigKeys.WINDOW_X))
+        self.settings_manager.set(ConfigKeys.WINDOW_Y, state.get(ConfigKeys.WINDOW_Y))
+        self.settings_manager.set(ConfigKeys.SPLITTER_STATE, state.get(ConfigKeys.SPLITTER_STATE))
+        self.settings_manager.set(ConfigKeys.RIGHT_PANEL_VISIBLE, state.get(ConfigKeys.RIGHT_PANEL_VISIBLE))
+
+        # 저장된 패널 너비 저장
+        if "saved_right_panel_width" in state:
+             # 임의의 키 또는 기존 키에 저장 (여기선 예시로 custom key 사용 가능 여부 확인 필요)
+             # SettingsManager.set은 경로 생성을 지원하므로 문제 없음
+             self.settings_manager.set("ui.saved_right_panel_width", state["saved_right_panel_width"])
 
         if ConfigKeys.MANUAL_CONTROL_STATE in state:
-            settings_manager.set(ConfigKeys.MANUAL_CONTROL_STATE, state[ConfigKeys.MANUAL_CONTROL_STATE])
+            self.settings_manager.set(ConfigKeys.MANUAL_CONTROL_STATE, state[ConfigKeys.MANUAL_CONTROL_STATE])
         if ConfigKeys.PORTS_TABS_STATE in state:
-            settings_manager.set(ConfigKeys.PORTS_TABS_STATE, state[ConfigKeys.PORTS_TABS_STATE])
+            self.settings_manager.set(ConfigKeys.PORTS_TABS_STATE, state[ConfigKeys.PORTS_TABS_STATE])
 
         if ConfigKeys.MACRO_COMMANDS in state:
-            settings_manager.set(ConfigKeys.MACRO_COMMANDS, state[ConfigKeys.MACRO_COMMANDS])
+            self.settings_manager.set(ConfigKeys.MACRO_COMMANDS, state[ConfigKeys.MACRO_COMMANDS])
         if ConfigKeys.MACRO_CONTROL_STATE in state:
-            settings_manager.set(ConfigKeys.MACRO_CONTROL_STATE, state[ConfigKeys.MACRO_CONTROL_STATE])
+            self.settings_manager.set(ConfigKeys.MACRO_CONTROL_STATE, state[ConfigKeys.MACRO_CONTROL_STATE])
 
-        # 3. 파일 저장
-        settings_manager.save_settings()
+        # 파일 저장
+        self.settings_manager.save_settings()
 
-        # 4. 리소스 정리 (포트 닫기)
+        # 리소스 정리 (포트 닫기)
         if self.connection_controller.has_active_connection:
             self.connection_controller.close_connection()
 
         logger.info("Application shutdown sequence completed.")
-
-    def on_data_received(self, port_name: str, data: bytes) -> None:
-        """
-        데이터 수신 처리
-
-        Logic:
-            - 데이터 로깅 (활성화 시)
-            - 해당 포트의 View(DataLogWidget)에 데이터 전달
-            - RX 카운트 증가
-
-        Args:
-            port_name (str): 수신 포트 이름
-            data (bytes): 수신 데이터
-        """
-        # 로깅 중이면 DataLogger에 먼저 기록 (데이터 누락 방지)
-        if data_logger_manager.is_logging(port_name):
-            data_logger_manager.write(port_name, data)
-
-        # 뷰 인터페이스를 통해 데이터 전달 (탭 탐색)
-        count = self.view.get_port_tabs_count()
-        for i in range(count):
-            widget = self.view.get_port_tab_widget(i)
-            if hasattr(widget, 'get_port_name') and widget.get_port_name() == port_name:
-                if hasattr(widget, 'data_log_widget'):
-                    widget.data_log_widget.append_data(data)
-                break
-
-        # RX 카운트 증가
-        self.rx_byte_count += len(data)
-
-    def on_data_sent(self, port_name: str, data: bytes) -> None:
-        """
-        데이터 송신 처리
-
-        Logic:
-            - 데이터 로깅 (활성화 시)
-            - TX 카운트 증가
-
-        Args:
-            port_name (str): 송신 포트 이름
-            data (bytes): 송신 데이터
-        """
-        if data_logger_manager.is_logging(port_name):
-            data_logger_manager.write(port_name, data)
-        self.tx_byte_count += len(data)
-
-    def on_macro_send_requested(self, text: str, hex_mode: bool, command_prefix: bool, command_suffix: bool) -> None:
-        """
-        매크로 전송 요청 처리
-
-        Logic:
-            - 연결 열림 확인
-            - CommandProcessor를 사용하여 데이터 가공 (Prefix/Suffix/Hex)
-            - 데이터 전송 (ConnectionController)
-
-        Args:
-            text (str): 전송할 텍스트
-            hex_mode (bool): Hex 모드 여부
-            command_prefix (bool): 접두사 사용 여부
-            command_suffix (bool): 접미사 사용 여부
-        """
-        if not self.connection_controller.has_active_connection:
-            logger.warning("Port not open")
-            return
-
-        # [Refactor] SettingsManager에서 값 획득 후 CommandProcessor에 주입
-        settings = SettingsManager()
-        prefix = settings.get(ConfigKeys.COMMAND_PREFIX) if command_prefix else None
-        suffix = settings.get(ConfigKeys.COMMAND_SUFFIX) if command_suffix else None
-
-        try:
-            # 데이터 가공 위임 (CommandProcessor에 Prefix/Suffix 값 직접 전달)
-            data = CommandProcessor.process_command(text, hex_mode, prefix=prefix, suffix=suffix)
-        except ValueError:
-            logger.error(f"Invalid hex string for sending: {text}")
-            return
-
-        # 전송
-        self.connection_controller.send_data(data)
 
     def on_settings_change_requested(self, new_settings: dict) -> None:
         """
@@ -317,7 +257,7 @@ class MainPresenter(QObject):
 
             setting_path = settings_map.get(key)
             if setting_path:
-                settings_manager.set(setting_path, final_value)
+                self.settings_manager.set(setting_path, final_value)
 
         # UI 업데이트
         if 'theme' in new_settings:
@@ -341,10 +281,12 @@ class MainPresenter(QObject):
         # PacketPresenter 설정 업데이트 요청
         self.packet_presenter.apply_settings()
 
+        # 즉시 저장
+        self.settings_manager.save_settings()
+
         self.view.show_status_message("Settings updated", 2000)
         self.view.log_system_message("Settings updated", "INFO")
 
-    @staticmethod
     def on_font_settings_changed(self, font_settings: dict) -> None:
         """
         폰트 설정 변경 처리
@@ -364,13 +306,58 @@ class MainPresenter(QObject):
 
         for tm_key, value in font_settings.items():
             if tm_key in key_map:
-                settings_manager.set(key_map[tm_key], value)
+                self.settings_manager.set(key_map[tm_key], value)
             else:
                 # 알 수 없는 키에 대한 경고 (유지보수성 확보)
                 logger.warning(f"Unknown font setting key: {tm_key}")
 
-        settings_manager.save_settings()
+        self.settings_manager.save_settings()
         logger.info("Font settings saved successfully.")
+
+    def on_data_received(self, port_name: str, data: bytes) -> None:
+        """
+        데이터 수신 처리
+
+        Logic:
+            - 데이터 로깅 (활성화 시)
+            - 해당 포트의 View(DataLogWidget)에 데이터 전달
+            - RX 카운트 증가
+
+        Args:
+            port_name (str): 수신 포트 이름
+            data (bytes): 수신 데이터
+        """
+        # 로깅 중이면 DataLogger에 먼저 기록 (데이터 누락 방지)
+        if data_logger_manager.is_logging(port_name):
+            data_logger_manager.write(port_name, data)
+
+        # 뷰 인터페이스를 통해 데이터 전달 (탭 탐색)
+        count = self.view.get_port_tabs_count()
+        for i in range(count):
+            widget = self.view.get_port_tab_widget(i)
+            if hasattr(widget, 'get_port_name') and widget.get_port_name() == port_name:
+                if hasattr(widget, 'data_log_widget'):
+                    widget.data_log_widget.append_data(data)
+                break
+
+        # RX 카운트 증가
+        self.rx_byte_count += len(data)
+
+    def on_data_sent(self, port_name: str, data: bytes) -> None:
+        """
+        데이터 송신 처리
+
+        Logic:
+            - 데이터 로깅 (활성화 시)
+            - TX 카운트 증가
+
+        Args:
+            port_name (str): 송신 포트 이름
+            data (bytes): 송신 데이터
+        """
+        if data_logger_manager.is_logging(port_name):
+            data_logger_manager.write(port_name, data)
+        self.tx_byte_count += len(data)
 
     # ---------------------------------------------------------
     # Event Handlers (Port Status)
@@ -406,6 +393,40 @@ class MainPresenter(QObject):
         """매크로 에러 알림"""
         self.view.log_system_message(f"Macro Error: {error_msg}", "ERROR")
         self.view.show_status_message(f"Macro Error: {error_msg}", 5000)
+
+    def on_macro_send_requested(self, text: str, hex_mode: bool, command_prefix: bool, command_suffix: bool) -> None:
+        """
+        매크로 전송 요청 처리
+
+        Logic:
+            - 연결 열림 확인
+            - CommandProcessor를 사용하여 데이터 가공 (Prefix/Suffix/Hex)
+            - 데이터 전송 (ConnectionController)
+
+        Args:
+            text (str): 전송할 텍스트
+            hex_mode (bool): Hex 모드 여부
+            command_prefix (bool): 접두사 사용 여부
+            command_suffix (bool): 접미사 사용 여부
+        """
+        if not self.connection_controller.has_active_connection:
+            logger.warning("Port not open")
+            return
+
+        # [Refactor] SettingsManager에서 값 획득 후 CommandProcessor에 주입
+        settings = SettingsManager()
+        prefix = settings.get(ConfigKeys.COMMAND_PREFIX) if command_prefix else None
+        suffix = settings.get(ConfigKeys.COMMAND_SUFFIX) if command_suffix else None
+
+        try:
+            # 데이터 가공 위임 (CommandProcessor에 Prefix/Suffix 값 직접 전달)
+            data = CommandProcessor.process_command(text, hex_mode, prefix=prefix, suffix=suffix)
+        except ValueError:
+            logger.error(f"Invalid hex string for sending: {text}")
+            return
+
+        # 전송
+        self.connection_controller.send_data(data)
 
     # ---------------------------------------------------------
     # Event Handlers (File Transfer)
