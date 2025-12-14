@@ -29,7 +29,7 @@ class CommandProcessor:
         명령어 텍스트를 설정에 맞춰 바이트 데이터로 변환
 
         Logic:
-            - **인자로 전달받은** Prefix/Suffix 적용
+            - 인자로 전달받은 Prefix/Suffix 적용
             - Hex 모드일 경우 공백 제거 후 bytes 변환
             - ASCII 모드일 경우 UTF-8 인코딩
 

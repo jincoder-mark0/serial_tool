@@ -93,7 +93,7 @@ class FilePresenter(QObject):
         # 'active connection name'을 가져오는 helper가 필요함.
         # 여기서는 편의상 ConnectionController에 남아있는 get_active_connections() 중 첫번째를 쓰거나
         # 상위(MainPresenter)에서 주입받은 current_port를 사용해야 함.
-        # **가장 좋은 방법**: FilePresenter 생성자나 start_transfer 시점에 target_port를 받는 것.
+        # 가장 좋은 방법: FilePresenter 생성자나 start_transfer 시점에 target_port를 받는 것.
         # 일단은 ConnectionController의 get_active_connections()를 활용하여 첫 번째 포트를 선택하거나,
         # FileTransferDialog가 포트를 선택하게 하는 것이 맞으나,
         # 현재 UI 구조상 '현재 활성 탭'의 포트를 의미함.
@@ -122,7 +122,7 @@ class FilePresenter(QObject):
              return
 
         try:
-            # 엔진 생성 - [Fix] DTO 전달
+            # 엔진 생성 - DTO 전달
             self.current_engine = FileTransferEngine(
                 self.connection_controller,
                 filepath,

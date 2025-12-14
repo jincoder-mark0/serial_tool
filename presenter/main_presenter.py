@@ -14,12 +14,15 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 * View 이벤트 처리 (시그널 구독)
 * Model 상태 변화에 따른 View 업데이트 (EventRouter 활용)
 * 설정 저장/로드 및 애플리케이션 종료 처리
+* Fast Path: 고속 데이터 수신 처리를 위한 직접 연결 및 버퍼링
 
 ## HOW
 * Signal/Slot 기반 통신
 * EventRouter를 통한 전역 이벤트 수신 및 라우팅
 * SettingsManager를 통한 설정 동기화 및 View 초기 상태 복원
+* QTimer & defaultdict: UI 업데이트 스로틀링 구현
 """
+from collections import defaultdict
 from PyQt5.QtCore import QObject, QTimer, QDateTime
 from view.main_window import MainWindow
 from model.connection_controller import ConnectionController
@@ -51,10 +54,11 @@ class MainPresenter(QObject):
 
         Logic:
             - SettingsManager를 통해 설정 로드
-            - **View 상태 복원 (restore_state 호출)**
+            - View 상태 복원 (restore_state 호출)
             - Model 인스턴스 생성
             - 하위 Presenter 초기화 및 의존성 주입
             - EventRouter 및 View 시그널 연결
+            - 데이터 수신 직접 연결 및 UI 버퍼링 타이머 설정
             - 상태바 업데이트 타이머 시작
 
         Args:
@@ -96,12 +100,26 @@ class MainPresenter(QObject):
         self.manual_control_presenter = ManualControlPresenter(
             self.view.left_section.manual_control_panel,
             self.connection_controller,
-            self.view.append_local_echo_data
+            self.view.append_local_echo_data,
+            self.port_presenter.get_active_port_name
         )
 
-        # --- 3. EventRouter 시그널 연결 (Model -> Presenter -> View) ---
+        # --- 3. 데이터 수신 최적화 ---
+        # EventBus를 거치지 않고 Controller 시그널을 직접 구독하여 오버헤드 감소
+        self.connection_controller.data_received.connect(self._on_fast_data_received)
+
+        # UI 버퍼링: 포트별로 수신 데이터를 모아둠 {port_name: bytearray}
+        self._rx_buffer = defaultdict(bytearray)
+
+        # UI 업데이트 타이머 (Throttling): 30ms마다 버퍼 내용을 View에 반영 (약 33fps)
+        self._ui_refresh_timer = QTimer()
+        self._ui_refresh_timer.setInterval(30)
+        self._ui_refresh_timer.timeout.connect(self._flush_rx_buffer_to_ui)
+        self._ui_refresh_timer.start()
+
+        # --- 4. EventRouter 시그널 연결 (Model -> Presenter -> View) ---
         # Port Events
-        self.event_router.data_received.connect(self.on_data_received)
+        # [Note] data_received는 Fast Path(_on_fast_data_received)에서 처리하므로 여기서 연결하지 않거나, 로직을 비워둠
         self.event_router.port_opened.connect(self.on_port_opened)
         self.event_router.port_closed.connect(self.on_port_closed)
         self.event_router.port_error.connect(self.on_port_error)
@@ -116,11 +134,11 @@ class MainPresenter(QObject):
         self.event_router.file_transfer_completed.connect(self.on_file_transfer_completed)
         self.event_router.file_transfer_error.connect(self.on_file_transfer_error)
 
-        # --- 4. 내부 Model 시그널 연결 ---
+        # --- 5. 내부 Model 시그널 연결 ---
         # MacroRunner의 전송 요청 처리
         self.macro_runner.send_requested.connect(self.on_macro_send_requested)
 
-        # --- 5. View 시그널 연결 (View -> Presenter) ---
+        # --- 6. View 시그널 연결 (View -> Presenter) ---
         # 설정 및 종료
         self.view.settings_save_requested.connect(self.on_settings_change_requested)
         self.view.font_settings_changed.connect(self.on_font_settings_changed)
@@ -139,7 +157,7 @@ class MainPresenter(QObject):
         self._connect_logging_signals()
         self.view.port_tab_added.connect(self._on_port_tab_added)
 
-        # --- 6. 초기화 완료 ---
+        # --- 7. 초기화 완료 ---
         self.rx_byte_count = 0
         self.tx_byte_count = 0
         self.status_timer = QTimer()
@@ -148,10 +166,79 @@ class MainPresenter(QObject):
 
         self.view.log_system_message("Application initialized", "INFO")
 
+    # -------------------------------------------------------------------------
+    # High-Performance Data Handling
+    # -------------------------------------------------------------------------
+    def _on_fast_data_received(self, port_name: str, data: bytes) -> None:
+        """
+        고속 데이터 수신 핸들러 (ConnectionController 직접 연결)
+
+        Logic:
+            - [Immediate] 파일 로깅 (DataLogger): 지연 없이 즉시 기록
+            - [Immediate] 통계 업데이트: RX 바이트 카운트 즉시 증가
+            - [Buffered] UI 업데이트: 버퍼에 추가하고 타이머에 의해 일괄 처리
+
+        Args:
+            port_name (str): 포트 이름
+            data (bytes): 수신 데이터
+        """
+        if not data:
+            return
+
+        # 1. 파일 로깅 (Critical Path)
+        if data_logger_manager.is_logging(port_name):
+            data_logger_manager.write(port_name, data)
+
+        # 2. 통계 집계
+        self.rx_byte_count += len(data)
+
+        # 3. UI 업데이트 버퍼링 (Throttling)
+        # bytearray는 가변 객체이므로 append 대신 extend 사용
+        self._rx_buffer[port_name].extend(data)
+
+    def _flush_rx_buffer_to_ui(self) -> None:
+        """
+        [Timer Slot] 버퍼링된 수신 데이터를 UI에 반영
+
+        Logic:
+            - 버퍼에 데이터가 있는 포트만 순회
+            - 해당 포트의 View(DataLogWidget)를 찾아 데이터 전달
+            - 버퍼 초기화
+        """
+        if not self._rx_buffer:
+            return
+
+        # 현재 뷰의 탭 정보를 가져옴 (최적화: 탭이 많을 경우 매번 전체 검색은 비효율적일 수 있음)
+        # 하지만 여기서는 안전하게 전체 탭을 순회하며 매칭
+        count = self.view.get_port_tabs_count()
+
+        # 처리할 데이터가 있는 포트 목록 복사 (Iterate 중 수정 방지)
+        pending_ports = list(self._rx_buffer.keys())
+
+        for port_name in pending_ports:
+            data = self._rx_buffer[port_name]
+            if not data:
+                continue
+
+            # bytes로 변환하여 전달
+            data_bytes = bytes(data)
+
+            # 해당 포트의 탭 찾기
+            for i in range(count):
+                widget = self.view.get_port_tab_widget(i)
+                if hasattr(widget, 'get_port_name') and widget.get_port_name() == port_name:
+                    if hasattr(widget, 'data_log_widget'):
+                        widget.data_log_widget.append_data(data_bytes)
+                    break
+
+            # 처리 완료된 버퍼 비우기
+            del self._rx_buffer[port_name]
+
+    # -------------------------------------------------------------------------
+    # Standard Event Handlers
+    # -------------------------------------------------------------------------
     def on_preferences_requested(self):
-        """
-        Preferences 다이얼로그 요청 처리
-        """
+        """Preferences 다이얼로그 요청 처리"""
         current_settings = self.settings_manager.get_all_settings()
         self.view.open_preferences_dialog(current_settings)
 
@@ -164,6 +251,10 @@ class MainPresenter(QObject):
             - 설정 파일 저장 (Presenter -> Model)
             - 열린 포트 닫기 및 리소스 정리
         """
+        # 타이머 정지
+        self._ui_refresh_timer.stop()
+        self.status_timer.stop()
+
         # 윈도우 상태 가져오기
         state = self.view.get_window_state()
 
@@ -303,7 +394,7 @@ class MainPresenter(QObject):
         self.settings_manager.save_settings()
         logger.info("Font settings saved successfully.")
 
-    def on_data_received(self, port_name: str, data: bytes) -> None:
+    def on_data_received_normal(self, port_name: str, data: bytes) -> None:
         """
         데이터 수신 처리
 
@@ -339,6 +430,17 @@ class MainPresenter(QObject):
 
         # RX 카운트 증가
         self.rx_byte_count += len(data)
+
+    def on_data_received(self, event: PortDataEvent) -> None:
+        """
+        데이터 수신 처리 (EventBus)
+
+        [Note] UI 업데이트 로직은 _on_fast_data_received 및
+        _flush_rx_buffer_to_ui로 이관되었습니다.
+        여기서는 중복 처리를 방지하기 위해 로직을 비워둡니다.
+        추후 플러그인이나 다른 모니터링 기능이 필요할 경우 사용할 수 있습니다.
+        """
+        pass
 
     def on_data_sent(self, event: PortDataEvent) -> None:
         """

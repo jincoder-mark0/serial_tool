@@ -327,7 +327,7 @@ class ThemeManager:
         prop_family, prop_size = self.get_proportional_font_info()
         fixed_family, fixed_size = self.get_fixed_font_info()
 
-        # [Fix] Dict 대신 DTO 반환
+        # Dict 대신 DTO 반환
         return FontConfig(
             prop_family=prop_family,
             prop_size=prop_size,

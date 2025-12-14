@@ -122,7 +122,7 @@ class MacroPresenter(QObject):
         # DTO에서 옵션 추출
         loop_count = option.max_runs
         interval_ms = option.interval_ms
-        is_broadcast = option.is_broadcast # [New]
+        is_broadcast = option.is_broadcast
 
         # 현재 리스트의 데이터를 MacroEntry로 변환
         raw_list = self.panel.macro_list.get_macro_list()

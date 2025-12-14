@@ -113,7 +113,7 @@ def test_dynamic_language_switching(app, qtbot):
         print(f"\nScanning Language: {language_code}...")
         language_manager.set_language(language_code)
 
-        # [Fix] 상태바 메시지 강제 초기화
+        # 상태바 메시지 강제 초기화
         # 초기화 과정에서 Theme 변경 메시지 등이 덮어쓰여질 수 있으므로
         # 번역 테스트를 위해 의도적으로 'Ready' 메시지로 되돌림
         # 단, 실제 UI에서는 retranslate_ui 호출 시 자동으로 변환되어야 함

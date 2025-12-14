@@ -272,7 +272,7 @@ class ConnectionController(QObject):
         연결을 종료합니다.
 
         Logic:
-            - **[Safety]** 해당 포트에서 진행 중인 파일 전송이 있다면 강제 취소 요청
+            - 해당 포트에서 진행 중인 파일 전송이 있다면 강제 취소 요청
             - Worker 스레드 종료 및 리소스 해제
 
         Args:

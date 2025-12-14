@@ -13,7 +13,7 @@
 * PortSettingsWidget, PortStatsWidget, DataLogWidget 배치
 * 연결/해제 토글 기능
 * 탭 제목 관리 (커스텀 이름)
-* [New] Broadcast 허용 상태 시그널 중계
+* Broadcast 허용 상태 시그널 중계
 
 ## HOW
 * QVBoxLayout 사용

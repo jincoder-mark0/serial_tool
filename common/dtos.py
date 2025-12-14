@@ -27,7 +27,7 @@
 ## HOW
 * python dataclasses 활용
 * to_dict/from_dict 메서드를 통해 JSON 직렬화 지원
-* **[New]** 안전한 타입 변환을 위한 헬퍼 메서드 적용
+* 안전한 타입 변환을 위한 헬퍼 메서드 적용
 """
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List

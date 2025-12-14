@@ -205,6 +205,6 @@ class MacroPanel(QWidget):
         Args:
             running (bool): 실행 중 여부
         """
-        # Note: 현재는 단순히 running 상태만 전달
+        # [Note] 현재는 단순히 running 상태만 전달
         # 향후 is_repeat 파라미터를 추가하여 Repeat/Pause 버튼 상태를 구분할 수 있음
         self.marco_control.set_running_state(running)

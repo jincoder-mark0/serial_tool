@@ -25,14 +25,14 @@ class FileTransferEngine(QRunnable):
 
     ## 흐름 제어 (Flow Control) 및 안정성 개선
 
-    - **Backpressure (역압) 제어**: `ConnectionController`의 송신 큐 크기를 모니터링하여
+    - Backpressure (역압) 제어: `ConnectionController`의 송신 큐 크기를 모니터링하여
       PC의 송신 버퍼가 가득 차면 일시 대기합니다. 이는 메모리 폭증과 데이터 유실을 방지합니다.
-    - **Flow Control 지원**: 포트 설정에 따라 속도 제어 방식을 달리합니다.
+    - Flow Control 지원: 포트 설정에 따라 속도 제어 방식을 달리합니다.
       - RTS/CTS, XON/XOFF: 하드웨어/드라이버 레벨의 흐름 제어를 신뢰하여 불필요한 sleep을 제거합니다.
       - None: Baudrate 기반의 타이밍 계산을 통해 전송 속도를 제한(Pacing)합니다.
 
     ## 향후 개선 계획
-    - **Y-MODEM**과 같은 프로토콜의 다양화
+    - Y-MODEM과 같은 프로토콜의 다양화
     """
 
     def __init__(self, connection_controller: ConnectionController, file_path: str, config: PortConfig):
@@ -71,10 +71,10 @@ class FileTransferEngine(QRunnable):
         파일 전송 실행 로직
 
         Logic:
-            - **[Safety]** 시작 시 ConnectionController에 자신을 등록
+            - 시작 시 ConnectionController에 자신을 등록
             - 파일 읽기 및 전송 루프
             - Backpressure 및 Flow Control 적용
-            - **[Safety]** 종료 시(finally) 등록 해제
+            - 종료 시(finally) 등록 해제
         """
         # [Safety] 전송 시작 등록 (Race Condition 방지)
         self.connection_controller.register_file_transfer(self.port_name, self)

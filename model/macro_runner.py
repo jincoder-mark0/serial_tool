@@ -59,7 +59,7 @@ class MacroRunner(QThread):
         # 실행 제어 플래그
         self._is_running = False
         self._is_paused = False
-        self._is_broadcast = False # [New] 브로드캐스트 모드
+        self._is_broadcast = False
 
         # 반복 설정
         self._loop_count = 0

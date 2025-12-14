@@ -38,7 +38,7 @@ class ManualControlPresenter(QObject):
         view: ManualControlPanel,
         connection_controller: ConnectionController,
         local_echo_callback: Optional[Callable[[bytes], None]] = None,
-        get_active_port_callback: Optional[Callable[[], Optional[str]]] = None # [New]
+        get_active_port_callback: Optional[Callable[[], Optional[str]]] = None
     ) -> None:
         """
         ManualControlPresenter 초기화
@@ -53,7 +53,7 @@ class ManualControlPresenter(QObject):
         self.view = view
         self.connection_controller = connection_controller
         self.local_echo_callback = local_echo_callback
-        self.get_active_port = get_active_port_callback # [New]
+        self.get_active_port = get_active_port_callback
         self.settings_manager = SettingsManager()
 
         # View 시그널 연결
