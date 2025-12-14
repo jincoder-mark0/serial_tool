@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton,
-    QLabel, QLineEdit, QSpinBox, QGroupBox, QGridLayout
+    QLabel, QLineEdit, QSpinBox, QGroupBox, QGridLayout, QCheckBox
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Optional
@@ -40,6 +40,7 @@ class MacroControlWidget(QWidget):
         self.execution_settings_grp = None
         self.script_load_btn: Optional[QPushButton] = None
         self.script_save_btn: Optional[QPushButton] = None
+        self.broadcast_chk: Optional[QCheckBox] = None # [New]
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
@@ -61,6 +62,10 @@ class MacroControlWidget(QWidget):
         self.repeat_count_spin.setRange(0, 9999)
         self.repeat_count_spin.setValue(0)
         self.repeat_count_spin.setToolTip(language_manager.get_text("macro_control_spin_repeat_tooltip"))
+
+        # Broadcast 체크박스
+        self.broadcast_chk = QCheckBox(language_manager.get_text("macro_control_chk_broadcast"))
+        self.broadcast_chk.setToolTip(language_manager.get_text("macro_control_chk_broadcast_tooltip"))
 
         self.script_save_btn = QPushButton(language_manager.get_text("macro_control_btn_save_script"))
         self.script_save_btn.setToolTip(language_manager.get_text("macro_control_btn_save_script_tooltip"))
@@ -96,17 +101,20 @@ class MacroControlWidget(QWidget):
         execution_layout.setContentsMargins(2, 2, 2, 2)
         execution_layout.setSpacing(5)
 
+        # Row 0 배치
         execution_layout.addWidget(self.interval_lbl, 0, 0)
         execution_layout.addWidget(self.repeat_delay_line_edit, 0, 1)
         execution_layout.addWidget(self.repeat_max_lbl, 0, 2)
         execution_layout.addWidget(self.repeat_count_spin, 0, 3)
-        execution_layout.addWidget(self.script_save_btn, 0, 4)
-        execution_layout.addWidget(self.script_load_btn, 0, 5)
+        execution_layout.addWidget(self.broadcast_chk, 0, 4) # 체크박스 추가
+        execution_layout.addWidget(self.script_save_btn, 0, 5)
+        execution_layout.addWidget(self.script_load_btn, 0, 6)
 
-        execution_layout.addWidget(self.macro_repeat_start_btn, 1, 0, 1, 2)
-        execution_layout.addWidget(self.macro_repeat_stop_btn, 1, 2)
-        execution_layout.addWidget(self.macro_repeat_pause_btn, 1, 3)
-        execution_layout.addWidget(self.macro_repeat_count_lbl, 1, 4)
+        # Row 1 배치
+        execution_layout.addWidget(self.macro_repeat_start_btn, 1, 0, 1, 3) # Span 3
+        execution_layout.addWidget(self.macro_repeat_stop_btn, 1, 3, 1, 2)  # Span 2
+        execution_layout.addWidget(self.macro_repeat_pause_btn, 1, 5)
+        execution_layout.addWidget(self.macro_repeat_count_lbl, 1, 6)
 
         # 자동 실행 설정 그룹 (Repeat Settings Group)
         self.execution_settings_grp = QGroupBox(language_manager.get_text("macro_control_grp_execution"))
@@ -147,8 +155,9 @@ class MacroControlWidget(QWidget):
         except ValueError:
             delay = DEFAULT_MACRO_DELAY_MS
         max_runs = self.repeat_count_spin.value()
+        is_broadcast = self.broadcast_chk.isChecked()
 
-        return MacroRepeatOption(delay_ms=delay, max_runs=max_runs)
+        return MacroRepeatOption(delay_ms=delay, max_runs=max_runs, is_broadcast=is_broadcast)
 
     def on_macro_repeat_start_clicked(self) -> None:
         """자동 실행 시작 버튼 핸들러"""
@@ -217,7 +226,8 @@ class MacroControlWidget(QWidget):
         """
         state = {
             "delay": self.repeat_delay_line_edit.text(),
-            "max_runs": self.repeat_count_spin.value()
+            "max_runs": self.repeat_count_spin.value(),
+            "broadcast": self.broadcast_chk.isChecked()
         }
         return state
 
@@ -233,3 +243,4 @@ class MacroControlWidget(QWidget):
 
         self.repeat_delay_line_edit.setText(state.get("delay", str(DEFAULT_MACRO_DELAY_MS)))
         self.repeat_count_spin.setValue(state.get("max_runs", 0))
+        self.broadcast_chk.setChecked(state.get("broadcast", False))

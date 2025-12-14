@@ -220,6 +220,7 @@ class MacroRepeatOption:
     delay_ms: int
     max_runs: int = 0
     interval_ms: int = 0
+    is_broadcast: bool = False # [New] 브로드캐스팅 여부
 
 @dataclass
 class MacroStepEvent:

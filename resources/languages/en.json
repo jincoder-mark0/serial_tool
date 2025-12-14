@@ -40,6 +40,8 @@
     "macro_control_lbl_interval": "Interval (ms)",
     "macro_control_lbl_repeat_max": "Repeat",
     "macro_control_spin_repeat_tooltip": "Number of times to repeat",
+    "macro_control_chk_broadcast": "Broadcast",
+    "macro_control_chk_broadcast_tooltip": "Send macro commands to all active ports",
     "macro_list_btn_add_row_tooltip": "Add new command",
     "macro_list_btn_del_row_tooltip": "Delete selected command",
     "macro_list_btn_down_row_tooltip": "Move command down",

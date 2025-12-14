@@ -114,15 +114,15 @@ class MacroPresenter(QObject):
 
         Args:
             indices (List[int]): 선택된 행 인덱스 리스트
-            option (MacroRepeatOption): 반복 실행 옵션 (delay, max_runs 등)
+            option (MacroRepeatOption): 반복 실행 옵션 (delay, max_runs, is_broadcast 등)
         """
         if not indices:
             return
 
         # DTO에서 옵션 추출
         loop_count = option.max_runs
-        interval_ms = option.interval_ms # 현재 UI에는 없지만 DTO에는 존재 (확장성)
-        delay_ms_override = option.delay_ms # 전역 지연 시간 설정이 있다면 (현재는 개별 지연 사용)
+        interval_ms = option.interval_ms
+        is_broadcast = option.is_broadcast # [New]
 
         # 현재 리스트의 데이터를 MacroEntry로 변환
         raw_list = self.panel.macro_list.get_macro_list()
@@ -151,7 +151,9 @@ class MacroPresenter(QObject):
 
         # Model에 로드 및 실행
         self.runner.load_macro(entries)
-        self.runner.start(loop_count, interval_ms)
+
+        # broadcast 플래그 전달
+        self.runner.start(loop_count, interval_ms, is_broadcast)
 
         # UI 상태 업데이트 (실행 중 표시)
         self.panel.set_running_state(True)

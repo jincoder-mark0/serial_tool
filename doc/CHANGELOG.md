@@ -2,6 +2,20 @@
 
 ## [미배포] (Unreleased)
 
+---
+
+### 매크로 기능 확장 (2025-12-14)
+
+#### 기능 추가 (Feat)
+
+- **매크로 브로드캐스트 지원**
+  - `MacroControlWidget`에 'Broadcast' 체크박스를 추가했습니다.
+  - 매크로 실행 시 활성화된 모든 포트로 명령어를 전송할 수 있는 기능을 구현했습니다.
+  - `MacroRepeatOption` DTO에 `is_broadcast` 필드를 추가하여 UI 상태를 Model로 전달하도록 구조를 확장했습니다.
+  - `MacroRunner`에서 `ManualCommand` 생성 시 브로드캐스트 플래그를 적용하여, 연결된 모든 장비에 일괄 명령을 전송(Fire-and-forget)하도록 로직을 구현했습니다.
+
+---
+
 ### 아키텍처 정밀화 및 안정성 강화 (2025-12-14)
 
 #### 수정 사항 (Fixed)
@@ -31,7 +45,7 @@
   - 딕셔너리(`dict`) 대신 명시적인 DTO를 사용하여 컴포넌트 간 데이터 전달 (View ↔ Presenter ↔ Model)
   - `ManualControlWidget`, `PortSettingsWidget` 등 주요 위젯에 적용하여 타입 안전성(Type Safety) 확보 및 오타 방지
 
-- **MVP 아키텍처 위반 수정 (Strict MVP)**
+- **MVP 아키텍처 위반 수정 (MVP)**
   - **MainWindow**: `SettingsManager`(Model) 직접 생성 및 의존성 제거
   - **MainPresenter**: 설정 로드 책임 이관 및 `View.restore_state()` 메서드를 통해 초기 상태 주입
   - **Main Entry**: `main.py`에서 모든 Manager(`Settings`, `Theme`, `Lang`, `Color`)를 사전 초기화하여 전역 상태 보장

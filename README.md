@@ -3,7 +3,7 @@
 **최종 업데이트**: 2025-12-10
 
 **SerialTool**은 Python과 PyQt5로 개발된 강력한 통신 유틸리티입니다.
-**Strict MVP (Model-View-Presenter)** 아키텍처를 기반으로 설계되어 유지보수성과 확장성이 뛰어나며,
+**MVP (Model-View-Presenter)** 아키텍처를 기반으로 설계되어 유지보수성과 확장성이 뛰어나며,
 Serial 통신뿐만 아니라 향후 SPI, I2C 등 다양한 프로토콜로의 확장을 고려한 현대적인 구조를 갖추고 있습니다.
 
 ---
@@ -231,7 +231,7 @@ serial_tool/
 
 ### 4.1 MVP 패턴 & 데이터 흐름 (Data Flow)
 
-본 프로젝트는 **Strict MVP (Model-View-Presenter)** 패턴을 준수합니다.
+본 프로젝트는 **MVP (Model-View-Presenter)** 패턴을 준수합니다.
 View와 Model은 서로 직접 통신하지 않으며,
 **DTO(Data Transfer Object)**를 통한 데이터 교환과
 **EventBus**를 통한 느슨한 결합(Decoupling)을 지향합니다.
@@ -273,13 +273,13 @@ graph TD
     subgraph VIEW_LAYER [View Layer (UI & Input)]
         direction TB
         MW[MainWindow]
-        
+
         subgraph WIDGETS [Key Widgets]
             DataLog[DataLogViewer]
             PortSettings[PortSettingsWidget]
             ManualCtrl[ManualCtrlWidget]
         end
-        
+
         MW --> PortSettings
         MW --> DataLog
         MW --> ManualCtrl
@@ -303,7 +303,7 @@ graph TD
         direction TB
         PortCtrl[ConnectionController]
         MacroRun[MacroRunner]
-        
+
         subgraph WORKERS [Background Threads]
             ConnWorker[ConnectionWorker]
             Transport[SerialTransport]
@@ -313,7 +313,7 @@ graph TD
     %% 연결 관계
     PortSettings -- "signal: open_requested (DTO)" --> PortP
     ManualCtrl -- "signal: send_requested (DTO)" --> ManualP
-    
+
     MainP o--o PortP
     MainP o--o ManualP
     MainP o--o Router

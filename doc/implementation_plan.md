@@ -420,7 +420,7 @@
 **EventRouter (View-Model Decoupling)**
 
 - **Role**: View 이벤트를 Domain 메서드로 라우팅, Domain 시그널을 View 업데이트로 변환
-- **Benefit**: View와 Model 간의 직접 의존성 제거 (Strict MVP 준수)
+- **Benefit**: View와 Model 간의 직접 의존성 제거 (MVP 준수)
 
 ---
 

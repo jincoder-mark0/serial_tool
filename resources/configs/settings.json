@@ -17,12 +17,12 @@
     "port_scan_interval": 5000
   },
   "ui": {
-    "window_width": 1159,
+    "window_width": 1249,
     "window_height": 860,
     "window_x": 283,
     "window_y": 53,
-    "splitter_state": "AAAA/wAAAAEAAAACAAACtQAAAcMB/////wEAAAABAA==",
-    "saved_right_section_width": 451,
+    "splitter_state": "AAAA/wAAAAEAAAACAAAC/QAAAdUB/////wEAAAABAA==",
+    "saved_right_section_width": 469,
     "proportional_font_size": 10
   },
   "ports": {
@@ -145,7 +145,8 @@
     ],
     "control_state": {
       "delay": "1000",
-      "max_runs": 0
+      "max_runs": 0,
+      "broadcast": false
     }
   },
   "logging": {

@@ -13,6 +13,7 @@
 * 매크로 항목(`MacroEntry`) 리스트 순차 실행 및 루프 제어
 * `Expect` 기능(특정 응답 대기) 및 타임아웃 처리
 * 실행 상태(시작, 진행, 완료, 에러) 이벤트 발행
+* Broadcast 실행 모드 지원
 
 ## HOW
 * `QThread`를 상속받아 `run()` 메서드 내에서 실행 루프 구현
@@ -26,7 +27,7 @@ from common.dtos import MacroEntry, ManualCommand, MacroStepEvent
 from model.packet_parser import ExpectMatcher
 from core.logger import logger
 from core.event_bus import event_bus
-from common.constants import EventTopics # 상수 임포트
+from common.constants import EventTopics
 
 class MacroRunner(QThread):
     """
@@ -37,8 +38,9 @@ class MacroRunner(QThread):
     """
 
     # UI 업데이트를 위한 시그널 (DTO 사용)
-    step_started = pyqtSignal(object)
-    step_completed = pyqtSignal(object)
+    step_started = pyqtSignal(object)   # MacroStepEvent
+    step_completed = pyqtSignal(object) # MacroStepEvent
+
     macro_finished = pyqtSignal()
     error_occurred = pyqtSignal(str)
 
@@ -57,6 +59,7 @@ class MacroRunner(QThread):
         # 실행 제어 플래그
         self._is_running = False
         self._is_paused = False
+        self._is_broadcast = False # [New] 브로드캐스트 모드
 
         # 반복 설정
         self._loop_count = 0
@@ -65,10 +68,10 @@ class MacroRunner(QThread):
         # Expect 처리 변수
         self._expect_matcher: Optional[ExpectMatcher] = None
         self._expect_found = False
-        self._expect_cond = QWaitCondition()
+        self._expect_cond = QWaitCondition() # Expect 대기 전용 조건 변수
 
         self.event_bus = event_bus
-        # 데이터 수신 이벤트 구독 (Expect 매칭용
+        # 데이터 수신 이벤트 구독 (Expect 매칭용)
         self.event_bus.subscribe(EventTopics.PORT_DATA_RECEIVED, self._on_data_received)
 
     def load_macro(self, entries: List[MacroEntry]) -> None:
@@ -80,7 +83,7 @@ class MacroRunner(QThread):
         """
         self._entries = entries
 
-    def start(self, loop_count: int = 1, interval_ms: int = 0) -> None:
+    def start(self, loop_count: int = 1, interval_ms: int = 0, is_broadcast: bool = False) -> None:
         """
         매크로 실행을 시작합니다.
 
@@ -93,6 +96,7 @@ class MacroRunner(QThread):
         Args:
             loop_count (int): 반복 횟수 (0=무한). 기본값 1.
             interval_ms (int): 루프 간 대기 시간 (ms). 기본값 0.
+            is_broadcast (bool): 브로드캐스트 모드 여부.
         """
         if not self._entries:
             self.error_occurred.emit("No macro entries loaded.")
@@ -103,6 +107,7 @@ class MacroRunner(QThread):
         self._is_paused = False
         self._loop_count = loop_count
         self._loop_interval_ms = interval_ms
+        self._is_broadcast = is_broadcast # 상태 저장
         self._mutex.unlock()
 
         self.event_bus.publish(EventTopics.MACRO_STARTED)
@@ -170,7 +175,8 @@ class MacroRunner(QThread):
             text=command,
             hex_mode=is_hex,
             prefix=prefix,
-            suffix=suffix
+            suffix=suffix,
+            is_broadcast=False
         )
         self.send_requested.emit(cmd)
 
@@ -250,7 +256,8 @@ class MacroRunner(QThread):
                         text=entry.command,
                         hex_mode=entry.is_hex,
                         prefix=entry.prefix,
-                        suffix=entry.suffix
+                        suffix=entry.suffix,
+                        is_broadcast=self._is_broadcast # 설정된 브로드캐스트 모드 적용
                     )
                     # 2-1. 명령 전송 요청 (Signal)
                     self.send_requested.emit(cmd)
