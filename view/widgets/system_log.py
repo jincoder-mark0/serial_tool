@@ -13,7 +13,7 @@ from constants import (
     DEFAULT_LOG_MAX_LINES
 )
 
-class SysLogWidget(QWidget):
+class SystemLogWidget(QWidget):
     """
     시스템 상태 메시지 및 에러 로그를 표시하는 위젯 클래스입니다.
     QTextEdit를 사용하여 여러 줄의 상태 이력을 관리합니다.
@@ -21,7 +21,7 @@ class SysLogWidget(QWidget):
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
-        SysLogWidget를 초기화합니다.
+        SystemLogWidget를 초기화합니다.
 
         Args:
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.

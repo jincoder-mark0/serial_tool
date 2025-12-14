@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import QPushButton, QHBoxLayout
 from view.widgets.data_log import DataLogWidget
 from view.widgets.manual_control import ManualControlWidget
 from view.widgets.macro_list import MacroListWidget
-from view.widgets.sys_log import SysLogWidget
+from view.widgets.system_log import SystemLogWidget
 from view.panels.port_panel import PortPanel
 from view.managers.theme_manager import ThemeManager
 from view.managers.language_manager import language_manager
@@ -62,8 +62,8 @@ class ViewTestWindow(QMainWindow):
         # Test 1: DataLogView (색상 규칙, Trim, 타임스탬프 테스트)
         tabs.addTab(self.create_data_log_test(), "DataLogView Test")
 
-        # Test 2: ManualCtrl (입력, 파일 전송 테스트)
-        tabs.addTab(self.create_manual_control_test(), "ManualCtrl Test")
+        # Test 2: ManualControl (입력, 파일 전송 테스트)
+        tabs.addTab(self.create_manual_control_test(), "ManualControl Test")
 
         # Test 3: CommandList (커맨드 리스트 테스트)
         tabs.addTab(self.create_macro_list_test(), "CommandList Test")
@@ -147,7 +147,7 @@ class ViewTestWindow(QMainWindow):
 
     def create_manual_control_test(self) -> QWidget:
         """
-        ManualCtrl 테스트 위젯을 생성합니다.
+        ManualControl 테스트 위젯을 생성합니다.
 
         Returns:
             QWidget: 테스트 위젯.
@@ -156,7 +156,7 @@ class ViewTestWindow(QMainWindow):
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
-        # ManualCtrl 인스턴스
+        # ManualControl 인스턴스
         self.manual_control = ManualControlWidget()
         layout.addWidget(self.manual_control)
 
@@ -169,7 +169,7 @@ class ViewTestWindow(QMainWindow):
         layout.addWidget(self.manual_output)
 
         # 시그널 연결
-        self.manual_control.manual_command_send_requested.connect(
+        self.manual_control.command_send_requested.connect(
             lambda text, hex_mode, prefix, suffix, local_echo: self.manual_output.append(
                 f"✅ Send: '{text}' (hex={hex_mode}, prefix={prefix}, suffix={suffix}, echo={local_echo})"
             )
@@ -288,26 +288,26 @@ class ViewTestWindow(QMainWindow):
         layout = QVBoxLayout(widget)
 
         # StatusArea 인스턴스
-        self.sys_log_widget = SysLogWidget()
-        layout.addWidget(self.sys_log_widget)
+        self.system_log_widget = SystemLogWidget()
+        layout.addWidget(self.system_log_widget)
 
         # 테스트 버튼
         button_layout = QHBoxLayout()
 
         btn_info = QPushButton("Log INFO")
-        btn_info.clicked.connect(lambda: self.sys_log_widget.log("This is an info message", "INFO"))
+        btn_info.clicked.connect(lambda: self.system_log_widget.log("This is an info message", "INFO"))
         button_layout.addWidget(btn_info)
 
         btn_error = QPushButton("Log ERROR")
-        btn_error.clicked.connect(lambda: self.sys_log_widget.log("This is an error message", "ERROR"))
+        btn_error.clicked.connect(lambda: self.system_log_widget.log("This is an error message", "ERROR"))
         button_layout.addWidget(btn_error)
 
         btn_warn = QPushButton("Log WARN")
-        btn_warn.clicked.connect(lambda: self.sys_log_widget.log("This is a warning message", "WARN"))
+        btn_warn.clicked.connect(lambda: self.system_log_widget.log("This is a warning message", "WARN"))
         button_layout.addWidget(btn_warn)
 
         btn_success = QPushButton("Log SUCCESS")
-        btn_success.clicked.connect(lambda: self.sys_log_widget.log("This is a success message", "SUCCESS"))
+        btn_success.clicked.connect(lambda: self.system_log_widget.log("This is a success message", "SUCCESS"))
         button_layout.addWidget(btn_success)
 
         layout.addLayout(button_layout)

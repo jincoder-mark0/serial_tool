@@ -9,7 +9,7 @@
 * 하드웨어 제어 신호(RTS, DTR) 처리
 
 ## WHAT
-* 수동 전송 요청(manual_command_send_requested) 처리
+* 수동 전송 요청(command_send_requested) 처리
 * RTS/DTR 상태 변경 요청 처리
 * 설정 적용 및 Local Echo 처리
 
@@ -53,11 +53,11 @@ class ManualControlPresenter(QObject):
         self.settings_manager = SettingsManager()
 
         # View 시그널 연결 (디미터 법칙 준수)
-        self.view.manual_command_send_requested.connect(self.on_manual_command_send_requested)
+        self.view.command_send_requested.connect(self.on_command_send_requested)
         self.view.rts_changed.connect(self.on_rts_changed)
         self.view.dtr_changed.connect(self.on_dtr_changed)
 
-    def on_manual_command_send_requested(self, send_data: Dict[str, Any]) -> None:
+    def on_command_send_requested(self, send_data: Dict[str, Any]) -> None:
         """
         수동 명령 전송 요청 처리
 

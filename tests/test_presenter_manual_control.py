@@ -41,7 +41,7 @@ def test_send_text_with_prefix_suffix(presenter, mock_components):
     connection_controller.has_active_connection = True
 
     # 전송 요청 (Prefix=True, Suffix=True)
-    presenter.on_manual_command_send_requested(
+    presenter.on_command_send_requested(
         text="command",
         hex_mode=False,
         command_prefix=True,
@@ -59,7 +59,7 @@ def test_send_hex_mode(presenter, mock_components):
     connection_controller.has_active_connection = True
 
     # 전송 요청 ("A1 B2" -> b'\xA1\xB2')
-    presenter.on_manual_command_send_requested(
+    presenter.on_command_send_requested(
         text="A1 B2",
         hex_mode=True,
         command_prefix=False,
@@ -75,7 +75,7 @@ def test_send_blocked_when_port_closed(presenter, mock_components):
     _, connection_controller, _ = mock_components
     connection_controller.has_active_connection = False  # 포트 닫힘
 
-    presenter.on_manual_command_send_requested("test", False, False, False, False)
+    presenter.on_command_send_requested("test", False, False, False, False)
 
     # 전송 메서드가 호출되지 않아야 함
     connection_controller.send_data.assert_not_called()
@@ -85,7 +85,7 @@ def test_local_echo_callback(presenter, mock_components):
     _, connection_controller, local_echo_callback = mock_components
     connection_controller.has_active_connection = True
 
-    presenter.on_manual_command_send_requested(
+    presenter.on_command_send_requested(
         text="echo",
         hex_mode=False,
         command_prefix=False,

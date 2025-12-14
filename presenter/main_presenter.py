@@ -110,7 +110,7 @@ class MainPresenter(QObject):
 
         # --- 4. 내부 Model 시그널 연결 ---
         # MacroRunner의 전송 요청 처리
-        self.macro_runner.send_requested.connect(self.on_macro_command_send_requested)
+        self.macro_runner.send_requested.connect(self.on_macro_send_requested)
 
         # --- 5. View 시그널 연결 (View -> Presenter) ---
         # 설정 및 종료
@@ -224,7 +224,7 @@ class MainPresenter(QObject):
             data_logger_manager.write(port_name, data)
         self.tx_byte_count += len(data)
 
-    def on_macro_command_send_requested(self, text: str, hex_mode: bool, command_prefix: bool, command_suffix: bool) -> None:
+    def on_macro_send_requested(self, text: str, hex_mode: bool, command_prefix: bool, command_suffix: bool) -> None:
         """
         매크로 전송 요청 처리
 

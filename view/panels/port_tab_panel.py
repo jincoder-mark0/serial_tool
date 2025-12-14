@@ -13,7 +13,7 @@ class PortTabPanel(QTabWidget):
     """
 
     # 시그널 정의
-    tab_added = pyqtSignal(object)  # 새 탭이 추가되었을 때 (패널 전달)
+    port_tab_added = pyqtSignal(object)  # 새 탭이 추가되었을 때 (패널 전달)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         super().__init__(parent)
@@ -157,7 +157,7 @@ class PortTabPanel(QTabWidget):
         # 시그널 차단 해제 후 변경 알림 (필요 시)
         # self.currentChanged.emit(self.currentIndex())
 
-        self.tab_added.emit(panel)
+        self.port_tab_added.emit(panel)
         return panel
 
     def _on_panel_title_changed(self, panel: "PortPanel", title: str) -> None:

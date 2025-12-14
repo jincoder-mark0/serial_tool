@@ -4,7 +4,7 @@ Presenter 초기화 및 연동 테스트
 - MainPresenter가 하위 Presenter들을 올바르게 초기화하는지 검증
 - EventRouter 연결 상태 확인
 - DataLogger 연동 확인
-- 신규 Presenter (Packet, ManualCtrl) 초기화 검증
+- 신규 Presenter (Packet, ManualControl) 초기화 검증
 
 pytest tests/test_presenter_init.py -v
 """

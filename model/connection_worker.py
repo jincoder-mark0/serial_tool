@@ -63,7 +63,7 @@ class ConnectionWorker(QThread):
 
         self._is_running = False
         self._mutex = QMutex()
-        self._tx_queue = ThreadSafeQueue() # 비동기 전송용 Queue
+        self._write_queue = ThreadSafeQueue() # 비동기 전송용 Queue
 
     def run(self) -> None:
         """
@@ -108,14 +108,14 @@ class ConnectionWorker(QThread):
                                 last_emit_time = current_time
 
                         # 4. TX Queue 처리 (비동기 전송)
-                        while not self._tx_queue.is_empty():
-                            data = self._tx_queue.dequeue()
+                        while not self._write_queue.is_empty():
+                            data = self._write_queue.dequeue()
                             if data:
                                 self.transport.write(data)
 
                         # 5. CPU 부하 방지
                         # 데이터가 없으면 긴 sleep, 있으면 짧은 sleep
-                        if len(batch_buffer) == 0 and self._tx_queue.is_empty():
+                        if len(batch_buffer) == 0 and self._write_queue.is_empty():
                             self.msleep(1)
                         else:
                             self.usleep(100)
@@ -178,7 +178,7 @@ class ConnectionWorker(QThread):
             bool: Queue 추가 성공 여부
         """
         if self.transport.is_open():
-            return self._tx_queue.enqueue(data)
+            return self._write_queue.enqueue(data)
         return False
 
     def get_write_queue_size(self) -> int:
@@ -189,7 +189,7 @@ class ConnectionWorker(QThread):
         Returns:
             int: 큐 사이즈
         """
-        return self._tx_queue.qsize()
+        return self._write_queue.qsize()
 
     # ---------------------------------------------------------
     # 하드웨어 제어 신호 위임

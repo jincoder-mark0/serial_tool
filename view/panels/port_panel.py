@@ -23,7 +23,7 @@ class PortPanel(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
-        # self.sys_log_widget = None
+        # self.system_log_widget = None
         self.data_log_widget = None
         self.port_stats_widget = None
         self.port_settings_widget = None
@@ -55,7 +55,7 @@ class PortPanel(QWidget):
         layout.addWidget(self.data_log_widget, 1) # Stretch 1
 
         # 하단: 상태 로그 영역 (Bottom: Status Log Area)
-        # layout.addWidget(self.sys_log_widget) # Global로 이동
+        # layout.addWidget(self.system_log_widget) # Global로 이동
 
         self.setLayout(layout)
 

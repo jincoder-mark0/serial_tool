@@ -153,7 +153,7 @@ class MacroRunner(QThread):
             self._cond.wakeAll()
         self._mutex.unlock()
 
-    def request_single_send(self, command: str, is_hex: bool, prefix: bool, suffix: bool) -> None:
+    def send_single_command(self, command: str, is_hex: bool, prefix: bool, suffix: bool) -> None:
         """
         단일 명령 전송을 요청합니다 (Presenter에서 사용).
 

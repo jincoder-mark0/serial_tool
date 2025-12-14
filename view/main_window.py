@@ -59,7 +59,7 @@ class MainWindow(QMainWindow):
     file_transfer_dialog_opened = pyqtSignal(object)
 
     # 하위 컴포넌트 시그널 중계
-    manual_command_send_requested = pyqtSignal(dict)
+    command_send_requested = pyqtSignal(dict)
     port_tab_added = pyqtSignal(object)
 
     def __init__(self, resource_path=None) -> None:
@@ -138,7 +138,7 @@ class MainWindow(QMainWindow):
         self.splitter.setCollapsible(1, True)
 
         # 시그널 체이닝 (하위 -> 상위)
-        self.left_section.manual_command_send_requested.connect(self.manual_command_send_requested.emit)
+        self.left_section.command_send_requested.connect(self.command_send_requested.emit)
         self.left_section.port_tab_added.connect(self.port_tab_added.emit)
 
         main_layout.addWidget(self.splitter)
@@ -184,7 +184,7 @@ class MainWindow(QMainWindow):
             message (str): 메시지 내용
             level (str): 로그 레벨
         """
-        self.left_section.sys_log_widget.log(message, level)
+        self.left_section.system_log_widget.log(message, level)
 
     def update_status_bar_stats(self, rx_bytes: int, tx_bytes: int) -> None:
         """상태바 통계 업데이트"""
@@ -208,7 +208,7 @@ class MainWindow(QMainWindow):
         current_index = self.left_section.port_tabs.currentIndex()
         current_widget = self.left_section.port_tabs.widget(current_index)
         if hasattr(current_widget, 'data_log_widget'):
-            current_widget.received_area_widget.on_data_log_logging_toggled(True) # 로깅 시작 요청
+            current_widget.data_log_widget.on_data_log_logging_toggled(True) # 로깅 시작 요청
 
     def append_local_echo_data(self, data: bytes) -> None:
         """
@@ -363,7 +363,7 @@ class MainWindow(QMainWindow):
         self.menu_bar.port_open_requested.connect(self.left_section.open_current_port)
         self.menu_bar.tab_close_requested.connect(self.left_section.close_current_tab)
         self.menu_bar.data_log_save_requested.connect(self.manual_save_log)
-        self.menu_bar.toggle_right_panel_requested.connect(self.toggle_right_panel)
+        self.menu_bar.toggle_right_panel_requested.connect(self.set_right_panel_visible)
         self.menu_bar.file_transfer_requested.connect(self.open_file_transfer_dialog)
 
     def clear_log(self) -> None:
@@ -464,7 +464,7 @@ class MainWindow(QMainWindow):
         # 설정에 언어 저장
         self.settings.set(ConfigKeys.LANGUAGE, language_code)
 
-    def toggle_right_panel(self, visible: bool) -> None:
+    def set_right_panel_visible(self, visible: bool) -> None:
         """우측 패널 가시성 토글"""
         if visible == self.right_section.isVisible():
             return

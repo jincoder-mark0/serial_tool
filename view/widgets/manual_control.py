@@ -38,7 +38,7 @@ class ManualControlWidget(QWidget):
     """
 
     # 시그널 정의
-    manual_command_send_requested = pyqtSignal(dict)
+    command_send_requested = pyqtSignal(dict)
     rts_changed = pyqtSignal(bool)
     dtr_changed = pyqtSignal(bool)
 
@@ -234,7 +234,7 @@ class ManualControlWidget(QWidget):
         }
 
         # 딕셔너리 인자로 시그널 발생
-        self.manual_command_send_requested.emit(send_data)
+        self.command_send_requested.emit(send_data)
 
     def add_to_history(self, command: str) -> None:
         """

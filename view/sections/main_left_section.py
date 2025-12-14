@@ -9,7 +9,7 @@
 
 ## WHAT
 * PortTabPanel 및 ManualControlPanel 배치
-* SysLogWidget 배치
+* SystemLogWidget 배치
 * 하위 패널 간 상호작용 중재 (View 레벨)
 
 ## HOW
@@ -24,7 +24,7 @@ from view.managers.language_manager import language_manager
 from view.panels.port_panel import PortPanel
 from view.panels.manual_control_panel import ManualControlPanel
 from view.panels.port_tab_panel import PortTabPanel
-from view.widgets.sys_log import SysLogWidget
+from view.widgets.system_log import SystemLogWidget
 
 class MainLeftSection(QWidget):
     """
@@ -33,11 +33,11 @@ class MainLeftSection(QWidget):
     Attributes:
         port_tabs (PortTabPanel): 포트 탭 관리 패널
         manual_control (ManualControlPanel): 수동 제어 패널
-        sys_log_widget (SysLogWidget): 시스템 로그 위젯
+        system_log_widget (SystemLogWidget): 시스템 로그 위젯
     """
 
     # 하위 패널 이벤트 상위 전달 시그널
-    manual_command_send_requested = pyqtSignal(str, bool, bool, bool, bool)
+    command_send_requested = pyqtSignal(str, bool, bool, bool, bool)
     port_tab_added = pyqtSignal(object) # PortPanel 객체 전달
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
@@ -50,7 +50,7 @@ class MainLeftSection(QWidget):
         super().__init__(parent)
         self.port_tabs = None
         self.manual_control = None
-        self.sys_log_widget = None
+        self.system_log_widget = None
         self.init_ui()
 
         language_manager.language_changed.connect(self.retranslate_ui)
@@ -65,23 +65,23 @@ class MainLeftSection(QWidget):
         # 1. 포트 탭 (Port Tabs)
         # ---------------------------------------------------------
         self.port_tabs = PortTabPanel()
-        self.port_tabs.tab_added.connect(self._on_tab_added)
-        self.port_tabs.tab_added.connect(self.port_tab_added.emit) # 외부 전달
+        self.port_tabs.port_tab_added.connect(self._on_port_tab_added)
+        self.port_tabs.port_tab_added.connect(self.port_tab_added.emit) # 외부 전달
 
         # ---------------------------------------------------------
         # 2. 수동 제어 패널 (Manual Control)
         # ---------------------------------------------------------
         self.manual_control = ManualControlPanel()
-        self.manual_control.manual_command_send_requested.connect(self.manual_command_send_requested.emit)
+        self.manual_control.command_send_requested.connect(self.command_send_requested.emit)
 
         # ---------------------------------------------------------
         # 3. 시스템 로그 (System Log)
         # ---------------------------------------------------------
-        self.sys_log_widget = SysLogWidget()
+        self.system_log_widget = SystemLogWidget()
 
         layout.addWidget(self.port_tabs, 1)
         layout.addWidget(self.manual_control)
-        layout.addWidget(self.sys_log_widget)
+        layout.addWidget(self.system_log_widget)
 
         self.setLayout(layout)
 
@@ -139,7 +139,7 @@ class MainLeftSection(QWidget):
             if hasattr(current_widget, 'data_log_widget'):
                 current_widget.data_log_widget.append_data(data)
 
-    def _on_tab_added(self, panel: PortPanel) -> None:
+    def _on_port_tab_added(self, panel: PortPanel) -> None:
         """
         탭 추가 시그널 핸들러
 
@@ -180,14 +180,14 @@ class MainLeftSection(QWidget):
         상태 데이터 복원
 
         Logic:
-            - ManualCtrl 상태 복원
+            - ManualControl 상태 복원
             - 기존 탭 제거 (초기화)
             - 저장된 포트 상태만큼 탭 생성 및 복원
 
         Args:
             state (Dict[str, Any]): 복원할 상태 데이터
         """
-        # 1. ManualCtrl 상태 복원
+        # 1. ManualControl 상태 복원
         manual_state = state.get("manual_control", {})
         if manual_state:
             self.manual_control.load_state(manual_state)
@@ -222,7 +222,7 @@ class MainLeftSection(QWidget):
 
         Logic:
             - 시그널 발생원이 현재 활성 탭인지 확인
-            - 활성 탭일 경우 ManualCtrl 활성화 상태 동기화
+            - 활성 탭일 경우 ManualControl 활성화 상태 동기화
 
         Args:
             connected (bool): 연결 여부
@@ -235,5 +235,5 @@ class MainLeftSection(QWidget):
             current_widget = self.port_tabs.widget(current_index)
             if current_widget and hasattr(current_widget, 'port_settings_widget'):
                 if current_widget.port_settings_widget == sender_widget:
-                    # 현재 탭의 변경이면 ManualCtrl 업데이트
+                    # 현재 탭의 변경이면 ManualControl 업데이트
                     self.manual_control.set_controls_enabled(connected)

@@ -31,7 +31,7 @@ class ManualControlPanel(QWidget):
     """
 
     # 하위 위젯 시그널 상위 전달 (Signal Bubbling)
-    manual_command_send_requested = pyqtSignal(dict)
+    command_send_requested = pyqtSignal(dict)
     rts_changed = pyqtSignal(bool) # RTS 상태 변경 시그널
     dtr_changed = pyqtSignal(bool) # DTR 상태 변경 시그널
 
@@ -55,7 +55,7 @@ class ManualControlPanel(QWidget):
         self.manual_control_widget = ManualControlWidget()
 
         # 위젯 시그널 -> 패널 시그널 연결 (Forwarding)
-        self.manual_control_widget.manual_command_send_requested.connect(self.manual_command_send_requested.emit)
+        self.manual_control_widget.command_send_requested.connect(self.command_send_requested.emit)
         self.manual_control_widget.rts_changed.connect(self.rts_changed.emit)
         self.manual_control_widget.dtr_changed.connect(self.dtr_changed.emit)
 

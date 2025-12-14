@@ -70,7 +70,7 @@ class PortPresenter(QObject):
             self._connect_tab_signals(widget)
 
         # 새 탭 추가 시그널 연결
-        self.left_panel.port_tabs.tab_added.connect(self._on_tab_added)
+        self.left_panel.port_tabs.port_tab_added.connect(self._on_port_tab_added)
 
         # 탭 변경 시 현재 패널 업데이트
         self.left_panel.port_tabs.currentChanged.connect(self.update_current_port_panel)
@@ -103,7 +103,7 @@ class PortPresenter(QObject):
             settings_widget.port_open_requested.connect(self.handle_open_request)
             settings_widget.port_close_requested.connect(self.handle_close_request)
 
-    def _on_tab_added(self, widget) -> None:
+    def _on_port_tab_added(self, widget) -> None:
         """새 탭이 추가되었을 때 호출되는 슬롯"""
         self._connect_tab_signals(widget)
         # 새 탭의 포트 리스트 갱신
@@ -188,8 +188,8 @@ class PortPresenter(QObject):
                 break
 
         # 시스템 로그 기록
-        if hasattr(self.left_panel, 'sys_log_widget'):
-            self.left_panel.sys_log_widget.log(f"[{port_name}] Port opened", "SUCCESS")
+        if hasattr(self.left_panel, 'system_log_widget'):
+            self.left_panel.system_log_widget.log(f"[{port_name}] Port opened", "SUCCESS")
 
     def on_connection_closed(self, port_name: str) -> None:
         """
@@ -215,8 +215,8 @@ class PortPresenter(QObject):
                 break
 
         # 시스템 로그 기록
-        if hasattr(self.left_panel, 'sys_log_widget'):
-            self.left_panel.sys_log_widget.log(f"[{port_name}] Port closed", "INFO")
+        if hasattr(self.left_panel, 'system_log_widget'):
+            self.left_panel.system_log_widget.log(f"[{port_name}] Port closed", "INFO")
 
     def on_error(self, port_name: str, message: str) -> None:
         """
@@ -230,8 +230,8 @@ class PortPresenter(QObject):
         QMessageBox.critical(self.left_panel, "Error", f"Port Error ({port_name}): {message}")
 
         # 시스템 로그 기록
-        if hasattr(self.left_panel, 'sys_log_widget'):
-            self.left_panel.sys_log_widget.log(f"[{port_name}] Error: {message}", "ERROR")
+        if hasattr(self.left_panel, 'system_log_widget'):
+            self.left_panel.system_log_widget.log(f"[{port_name}] Error: {message}", "ERROR")
 
         # 에러 발생 시 해당 포트 UI 동기화 (필요 시)
         # on_connection_closed가 호출되지 않는 에러 상황(예: 열기 실패)에 대비해 UI 상태 리셋 가능

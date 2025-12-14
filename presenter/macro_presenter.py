@@ -163,7 +163,7 @@ class MacroPresenter(QObject):
         if 0 <= row_index < len(raw_list):
             raw = raw_list[row_index]
             # 일관성을 위해 Runner의 유틸리티 메서드를 사용하여 전송 요청
-            self.runner.request_single_send(
+            self.runner.send_single_command(
                 raw['command'], raw['hex_mode'], raw['prefix'], raw['suffix']
             )
 
