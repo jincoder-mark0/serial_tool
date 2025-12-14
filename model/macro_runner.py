@@ -22,7 +22,7 @@
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QWaitCondition
 from typing import List, Optional
 import time
-from common.dtos import MacroEntry
+from common.dtos import MacroEntry, ManualCommand
 from model.packet_parser import ExpectMatcher
 from core.logger import logger
 from core.event_bus import event_bus
@@ -36,13 +36,13 @@ class MacroRunner(QThread):
     """
 
     # UI 업데이트를 위한 시그널
-    step_started = pyqtSignal(int, MacroEntry)  # index, entry
-    step_completed = pyqtSignal(int, bool)      # index, success
+    step_started = pyqtSignal(int, MacroEntry)
+    step_completed = pyqtSignal(int, bool)
     macro_finished = pyqtSignal()
     error_occurred = pyqtSignal(str)
 
-    # 실제 전송 요청 시그널 (UI 스레드의 ConnectionController로 전달)
-    send_requested = pyqtSignal(str, bool, bool, bool) # text, hex, prefix, suffix
+    # 실제 전송 요청 시그널
+    send_requested = pyqtSignal(object)
 
     def __init__(self):
         """MacroRunner 초기화 및 상태 변수 설정"""
@@ -122,8 +122,8 @@ class MacroRunner(QThread):
         self._mutex.lock()
         self._is_running = False
         self._is_paused = False
-        self._cond.wakeAll()        # 일반 지연 대기 해제
-        self._expect_cond.wakeAll() # Expect 대기 해제
+        self._cond.wakeAll()
+        self._expect_cond.wakeAll()
         self._mutex.unlock()
 
         # 스레드 종료 대기 (블로킹)
@@ -133,7 +133,9 @@ class MacroRunner(QThread):
         self.event_bus.publish("macro.finished")
 
     def pause(self) -> None:
-        """실행을 일시 정지합니다."""
+        """
+        실행을 일시 정지합니다.
+        """
         self._mutex.lock()
         if self._is_running:
             self._is_paused = True
@@ -163,7 +165,13 @@ class MacroRunner(QThread):
             prefix (bool): 접두사 사용 여부
             suffix (bool): 접미사 사용 여부
         """
-        self.send_requested.emit(command, is_hex, prefix, suffix)
+        cmd = ManualCommand(
+            text=command,
+            hex_mode=is_hex,
+            prefix=prefix,
+            suffix=suffix
+        )
+        self.send_requested.emit(cmd)
 
     def _on_data_received(self, data_dict: dict) -> None:
         """
@@ -176,9 +184,13 @@ class MacroRunner(QThread):
             4. 매칭 성공 시 `_expect_found` 플래그 설정 및 대기 스레드 깨움
 
         Args:
-            data_dict (dict): {'port': str, 'data': bytes} 구조의 데이터
+            data_dict (dict): 수신 데이터 (PortDataEvent DTO 또는 dict)
         """
-        data = data_dict.get('data', b'')
+        if hasattr(data_dict, 'data'): # DTO
+            data = data_dict.data
+        else: # Dict
+            data = data_dict.get('data', b'')
+
         if not data:
             return
 
@@ -188,7 +200,7 @@ class MacroRunner(QThread):
             if self._is_running and self._expect_matcher:
                 if self._expect_matcher.match(data):
                     self._expect_found = True
-                    self._expect_cond.wakeAll() # _wait_for_expect 깨움
+                    self._expect_cond.wakeAll()
         finally:
             self._mutex.unlock()
 
@@ -230,8 +242,15 @@ class MacroRunner(QThread):
                 error_msg = ""
 
                 try:
+                    # [Refactor] DTO 생성 및 전송
+                    cmd = ManualCommand(
+                        text=entry.command,
+                        hex_mode=entry.is_hex,
+                        prefix=entry.prefix,
+                        suffix=entry.suffix
+                    )
                     # 2-1. 명령 전송 요청 (Signal)
-                    self.send_requested.emit(entry.command, entry.is_hex, entry.prefix, entry.suffix)
+                    self.send_requested.emit(cmd)
 
                     # 2-2. Expect 처리 (응답 대기)
                     if entry.expect:

@@ -30,6 +30,7 @@ from common.enums import ParserType
 from common.dtos import PortConfig # DTO 사용
 from common.constants import DEFAULT_BAUDRATE
 from core.event_bus import event_bus
+from common.dtos import PortDataEvent, PortErrorEvent, PacketEvent, PortConfig
 
 class ConnectionController(QObject):
     """
@@ -72,23 +73,24 @@ class ConnectionController(QObject):
         self._connect_signals_to_eventbus()
 
     def _connect_signals_to_eventbus(self) -> None:
-        """PyQt Signal 발생 시 자동으로 EventBus 이벤트를 발행하도록 연결합니다."""
-        self.connection_opened.connect(lambda n: self.event_bus.publish("port.opened", n))
+        """Signal -> EventBus (DTO 발행)"""
+        self.connection_opened.connect(lambda n: self.event_bus.publish("port.opened", n)) # 단순 문자열은 그대로
         self.connection_closed.connect(lambda n: self.event_bus.publish("port.closed", n))
+
         self.error_occurred.connect(
-            lambda n, m: self.event_bus.publish("port.error", {'port': n, 'message': m})
+            lambda n, m: self.event_bus.publish("port.error", PortErrorEvent(port=n, message=m))
         )
 
         self.data_received.connect(
-            lambda n, d: self.event_bus.publish("port.data_received", {'port': n, 'data': d})
+            lambda n, d: self.event_bus.publish("port.data_received", PortDataEvent(port=n, data=d))
         )
 
         self.data_sent.connect(
-            lambda n, d: self.event_bus.publish("port.data_sent", {'port': n, 'data': d})
+            lambda n, d: self.event_bus.publish("port.data_sent", PortDataEvent(port=n, data=d))
         )
 
         self.packet_received.connect(
-            lambda n, pkt: self.event_bus.publish("port.packet_received", {'port': n, 'packet': pkt})
+            lambda n, pkt: self.event_bus.publish("port.packet_received", PacketEvent(port=n, packet=pkt))
         )
 
     @property

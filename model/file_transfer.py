@@ -3,12 +3,14 @@ import time
 from PyQt5.QtCore import QRunnable, QObject, pyqtSignal
 from model.connection_controller import ConnectionController
 from core.event_bus import event_bus
+from common.dtos import FileProgressState
 
 class FileTransferSignals(QObject):
     """
     파일 전송 엔진에서 사용하는 시그널 정의
     """
-    progress_updated = pyqtSignal(int, int)  # current_bytes, total_bytes
+    # DTO 사용 (FileProgressState)
+    progress_updated = pyqtSignal(object)
     transfer_completed = pyqtSignal(bool)    # success
     error_occurred = pyqtSignal(str)         # error_message
 
@@ -100,7 +102,19 @@ class FileTransferEngine(QRunnable):
 
                     # 진행률 업데이트
                     sent_bytes += len(chunk)
-                    self.signals.progress_updated.emit(sent_bytes, total_size)
+
+                    # [Refactor] DTO 생성 (속도/ETA 계산은 Presenter에서 할 수도 있지만, 여기서 Raw Data 전달)
+                    # 여기서는 기본 정보만 담아서 보내고 계산은 Presenter에 위임하거나
+                    # 엔진에서 계산해서 보낼 수 있음. 현재 구조상 Presenter가 계산하므로 기본 정보 전달.
+                    state = FileProgressState(
+                        file_path=self.file_path,
+                        sent_bytes=sent_bytes,
+                        total_bytes=total_size,
+                        status="Sending"
+                    )
+                    self.signals.progress_updated.emit(state)
+
+                    # EventBus는 아직 dict를 쓰거나 DTO를 쓸 수 있음 (일단 유지)
                     self.event_bus.publish("file.progress", {'current': sent_bytes, 'total': total_size})
 
                     # [Logic] Speed Control (속도 제어)

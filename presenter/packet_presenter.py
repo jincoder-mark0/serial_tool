@@ -23,6 +23,7 @@ from view.panels.packet_panel import PacketPanel
 from presenter.event_router import EventRouter
 from core.settings_manager import SettingsManager
 from common.constants import ConfigKeys
+from common.dtos import PacketEvent
 
 class PacketPresenter(QObject):
     """
@@ -69,7 +70,7 @@ class PacketPresenter(QObject):
 
         self.view.set_packet_options(buffer_size, auto_scroll)
 
-    def on_packet_received(self, port_name: str, packet: object) -> None:
+    def on_packet_received(self, event: PacketEvent) -> None:
         """
         패킷 수신 이벤트 핸들러
 
@@ -80,9 +81,16 @@ class PacketPresenter(QObject):
             - View에 데이터 추가 요청
 
         Args:
-            port_name (str): 포트 이름
-            packet (Packet): 수신된 패킷 객체
+            event (PacketEvent): 수신된 패킷 이벤트
         """
+        if isinstance(event, PacketEvent):
+            packet = event.packet
+        else: # Legacy dict
+            packet = event.get('packet')
+
+        if not packet:
+            return
+
         # 실시간 추적 옵션 확인
         realtime = self.settings_manager.get(ConfigKeys.PACKET_REALTIME, True)
         if not realtime:

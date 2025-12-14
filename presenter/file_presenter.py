@@ -23,6 +23,7 @@ from model.connection_controller import ConnectionController
 from model.file_transfer import FileTransferEngine
 from view.dialogs.file_transfer_dialog import FileTransferDialog
 from core.logger import logger
+from common.dtos import FileProgressState
 
 class FilePresenter(QObject):
     """
@@ -97,8 +98,8 @@ class FilePresenter(QObject):
 
         # 포트 설정 가져오기
         port_config = self.connection_controller.get_connection_config(port_name)
-        baudrate = port_config.get('baudrate', 115200)
-        flow_control = port_config.get('flowctrl', 'None')
+        baudrate = port_config.baudrate if port_config else 115200
+        flow_control = port_config.flowctrl if port_config else "None"
 
         try:
             # 엔진 생성
@@ -135,7 +136,7 @@ class FilePresenter(QObject):
             logger.info("Cancelling file transfer...")
             self.current_engine.cancel()
 
-    def _on_progress(self, sent: int, total: int) -> None:
+    def _on_progress(self, state: FileProgressState) -> None:
         """
         진행률 업데이트 및 메트릭 계산
 
@@ -146,28 +147,24 @@ class FilePresenter(QObject):
             - View 업데이트 메서드 호출
 
         Args:
-            sent: 전송된 바이트 수
-            total: 전체 바이트 수
+            state (FileProgressState): 모델에서 전달받은 상태 객체 (Raw Data 포함)
         """
         if not self.current_dialog:
             return
 
+        # 계산 로직 (속도/ETA 계산하여 DTO 업데이트)
         current_time = QDateTime.currentMSecsSinceEpoch()
         elapsed_total_sec = (current_time - self._start_time) / 1000.0
 
-        # 속도 계산 (평균 속도)
-        speed = 0.0
         if elapsed_total_sec > 0:
-            speed = sent / elapsed_total_sec
+            state.speed = state.sent_bytes / elapsed_total_sec
 
-        # ETA 계산
-        eta = 0.0
-        if speed > 0:
-            remaining_bytes = total - sent
-            eta = remaining_bytes / speed
+        if state.speed > 0:
+            remaining_bytes = state.total_bytes - state.sent_bytes
+            state.eta = remaining_bytes / state.speed
 
-        # View 업데이트 (수동적인 뷰)
-        self.current_dialog.update_progress(sent, total, speed, eta)
+        # View 업데이트
+        self.current_dialog.update_progress(state)
 
     def _on_completed(self, success: bool) -> None:
         """

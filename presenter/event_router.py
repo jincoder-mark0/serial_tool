@@ -21,6 +21,7 @@ EventBus와 Presenter/View 사이의 이벤트를 라우팅합니다.
 """
 from PyQt5.QtCore import QObject, pyqtSignal
 from core.event_bus import event_bus
+from common.dtos import PortDataEvent, PortErrorEvent, PacketEvent
 
 class EventRouter(QObject):
     """
@@ -33,12 +34,12 @@ class EventRouter(QObject):
     # ---------------------------------------------------------
     # 1. Port Events
     # ---------------------------------------------------------
-    port_opened = pyqtSignal(str)              # port_name
-    port_closed = pyqtSignal(str)              # port_name
-    port_error = pyqtSignal(str, str)          # port_name, error_message
-    data_received = pyqtSignal(str, bytes)     # port_name, data
-    data_sent = pyqtSignal(str, bytes)         # port_name, data
-    packet_received = pyqtSignal(str, object)  # port_name, Packet object
+    port_opened = pyqtSignal(str)
+    port_closed = pyqtSignal(str)
+    port_error = pyqtSignal(object)          # PortErrorEvent
+    data_received = pyqtSignal(object)       # PortDataEvent
+    data_sent = pyqtSignal(object)           # PortDataEvent
+    packet_received = pyqtSignal(object)     # PacketEvent
 
     # ---------------------------------------------------------
     # 2. Macro Events
@@ -71,6 +72,8 @@ class EventRouter(QObject):
         # Port Events
         self.bus.subscribe("port.opened", self._on_port_opened)
         self.bus.subscribe("port.closed", self._on_port_closed)
+
+        # DTO를 그대로 emit
         self.bus.subscribe("port.error", self._on_port_error)
         self.bus.subscribe("port.data_received", self._on_data_received)
         self.bus.subscribe("port.data_sent", self._on_data_sent)
@@ -97,21 +100,33 @@ class EventRouter(QObject):
         """포트 닫힘 이벤트 처리"""
         self.port_closed.emit(port_name)
 
-    def _on_port_error(self, data: dict):
+    def _on_port_error(self, event):
         """포트 에러 이벤트 처리"""
-        self.port_error.emit(data.get('port', ''), data.get('message', 'Unknown Error'))
+        if isinstance(event, PortErrorEvent):
+            self.port_error.emit(event)
+        elif isinstance(event, dict): # Legacy support
+            self.port_error.emit(PortErrorEvent(event.get('port'), event.get('message')))
 
-    def _on_data_received(self, data: dict):
-        """데이터 수신 이벤트 처리"""
-        self.data_received.emit(data.get('port', ''), data.get('data', b''))
+    def _on_data_received(self, event):
+        """포트 데이터 수신 이벤트 처리"""
+        if isinstance(event, PortDataEvent):
+            self.data_received.emit(event)
+        elif isinstance(event, dict):
+            self.data_received.emit(PortDataEvent(event.get('port'), event.get('data')))
 
-    def _on_data_sent(self, data: dict):
-        """데이터 송신 이벤트 처리"""
-        self.data_sent.emit(data.get('port', ''), data.get('data', b''))
+    def _on_data_sent(self, event):
+        """포트 데이터 송신 이벤트 처리"""
+        if isinstance(event, PortDataEvent):
+            self.data_sent.emit(event)
+        elif isinstance(event, dict):
+            self.data_sent.emit(PortDataEvent(event.get('port'), event.get('data')))
 
-    def _on_packet_received(self, data: dict):
+    def _on_packet_received(self, event):
         """패킷 파싱 완료 이벤트 처리"""
-        self.packet_received.emit(data.get('port', ''), data.get('packet'))
+        if isinstance(event, PacketEvent):
+            self.packet_received.emit(event)
+        elif isinstance(event, dict):
+            self.packet_received.emit(PacketEvent(event.get('port'), event.get('packet')))
 
     # ---------------------------------------------------------
     # Event Handlers (Macro)

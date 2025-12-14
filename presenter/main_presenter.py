@@ -36,6 +36,7 @@ from core.data_logger import data_logger_manager
 from view.managers.language_manager import language_manager
 from core.logger import logger
 from common.constants import ConfigKeys
+from common.dtos import ManualCommand, PortDataEvent, PortErrorEvent, PacketEvent
 
 class MainPresenter(QObject):
     """
@@ -325,7 +326,15 @@ class MainPresenter(QObject):
             port_name (str): 수신 포트 이름
             data (bytes): 수신 데이터
         """
-        # 로깅 중이면 DataLogger에 먼저 기록 (데이터 누락 방지)
+        # EventRouter에서 DTO로 변환해서 준다고 가정 (나중에 EventRouter 수정 시 반영)
+        # 하지만 EventRouter 수정 전까지는 dict일 수도 있으므로 타입 체크
+        if isinstance(event, PortDataEvent):
+            port_name = event.port
+            data = event.data
+        else: # Legacy dict support (during refactoring)
+            port_name = event.get('port')
+            data = event.get('data')
+
         if data_logger_manager.is_logging(port_name):
             data_logger_manager.write(port_name, data)
 
@@ -341,7 +350,7 @@ class MainPresenter(QObject):
         # RX 카운트 증가
         self.rx_byte_count += len(data)
 
-    def on_data_sent(self, port_name: str, data: bytes) -> None:
+    def on_data_sent(self, event: PortDataEvent) -> None:
         """
         데이터 송신 처리
 
@@ -350,9 +359,15 @@ class MainPresenter(QObject):
             - TX 카운트 증가
 
         Args:
-            port_name (str): 송신 포트 이름
-            data (bytes): 송신 데이터
+            event (PortDataEvent): 포트 데이터 이벤트
         """
+        if isinstance(event, PortDataEvent):
+            port_name = event.port
+            data = event.data
+        else:
+            port_name = event.get('port')
+            data = event.get('data')
+
         if data_logger_manager.is_logging(port_name):
             data_logger_manager.write(port_name, data)
         self.tx_byte_count += len(data)
@@ -392,7 +407,7 @@ class MainPresenter(QObject):
         self.view.log_system_message(f"Macro Error: {error_msg}", "ERROR")
         self.view.show_status_message(f"Macro Error: {error_msg}", 5000)
 
-    def on_macro_send_requested(self, text: str, hex_mode: bool, command_prefix: bool, command_suffix: bool) -> None:
+    def on_macro_send_requested(self, command: ManualCommand) -> None:
         """
         매크로 전송 요청 처리
 
@@ -402,22 +417,19 @@ class MainPresenter(QObject):
             - 데이터 전송 (ConnectionController)
 
         Args:
-            text (str): 전송할 텍스트
-            hex_mode (bool): Hex 모드 여부
-            command_prefix (bool): 접두사 사용 여부
-            command_suffix (bool): 접미사 사용 여부
+            command (ManualCommand): 매크로 명령어
         """
         if not self.connection_controller.has_active_connection:
             logger.warning("Port not open")
             return
 
         # SettingsManager에서 값 획득 후 CommandProcessor에 주입 (Presenter의 책임)
-        prefix = self.settings_manager.get(ConfigKeys.COMMAND_PREFIX) if command_prefix else None
-        suffix = self.settings_manager.get(ConfigKeys.COMMAND_SUFFIX) if command_suffix else None
+        prefix = self.settings_manager.get(ConfigKeys.COMMAND_PREFIX) if command.prefix else None
+        suffix = self.settings_manager.get(ConfigKeys.COMMAND_SUFFIX) if command.suffix else None
 
         try:
             # 데이터 가공 위임 (CommandProcessor에 Prefix/Suffix 값 직접 전달)
-            data = CommandProcessor.process_command(text, hex_mode, prefix=prefix, suffix=suffix)
+            data = CommandProcessor.process_command(command.text, command.hex_mode, prefix=prefix, suffix=suffix)
         except ValueError:
             logger.error(f"Invalid hex string for sending: {text}")
             return

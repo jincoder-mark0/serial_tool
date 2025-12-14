@@ -10,13 +10,18 @@
 * 순환 참조(Circular Import) 방지를 위한 최하위 계층 위치
 
 ## WHAT
-* ManualCommand: 수동 명령어 데이터
-* PortConfig: 포트 연결 설정 데이터
-* FontConfig: 폰트 설정 데이터
-* MacroEntry: 매크로 항목 데이터
+* ManualCommand: 수동 제어 명령어
+* PortConfig: 포트 연결 설정
+* FontConfig: 폰트 설정
+* MacroEntry: 매크로(자동화) 항목
+* FileProgressState: 파일 전송 상태
+* PortDataEvent: 포트 데이터 이벤트
+* PortErrorEvent: 포트 에러 이벤트
+* PacketEvent: 패킷 수신 이벤트
 
 ## HOW
-* python dataclasses 모듈 활용
+* python dataclasses 활용
+* to_dict/from_dict 메서드를 통해 JSON 직렬화 지원
 """
 from dataclasses import dataclass
 from typing import Optional, Dict, Any
@@ -128,3 +133,45 @@ class MacroEntry:
             expect=data.get("expect", ""),
             timeout_ms=data.get("timeout_ms", 5000)
         )
+
+@dataclass
+class FileProgressState:
+    """
+    파일 전송 진행 상태 DTO
+    Model -> Presenter -> View
+    """
+    file_path: str = ""
+    sent_bytes: int = 0
+    total_bytes: int = 0
+    speed: float = 0.0      # bytes/sec
+    eta: float = 0.0        # seconds
+    status: str = "Sending" # Sending, Completed, Error, Cancelled
+    error_msg: str = ""     # 에러 발생 시 메시지
+
+@dataclass
+class PortDataEvent:
+    """
+    포트 데이터 수신/송신 이벤트 DTO
+    Model -> EventBus -> Router -> Presenter
+    """
+    port: str
+    data: bytes
+    timestamp: float = 0.0
+
+@dataclass
+class PortErrorEvent:
+    """
+    포트 에러 이벤트 DTO
+    Model -> EventBus -> Router -> Presenter
+    """
+    port: str
+    message: str
+
+@dataclass
+class PacketEvent:
+    """
+    패킷 파싱 완료 이벤트 DTO
+    Model -> EventBus -> Router -> Presenter
+    """
+    port: str
+    packet: Any # model.packet_parser.Packet 객체

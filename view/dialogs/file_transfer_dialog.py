@@ -27,6 +27,7 @@ from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Optional
 from view.managers.language_manager import language_manager
 from view.widgets.file_progress import FileProgressWidget
+from common.dtos import FileProgressState
 
 class FileTransferDialog(QDialog):
     """
@@ -92,9 +93,9 @@ class FileTransferDialog(QDialog):
         path_layout.addWidget(self.select_file_btn)
 
         self.send_btn = QPushButton(language_manager.get_text("manual_control_btn_send_file"))
-        self.send_btn.setProperty("class", "accent")  # 강조 스타일
+        self.send_btn.setProperty("class", "accent")
         self.send_btn.clicked.connect(self.on_send_clicked)
-        self.send_btn.setEnabled(False) # 파일 선택 전까지 비활성화
+        self.send_btn.setEnabled(False)
 
         file_layout.addLayout(path_layout)
         file_layout.addWidget(self.send_btn)
@@ -163,19 +164,16 @@ class FileTransferDialog(QDialog):
         """
         self.select_file_btn.setEnabled(not busy)
         self.send_btn.setEnabled(not busy)
-        self.close_btn.setEnabled(not busy) # 전송 중에는 닫기 방지 (취소 버튼 유도)
+        self.close_btn.setEnabled(not busy)
 
-    def update_progress(self, sent: int, total: int, speed: float, eta: float) -> None:
+    def update_progress(self, state: FileProgressState) -> None:
         """
         진행률 업데이트 (Presenter가 호출)
 
         Args:
-            sent (int): 전송된 바이트
-            total (int): 전체 바이트
-            speed (float): 전송 속도 (bytes/s)
-            eta (float): 남은 시간 (초)
+            state (FileProgressState): 파일 전송 상태 DTO
         """
-        self.progress_widget.update_progress(sent, total, speed, eta)
+        self.progress_widget.update_progress(state.sent_bytes, state.total_bytes, state.speed, state.eta)
 
     def set_complete(self, success: bool, message: str = "") -> None:
         """
@@ -191,6 +189,6 @@ class FileTransferDialog(QDialog):
     def closeEvent(self, event) -> None:
         """다이얼로그 닫기 이벤트 핸들러"""
         # 전송 중 닫기 시도 시 취소 요청 발생
-        if not self.send_btn.isEnabled(): # 전송 중임
+        if not self.send_btn.isEnabled():
             self.cancel_requested.emit()
         super().closeEvent(event)
