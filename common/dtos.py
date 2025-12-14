@@ -27,9 +27,33 @@
 ## HOW
 * python dataclasses 활용
 * to_dict/from_dict 메서드를 통해 JSON 직렬화 지원
+* **[New]** 안전한 타입 변환을 위한 헬퍼 메서드 적용
 """
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List
+
+def _safe_cast(value: Any, target_type: type, default: Any) -> Any:
+    """
+    값을 안전하게 대상 타입으로 변환합니다.
+    None이거나 변환 실패 시 기본값을 반환합니다.
+    """
+    if value is None:
+        return default
+    try:
+        if target_type is bool:
+            # "true"/"false" 문자열 처리
+            if isinstance(value, str):
+                return value.lower() == "true"
+            return bool(value)
+        if target_type is int:
+            return int(value)
+        if target_type is float:
+            return float(value)
+        if target_type is str:
+            return str(value)
+        return value
+    except (ValueError, TypeError):
+        return default
 
 @dataclass
 class ManualCommand:
@@ -64,6 +88,21 @@ class PortConfig:
     speed: int = 1000000
     mode: int = 0
 
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'PortConfig':
+        """Dictionary에서 안전하게 PortConfig 생성"""
+        return cls(
+            port=_safe_cast(data.get("port"), str, ""),
+            protocol=_safe_cast(data.get("protocol"), str, "Serial"),
+            baudrate=_safe_cast(data.get("baudrate"), int, 115200),
+            bytesize=_safe_cast(data.get("bytesize"), int, 8),
+            parity=_safe_cast(data.get("parity"), str, "N"),
+            stopbits=_safe_cast(data.get("stopbits"), float, 1.0),
+            flowctrl=_safe_cast(data.get("flowctrl"), str, "None"),
+            speed=_safe_cast(data.get("speed"), int, 1000000),
+            mode=_safe_cast(data.get("mode"), int, 0)
+        )
+
 @dataclass
 class FontConfig:
     """
@@ -74,6 +113,16 @@ class FontConfig:
     prop_size: int
     fixed_family: str
     fixed_size: int
+
+    @classmethod
+    def from_dict(cls, data: Dict[str, Any]) -> 'FontConfig':
+        """Dictionary에서 안전하게 FontConfig 생성"""
+        return cls(
+            prop_family=_safe_cast(data.get("prop_family"), str, "Segoe UI"),
+            prop_size=_safe_cast(data.get("prop_size"), int, 9),
+            fixed_family=_safe_cast(data.get("fixed_family"), str, "Consolas"),
+            fixed_size=_safe_cast(data.get("fixed_size"), int, 9)
+        )
 
 @dataclass
 class MacroEntry:
@@ -129,14 +178,14 @@ class MacroEntry:
             MacroEntry: 생성된 인스턴스
         """
         return cls(
-            enabled=data.get("enabled", True),
-            command=data.get("command", ""),
-            is_hex=data.get("is_hex", False),
-            prefix=data.get("prefix", False),
-            suffix=data.get("suffix", False),
-            delay_ms=data.get("delay_ms", 0),
-            expect=data.get("expect", ""),
-            timeout_ms=data.get("timeout_ms", 5000)
+            enabled=_safe_cast(data.get("enabled"), bool, True),
+            command=_safe_cast(data.get("command"), str, ""),
+            is_hex=_safe_cast(data.get("is_hex"), bool, False),
+            prefix=_safe_cast(data.get("prefix"), bool, False),
+            suffix=_safe_cast(data.get("suffix"), bool, False),
+            delay_ms=_safe_cast(data.get("delay_ms"), int, 0),
+            expect=_safe_cast(data.get("expect"), str, ""),
+            timeout_ms=_safe_cast(data.get("timeout_ms"), int, 5000)
         )
 
 @dataclass
@@ -211,6 +260,18 @@ class MacroScriptData:
     filepath: str
     data: Dict[str, Any] # commands 리스트와 control_state 포함
 
+    @classmethod
+    def from_dict(cls, filepath: str, data: Dict[str, Any]) -> 'MacroScriptData':
+        """안전한 생성 메서드"""
+        if not isinstance(data, dict):
+            data = {}
+        # 필수 키 보장
+        if "commands" not in data:
+            data["commands"] = []
+        if "control_state" not in data:
+            data["control_state"] = {}
+        return cls(filepath=filepath, data=data)
+
 @dataclass
 class MacroRepeatOption:
     """
@@ -220,7 +281,7 @@ class MacroRepeatOption:
     delay_ms: int
     max_runs: int = 0
     interval_ms: int = 0
-    is_broadcast: bool = False # [New] 브로드캐스팅 여부
+    is_broadcast: bool = False
 
 @dataclass
 class MacroStepEvent:

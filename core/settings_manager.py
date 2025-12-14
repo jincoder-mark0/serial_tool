@@ -8,6 +8,7 @@
 * 설정 파일 손상 시 자동 복구 (Fallback)
 * 점(.) 표기법으로 중첩된 설정 접근 편의성 제공
 * 싱글톤 패턴으로 전역 일관성 보장
+* JSON Schema 기반 무결성 검증
 
 ## WHAT
 * JSON 기반 설정 파일 관리
@@ -15,23 +16,68 @@
 * 기본값(Fallback) 자동 생성
 * ResourcePath를 통한 동적 경로 관리
 * 주석 지원 JSON (commentjson) 파싱
+* 필수 설정 필드 유효성 검사
 
 ## HOW
 * 싱글톤 패턴으로 전역 인스턴스 제공
 * commentjson으로 주석 포함 JSON 파싱
+* jsonschema를 사용하여 로드된 데이터 구조 검증
 * 재귀적 딕셔너리 병합으로 설정 통합
-* 파일 로드 실패 시 Fallback 설정 자동 생성
-* ResourcePath로 개발/배포 환경 경로 자동 처리
+* 파일 로드 실패 또는 검증 실패 시 Fallback 설정 자동 생성
 """
 try:
     import commentjson as json
 except ImportError:
     import json
+import jsonschema
+from jsonschema import validate, ValidationError
 from pathlib import Path
 from typing import Dict, Any
 from common.constants import DEFAULT_BAUDRATE, DEFAULT_LOG_MAX_LINES
 from core.logger import logger
 import os
+
+# 핵심 설정 스키마 정의
+# 필수 필드만 엄격하게 검사하고, 나머지는 허용(additionalProperties: True)
+CORE_SETTINGS_SCHEMA = {
+    "type": "object",
+    "properties": {
+        "version": {"type": "string"},
+        "global": {
+            "type": "object",
+            "properties": {
+                "theme": {"type": "string"},
+                "language": {"type": "string"}
+            },
+            "required": ["theme", "language"]
+        },
+        "ui": {
+            "type": "object",
+            "properties": {
+                "rx_max_lines": {"type": "integer"},
+                "proportional_font_family": {"type": "string"},
+                "proportional_font_size": {"type": "integer"},
+                "fixed_font_family": {"type": "string"},
+                "fixed_font_size": {"type": "integer"}
+            }
+        },
+        "ports": {
+            "type": "object",
+            "properties": {
+                "default_config": {
+                    "type": "object",
+                    "properties": {
+                        "baudrate": {"type": "integer"},
+                        "parity": {"type": "string"},
+                        "bytesize": {"type": "integer"},
+                        "stopbits": {"type": "number"}
+                    }
+                }
+            }
+        }
+    },
+    "required": ["version", "global"]
+}
 
 class SettingsManager:
     """
@@ -106,22 +152,57 @@ class SettingsManager:
 
     def load_settings(self) -> None:
         """
-        설정을 로드합니다.
-        파일이 없거나 손상된 경우 기본값(Fallback)을 사용하고 파일을 재생성합니다.
+        설정을 로드하고 유효성을 검사합니다.
+        파일이 없거나 손상되었거나 스키마가 일치하지 않는 경우
+        기본값(Fallback)을 사용하고 파일을 복구합니다.
         """
+        fallback_settings = self._get_fallback_settings()
+
         try:
+            if not self.config_path.exists():
+                raise FileNotFoundError("Settings file not found")
+
             with open(self.config_path, 'r', encoding='utf-8') as f:
-                self.settings = json.load(f)
-        except (FileNotFoundError, ValueError, Exception) as e:
-            logger.error(f"설정 로드 실패: {e}")
-            self.settings = self._get_fallback_settings()
-            # 기본 설정으로 파일 생성
+                loaded_settings = json.load(f)
+
+            # JSON Schema 검증
+            validate(instance=loaded_settings, schema=CORE_SETTINGS_SCHEMA)
+
+            # 검증 성공 시 설정 적용 (기본값 위에 덮어쓰기하여 누락된 키 보완)
+            self.settings = fallback_settings.copy()
+            self._merge_settings(loaded_settings)
+
+            logger.info("Settings loaded and validated successfully.")
+
+        except (FileNotFoundError, json.JSONDecodeError) as e:
+            logger.warning(f"Settings load failed ({type(e).__name__}): {e}. Using fallback.")
+            self.settings = fallback_settings
+            self.save_settings() # 복구된 설정 저장
+
+        except ValidationError as e:
+            logger.error(f"Settings validation failed: {e.message}. Reverting to fallback for critical sections.")
+            # 스키마 불일치 시, 로드된 데이터 중 일부가 유효할 수 있으므로
+            # Fallback을 기본으로 하고, 로드된 데이터를 조심스럽게 병합하거나
+            # 안전을 위해 Fallback을 우선 사용함. 여기서는 Fallback 우선 정책.
+            self.settings = fallback_settings
+            # 잘못된 파일을 백업하고 새로 생성하는 것이 좋음
+            backup_path = self.config_path.with_suffix('.json.bak')
+            try:
+                if self.config_path.exists():
+                    self.config_path.rename(backup_path)
+                    logger.info(f"Corrupted settings backed up to {backup_path}")
+            except OSError:
+                pass
             self.save_settings()
 
+        except Exception as e:
+            logger.error(f"Unexpected error loading settings: {e}")
+            self.settings = fallback_settings
 
     def _merge_settings(self, user_settings: Dict[str, Any]) -> None:
         """
-        사용자 설정을 기본 설정에 재귀적으로 병합합니다.
+        사용자 설정을 기본 설정(self.settings)에 재귀적으로 병합합니다.
+        기본 설정(Fallback)에 있는 키 구조를 유지하면서 값을 업데이트합니다.
 
         Args:
             user_settings (Dict[str, Any]): 병합할 사용자 설정 딕셔너리.
@@ -131,6 +212,11 @@ class SettingsManager:
                 if key in base and isinstance(base[key], dict) and isinstance(value, dict):
                     merge_dict(base[key], value)
                 else:
+                    base[key] = value
+
+            # base에 없는 키도 override에 있다면 추가 (확장성)
+            for key, value in override.items():
+                if key not in base:
                     base[key] = value
 
         merge_dict(self.settings, user_settings)
