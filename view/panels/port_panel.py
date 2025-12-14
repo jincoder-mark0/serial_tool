@@ -1,3 +1,24 @@
+"""
+포트 패널 모듈
+
+개별 시리얼 포트 탭의 메인 위젯 클래스입니다.
+포트 설정(PortSettings), 통신 로그(DataLogWidget), 상태 로그(PortStats) 영역을 포함합니다.
+
+## WHY
+* 포트 단위의 독립적인 UI 컴포넌트 구성
+* 하위 위젯들의 레이아웃 및 상호작용 관리
+* Presenter에 단일 접근점 제공
+
+## WHAT
+* PortSettingsWidget, PortStatsWidget, DataLogWidget 배치
+* 연결/해제 토글 기능
+* 탭 제목 관리 (커스텀 이름)
+* [New] Broadcast 허용 상태 시그널 중계
+
+## HOW
+* QVBoxLayout 사용
+* 시그널 체이닝 (Widget -> Panel -> Presenter)
+"""
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtCore import pyqtSignal
 from typing import Optional
@@ -14,6 +35,7 @@ class PortPanel(QWidget):
 
     # 시그널 정의
     tab_title_changed = pyqtSignal(str)  # 탭 제목 변경 시그널
+    broadcast_allow_changed = pyqtSignal(bool)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -43,6 +65,8 @@ class PortPanel(QWidget):
         self.port_settings_widget = PortSettingsWidget()
         self.port_stats_widget = PortStatsWidget()
         self.data_log_widget = DataLogWidget()
+
+        self.data_log_widget.tx_broadcast_allow_changed.connect(self.broadcast_allow_changed.emit)
 
         # 레이아웃 구성
         # 상단: 설정 (Top: Settings)

@@ -206,8 +206,6 @@ class ConnectionController(QObject):
             return False
 
         # SerialTransport 생성 (Config DTO 속성 사용)
-        # 기존 SerialTransport가 dict를 받도록 되어 있다면 DTO -> dict 변환 필요할 수 있음
-        # 여기서는 편의상 SerialTransport가 config dict를 받는다고 가정하고 변환
         transport_config = {
             "bytesize": config.bytesize,
             "parity": config.parity,
@@ -314,7 +312,7 @@ class ConnectionController(QObject):
 
         Logic:
             - 현재 broadcasting 활성화된 워커 리스트를 순회하며 데이터를 전송
-            - send_data_to 메서드를 호출하여 실제 전송 수행
+            - Worker의 is_broadcasting() 상태 확인
 
         Args:
             data: 전송할 바이트 데이터
@@ -323,10 +321,16 @@ class ConnectionController(QObject):
             self.error_occurred.emit("", "No active connections.")
             return
 
+        sent_any = False
         for name, worker in self.workers.items():
             if worker.isRunning() and worker.is_broadcasting():
-                # TODO : broadcasting 설정 확인 로직 추가 필요
                 self.send_data_to_connection(name, data)
+                sent_any = True
+
+        if not sent_any:
+            # 브로드캐스팅 대상이 없으면 현재 탭으로라도 보내거나, 에러 로그?
+            # 여기서는 아무 동작도 하지 않거나 로그를 남길 수 있음.
+            pass
 
     def send_data_to_all(self, data: bytes) -> None:
         """
@@ -369,6 +373,17 @@ class ConnectionController(QObject):
             return True
         return False
 
+    def set_port_broadcast_state(self, port_name: str, state: bool) -> None:
+        """
+        특정 포트의 브로드캐스트 수신 허용 상태를 변경합니다.
+
+        Args:
+            port_name (str): 포트 이름
+            state (bool): True=허용, False=거부
+        """
+        worker = self.workers.get(port_name)
+        if worker:
+            worker.set_broadcast(state)
 
     def set_dtr(self, state: bool) -> None:
         """
@@ -392,7 +407,7 @@ class ConnectionController(QObject):
 
     def set_broadcast(self, state: bool) -> None:
         """
-        모든 포트의 broadcasting 설정
+        모든 포트의 broadcasting 설정 (일괄 설정용)
 
         Args:
             state: True면 broadcasting ON, False면 broadcasting OFF

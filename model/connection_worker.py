@@ -15,6 +15,7 @@ DeviceTransport 인터페이스를 사용하여 하드웨어 독립적인 I/O �
 * Thread-safe Queue 기반 비동기 전송
 * DTR/RTS 하드웨어 제어 신호 지원
 * 연결 상태 모니터링 및 이벤트 발행
+* Broadcast 수신 허용 상태 관리
 
 ## HOW
 * QThread 상속으로 별도 Thread 실행
@@ -62,6 +63,8 @@ class ConnectionWorker(QThread):
         self.connection_name = connection_name
 
         self._is_running = False
+        self._is_broadcasting = False
+
         self._mutex = QMutex()
         self._write_queue = ThreadSafeQueue() # 비동기 전송용 Queue
 
@@ -219,4 +222,14 @@ class ConnectionWorker(QThread):
         Args:
             state: True면 broadcasting ON, False면 broadcasting OFF
         """
+        self._is_broadcasting = state
         self.transport.set_broadcast(state)
+
+    def is_broadcasting(self) -> bool:
+        """
+        현재 브로드캐스팅 수신 허용 여부 반환
+
+        Returns:
+            bool: 브로드캐스팅 허용 여부
+        """
+        return self._is_broadcasting

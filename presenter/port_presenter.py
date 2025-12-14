@@ -103,6 +103,28 @@ class PortPresenter(QObject):
             settings_widget.port_open_requested.connect(self.handle_open_request)
             settings_widget.port_close_requested.connect(self.handle_close_request)
 
+        # Broadcast 체크박스 시그널 연결
+        if hasattr(widget, 'broadcast_allow_changed'):
+            try:
+                # widget 파라미터를 lambda로 캡처하여 어떤 탭인지 식별
+                widget.broadcast_allow_changed.disconnect()
+            except TypeError:
+                pass
+            widget.broadcast_allow_changed.connect(lambda state, w=widget: self.on_broadcast_changed(w, state))
+
+    def on_broadcast_changed(self, widget, state: bool) -> None:
+        """
+        브로드캐스트 허용 상태 변경 핸들러
+
+        Args:
+            widget: 시그널을 보낸 PortPanel
+            state: 체크 여부
+        """
+        if hasattr(widget, 'get_port_name'):
+            port_name = widget.get_port_name()
+            if port_name:
+                self.connection_controller.set_port_broadcast_state(port_name, state)
+
     def _on_port_tab_added(self, widget) -> None:
         """새 탭이 추가되었을 때 호출되는 슬롯"""
         self._connect_tab_signals(widget)
