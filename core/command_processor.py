@@ -15,8 +15,6 @@
 * 인자로 받은 Prefix/Suffix를 적용하여 순수 로직 수행
 """
 from typing import Optional
-from core.settings_manager import SettingsManager # 주석 참조용으로 유지
-from common.constants import ConfigKeys # 주석 참조용으로 유지
 
 class CommandProcessor:
     """

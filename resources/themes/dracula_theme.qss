@@ -1,0 +1,264 @@
+/* Dracula Theme Colors */
+/* Background: #282a36, Current Line: #44475a, Foreground: #f8f8f2 */
+/* Comment: #6272a4, Cyan: #8be9fd, Green: #50fa7b, Orange: #ffb86c */
+/* Pink: #ff79c6, Purple: #bd93f9, Red: #ff5555, Yellow: #f1fa8c */
+
+/* Global Settings */
+QWidget {
+    background-color: #282a36;
+    color: #f8f8f2;
+    selection-background-color: #44475a;
+    selection-color: #f8f8f2;
+}
+
+/* MainWindow */
+QMainWindow {
+    background-color: #282a36;
+}
+
+QMainWindow::separator {
+    background-color: #44475a;
+    width: 2px;
+    height: 2px;
+}
+
+QMainWindow::separator:hover {
+    background-color: #6272a4;
+}
+
+/* QTabWidget */
+QTabWidget::pane {
+    border: 1px solid #44475a;
+    background-color: #282a36;
+}
+
+QTabBar::tab {
+    background-color: #21222c;
+    color: #6272a4;
+    border: 1px solid #44475a;
+    border-bottom: none;
+    padding: 8px 16px;
+    margin-right: 2px;
+    border-top-left-radius: 4px;
+    border-top-right-radius: 4px;
+}
+
+QTabBar::tab:selected {
+    background-color: #282a36;
+    color: #f8f8f2;
+    border-bottom: 2px solid #bd93f9; /* Purple accent */
+}
+
+QTabBar::tab:hover {
+    background-color: #44475a;
+    color: #f8f8f2;
+}
+
+QTabBar::close-button {
+    image: url(resources/icons/dracula/close_dracula.svg);
+}
+
+/* QPushButton */
+QPushButton {
+    background-color: #44475a;
+    border: 1px solid #6272a4;
+    color: #f8f8f2;
+    border-radius: 4px;
+    padding: 6px 12px;
+}
+
+QPushButton:hover {
+    background-color: #6272a4;
+    border-color: #bd93f9;
+}
+
+QPushButton:pressed {
+    background-color: #bd93f9;
+    color: #282a36;
+}
+
+QPushButton:disabled {
+    background-color: #21222c;
+    color: #6272a4;
+    border-color: #44475a;
+}
+
+/* Icons (Object Name Matching) */
+QPushButton#add_row_btn { qproperty-icon: url(resources/icons/dracula/add_dracula.svg); }
+QPushButton#del_row_btn { qproperty-icon: url(resources/icons/dracula/delete_dracula.svg); }
+QPushButton#up_row_btn { qproperty-icon: url(resources/icons/dracula/up_dracula.svg); }
+QPushButton#down_row_btn { qproperty-icon: url(resources/icons/dracula/down_dracula.svg); }
+QPushButton#data_log_search_prev_btn { qproperty-icon: url(resources/icons/dracula/find_prev_dracula.svg); }
+QPushButton#data_log_search_next_btn { qproperty-icon: url(resources/icons/dracula/find_next_dracula.svg); }
+
+/* Inputs */
+QLineEdit, QTextEdit, QPlainTextEdit {
+    background-color: #21222c;
+    border: 1px solid #44475a;
+    color: #f8f8f2;
+    border-radius: 4px;
+    padding: 4px;
+}
+
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
+    border: 1px solid #bd93f9; /* Purple focus */
+}
+
+/* QComboBox */
+QComboBox {
+    background-color: #44475a;
+    border: 1px solid #6272a4;
+    border-radius: 4px;
+    padding: 4px 8px;
+    color: #f8f8f2;
+}
+
+QComboBox::drop-down {
+    subcontrol-origin: padding;
+    subcontrol-position: top right;
+    width: 20px;
+    border-left-width: 0px;
+}
+
+QComboBox::down-arrow {
+    image: url(resources/icons/dracula/arrow_down_dracula.svg);
+}
+
+QComboBox QAbstractItemView {
+    background-color: #282a36;
+    border: 1px solid #6272a4;
+    selection-background-color: #bd93f9;
+    selection-color: #282a36;
+}
+
+/* QListView & SmartListView */
+QListView, QSmartListView {
+    background-color: #21222c;
+    border: 1px solid #44475a;
+    selection-background-color: #44475a;
+    selection-color: #f8f8f2;
+}
+
+/* QSmartTextEdit Properties for Dracula */
+QSmartTextEdit {
+    qproperty-lineNumberBackgroundColor: #21222c;
+    qproperty-lineNumberColor: #6272a4;
+    qproperty-currentLineColor: #44475a;
+}
+
+/* Checkbox */
+QCheckBox::indicator {
+    border: 1px solid #6272a4;
+    background-color: #21222c;
+    width: 14px;
+    height: 14px;
+    border-radius: 2px;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #bd93f9;
+    border-color: #bd93f9;
+}
+
+/* ScrollBar */
+QScrollBar:vertical {
+    background-color: #282a36;
+    width: 12px;
+}
+QScrollBar::handle:vertical {
+    background-color: #6272a4;
+    border-radius: 6px;
+    min-height: 20px;
+}
+QScrollBar::handle:vertical:hover {
+    background-color: #bd93f9;
+}
+QScrollBar::add-line:vertical, QScrollBar::sub-line:vertical {
+    height: 0px;
+}
+
+/* GroupBox & Labels */
+QGroupBox {
+    border: 1px solid #44475a;
+    border-radius: 4px;
+    margin-top: 1.5em;
+    padding-top: 10px;
+}
+
+QGroupBox::title, QLabel[class="section-title"] {
+    color: #ff79c6; /* Pink Title */
+    subcontrol-origin: margin;
+    subcontrol-position: top left;
+    padding: 0 5px;
+    font-weight: bold;
+}
+
+/* Status Bar */
+QStatusBar {
+    background-color: #191a21;
+    color: #f8f8f2;
+    border-top: 1px solid #44475a;
+}
+
+/* Menu & ToolBar */
+QMenuBar {
+    background-color: #191a21;
+    color: #f8f8f2;
+}
+QMenuBar::item:selected {
+    background-color: #44475a;
+}
+QMenu {
+    background-color: #282a36;
+    border: 1px solid #44475a;
+}
+QMenu::item:selected {
+    background-color: #bd93f9;
+    color: #282a36;
+}
+QToolBar {
+    background-color: #191a21;
+    border-bottom: 1px solid #44475a;
+}
+
+/* State Buttons */
+QPushButton[class="accent"] { /* Save, Start */
+    background-color: #50fa7b; /* Green */
+    color: #282a36;
+    border-color: #50fa7b;
+}
+QPushButton[class="accent"]:hover {
+    background-color: #69ff94;
+}
+
+QPushButton[class="danger"] { /* Stop, Delete */
+    background-color: #ff5555; /* Red */
+    color: #282a36;
+    border-color: #ff5555;
+}
+QPushButton[class="danger"]:hover {
+    background-color: #ff6e6e;
+}
+
+QPushButton[class="warning"] { /* Pause */
+    background-color: #ffb86c; /* Orange */
+    color: #282a36;
+    border-color: #ffb86c;
+}
+
+/* Port State Colors */
+QPushButton[state="connected"] {
+    background-color: #50fa7b; /* Green */
+    color: #282a36;
+    border: 1px solid #50fa7b;
+}
+QPushButton[state="disconnected"] {
+    background-color: #44475a;
+    color: #f8f8f2;
+    border: 1px solid #6272a4;
+}
+QPushButton[state="error"] {
+    background-color: #ff5555; /* Red */
+    color: #282a36;
+    border: 1px solid #ff5555;
+}
