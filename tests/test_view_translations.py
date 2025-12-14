@@ -97,7 +97,7 @@ def test_dynamic_language_switching(app, qtbot):
          lambda w: w.text(), "packet_grp_title"),
 
         # 9. System Log (Left Panel Bottom)
-        (lambda: app.left_section.system_log_widget.system_log_title,
+        (lambda: app.left_section.sys_log_view_widget.sys_log_view_title,
          lambda w: w.text(), "sys_log_view_title"),
 
         # 10. Status Bar (예외 처리 필요)

@@ -23,7 +23,7 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QPushButton, QCheckBox,
     QGridLayout, QPlainTextEdit
 )
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
 from PyQt5.QtGui import QKeyEvent
 from typing import Optional, List
 from view.managers.lang_manager import lang_manager
@@ -38,9 +38,9 @@ class ManualCtrlWidget(QWidget):
     """
 
     # 시그널 정의
-    manual_cmd_send_requested = pyqtSignal(str, bool, bool, bool, bool) # text, hex, prefix, suffix, local_echo
-    rts_changed = pyqtSignal(bool) # RTS 상태 변경
-    dtr_changed = pyqtSignal(bool) # DTR 상태 변경
+    manual_cmd_send_requested = pyqtSignal(dict)
+    rts_changed = pyqtSignal(bool)
+    dtr_changed = pyqtSignal(bool)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -50,16 +50,18 @@ class ManualCtrlWidget(QWidget):
             parent (Optional[QWidget]): 부모 위젯
         """
         super().__init__(parent)
-        self.send_manual_cmd_btn = None
-        self.history_up_btn = None
-        self.history_down_btn = None
+
+        # UI 컴포넌트 선언
+        self.send_manual_cmd_btn: Optional[QPushButton] = None
+        self.history_up_btn: Optional[QPushButton] = None
+        self.history_down_btn: Optional[QPushButton] = None
         self.manual_cmd_txt = None
-        self.dtr_chk = None
-        self.rts_chk = None
-        self.suffix_chk = None
-        self.prefix_chk = None
-        self.hex_chk = None
-        self.local_echo_chk = None
+        self.dtr_chk: Optional[QCheckBox] = None
+        self.rts_chk: Optional[QCheckBox] = None
+        self.suffix_chk: Optional[QCheckBox] = None
+        self.prefix_chk: Optional[QCheckBox] = None
+        self.hex_chk: Optional[QCheckBox] = None
+        self.local_echo_chk: Optional[QCheckBox] = None
 
         # History State
         self.cmd_history: List[str] = []
@@ -67,7 +69,7 @@ class ManualCtrlWidget(QWidget):
 
         self.init_ui()
 
-        # 언어 변경 시 UI 업데이트 연결
+        # 언어 변경 이벤트 연결
         lang_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self) -> None:
@@ -76,8 +78,8 @@ class ManualCtrlWidget(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
 
-        # ---------------------------------------------------------
-        # 1. 수동 전송 영역 (입력창 + 히스토리/전송 버튼)
+        # 1. 입력 및 전송 영역
+
         # ---------------------------------------------------------
         self.manual_cmd_txt = QSmartTextEdit()  # 라인 번호 지원 에디터
         self.manual_cmd_txt.setPlaceholderText(lang_manager.get_text("manual_ctrl_txt_cmd_placeholder"))
@@ -116,9 +118,8 @@ class ManualCtrlWidget(QWidget):
         send_layout.addWidget(self.manual_cmd_txt, 1)
         send_layout.addLayout(btn_layout)
 
-        # ---------------------------------------------------------
-        # 2. 제어 옵션 영역 (체크박스 그리드)
-        # ---------------------------------------------------------
+
+        # 2. 옵션 영역
         self.hex_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_hex"))
         self.hex_chk.setToolTip(lang_manager.get_text("manual_ctrl_chk_hex_tooltip"))
 
@@ -126,20 +127,17 @@ class ManualCtrlWidget(QWidget):
         self.prefix_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_prefix"))
         self.suffix_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_suffix"))
 
-        # 흐름 제어 (Flow Control - RTS/DTR)
         self.rts_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_rts"))
         self.rts_chk.setToolTip(lang_manager.get_text("manual_ctrl_chk_rts_tooltip"))
-        # RTS 시그널 연결
         self.rts_chk.stateChanged.connect(lambda state: self.rts_changed.emit(state == Qt.Checked))
 
         self.dtr_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_dtr"))
         self.dtr_chk.setToolTip(lang_manager.get_text("manual_ctrl_chk_dtr_tooltip"))
-        # DTR 시그널 연결
         self.dtr_chk.stateChanged.connect(lambda state: self.dtr_changed.emit(state == Qt.Checked))
 
-        # 로컬 에코 체크박스 추가 (상태 변경 시그널 제거 - 전송 시점에 상태 확인)
         self.local_echo_chk = QCheckBox(lang_manager.get_text("manual_ctrl_chk_local_echo"))
 
+        # 전체 레이아웃
         option_layout = QGridLayout()
         option_layout.setContentsMargins(0, 5, 0, 0) # 상단 여백 추가
         option_layout.setSpacing(5) # 간격 조정
@@ -166,7 +164,9 @@ class ManualCtrlWidget(QWidget):
         self.manual_cmd_txt.keyPressEvent = self._cmd_input_key_press_event
 
     def retranslate_ui(self) -> None:
-        """다국어 텍스트 업데이트"""
+        """
+        다국어 텍스트 업데이트
+        """
         self.hex_chk.setText(lang_manager.get_text("manual_ctrl_chk_hex"))
         self.prefix_chk.setText(lang_manager.get_text("manual_ctrl_chk_prefix"))
         self.suffix_chk.setText(lang_manager.get_text("manual_ctrl_chk_suffix"))
@@ -211,6 +211,7 @@ class ManualCtrlWidget(QWidget):
         # 필요시 입력 검증 로직 추가 가능
         pass
 
+    @pyqtSlot()
     def on_send_manual_cmd_clicked(self) -> None:
         """전송 버튼 클릭 처리"""
         text = self.manual_cmd_txt.toPlainText()
@@ -218,17 +219,22 @@ class ManualCtrlWidget(QWidget):
             # 히스토리에 추가
             self.add_to_history(text)
 
-            # View는 원본 입력과 체크박스 상태만 전달
-            # prefix/suffix 처리는 Presenter에서 수행
-            self.manual_cmd_send_requested.emit(
-                text,
-                self.hex_chk.isChecked(),
-                self.prefix_chk.isChecked(),
-                self.suffix_chk.isChecked(),
-                self.local_echo_chk.isChecked()
-            )
-            # 입력 후 지우지 않음 (히스토리 기능이 없으므로 유지하는 편이 나음 -> 히스토리 있으니 지워도 되지만, 보통 남겨두는게 편함)
-            # self.manual_cmd_txt.clear()
+
+        text = self.manual_cmd_input.text()
+        if not text:
+            return
+
+        # 전송 데이터 패키징 (Dict)
+        send_data = {
+            "text": text,
+            "hex_mode_chk": self.hex_chk.isChecked(),
+            "prefix_chk": self.prefix_chk.isChecked(),
+            "suffix_chk": self.suffix_chk.isChecked(),
+            "local_echo_chk": self.local_echo_chk.isChecked(),
+        }
+
+        # 딕셔너리 인자로 시그널 발생
+        self.manual_cmd_send_requested.emit(send_data)
 
     def add_to_history(self, cmd: str) -> None:
         """
@@ -246,8 +252,8 @@ class ManualCtrlWidget(QWidget):
             self.cmd_history.remove(cmd)
 
         self.cmd_history.append(cmd)
-
-        # 최대 크기 제한
+        # 딕셔너리 데이터 구성
+            # broadcast는 ManualCtrlPanel에서 DataLogViewer 상태를 읽어 추가함
         if len(self.cmd_history) > MAX_CMD_HISTORY_SIZE:
             self.cmd_history.pop(0) # 가장 오래된 항목 제거
 
@@ -296,7 +302,7 @@ class ManualCtrlWidget(QWidget):
             enabled (bool): 활성화 여부
         """
         self.send_manual_cmd_btn.setEnabled(enabled)
-        # RTS/DTR은 연결된 상태에서만 제어 가능
+        # 딕셔너리를 인자로 전송
         self.rts_chk.setEnabled(enabled)
         self.dtr_chk.setEnabled(enabled)
 
@@ -323,7 +329,7 @@ class ManualCtrlWidget(QWidget):
             "suffix_chk": self.suffix_chk.isChecked(),
             "rts_chk": self.rts_chk.isChecked(),
             "dtr_chk": self.dtr_chk.isChecked(),
-            "local_echo": self.local_echo_chk.isChecked(),
+            "local_echo_chk": self.local_echo_chk.isChecked(),
             "cmd_history": self.cmd_history # 히스토리 저장
         }
         return state
@@ -337,12 +343,11 @@ class ManualCtrlWidget(QWidget):
         """
         if not state:
             return
-
         self.hex_chk.setChecked(state.get("hex_mode", False))
         self.prefix_chk.setChecked(state.get("prefix_chk", False))
         self.suffix_chk.setChecked(state.get("suffix_chk", False))
         self.rts_chk.setChecked(state.get("rts_chk", False))
         self.dtr_chk.setChecked(state.get("dtr_chk", False))
-        self.local_echo_chk.setChecked(state.get("local_echo", False))
+        self.local_echo_chk.setChecked(state.get("local_echo_chk", False))
         self.manual_cmd_txt.setPlainText(state.get("input_text", ""))
         self.cmd_history = state.get("cmd_history", [])

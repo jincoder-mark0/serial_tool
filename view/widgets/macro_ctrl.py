@@ -110,7 +110,7 @@ class MacroCtrlWidget(QWidget):
 
         # 자동 실행 설정 그룹 (Repeat Settings Group)
         self.execution_settings_grp = QGroupBox(lang_manager.get_text("macro_ctrl_grp_execution"))
-        self.execution_settings_grp.setFixedHeight(100) # 높이 고정 (SystemLogWidget과 맞춤)
+        self.execution_settings_grp.setFixedHeight(100) # 높이 고정 (SysLogViewWidget과 맞춤)
         self.execution_settings_grp.setLayout(execution_layout)
 
         layout = QVBoxLayout()

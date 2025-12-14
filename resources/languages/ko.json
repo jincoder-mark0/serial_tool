@@ -191,6 +191,8 @@
     "data_log_view_chk_timestamp": "타임스탬프",
     "data_log_view_chk_timestamp_tooltip": "타임스탬프 표시",
     "data_log_view_combo_newline_tooltip": "줄바꿈 모드 선택",
+    "data_log_view_chk_tx_broadcast": "TX Broadcast",
+    "data_log_view_chk_tx_broadcast_tooltip": "TX Broadcast 활성화",
     "data_log_view_input_search_placeholder": "검색...",
     "data_log_view_input_search_tooltip": "수신 데이터에서 검색",
     "data_log_view_list_log_placeholder": "수신 데이터가 여기에 표시됩니다...",
@@ -204,9 +206,14 @@
     "sys_log_view_list_log_placeholder": "시스템 상태 메시지가 여기에 표시됩니다...",
     "sys_log_view_list_log_tooltip": "시스템 상태 및 오류 메시지",
     "sys_log_view_title": "시스템 로그",
-    "toolbar_btn_clear": "지우기",
-    "toolbar_btn_close": "닫기",
-    "toolbar_btn_open": "열기",
-    "toolbar_btn_save_data_log": "로그 저장",
-    "toolbar_btn_settings": "설정"
+    "sys_log_view_btn_clear": "지우기",
+    "sys_log_view_btn_clear_tooltip": "시스템 로그 지우기",
+    "sys_log_view_btn_search_next_tooltip": "다음 찾기",
+    "sys_log_view_btn_search_prev_tooltip": "이전 찾기",
+    "sys_log_view_btn_toggle_logging": "저장",
+    "sys_log_view_btn_toggle_logging_tooltip": "시스템 로그를 파일로 저장",
+    "sys_log_view_chk_filter": "필터",
+    "sys_log_view_chk_filter_tooltip": "시스템 로그 필터링 활성화",
+    "sys_log_view_input_search_placeholder": "검색...",
+    "sys_log_view_input_search_tooltip": "시스템 로그에서 검색"
 }

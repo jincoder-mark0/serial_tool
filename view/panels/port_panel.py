@@ -9,7 +9,7 @@ from view.widgets.port_stats import PortStatsWidget
 class PortPanel(QWidget):
     """
     개별 시리얼 포트 탭의 메인 위젯 클래스입니다.
-    포트 설정(PortSettings), 통신 로그(DataLogViewer), 상태 로그(PortStats) 영역을 포함합니다.
+    포트 설정(PortSettings), 통신 로그(DataLogViewWidget), 상태 로그(PortStats) 영역을 포함합니다.
     """
 
     # 시그널 정의
@@ -23,7 +23,7 @@ class PortPanel(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
-        # self.system_log_widget = None
+        # self.sys_log_view_widget = None
         self.data_log_view_widget = None
         self.port_stats_widget = None
         self.port_settings_widget = None
@@ -55,7 +55,7 @@ class PortPanel(QWidget):
         layout.addWidget(self.data_log_view_widget, 1) # Stretch 1
 
         # 하단: 상태 로그 영역 (Bottom: Status Log Area)
-        # layout.addWidget(self.system_log_widget) # Global로 이동
+        # layout.addWidget(self.sys_log_view_widget) # Global로 이동
 
         self.setLayout(layout)
 

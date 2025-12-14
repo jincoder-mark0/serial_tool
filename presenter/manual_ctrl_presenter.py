@@ -5,7 +5,7 @@
 
 ## WHY
 * View와 Model 사이의 중재자 역할
-* **CommandProcessor를 호출하기 전에 SettingsManager에서 설정값(Prefix/Suffix)을 가져와 주입**
+* SettingsManager에서 설정값(Prefix/Suffix) 주입
 * 하드웨어 제어 신호(RTS, DTR) 처리
 
 ## WHAT
@@ -19,7 +19,7 @@
 * ConnectionController 메서드 호출 (send_data, set_rts, set_dtr)
 """
 from PyQt5.QtCore import QObject
-from typing import Callable, Optional
+from typing import Callable, Optional, Dict, Any
 from view.panels.manual_ctrl_panel import ManualCtrlPanel
 from model.connection_controller import ConnectionController
 from core.settings_manager import SettingsManager
@@ -57,15 +57,7 @@ class ManualCtrlPresenter(QObject):
         self.view.rts_changed.connect(self.on_rts_changed)
         self.view.dtr_changed.connect(self.on_dtr_changed)
 
-        # 초기 상태 설정 (전역 설정 반영)
-        self._apply_initial_settings()
-
-    def _apply_initial_settings(self) -> None:
-        """설정 파일에서 Local Echo 기본값을 읽어 View에 적용"""
-        default_echo = self.settings_manager.get(ConfigKeys.PORT_LOCAL_ECHO, False)
-        self.view.set_local_echo_state(default_echo)
-
-    def on_manual_cmd_send_requested(self, text: str, hex_mode: bool, cmd_prefix: bool, cmd_suffix: bool, local_echo: bool) -> None:
+    def on_manual_cmd_send_requested(self, send_data: Dict[str, Any]) -> None:
         """
         수동 명령 전송 요청 처리
 
@@ -76,23 +68,29 @@ class ManualCtrlPresenter(QObject):
             - 데이터 전송 및 Local Echo 처리
 
         Args:
-            text (str): 전송할 텍스트
-            hex_mode (bool): Hex 모드 여부
-            cmd_prefix (bool): 접두사 사용 여부
-            cmd_suffix (bool): 접미사 사용 여부
-            local_echo (bool): 로컬 에코 사용 여부
+            send_data (Dict[str, Any]): 전송 관련 설정 딕셔너리
+                keys: text, hex_mode, cmd_prefix, cmd_suffix, local_echo
         """
         if not self.connection_controller.has_active_connection:
             logger.warning("Manual Send: No active connection")
             return
 
+        # 딕셔너리에서 필요한 값 추출
+        text = send_data.get("text", "")
+        hex_mode_chk = send_data.get("hex_mode_chk", False)
+        prefix_chk = send_data.get("prefix_chk", False)
+        suffix_chk = send_data.get("suffix_chk", False)
+        local_echo_chk = send_data.get("local_echo_chk", False)
+        
+        if not text:
+            return
         # SettingsManager에서 값 획득 후 CmdProcessor에 주입
-        prefix = self.settings_manager.get(ConfigKeys.CMD_PREFIX) if cmd_prefix else None
-        suffix = self.settings_manager.get(ConfigKeys.CMD_SUFFIX) if cmd_suffix else None
+        prefix = self.settings_manager.get(ConfigKeys.CMD_PREFIX) if prefix_chk else None
+        suffix = self.settings_manager.get(ConfigKeys.CMD_SUFFIX) if suffix_chk else None
 
         try:
             # 데이터 가공 위임 (CmdProcessor에 Prefix/Suffix 값 직접 전달)
-            data = CmdProcessor.process_cmd(text, hex_mode, prefix=prefix, suffix=suffix)
+            data = CmdProcessor.process_cmd(text, hex_mode_chk, prefix=prefix, suffix=suffix)
         except ValueError:
             logger.error(f"Invalid hex string for sending: {text}")
             return

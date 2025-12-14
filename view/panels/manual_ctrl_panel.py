@@ -31,7 +31,7 @@ class ManualCtrlPanel(QWidget):
     """
 
     # 하위 위젯 시그널 상위 전달 (Signal Bubbling)
-    manual_cmd_send_requested = pyqtSignal(str, bool, bool, bool, bool)
+    manual_cmd_send_requested = pyqtSignal(dict)
     rts_changed = pyqtSignal(bool) # RTS 상태 변경 시그널
     dtr_changed = pyqtSignal(bool) # DTR 상태 변경 시그널
 
@@ -43,7 +43,7 @@ class ManualCtrlPanel(QWidget):
             parent (Optional[QWidget]): 부모 위젯
         """
         super().__init__(parent)
-        self.manual_ctrl_widget = None
+        self.manual_ctrl_widget: Optional[ManualCtrlWidget] = None
         self.init_ui()
 
     def init_ui(self) -> None:
@@ -51,6 +51,7 @@ class ManualCtrlPanel(QWidget):
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
+        # 수동 제어 위젯 생성
         self.manual_ctrl_widget = ManualCtrlWidget()
 
         # 위젯 시그널 -> 패널 시그널 연결 (Forwarding)
@@ -82,12 +83,13 @@ class ManualCtrlPanel(QWidget):
 
     def set_controls_enabled(self, enabled: bool) -> None:
         """
-        제어 위젯 활성화 상태 설정
+        연결 상태에 따라 제어 위젯 활성화/비활성화
 
         Args:
             enabled (bool): 활성화 여부
         """
-        self.manual_ctrl_widget.set_controls_enabled(enabled)
+        if self.manual_ctrl_widget:
+            self.manual_ctrl_widget.set_controls_enabled(enabled)
 
     def set_local_echo_state(self, checked: bool) -> None:
         """

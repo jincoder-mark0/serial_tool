@@ -47,6 +47,7 @@ class DataLogViewWidget(QWidget):
     # 로깅 시그널 (포트명은 Presenter에서 관리)
     data_logging_started = pyqtSignal(str)  # filepath
     data_logging_stopped = pyqtSignal()
+
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
         DataLogViewWidget를 초기화합니다.
@@ -62,26 +63,28 @@ class DataLogViewWidget(QWidget):
         # UI Components
         self.data_log_search_prev_btn = None
         self.data_log_search_next_btn = None
+        self.data_log_tx_broadcast_chk = None
         self.data_log_search_input = None
         self.data_log_toggle_logging_btn = None
         self.data_log_clear_log_btn = None
         self.data_log_pause_chk = None
         self.data_log_timestamp_chk = None
         self.data_log_hex_chk = None
-        self.data_log_filter_chk = None  # Filter Checkbox
-        self.data_log_newline_combo = None # Newline Combo
+        self.data_log_filter_chk = None
+        self.data_log_newline_combo = None
         self.data_log_view_title = None
         self.data_log_list = None
 
         # State Variables
+        self.tx_broadcast_enabled: bool = True
         self.hex_mode: bool = False
         self.is_paused: bool = False
         self.timestamp_enabled: bool = False
-        self.filter_enabled: bool = False # Filter State
-        self.ui_update_buffer: list = []  # (text, formatter) 튜플 리스트
+        self.filter_enabled: bool = False
+        self.ui_update_buffer: list = []
 
         self.max_lines: int = DEFAULT_LOG_MAX_LINES
-        self.tab_name: str = ""  # 탭 이름 저장
+        self.tab_name: str = ""
 
         # 색상 규칙 관리자
         self.color_manager = color_manager
@@ -90,11 +93,6 @@ class DataLogViewWidget(QWidget):
         # 2. UI 구성 및 시그널 연결
         # ---------------------------------------------------------
         self.init_ui()
-
-        # QSmartListView 초기 설정
-        self.data_log_list.set_color_manager(self.color_manager)
-        self.data_log_list.set_hex_mode_enabled(self.hex_mode)
-        self.data_log_list.set_timestamp_enabled(self.timestamp_enabled, timeout_ms=100)
 
         # 언어 변경 연결
         lang_manager.language_changed.connect(self.retranslate_ui)
@@ -113,17 +111,16 @@ class DataLogViewWidget(QWidget):
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
-        layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(2)
-
         # 1. 툴바 영역 (타이틀 + 도구들)
         # 타이틀 섹션
         self.data_log_view_title = QLabel(lang_manager.get_text("data_log_view_title"))
         self.data_log_view_title.setProperty("class", "section-title")  # 섹션 타이틀 스타일 적용
 
-
         # 도구 섹션 (검색, 옵션, 액션)
+        # TX Broadcast Checkbox
+        self.data_log_tx_broadcast_chk = QCheckBox(lang_manager.get_text("data_log_view_chk_tx_broadcast"))
+        self.data_log_tx_broadcast_chk.setToolTip(lang_manager.get_text("data_log_view_chk_tx_broadcast_tooltip"))
+        self.data_log_tx_broadcast_chk.stateChanged.connect(self.on_data_log_tx_broadcast_changed)
 
         # Search Bar
         self.data_log_search_input = QLineEdit()
@@ -189,26 +186,36 @@ class DataLogViewWidget(QWidget):
         self.data_log_list = QSmartListView()
         self.data_log_list.set_max_lines(DEFAULT_LOG_MAX_LINES)
         self.data_log_list.setReadOnly(True)
+        self.data_log_list.set_color_manager(self.color_manager)
+        self.data_log_list.set_hex_mode_enabled(self.hex_mode)
+        self.data_log_list.set_timestamp_enabled(self.timestamp_enabled, timeout_ms=100)
         self.data_log_list.setPlaceholderText(lang_manager.get_text("data_log_view_list_log_placeholder"))
-        self.data_log_list.setToolTip(lang_manager.get_text("data_log_view_title"))
+        self.data_log_list.setToolTip(lang_manager.get_text("data_log_view_list_log_tooltip"))
         self.data_log_list.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
 
         # Layout 배치
         toolbar_layout = QHBoxLayout()
         toolbar_layout.addWidget(self.data_log_view_title)
         toolbar_layout.addStretch()
+        toolbar_layout.addWidget(self.data_log_tx_broadcast_chk)
+        toolbar_layout.addStretch()
         toolbar_layout.addWidget(self.data_log_search_input)
         toolbar_layout.addWidget(self.data_log_search_prev_btn)
         toolbar_layout.addWidget(self.data_log_search_next_btn)
-        toolbar_layout.addWidget(self.data_log_filter_chk) # Filter Checkbox
-        toolbar_layout.addWidget(self.data_log_newline_combo) # Newline Combo
+        toolbar_layout.addWidget(self.data_log_filter_chk)
+        toolbar_layout.addWidget(self.data_log_newline_combo)
         toolbar_layout.addWidget(self.data_log_hex_chk)
         toolbar_layout.addWidget(self.data_log_timestamp_chk)
         toolbar_layout.addWidget(self.data_log_pause_chk)
         toolbar_layout.addWidget(self.data_log_clear_log_btn)
         toolbar_layout.addWidget(self.data_log_toggle_logging_btn)
+
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(2)
         layout.addLayout(toolbar_layout)
         layout.addWidget(self.data_log_list)
+
         self.setLayout(layout)
 
     def retranslate_ui(self) -> None:
@@ -217,6 +224,10 @@ class DataLogViewWidget(QWidget):
         self.data_log_view_title.setText(lang_manager.get_text("data_log_view_title"))
         self.data_log_list.setToolTip(lang_manager.get_text("data_log_view_list_log_tooltip"))
         self.data_log_list.setPlaceholderText(lang_manager.get_text("data_log_view_list_log_placeholder"))
+
+        # TX Broadcast Components
+        self.data_log_tx_broadcast_chk.setText(lang_manager.get_text("data_log_view_chk_tx_broadcast"))
+        self.data_log_tx_broadcast_chk.setToolTip(lang_manager.get_text("data_log_view_chk_tx_broadcast_tooltip"))
 
         # Search Components
         self.data_log_search_input.setPlaceholderText(lang_manager.get_text("data_log_view_input_search_placeholder"))
@@ -365,6 +376,15 @@ class DataLogViewWidget(QWidget):
             self.data_log_toggle_logging_btn.setText(lang_manager.get_text("data_log_view_btn_toggle_logging"))
             self.data_log_toggle_logging_btn.setStyleSheet("")
 
+    @pyqtSlot(int)
+    def on_data_log_tx_broadcast_changed(self, state: int) -> None:
+        """
+        TX Broadcast 토글을 처리합니다.
+
+        Args:
+            state (int): 체크박스 상태.
+        """
+        self.tx_broadcast_enabled = (state == Qt.Checked)
 
     @pyqtSlot(int)
     def on_data_log_filter_changed(self, state: int) -> None:
@@ -422,14 +442,25 @@ class DataLogViewWidget(QWidget):
         self.max_lines = max_lines
         self.data_log_list.set_max_lines(max_lines)
 
+    @property
+    def is_broadcast_enabled(self) -> bool:
+        """
+        현재 브로드캐스팅 모드 상태를 반환합니다
+
+        Returns:
+            bool: 브로드캐스팅 모드 상태
+        """
+        return self.tx_broadcast_enabled
+
     def save_state(self) -> dict:
         """
         현재 위젯의 UI 상태를 딕셔너리로 반환합니다 (설정 저장용).
 
         Returns:
-            dict: {hex_mode, timestamp, is_paused, search_text, filter_enabled}
+            dict: {tx_broadcast_enabled, hex_mode, timestamp, is_paused, search_text, filter_enabled}
         """
         state = {
+            "tx_broadcast_enabled": self.tx_broadcast_enabled,
             "hex_mode": self.hex_mode,
             "timestamp": self.timestamp_enabled,
             "is_paused": self.is_paused,
@@ -450,6 +481,7 @@ class DataLogViewWidget(QWidget):
             return
 
         # 체크박스 상태 업데이트 (시그널 발생으로 내부 변수도 업데이트됨)
+        self.data_log_tx_broadcast_chk.setChecked(state.get("tx_broadcast_enabled", False))
         self.data_log_hex_chk.setChecked(state.get("hex_mode", False))
         self.data_log_timestamp_chk.setChecked(state.get("timestamp", False))
         self.data_log_pause_chk.setChecked(state.get("is_paused", False))

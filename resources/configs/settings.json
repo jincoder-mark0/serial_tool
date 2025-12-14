@@ -17,11 +17,11 @@
     "port_scan_interval": 5000
   },
   "ui": {
-    "window_width": 1065,
+    "window_width": 1159,
     "window_height": 860,
-    "window_x": 305,
+    "window_x": 283,
     "window_y": 53,
-    "splitter_state": "AAAA/wAAAAEAAAACAAAEHwAAAcMB/////wEAAAABAA=="
+    "splitter_state": "AAAA/wAAAAEAAAACAAAEfQAAAcMB/////wEAAAABAA=="
   },
   "ports": {
     "default_config": {
@@ -50,6 +50,7 @@
           }
         },
         "data_log_view_widget": {
+          "tx_broadcast_enabled": true,
           "hex_mode": false,
           "timestamp": false,
           "is_paused": false,
@@ -67,7 +68,7 @@
     "suffix_chk": true,
     "rts_chk": true,
     "dtr_chk": true,
-    "local_echo": true,
+    "local_echo_chk": false,
     "cmd_history": []
   },
   "macro_list": {

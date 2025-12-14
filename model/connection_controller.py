@@ -7,6 +7,7 @@
 * 단일 연결에 대한 상태 관리 및 로직 캡슐화 필요
 * 하드웨어(Worker)와 UI(Presenter) 사이의 중재자 역할
 * 데이터 파싱 및 이벤트 전파의 중심점
+* 브로드캐스팅 및 유니캐스트 전송 로직의 중앙화
 
 ## WHAT
 * 연결 열기/닫기(Open/Close) 관리
@@ -50,7 +51,7 @@ class ConnectionController(QObject):
         Logic:
             - Worker/Parser 저장소 초기화
             - Signal -> EventBus 자동 중계 연결
-            - **_active_connection_name 초기화**
+            - _active_connection_name 초기화
         """
         super().__init__()
         # 연결 이름(str) -> ConnectionWorker 매핑
@@ -290,7 +291,7 @@ class ConnectionController(QObject):
             for name in list(self.workers.keys()):
                 self.close_connection(name)
 
-    def send_data(self, data: bytes) -> None:
+    def send_data_to_all(self, data: bytes) -> None:
         """
         모든 활성 연결로 데이터 Broadcasting
 
@@ -310,9 +311,13 @@ class ConnectionController(QObject):
         """
         특정 연결로 데이터 전송
 
+        Logic:
+            - 이름으로 워커를 찾아 전송 큐에 넣음
+            - 성공 시 data_sent 시그널 발행
+
         Args:
-            name: 대상 연결 이름
-            data: 전송할 데이터
+            name (str): 대상 연결 이름
+            data (bytes): 전송할 데이터
 
         Returns:
             bool: 전송 성공 여부
@@ -323,6 +328,31 @@ class ConnectionController(QObject):
             self.data_sent.emit(name, data)
             return True
         return False
+
+    def send_data_to_broadcast(self, data: bytes) -> None:
+        """
+        브로드케스팅 설정된 연결로 데이터 전송
+
+        Args:
+            data (bytes): 전송할 데이터
+        """
+        pass
+
+    def send_data(self, data: bytes) -> None:
+        """
+        모든 활성 연결로 데이터 브로드캐스팅
+
+        Logic:
+            - 현재 활성화된 워커 리스트를 순회하며 데이터를 전송
+            - send_data_to 메서드를 호출하여 실제 전송 수행
+        """
+        if not self.workers:
+            self.error_occurred.emit("", "No active connections.")
+            return
+
+        for name, worker in self.workers.items():
+            if worker.isRunning():
+                self.send_data_to(name, data)
 
     def set_dtr(self, state: bool) -> None:
         """

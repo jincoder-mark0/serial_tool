@@ -18,7 +18,7 @@ from PyQt5.QtWidgets import QPushButton, QHBoxLayout
 from view.widgets.data_log_view import DataLogViewWidget
 from view.widgets.manual_ctrl import ManualCtrlWidget
 from view.widgets.macro_list import MacroListWidget
-from view.widgets.system_log import SystemLogWidget
+from view.widgets.sys_log_view import SysLogViewWidget
 from view.panels.port_panel import PortPanel
 from view.managers.theme_manager import ThemeManager
 from view.managers.lang_manager import lang_manager
@@ -69,7 +69,7 @@ class ViewTestWindow(QMainWindow):
         tabs.addTab(self.create_macro_list_test(), "CommandList Test")
 
         # Test 4: StatusArea (상태 로그 테스트)
-        tabs.addTab(self.create_system_log_test(), "StatusArea Test")
+        tabs.addTab(self.create_sys_log_view_test(), "StatusArea Test")
 
         # Test 5: PortPanel (전체 패널 테스트)
         tabs.addTab(self.create_port_panel_test(), "PortPanel Test")
@@ -275,7 +275,7 @@ class ViewTestWindow(QMainWindow):
 
         return widget
 
-    def create_system_log_test(self) -> QWidget:
+    def create_sys_log_view_test(self) -> QWidget:
         """
         StatusArea 테스트 위젯을 생성합니다.
 
@@ -288,26 +288,26 @@ class ViewTestWindow(QMainWindow):
         layout = QVBoxLayout(widget)
 
         # StatusArea 인스턴스
-        self.system_log_widget = SystemLogWidget()
-        layout.addWidget(self.system_log_widget)
+        self.sys_log_view_widget = SysLogViewWidget()
+        layout.addWidget(self.sys_log_view_widget)
 
         # 테스트 버튼
         button_layout = QHBoxLayout()
 
         btn_info = QPushButton("Log INFO")
-        btn_info.clicked.connect(lambda: self.system_log_widget.log("This is an info message", "INFO"))
+        btn_info.clicked.connect(lambda: self.sys_log_view_widget.log("This is an info message", "INFO"))
         button_layout.addWidget(btn_info)
 
         btn_error = QPushButton("Log ERROR")
-        btn_error.clicked.connect(lambda: self.system_log_widget.log("This is an error message", "ERROR"))
+        btn_error.clicked.connect(lambda: self.sys_log_view_widget.log("This is an error message", "ERROR"))
         button_layout.addWidget(btn_error)
 
         btn_warn = QPushButton("Log WARN")
-        btn_warn.clicked.connect(lambda: self.system_log_widget.log("This is a warning message", "WARN"))
+        btn_warn.clicked.connect(lambda: self.sys_log_view_widget.log("This is a warning message", "WARN"))
         button_layout.addWidget(btn_warn)
 
         btn_success = QPushButton("Log SUCCESS")
-        btn_success.clicked.connect(lambda: self.system_log_widget.log("This is a success message", "SUCCESS"))
+        btn_success.clicked.connect(lambda: self.sys_log_view_widget.log("This is a success message", "SUCCESS"))
         button_layout.addWidget(btn_success)
 
         layout.addLayout(button_layout)

@@ -10,7 +10,7 @@
 
 ## WHAT
 * 섹션(Section) 배치 및 스플리터 관리
-* 메뉴바, 툴바, 상태바 관리
+* 메뉴바, 상태바 관리
 * Presenter용 공개 API 제공
 
 ## HOW
@@ -25,7 +25,7 @@ from PyQt5.QtGui import QKeySequence
 from PyQt5.QtCore import Qt, pyqtSignal, QByteArray
 
 from view.sections import (
-    MainLeftSection, MainRightSection, MainStatusBar, MainMenuBar, MainToolBar
+    MainLeftSection, MainRightSection, MainStatusBar, MainMenuBar
 )
 from view.dialogs import (
     FontSettingsDialog, AboutDialog, PreferencesDialog, FileTransferDialog
@@ -44,7 +44,7 @@ class MainWindow(QMainWindow):
     필요한 인터페이스를 프로퍼티와 메서드로 제공합니다.
     """
 
-    # Presenter 전달용 시그널 (UI 이벤트 -> 비즈니스 로직 요청)
+    # Presenter 전달용 시그널
     close_requested = pyqtSignal()
     settings_save_requested = pyqtSignal(dict)
 
@@ -55,11 +55,11 @@ class MainWindow(QMainWindow):
     shortcut_disconnect_requested = pyqtSignal()
     shortcut_clear_requested = pyqtSignal()
 
-    # 파일 전송 시그널 (다이얼로그 인스턴스 전달)
+    # 파일 전송 시그널
     file_transfer_dialog_opened = pyqtSignal(object)
 
-    # 하위 컴포넌트 시그널 중계 (Signal Chaining)
-    manual_cmd_send_requested = pyqtSignal(str, bool, bool, bool, bool)
+    # 하위 컴포넌트 시그널 중계
+    manual_cmd_send_requested = pyqtSignal(dict)
     port_tab_added = pyqtSignal(object)
 
     def __init__(self, resource_path=None) -> None:
@@ -120,10 +120,6 @@ class MainWindow(QMainWindow):
         main_layout.setContentsMargins(5, 5, 5, 5)
         main_layout.setSpacing(5)
 
-        # 툴바 설정
-        self.main_toolbar = MainToolBar(self)
-        self.addToolBar(Qt.TopToolBarArea, self.main_toolbar)
-
         # 스플리터 구성 (좌: 포트/제어, 우: 커맨드/인스펙터)
         self.splitter = QSplitter(Qt.Horizontal)
 
@@ -132,14 +128,18 @@ class MainWindow(QMainWindow):
 
         self.splitter.addWidget(self.left_section)
         self.splitter.addWidget(self.right_section)
+
+        # 왼쪽 패널(0)은 가능한 크기를 유지하려 하고, 오른쪽 패널(1)이 남은 공간을 차지
         self.splitter.setStretchFactor(0, 0)
         self.splitter.setStretchFactor(1, 1)
+
+        # 왼쪽 패널이 완전히 사라지는 것을 방지 (Collapsible False)
+        self.splitter.setCollapsible(0, False)
+        self.splitter.setCollapsible(1, True)
 
         # 시그널 체이닝 (하위 -> 상위)
         self.left_section.manual_cmd_send_requested.connect(self.manual_cmd_send_requested.emit)
         self.left_section.port_tab_added.connect(self.port_tab_added.emit)
-
-        self._connect_toolbar_signals()
 
         main_layout.addWidget(self.splitter)
 
@@ -184,7 +184,7 @@ class MainWindow(QMainWindow):
             message (str): 메시지 내용
             level (str): 로그 레벨
         """
-        self.left_section.system_log_widget.log(message, level)
+        self.left_section.sys_log_view_widget.log(message, level)
 
     def update_status_bar_stats(self, rx_bytes: int, tx_bytes: int) -> None:
         """상태바 통계 업데이트"""
@@ -365,14 +365,6 @@ class MainWindow(QMainWindow):
         self.menu_bar.data_log_save_requested.connect(self.manual_save_log)
         self.menu_bar.toggle_right_panel_requested.connect(self.toggle_right_panel)
         self.menu_bar.file_transfer_requested.connect(self.open_file_transfer_dialog)
-
-    def _connect_toolbar_signals(self) -> None:
-        """툴바 시그널 연결"""
-        self.main_toolbar.open_requested.connect(self.left_section.open_current_port)
-        self.main_toolbar.close_requested.connect(self.left_section.close_current_port)
-        self.main_toolbar.clear_requested.connect(self.clear_log)
-        self.main_toolbar.data_log_save_requested.connect(self.manual_save_log)
-        self.main_toolbar.settings_requested.connect(self.open_preferences_dialog)
 
     def clear_log(self) -> None:
         """현재 활성 탭의 로그 삭제"""

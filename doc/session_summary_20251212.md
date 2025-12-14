@@ -36,11 +36,9 @@
 
 - **Data Logger 명칭 변경**:
   - 시스템 로그(`Logger`)와 데이터 로깅의 역할을 명확히 구분하기 위해 `LogRecorder`를 **`DataLogger`**로 변경했습니다.
-  - 관련 클래스(`DataLogger`, `DataLoggerManager`) 및 UI 텍스트를 일괄 수정했습니다.
 
-- **Data Logger Viewer 명칭 변경**:
-  - `RxLogWidget`를 **`DataLogViewer`**로 명칭 변경 (송수신 데이터를 포괄하는 `DataLog`가 더 정확함)
-  - 관련 클래스(`DataLogViewer`, `DataLogViewerManager`) 및 UI 텍스트를 일괄 수정했습니다.
+- **Data Log View 명칭 변경**:
+  - `RxLogWidget`를 **`DataLogViewWidget`**로 명칭 변경 (송수신 데이터를 포괄하는 `DataLog`가 더 정확함)
 
 ### 2.3 핵심 기능 고도화 (Core Logic Enhancements)
 

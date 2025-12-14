@@ -9,7 +9,7 @@
 
 ## WHAT
 * PortTabPanel 및 ManualCtrlPanel 배치
-* SystemLogWidget 배치
+* SysLogViewWidget 배치
 * 하위 패널 간 상호작용 중재 (View 레벨)
 
 ## HOW
@@ -24,7 +24,7 @@ from view.managers.lang_manager import lang_manager
 from view.panels.port_panel import PortPanel
 from view.panels.manual_ctrl_panel import ManualCtrlPanel
 from view.panels.port_tab_panel import PortTabPanel
-from view.widgets.system_log import SystemLogWidget
+from view.widgets.sys_log_view import SysLogViewWidget
 
 class MainLeftSection(QWidget):
     """
@@ -33,7 +33,7 @@ class MainLeftSection(QWidget):
     Attributes:
         port_tabs (PortTabPanel): 포트 탭 관리 패널
         manual_ctrl (ManualCtrlPanel): 수동 제어 패널
-        system_log_widget (SystemLogWidget): 시스템 로그 위젯
+        sys_log_view_widget (SysLogViewWidget): 시스템 로그 위젯
     """
 
     # 하위 패널 이벤트 상위 전달 시그널
@@ -50,7 +50,7 @@ class MainLeftSection(QWidget):
         super().__init__(parent)
         self.port_tabs = None
         self.manual_ctrl = None
-        self.system_log_widget = None
+        self.sys_log_view_widget = None
         self.init_ui()
 
         lang_manager.language_changed.connect(self.retranslate_ui)
@@ -77,11 +77,11 @@ class MainLeftSection(QWidget):
         # ---------------------------------------------------------
         # 3. 시스템 로그 (System Log)
         # ---------------------------------------------------------
-        self.system_log_widget = SystemLogWidget()
+        self.sys_log_view_widget = SysLogViewWidget()
 
         layout.addWidget(self.port_tabs, 1)
         layout.addWidget(self.manual_ctrl)
-        layout.addWidget(self.system_log_widget)
+        layout.addWidget(self.sys_log_view_widget)
 
         self.setLayout(layout)
 

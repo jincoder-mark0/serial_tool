@@ -191,6 +191,8 @@
     "data_log_view_chk_timestamp": "Timestamp",
     "data_log_view_chk_timestamp_tooltip": "Show timestamp",
     "data_log_view_combo_newline_tooltip": "Select newline mode",
+    "data_log_view_chk_tx_broadcast": "TX Broadcast",
+    "data_log_view_chk_tx_broadcast_tooltip": "Enable TX Broadcast",
     "data_log_view_input_search_placeholder": "Search...",
     "data_log_view_input_search_tooltip": "Search in received data",
     "data_log_view_list_log_placeholder": "Received data will be displayed here...",
@@ -204,9 +206,14 @@
     "sys_log_view_list_log_placeholder": "System status messages will appear here...",
     "sys_log_view_list_log_tooltip": "System status and error messages",
     "sys_log_view_title": "System Log",
-    "toolbar_btn_clear": "Clear",
-    "toolbar_btn_close": "Close",
-    "toolbar_btn_open": "Open",
-    "toolbar_btn_save_data_log": "Save Log",
-    "toolbar_btn_settings": "Settings"
+    "sys_log_view_btn_clear": "Clear",
+    "sys_log_view_btn_clear_tooltip": "Clear system log",
+    "sys_log_view_btn_search_next_tooltip": "Find next",
+    "sys_log_view_btn_search_prev_tooltip": "Find previous",
+    "sys_log_view_btn_toggle_logging": "Save",
+    "sys_log_view_btn_toggle_logging_tooltip": "Save system log to file",
+    "sys_log_view_chk_filter": "Filter",
+    "sys_log_view_chk_filter_tooltip": "Enable system log filtering",
+    "sys_log_view_input_search_placeholder": "Search...",
+    "sys_log_view_input_search_tooltip": "Search in system log data"
 }
