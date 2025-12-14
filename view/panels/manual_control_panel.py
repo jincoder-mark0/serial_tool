@@ -68,11 +68,9 @@ class ManualControlPanel(QWidget):
         수동 전송 요청 핸들러
 
         Logic:
-            - DataLogViewer의 상태를 확인하여 DTO의 is_broadcast 속성 설정
-            - 상위 Presenter로 DTO 전달
+            - Widget에서 완성된 DTO를 그대로 상위 Presenter로 전달합니다.
+            - Panel 계층에서 비즈니스 로직(Broadcast 여부 판단 등)을 수행하지 않습니다.
         """
-
-        # DTO 전달
         self.send_requested.emit(command)
 
     def set_controls_enabled(self, enabled: bool) -> None:
@@ -83,7 +81,7 @@ class ManualControlPanel(QWidget):
             enabled (bool): 활성화 여부
         """
         if self.manual_control_widget:
-            self.manual_control_widget.setEnabled(enabled)
+            self.manual_control_widget.set_controls_enabled(enabled)
 
     def set_local_echo_state(self, checked: bool) -> None:
         """

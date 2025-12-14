@@ -11,6 +11,7 @@ ManualControlWidget 모듈
 ## WHAT
 * 명령어 입력(QSmartTextEdit) 및 전송 버튼
 * 제어 옵션(HEX, Prefix, Suffix, Local Echo) 체크박스
+* Broadcast 체크박스 추가
 * 하드웨어 흐름 제어(RTS, DTR) 체크박스 및 시그널 발생
 * 명령어 히스토리(MRU) 관리
 
@@ -26,7 +27,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QSize, Qt
 from PyQt5.QtGui import QKeyEvent
 from view.custom_qt.smart_plain_text_edit import QSmartTextEdit
-from typing import Optional
+from typing import Optional, List
 from view.managers.language_manager import language_manager
 from common.dtos import ManualCommand
 from common.constants import MAX_COMMAND_HISTORY_SIZE
@@ -65,6 +66,7 @@ class ManualControlWidget(QWidget):
         self.prefix_chk: Optional[QCheckBox] = None
         self.hex_chk: Optional[QCheckBox] = None
         self.local_echo_chk: Optional[QCheckBox] = None
+        self.broadcast_chk: Optional[QCheckBox] = None
 
         # History State
         self.command_history: List[str] = []
@@ -120,6 +122,10 @@ class ManualControlWidget(QWidget):
 
         self.local_echo_chk = QCheckBox(language_manager.get_text("manual_control_chk_local_echo"))
 
+        # Broadcast 체크박스
+        self.broadcast_chk = QCheckBox("Broadcast") # 추후 언어 키 추가 권장
+        self.broadcast_chk.setToolTip("Send command to all active ports that allow broadcasting")
+
         btn_layout = QVBoxLayout()
         btn_layout.setSpacing(2)
         btn_layout.setContentsMargins(0, 0, 0, 0)
@@ -145,6 +151,7 @@ class ManualControlWidget(QWidget):
         option_layout.addWidget(self.rts_chk, 0, 3)
         option_layout.addWidget(self.dtr_chk, 0, 4)
         option_layout.addWidget(self.local_echo_chk, 0, 5)
+        option_layout.addWidget(self.broadcast_chk, 0, 6)
 
         # 메인 레이아웃에 추가
         layout = QVBoxLayout()
@@ -172,6 +179,7 @@ class ManualControlWidget(QWidget):
         self.rts_chk.setText(language_manager.get_text("manual_control_chk_rts"))
         self.dtr_chk.setText(language_manager.get_text("manual_control_chk_dtr"))
         self.local_echo_chk.setText(language_manager.get_text("manual_control_chk_local_echo"))
+        self.broadcast_chk.setText(language_manager.get_text("manual_control_chk_broadcast"))
         self.send_manual_command_btn.setText(language_manager.get_text("manual_control_btn_send"))
         self.history_up_btn.setToolTip(language_manager.get_text("manual_control_btn_history_up_tooltip"))
         self.history_down_btn.setToolTip(language_manager.get_text("manual_control_btn_history_down_tooltip"))
@@ -222,14 +230,15 @@ class ManualControlWidget(QWidget):
         if not text:
             return
 
-        # 전송 데이터 패키징 (Dict)
+        # 전송 데이터 패키징 (DTO)
+        # View(Widget) 내부의 체크박스 상태로 DTO를 완결성 있게 생성합니다.
         command = ManualCommand(
             text=text,
             hex_mode=self.hex_chk.isChecked(),
             prefix=self.prefix_chk.isChecked(),
             suffix=self.suffix_chk.isChecked(),
-            local_echo=self.local_echo_chk.isChecked()
-            # is_broadcast는 Panel에서 주입
+            local_echo=self.local_echo_chk.isChecked(),
+            is_broadcast=self.broadcast_chk.isChecked() # Broadcast 상태 반영
         )
 
         self.send_requested.emit(command)
@@ -250,8 +259,6 @@ class ManualControlWidget(QWidget):
             self.command_history.remove(command)
 
         self.command_history.append(command)
-        # 딕셔너리 데이터 구성
-            # broadcast는 ManualControlPanel에서 DataLogViewer 상태를 읽어 추가함
         if len(self.command_history) > MAX_COMMAND_HISTORY_SIZE:
             self.command_history.pop(0) # 가장 오래된 항목 제거
 
@@ -300,7 +307,6 @@ class ManualControlWidget(QWidget):
             enabled (bool): 활성화 여부
         """
         self.send_manual_command_btn.setEnabled(enabled)
-        # 딕셔너리를 인자로 전송
         self.rts_chk.setEnabled(enabled)
         self.dtr_chk.setEnabled(enabled)
 
@@ -328,6 +334,7 @@ class ManualControlWidget(QWidget):
             "rts_chk": self.rts_chk.isChecked(),
             "dtr_chk": self.dtr_chk.isChecked(),
             "local_echo_chk": self.local_echo_chk.isChecked(),
+            "broadcast_chk": self.broadcast_chk.isChecked(), # 상태 저장
             "command_history": self.command_history
         }
         return state
@@ -348,4 +355,5 @@ class ManualControlWidget(QWidget):
         self.rts_chk.setChecked(state.get("rts_chk", False))
         self.dtr_chk.setChecked(state.get("dtr_chk", False))
         self.local_echo_chk.setChecked(state.get("local_echo_chk", False))
+        self.broadcast_chk.setChecked(state.get("broadcast_chk", False))
         self.command_history = state.get("command_history", [])

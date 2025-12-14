@@ -94,8 +94,8 @@ class ManualControlPresenter(QObject):
         # DTO 속성 접근 (오타 방지 및 타입 힌트 지원)
         if not command.text:
             return
-        # SettingsManager에서 값 획득 후 CommandProcessor에 주입
 
+        # SettingsManager에서 값 획득 후 CommandProcessor에 주입
         prefix = self.settings_manager.get(ConfigKeys.COMMAND_PREFIX) if command.prefix else None
         suffix = self.settings_manager.get(ConfigKeys.COMMAND_SUFFIX) if command.suffix else None
 
@@ -105,12 +105,17 @@ class ManualControlPresenter(QObject):
             logger.error(f"Invalid hex string for sending: {command.text}")
             return
 
-        # Controller에 DTO의 브로드캐스트 플래그 전달
-        self.connection_controller.send_data_to_broadcasting(data)
+        # [Logic] Broadcast 여부에 따른 전송 처리
+        if command.is_broadcast:
+            # 브로드캐스팅 허용된 모든 포트로 전송
+            self.connection_controller.send_data_to_broadcasting(data)
+            logger.info(f"Manual command broadcasted: {command.text}")
+        else:
+            # 현재 활성 포트로만 전송
+            self.connection_controller.send_data(data, is_broadcast=False)
+            logger.info(f"Manual command sent (Unicast): {command.text}")
 
-        mode_str = "Broadcast" if command.is_broadcast else "Unicast"
-        logger.info(f"Manual command sent ({mode_str}): {command.text}")
-
+        # Local Echo (송신 데이터를 화면에 표시)
         if command.local_echo and self.local_echo_callback:
             self.local_echo_callback(data)
 
