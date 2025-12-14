@@ -32,6 +32,7 @@ from model.connection_controller import ConnectionController
 from core.settings_manager import SettingsManager
 from core.logger import logger
 from common.constants import ConfigKeys
+from common.dtos import PortConfig
 
 class PortPresenter(QObject):
     """
@@ -163,12 +164,12 @@ class PortPresenter(QObject):
             if hasattr(widget, 'port_settings_widget'):
                 widget.port_settings_widget.set_port_list(ports)
 
-    def handle_open_request(self, config: dict) -> None:
+    def handle_open_request(self, config: PortConfig) -> None:
         """
         포트 열기 요청 처리 (View Signal Slot)
 
         Args:
-            config: 포트 설정 딕셔너리
+            config (PortConfig): 포트 설정 DTO
         """
         self.connection_controller.open_connection(config)
 

@@ -36,7 +36,7 @@ from core.data_logger import data_logger_manager
 from view.managers.language_manager import language_manager
 from core.logger import logger
 from common.constants import ConfigKeys
-from common.dtos import ManualCommand, PortDataEvent, PortErrorEvent, PacketEvent
+from common.dtos import ManualCommand, PortDataEvent, PortErrorEvent, PacketEvent, FontConfig
 
 class MainPresenter(QObject):
     """
@@ -288,27 +288,20 @@ class MainPresenter(QObject):
         self.view.show_status_message("Settings updated", 2000)
         self.view.log_system_message("Settings updated", "INFO")
 
-    def on_font_settings_changed(self, font_settings: dict) -> None:
+    def on_font_settings_changed(self, font_config: FontConfig) -> None:
         """
         폰트 설정 변경 처리
 
         Args:
-            font_settings (dict): 폰트 설정 데이터
+            font_config (FontConfig): 폰트 설정 DTO
         """
-        # ThemeManager 키와 ConfigKeys 상수 매핑
-        key_map = {
-            "proportional_font_family": ConfigKeys.PROP_FONT_FAMILY,
-            "proportional_font_size": ConfigKeys.PROP_FONT_SIZE,
-            "fixed_font_family": ConfigKeys.FIXED_FONT_FAMILY,
-            "fixed_font_size": ConfigKeys.FIXED_FONT_SIZE
-        }
+        # [Refactor] DTO 사용 및 상수 키 매핑
+        # SettingsManager는 내부적으로 dict 구조를 사용하므로 DTO 값을 개별적으로 설정
 
-        for tm_key, value in font_settings.items():
-            if tm_key in key_map:
-                self.settings_manager.set(key_map[tm_key], value)
-            else:
-                # 알 수 없는 키에 대한 경고 (유지보수성 확보)
-                logger.warning(f"Unknown font setting key: {tm_key}")
+        self.settings_manager.set(ConfigKeys.PROP_FONT_FAMILY, font_config.prop_family)
+        self.settings_manager.set(ConfigKeys.PROP_FONT_SIZE, font_config.prop_size)
+        self.settings_manager.set(ConfigKeys.FIXED_FONT_FAMILY, font_config.fixed_family)
+        self.settings_manager.set(ConfigKeys.FIXED_FONT_SIZE, font_config.fixed_size)
 
         self.settings_manager.save_settings()
         logger.info("Font settings saved successfully.")

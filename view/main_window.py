@@ -32,6 +32,7 @@ from view.dialogs import (
 from view.managers.theme_manager import ThemeManager
 from view.managers.language_manager import language_manager
 from common.constants import ConfigKeys
+from common.dtos import FontConfig, ManualCommand # DTO 임포트
 
 class MainWindow(QMainWindow):
     """
@@ -46,7 +47,8 @@ class MainWindow(QMainWindow):
     settings_save_requested = pyqtSignal(dict)
     preferences_requested = pyqtSignal()
 
-    font_settings_changed = pyqtSignal(dict)
+    # FontConfig DTO 전달을 위해 object로 변경
+    font_settings_changed = pyqtSignal(object)
 
     # 단축키 시그널
     shortcut_connect_requested = pyqtSignal()
@@ -57,7 +59,8 @@ class MainWindow(QMainWindow):
     file_transfer_dialog_opened = pyqtSignal(object)
 
     # 하위 컴포넌트 시그널 중계
-    send_requested = pyqtSignal(dict)
+    # ManualCommand DTO 전달을 위해 object로 변경
+    send_requested = pyqtSignal(object)
     port_tab_added = pyqtSignal(object)
 
     def __init__(self) -> None:
@@ -180,7 +183,6 @@ class MainWindow(QMainWindow):
         self.right_section.setVisible(right_section_visible)
 
         # 4. 저장된 우측 패널 너비 복원
-        # custom key "ui.saved_right_section_width" 사용
         ui_settings = settings.get("ui", {})
         self._saved_right_width = ui_settings.get("saved_right_section_width")
 
@@ -190,7 +192,7 @@ class MainWindow(QMainWindow):
             try:
                 self.splitter.restoreState(QByteArray.fromBase64(splitter_state.encode()))
             except Exception:
-                pass # 복원 실패 시 기본값 유지
+                pass
         else:
             self.splitter.setStretchFactor(0, 1)
             self.splitter.setStretchFactor(1, 1)
@@ -398,12 +400,9 @@ class MainWindow(QMainWindow):
         """
         dialog = FontSettingsDialog(self.theme_manager, self)
         if dialog.exec_():
-            # 폰트 설정 가져오기 (ThemeManager는 이미 다이얼로그에 의해 업데이트됨)
-            font_settings = self.theme_manager.get_font_settings()
-
-            # Presenter로 변경 사항 전달 (저장 요청)
-            # MVP: View는 데이터를 전달만 하고 저장은 Presenter가 담당
-            self.font_settings_changed.emit(font_settings)
+            # 폰트 설정 가져오기
+            font_config = self.theme_manager.get_font_settings()
+            self.font_settings_changed.emit(font_config)
 
             # 애플리케이션에 가변폭 폰트 적용 (UI 즉시 반영)
             prop_font = self.theme_manager.get_proportional_font()

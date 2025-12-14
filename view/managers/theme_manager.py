@@ -29,6 +29,7 @@ import platform
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QFont, QIcon
 from core.logger import logger
+from common.dtos import FontConfig # DTO 임포트
 
 class ThemeManager:
     """애플리케이션 테마와 폰트 관리자"""
@@ -316,22 +317,23 @@ class ThemeManager:
         if self._app:
              self.apply_theme(self._app, self._current_theme)
 
-    def get_font_settings(self) -> dict:
+    def get_font_settings(self) -> FontConfig:
         """
-        현재 폰트 설정을 딕셔너리로 반환합니다.
+        현재 폰트 설정을 FontConfig DTO로 반환합니다.
 
         Returns:
-            dict: 폰트 설정 딕셔너리 (저장용).
+            FontConfig: 폰트 설정 객체 (저장용).
         """
         prop_family, prop_size = self.get_proportional_font_info()
         fixed_family, fixed_size = self.get_fixed_font_info()
 
-        return {
-            "proportional_font_family": prop_family,
-            "proportional_font_size": prop_size,
-            "fixed_font_family": fixed_family,
-            "fixed_font_size": fixed_size
-        }
+        # [Fix] Dict 대신 DTO 반환
+        return FontConfig(
+            prop_family=prop_family,
+            prop_size=prop_size,
+            fixed_family=fixed_family,
+            fixed_size=fixed_size
+        )
 
     # 레거시 호환성
     @staticmethod

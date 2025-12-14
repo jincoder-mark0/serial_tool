@@ -25,6 +25,7 @@ from view.panels.port_panel import PortPanel
 from view.panels.manual_control_panel import ManualControlPanel
 from view.panels.port_tab_panel import PortTabPanel
 from view.widgets.system_log import SystemLogWidget
+from common.dtos import ManualCommand
 
 class MainLeftSection(QWidget):
     """
@@ -37,7 +38,7 @@ class MainLeftSection(QWidget):
     """
 
     # 하위 패널 이벤트 상위 전달 시그널
-    send_requested = pyqtSignal(str, bool, bool, bool, bool)
+    send_requested = pyqtSignal(object)
     port_tab_added = pyqtSignal(object) # PortPanel 객체 전달
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
@@ -66,7 +67,7 @@ class MainLeftSection(QWidget):
         # ---------------------------------------------------------
         self.port_tab_panel = PortTabPanel()
         self.port_tab_panel.port_tab_added.connect(self._on_port_tab_added)
-        self.port_tab_panel.port_tab_added.connect(self.port_tab_added.emit) # 외부 전달
+        self.port_tab_panel.port_tab_added.connect(self.port_tab_added.emit)
 
         # ---------------------------------------------------------
         # 2. 수동 제어 패널 (Manual Control)
@@ -201,7 +202,9 @@ class MainLeftSection(QWidget):
             # 기존 탭 제거 (플러스 탭 제외하고 역순으로 제거)
             # 역순으로 제거해야 인덱스 문제 없음, 단 플러스 탭은 유지
             count = self.port_tab_panel.count()
-            for i in range(count - 2, -1, -1): # 마지막 탭(count-1)은 +탭이므로 제외
+
+            # 마지막 탭(count-1)은 +탭이므로 제외
+            for i in range(count - 2, -1, -1):
                 self.port_tab_panel.removeTab(i)
 
             # 저장된 상태가 없으면 기본 탭 하나 추가
