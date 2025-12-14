@@ -15,6 +15,7 @@
 * FontConfig: 폰트 설정
 * MacroEntry: 매크로(자동화) 항목
 * FileProgressState: 파일 전송 상태
+* FileProgressEvent: 파일 전송 진행 이벤트
 * PortDataEvent: 포트 데이터 이벤트
 * PortErrorEvent: 포트 에러 이벤트
 * PacketEvent: 패킷 수신 이벤트
@@ -94,12 +95,12 @@ class MacroEntry:
     expect: str = ""
     timeout_ms: int = 5000
 
-    def to_dict(self) -> dict:
+    def to_dict(self) -> Dict[str, Any]:
         """
         Dictionary로 변환 (설정 저장용)
 
         Returns:
-            dict: 모든 속성을 포함하는 Dictionary
+            Dict[str, Any]: 모든 속성을 포함하는 Dictionary
         """
         return {
             "enabled": self.enabled,
@@ -113,7 +114,7 @@ class MacroEntry:
         }
 
     @classmethod
-    def from_dict(cls, data: dict) -> 'MacroEntry':
+    def from_dict(cls, data: Dict[str, Any]) -> 'MacroEntry':
         """
         Dictionary에서 MacroEntry 생성 (설정 로드용)
 
@@ -147,6 +148,15 @@ class FileProgressState:
     eta: float = 0.0        # seconds
     status: str = "Sending" # Sending, Completed, Error, Cancelled
     error_msg: str = ""     # 에러 발생 시 메시지
+
+@dataclass
+class FileProgressEvent:
+    """
+    파일 전송 진행 이벤트 DTO
+    Model -> EventBus -> Router -> External/Plugins
+    """
+    current: int
+    total: int
 
 @dataclass
 class PortDataEvent:

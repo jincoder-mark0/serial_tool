@@ -21,7 +21,7 @@ EventBus와 Presenter/View 사이의 이벤트를 라우팅합니다.
 """
 from PyQt5.QtCore import QObject, pyqtSignal
 from core.event_bus import event_bus
-from common.dtos import PortDataEvent, PortErrorEvent, PacketEvent
+from common.dtos import PortDataEvent, PortErrorEvent, PacketEvent, FileProgressEvent
 
 class EventRouter(QObject):
     """
@@ -138,9 +138,17 @@ class EventRouter(QObject):
     # ---------------------------------------------------------
     # Event Handlers (File Transfer)
     # ---------------------------------------------------------
-    def _on_file_progress(self, data: dict):
-        """파일 전송 진행률 이벤트 처리"""
-        self.file_transfer_progress.emit(data.get('current', 0), data.get('total', 0))
+    def _on_file_progress(self, event):
+        """
+        파일 전송 진행률 이벤트 처리
+
+        Args:
+            event: FileProgressEvent
+        """
+        if isinstance(event, FileProgressEvent):
+            self.file_transfer_progress.emit(event.current, event.total)
+        elif isinstance(event, dict): # Legacy support
+            self.file_transfer_progress.emit(event.get('current', 0), event.get('total', 0))
 
     def _on_file_completed(self, success: bool):
         """파일 전송 완료 이벤트 처리"""
