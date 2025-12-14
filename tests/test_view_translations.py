@@ -12,11 +12,11 @@ UI 동적 번역 테스트 모듈
 ## WHAT
 * MainWindow, MenuBar, ToolBar, Dock/Panel, Widget 등 주요 UI 요소 검증
 * 언어 전환 시그널(language_changed) 발생 및 처리 확인
-* ResourcePath 및 LangManager 정상 동작 확인
+* ResourcePath 및 LanguageManager 정상 동작 확인
 
 ## HOW
 * pytest-qt의 qtbot을 사용하여 GUI 이벤트 루프 제어
-* LangManager를 통해 언어를 강제로 전환하며 테스트
+* LanguageManager를 통해 언어를 강제로 전환하며 테스트
 * 각 위젯의 text(), windowTitle(), toolTip() 등을 예상되는 언어 값과 비교
 
 pytest tests\test_view_translations.py -v -s
@@ -29,7 +29,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from view.main_window import MainWindow
-from view.managers.lang_manager import lang_manager
+from view.managers.language_manager import language_manager
 from resource_path import ResourcePath
 
 # 테스트에 사용할 리소스 경로 설정 (실제 런타임과 동일 환경)
@@ -41,10 +41,10 @@ def app(qtbot):
     MainWindow 피스처
     테스트용 메인 윈도우를 생성하고 반환합니다.
     """
-    # LangManager 초기화 (ResourcePath 주입)
-    if not lang_manager._resource_path:
-        from view.managers.lang_manager import LangManager
-        LangManager(resource_path)
+    # LanguageManager 초기화 (ResourcePath 주입)
+    if not language_manager._resource_path:
+        from view.managers.language_manager import LanguageManager
+        LanguageManager(resource_path)
 
     window = MainWindow(resource_path)
     qtbot.addWidget(window)
@@ -79,26 +79,26 @@ def test_dynamic_language_switching(app, qtbot):
          lambda w: w.toolTip(), "port_btn_connect_tooltip"),
 
         # 5. Manual Control (Left Panel)
-        (lambda: app.left_section.manual_ctrl.manual_ctrl_widget.send_manual_cmd_btn,
-         lambda w: w.text(), "manual_ctrl_btn_send"),
-        (lambda: app.left_section.manual_ctrl.manual_ctrl_widget.hex_chk,
-         lambda w: w.text(), "manual_ctrl_chk_hex"),
+        (lambda: app.left_section.manual_control.manual_control_widget.send_manual_command_btn,
+         lambda w: w.text(), "manual_control_btn_send"),
+        (lambda: app.left_section.manual_control.manual_control_widget.hex_chk,
+         lambda w: w.text(), "manual_control_chk_hex"),
 
         # 6. Macro List (Right Panel - Tab 0)
         (lambda: app.right_section.macro_panel.macro_list.add_row_btn,
          lambda w: w.toolTip(), "macro_list_btn_add_row_tooltip"),
 
         # 7. Macro Control (Right Panel - Tab 0)
-        (lambda: app.right_section.macro_panel.marco_ctrl.macro_repeat_start_btn,
-         lambda w: w.text(), "macro_ctrl_btn_repeat_start"),
+        (lambda: app.right_section.macro_panel.marco_control.macro_repeat_start_btn,
+         lambda w: w.text(), "macro_control_btn_repeat_start"),
 
         # 8. Packet Inspector (Right Panel - Tab 1)
-        (lambda: app.right_section.packet_inspector.packet_inspector_widget.title_lbl,
+        (lambda: app.right_section.packet_panel.packet_widget.title_lbl,
          lambda w: w.text(), "packet_grp_title"),
 
         # 9. System Log (Left Panel Bottom)
-        (lambda: app.left_section.sys_log_view_widget.sys_log_view_title,
-         lambda w: w.text(), "sys_log_view_title"),
+        (lambda: app.left_section.sys_log_widget.sys_log_title,
+         lambda w: w.text(), "sys_log_title"),
 
         # 10. Status Bar (예외 처리 필요)
         (lambda: app.global_status_bar,
@@ -108,10 +108,10 @@ def test_dynamic_language_switching(app, qtbot):
     # 테스트 시나리오: en -> ko -> en
     test_sequence = ['en', 'ko', 'en']
 
-    for lang_code in test_sequence:
+    for language_code in test_sequence:
         # 언어 변경 요청
-        print(f"\nScanning Language: {lang_code}...")
-        lang_manager.set_language(lang_code)
+        print(f"\nScanning Language: {language_code}...")
+        language_manager.set_language(language_code)
 
         # [Fix] 상태바 메시지 강제 초기화
         # 초기화 과정에서 Theme 변경 메시지 등이 덮어쓰여질 수 있으므로
@@ -122,15 +122,15 @@ def test_dynamic_language_switching(app, qtbot):
         # retranslate_ui가 'Theme changed...' 같은 임시 메시지는 번역하지 않는 특성을 고려해야 함.
 
         # MainStatusBar.retranslate_ui() 로직:
-        # if lang_manager.text_matches_key(current_msg, "main_status_msg_ready"): ...
+        # if language_manager.text_matches_key(current_msg, "main_status_msg_ready"): ...
         # 즉, 현재 메시지가 'Ready'일 때만 번역됨.
         # 따라서 테스트 전에 메시지를 'Ready' 상태(이전 언어)로 만들어야 함.
 
         # 이전 언어로 Ready 메시지 설정 (테스트를 위한 사전 조건 설정)
-        prev_lang = 'en' if lang_code == 'ko' else 'ko'
+        prev_lang = 'en' if language_code == 'ko' else 'ko'
         # 첫 번째 루프('en')일때는 이전 언어가 없으므로 기본값 사용
-        if lang_code == test_sequence[0]:
-             app.global_status_bar.showMessage(lang_manager.get_text("main_status_msg_ready", lang_code))
+        if language_code == test_sequence[0]:
+             app.global_status_bar.showMessage(language_manager.get_text("main_status_msg_ready", language_code))
         else:
              # 언어 변경 직전에 상태바가 'Ready' 메시지를 가지고 있어야 retranslate됨
              pass
@@ -140,11 +140,11 @@ def test_dynamic_language_switching(app, qtbot):
 
         # 해결책: 테스트 시작 전 상태바 메시지를 'Ready' 키에 해당하는 텍스트로 강제 설정
         # 현재 언어 기준으로 Ready 메시지 설정
-        current_ready_msg = lang_manager.get_text("main_status_msg_ready", lang_manager.current_language)
+        current_ready_msg = language_manager.get_text("main_status_msg_ready", language_manager.current_language)
         app.global_status_bar.showMessage(current_ready_msg)
 
         # 다시 언어 설정 (retranslate 트리거)
-        lang_manager.set_language(lang_code)
+        language_manager.set_language(language_code)
 
         # 이벤트 루프 처리 (UI 갱신 대기)
         qtbot.wait(100)
@@ -153,12 +153,12 @@ def test_dynamic_language_switching(app, qtbot):
         for i, (get_widget, get_text, key) in enumerate(targets):
             widget = get_widget()
             current_text = get_text(widget)
-            expected_text = lang_manager.get_text(key, lang_code)
+            expected_text = language_manager.get_text(key, language_code)
 
             # MainWindow Title은 버전 정보가 붙으므로 startswith로 검사
             if key == "main_title":
                 assert current_text.startswith(expected_text), \
-                    f"[{lang_code}] Main title mismatch. Got: '{current_text}', Expected starts with: '{expected_text}'"
+                    f"[{language_code}] Main title mismatch. Got: '{current_text}', Expected starts with: '{expected_text}'"
 
             # Status Bar 메시지 검증
             elif key == "main_status_msg_ready":
@@ -173,34 +173,34 @@ def test_dynamic_language_switching(app, qtbot):
 
             else:
                 assert current_text == expected_text, \
-                    f"[{lang_code}] Text mismatch for key '{key}'. Got: '{current_text}', Expected: '{expected_text}'"
+                    f"[{language_code}] Text mismatch for key '{key}'. Got: '{current_text}', Expected: '{expected_text}'"
 
-def test_manual_ctrl_placeholder_translation(app, qtbot):
+def test_manual_control_placeholder_translation(app, qtbot):
     """
-    ManualCtrlWidget의 입력창 Placeholder 텍스트 번역을 테스트합니다.
+    ManualControlWidget의 입력창 Placeholder 텍스트 번역을 테스트합니다.
     QSmartTextEdit 커스텀 위젯을 사용하므로 별도 검증합니다.
     """
-    widget = app.left_section.manual_ctrl.manual_ctrl_widget.manual_cmd_txt
-    key = "manual_ctrl_txt_cmd_placeholder"
+    widget = app.left_section.manual_control.manual_control_widget.manual_command_txt
+    key = "manual_control_txt_command_placeholder"
 
     # English Check
-    lang_manager.set_language('en')
+    language_manager.set_language('en')
     qtbot.wait(50)
-    assert widget.placeholderText() == lang_manager.get_text(key, 'en')
+    assert widget.placeholderText() == language_manager.get_text(key, 'en')
 
     # Korean Check
-    lang_manager.set_language('ko')
+    language_manager.set_language('ko')
     qtbot.wait(50)
-    assert widget.placeholderText() == lang_manager.get_text(key, 'ko')
+    assert widget.placeholderText() == language_manager.get_text(key, 'ko')
 
 def test_combobox_translation(app, qtbot):
     """
-    DataLogViewWidget의 Newline ComboBox 아이템 번역을 테스트합니다.
+    DataLogWidget의 Newline ComboBox 아이템 번역을 테스트합니다.
     ComboBox는 setItemText로 인덱스별 갱신이 일어나야 합니다.
     """
-    # 현재 활성 탭의 DataLogViewWidget
-    rx_widget = app.left_section.port_tabs.currentWidget().data_log_view_widget
-    combo = rx_widget.data_log_newline_combo
+    # 현재 활성 탭의 DataLogWidget
+    data_log_widget = app.left_section.port_tabs.currentWidget().data_log_widget
+    combo = data_log_widget.data_log_newline_combo
 
     # 각 아이템의 키 매핑 (순서대로)
     item_keys = [
@@ -211,16 +211,16 @@ def test_combobox_translation(app, qtbot):
     ]
 
     # English Check
-    lang_manager.set_language('en')
+    language_manager.set_language('en')
     qtbot.wait(50)
     for i, key in enumerate(item_keys):
-        assert combo.itemText(i) == lang_manager.get_text(key, 'en')
+        assert combo.itemText(i) == language_manager.get_text(key, 'en')
 
     # Korean Check
-    lang_manager.set_language('ko')
+    language_manager.set_language('ko')
     qtbot.wait(50)
     for i, key in enumerate(item_keys):
-        assert combo.itemText(i) == lang_manager.get_text(key, 'ko')
+        assert combo.itemText(i) == language_manager.get_text(key, 'ko')
 
 if __name__ == "__main__":
     pytest.main([__file__])

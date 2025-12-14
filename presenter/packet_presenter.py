@@ -16,10 +16,10 @@
 ## HOW
 * EventRouter 시그널 구독
 * SettingsManager 설정값 조회
-* View 인터페이스(PacketInspectorPanel) 호출
+* View 인터페이스(PacketPanel) 호출
 """
 from PyQt5.QtCore import QObject, QDateTime
-from view.panels.packet_inspector_panel import PacketInspectorPanel
+from view.panels.packet_panel import PacketPanel
 from presenter.event_router import EventRouter
 from core.settings_manager import SettingsManager
 from constants import ConfigKeys
@@ -32,12 +32,12 @@ class PacketPresenter(QObject):
     View의 사용자 요청(Clear)을 처리합니다.
     """
 
-    def __init__(self, view: PacketInspectorPanel, event_router: EventRouter) -> None:
+    def __init__(self, view: PacketPanel, event_router: EventRouter) -> None:
         """
         PacketPresenter 초기화
 
         Args:
-            view (PacketInspectorPanel): 패킷 인스펙터 뷰
+            view (PacketPanel): 패킷 인스펙터 뷰
             event_router (EventRouter): 이벤트 라우터
         """
         super().__init__()
@@ -64,10 +64,10 @@ class PacketPresenter(QObject):
             - SettingsManager에서 버퍼 크기 및 자동 스크롤 설정 조회
             - View에 설정값 전달
         """
-        buffer_size = self.settings_manager.get(ConfigKeys.INSPECTOR_BUFFER_SIZE, 100)
-        auto_scroll = self.settings_manager.get(ConfigKeys.INSPECTOR_AUTOSCROLL, True)
+        buffer_size = self.settings_manager.get(ConfigKeys.PACKET_BUFFER_SIZE, 100)
+        auto_scroll = self.settings_manager.get(ConfigKeys.PACKET_AUTOSCROLL, True)
 
-        self.view.set_inspector_options(buffer_size, auto_scroll)
+        self.view.set_packet_options(buffer_size, auto_scroll)
 
     def on_packet_received(self, port_name: str, packet: object) -> None:
         """
@@ -84,7 +84,7 @@ class PacketPresenter(QObject):
             packet (Packet): 수신된 패킷 객체
         """
         # 실시간 추적 옵션 확인
-        realtime = self.settings_manager.get(ConfigKeys.INSPECTOR_REALTIME, True)
+        realtime = self.settings_manager.get(ConfigKeys.PACKET_REALTIME, True)
         if not realtime:
             return
 

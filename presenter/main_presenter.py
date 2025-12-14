@@ -28,12 +28,12 @@ from .port_presenter import PortPresenter
 from .macro_presenter import MacroPresenter
 from .file_presenter import FilePresenter
 from .packet_presenter import PacketPresenter
-from .manual_ctrl_presenter import ManualCtrlPresenter
+from .manual_control_presenter import ManualControlPresenter
 from .event_router import EventRouter
-from core.cmd_processor import CmdProcessor
+from core.command_processor import CommandProcessor
 from core.settings_manager import SettingsManager
 from core.data_logger import data_logger_manager
-from view.managers.lang_manager import lang_manager
+from view.managers.language_manager import language_manager
 from core.logger import logger
 from constants import ConfigKeys
 
@@ -78,14 +78,14 @@ class MainPresenter(QObject):
 
         # 2.4 Packet Inspector (우측 패킷 탭)
         self.packet_presenter = PacketPresenter(
-            self.view.right_section.packet_inspector,
+            self.view.right_section.packet_panel,
             self.event_router
         )
 
         # 2.5 Manual Control (좌측 수동 제어)
         # Local Echo 처리를 위해 View의 콜백 메서드(append_local_echo_data) 주입
-        self.manual_ctrl_presenter = ManualCtrlPresenter(
-            self.view.left_section.manual_ctrl,
+        self.manual_control_presenter = ManualControlPresenter(
+            self.view.left_section.manual_control,
             self.connection_controller,
             self.view.append_local_echo_data
         )
@@ -110,7 +110,7 @@ class MainPresenter(QObject):
 
         # --- 4. 내부 Model 시그널 연결 ---
         # MacroRunner의 전송 요청 처리
-        self.macro_runner.send_requested.connect(self.on_macro_cmd_send_requested)
+        self.macro_runner.send_requested.connect(self.on_macro_command_send_requested)
 
         # --- 5. View 시그널 연결 (View -> Presenter) ---
         # 설정 및 종료
@@ -160,8 +160,8 @@ class MainPresenter(QObject):
         settings_manager.set(ConfigKeys.SPLITTER_STATE, state.get(ConfigKeys.SPLITTER_STATE))
         settings_manager.set(ConfigKeys.RIGHT_PANEL_VISIBLE, state.get(ConfigKeys.RIGHT_PANEL_VISIBLE))
 
-        if ConfigKeys.MANUAL_CTRL_STATE in state:
-            settings_manager.set(ConfigKeys.MANUAL_CTRL_STATE, state[ConfigKeys.MANUAL_CTRL_STATE])
+        if ConfigKeys.MANUAL_CONTROL_STATE in state:
+            settings_manager.set(ConfigKeys.MANUAL_CONTROL_STATE, state[ConfigKeys.MANUAL_CONTROL_STATE])
         if ConfigKeys.PORTS_TABS_STATE in state:
             settings_manager.set(ConfigKeys.PORTS_TABS_STATE, state[ConfigKeys.PORTS_TABS_STATE])
 
@@ -185,7 +185,7 @@ class MainPresenter(QObject):
 
         Logic:
             - 데이터 로깅 (활성화 시)
-            - 해당 포트의 View(DataLogViewWidget)에 데이터 전달
+            - 해당 포트의 View(DataLogWidget)에 데이터 전달
             - RX 카운트 증가
 
         Args:
@@ -201,8 +201,8 @@ class MainPresenter(QObject):
         for i in range(count):
             widget = self.view.get_port_tab_widget(i)
             if hasattr(widget, 'get_port_name') and widget.get_port_name() == port_name:
-                if hasattr(widget, 'data_log_view_widget'):
-                    widget.data_log_view_widget.append_data(data)
+                if hasattr(widget, 'data_log_widget'):
+                    widget.data_log_widget.append_data(data)
                 break
 
         # RX 카운트 증가
@@ -224,33 +224,33 @@ class MainPresenter(QObject):
             data_logger_manager.write(port_name, data)
         self.tx_byte_count += len(data)
 
-    def on_macro_cmd_send_requested(self, text: str, hex_mode: bool, cmd_prefix: bool, cmd_suffix: bool) -> None:
+    def on_macro_command_send_requested(self, text: str, hex_mode: bool, command_prefix: bool, command_suffix: bool) -> None:
         """
         매크로 전송 요청 처리
 
         Logic:
             - 연결 열림 확인
-            - CmdProcessor를 사용하여 데이터 가공 (Prefix/Suffix/Hex)
+            - CommandProcessor를 사용하여 데이터 가공 (Prefix/Suffix/Hex)
             - 데이터 전송 (ConnectionController)
 
         Args:
             text (str): 전송할 텍스트
             hex_mode (bool): Hex 모드 여부
-            cmd_prefix (bool): 접두사 사용 여부
-            cmd_suffix (bool): 접미사 사용 여부
+            command_prefix (bool): 접두사 사용 여부
+            command_suffix (bool): 접미사 사용 여부
         """
         if not self.connection_controller.has_active_connection:
             logger.warning("Port not open")
             return
 
-        # [Refactor] SettingsManager에서 값 획득 후 CmdProcessor에 주입
+        # [Refactor] SettingsManager에서 값 획득 후 CommandProcessor에 주입
         settings = SettingsManager()
-        prefix = settings.get(ConfigKeys.CMD_PREFIX) if cmd_prefix else None
-        suffix = settings.get(ConfigKeys.CMD_SUFFIX) if cmd_suffix else None
+        prefix = settings.get(ConfigKeys.COMMAND_PREFIX) if command_prefix else None
+        suffix = settings.get(ConfigKeys.COMMAND_SUFFIX) if command_suffix else None
 
         try:
-            # 데이터 가공 위임 (CmdProcessor에 Prefix/Suffix 값 직접 전달)
-            data = CmdProcessor.process_cmd(text, hex_mode, prefix=prefix, suffix=suffix)
+            # 데이터 가공 위임 (CommandProcessor에 Prefix/Suffix 값 직접 전달)
+            data = CommandProcessor.process_command(text, hex_mode, prefix=prefix, suffix=suffix)
         except ValueError:
             logger.error(f"Invalid hex string for sending: {text}")
             return
@@ -279,8 +279,8 @@ class MainPresenter(QObject):
             'language': ConfigKeys.LANGUAGE,
             'proportional_font_size': ConfigKeys.PROP_FONT_SIZE,
             'max_log_lines': ConfigKeys.RX_MAX_LINES,
-            'cmd_prefix': ConfigKeys.CMD_PREFIX,
-            'cmd_suffix': ConfigKeys.CMD_SUFFIX,
+            'command_prefix': ConfigKeys.COMMAND_PREFIX,
+            'command_suffix': ConfigKeys.COMMAND_SUFFIX,
             'port_baudrate': ConfigKeys.PORT_BAUDRATE,
             'port_newline': ConfigKeys.PORT_NEWLINE,
             'port_local_echo': ConfigKeys.PORT_LOCAL_ECHO,
@@ -297,9 +297,9 @@ class MainPresenter(QObject):
             'at_color_prompt': ConfigKeys.AT_COLOR_PROMPT,
 
             # Inspector Settings
-            'inspector_buffer_size': ConfigKeys.INSPECTOR_BUFFER_SIZE,
-            'inspector_realtime': ConfigKeys.INSPECTOR_REALTIME,
-            'inspector_autoscroll': ConfigKeys.INSPECTOR_AUTOSCROLL,
+            'packet_buffer_size': ConfigKeys.PACKET_BUFFER_SIZE,
+            'packet_realtime': ConfigKeys.PACKET_REALTIME,
+            'packet_autoscroll': ConfigKeys.PACKET_AUTOSCROLL,
         }
 
         # 데이터 변환 및 저장
@@ -324,17 +324,17 @@ class MainPresenter(QObject):
             self.view.switch_theme(new_settings['theme'].lower())
 
         if 'language' in new_settings:
-            lang_manager.set_language(new_settings['language'])
+            language_manager.set_language(new_settings['language'])
 
-        # max_log_lines 설정 변경 시 모든 DataLogViewWidget에 적용
+        # max_log_lines 설정 변경 시 모든 DataLogWidget에 적용
         if 'max_log_lines' in new_settings:
             try:
                 max_lines_int = int(new_settings['max_log_lines'])
                 count = self.view.get_port_tabs_count()
                 for i in range(count):
                     widget = self.view.get_port_tab_widget(i)
-                    if hasattr(widget, 'data_log_view_widget'):
-                        widget.data_log_view_widget.set_max_lines(max_lines_int)
+                    if hasattr(widget, 'data_log_widget'):
+                        widget.data_log_widget.set_max_lines(max_lines_int)
             except (ValueError, TypeError):
                 logger.warning("Invalid max_log_lines value")
 
@@ -469,8 +469,8 @@ class MainPresenter(QObject):
         Args:
             panel: 포트 패널 위젯
         """
-        if hasattr(panel, 'data_log_view_widget'):
-            rx_widget = panel.data_log_view_widget
+        if hasattr(panel, 'data_log_widget'):
+            rx_widget = panel.data_log_widget
             # 중복 연결 방지를 위해 disconnect 시도
             try:
                 rx_widget.data_logging_started.disconnect(self._on_data_logging_started)
@@ -487,7 +487,7 @@ class MainPresenter(QObject):
         count = self.view.get_port_tabs_count()
         for i in range(count):
             widget = self.view.get_port_tab_widget(i)
-            if hasattr(widget, 'data_log_view_widget') and widget.data_log_view_widget == sender:
+            if hasattr(widget, 'data_log_widget') and widget.data_log_widget == sender:
                 return widget
         return None
 

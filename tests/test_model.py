@@ -95,8 +95,8 @@ def test_macro_runner_basic_flow(qtbot):
 
     # 테스트용 매크로 엔트리 (Delay 10ms로 최소화)
     entries = [
-        MacroEntry(cmd="CMD1", delay_ms=10),
-        MacroEntry(cmd="CMD2", delay_ms=10)
+        MacroEntry(command="CMD1", delay_ms=10),
+        MacroEntry(command="CMD2", delay_ms=10)
     ]
     runner.load_macro(entries)
 
@@ -124,7 +124,7 @@ def test_macro_runner_expect(qtbot):
 
     # Expect가 있는 엔트리 설정 (Timeout 5초로 설정하여 테스트 중 타임아웃 방지)
     entries = [
-        MacroEntry(cmd="AT", expect="OK", timeout_ms=5000, delay_ms=10)
+        MacroEntry(command="AT", expect="OK", timeout_ms=5000, delay_ms=10)
     ]
     runner.load_macro(entries)
 
@@ -183,14 +183,14 @@ def test_file_transfer_backpressure(tmp_path):
     with open(test_file, "wb") as f:
         f.write(b"A" * 10240)
 
-    mock_ctrl = MockConnectionController()
-    engine = FileTransferEngine(mock_ctrl, "COM1", str(test_file), baudrate=9600)
+    mock_control = MockConnectionController()
+    engine = FileTransferEngine(mock_control, "COM1", str(test_file), baudrate=9600)
 
     # 청크 사이즈 강제 축소 (테스트 용이성)
     engine.chunk_size = 100
 
     # 2. Backpressure 시뮬레이션
-    mock_ctrl.queue_size = 100 # Threshold is usually 50
+    mock_control.queue_size = 100 # Threshold is usually 50
 
     # 엔진 속성 확인 (로직 존재 여부 검증)
     assert engine.queue_threshold == 50

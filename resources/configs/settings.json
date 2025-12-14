@@ -9,8 +9,8 @@
     "fixed_font_family": "Consolas",
     "fixed_font_size": 9,
     "right_panel_visible": false,
-    "cmd_prefix": "",
-    "cmd_suffix": "",
+    "command_prefix": "",
+    "command_suffix": "",
     "port_baudrate": 200,
     "port_local_echo": true,
     "port_newline": "\n",
@@ -49,7 +49,7 @@
             "mode": "0"
           }
         },
-        "data_log_view_widget": {
+        "data_log_widget": {
           "tx_broadcast_enabled": true,
           "hex_mode": false,
           "timestamp": false,
@@ -61,7 +61,7 @@
       }
     ]
   },
-  "manual_ctrl": {
+  "manual_control": {
     "input_text": "xxzc\nsdf\ndf\nd\n",
     "hex_mode": true,
     "prefix_chk": true,
@@ -69,14 +69,14 @@
     "rts_chk": true,
     "dtr_chk": true,
     "local_echo_chk": false,
-    "cmd_history": []
+    "command_history": []
   },
   "macro_list": {
-    "cmds": [
+    "commands": [
       {
         "enabled": true,
         "prefix": true,
-        "cmd": "",
+        "command": "",
         "suffix": true,
         "hex_mode": false,
         "delay": "100"
@@ -84,7 +84,7 @@
       {
         "enabled": true,
         "prefix": true,
-        "cmd": "",
+        "command": "",
         "suffix": true,
         "hex_mode": false,
         "delay": "100"
@@ -92,7 +92,7 @@
       {
         "enabled": true,
         "prefix": true,
-        "cmd": "",
+        "command": "",
         "suffix": true,
         "hex_mode": false,
         "delay": "100"
@@ -100,7 +100,7 @@
       {
         "enabled": true,
         "prefix": false,
-        "cmd": "ss",
+        "command": "ss",
         "suffix": true,
         "hex_mode": true,
         "delay": "100"
@@ -108,7 +108,7 @@
       {
         "enabled": true,
         "prefix": true,
-        "cmd": "",
+        "command": "",
         "suffix": true,
         "hex_mode": false,
         "delay": "100"
@@ -116,7 +116,7 @@
       {
         "enabled": true,
         "prefix": false,
-        "cmd": "",
+        "command": "",
         "suffix": true,
         "hex_mode": false,
         "delay": "100"
@@ -124,7 +124,7 @@
       {
         "enabled": true,
         "prefix": false,
-        "cmd": "",
+        "command": "",
         "suffix": true,
         "hex_mode": true,
         "delay": "100"
@@ -132,7 +132,7 @@
       {
         "enabled": true,
         "prefix": false,
-        "cmd": "",
+        "command": "",
         "suffix": true,
         "hex_mode": true,
         "delay": "100"

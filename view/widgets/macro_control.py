@@ -4,11 +4,11 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Optional
-from view.managers.lang_manager import lang_manager
+from view.managers.language_manager import language_manager
 
 from constants import DEFAULT_MACRO_DELAY_MS
 
-class MacroCtrlWidget(QWidget):
+class MacroControlWidget(QWidget):
     """
     Command List 실행을 제어하는 위젯 클래스입니다.
     Repeat, 스크립트 저장/로드 기능을 제공합니다.
@@ -24,7 +24,7 @@ class MacroCtrlWidget(QWidget):
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
-        MacroCtrlWidget을 초기화합니다.
+        MacroControlWidget을 초기화합니다.
 
         Args:
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
@@ -43,47 +43,47 @@ class MacroCtrlWidget(QWidget):
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
-        lang_manager.language_changed.connect(self.retranslate_ui)
+        language_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
 
         # Row 0: 자동 실행 설정
-        self.interval_lbl = QLabel(lang_manager.get_text("macro_ctrl_lbl_interval"))
+        self.interval_lbl = QLabel(language_manager.get_text("macro_control_lbl_interval"))
 
         self.repeat_delay_line_edit = QLineEdit(str(DEFAULT_MACRO_DELAY_MS))
         self.repeat_delay_line_edit.setFixedWidth(50)
         self.repeat_delay_line_edit.setAlignment(Qt.AlignRight)
 
-        self.repeat_max_lbl = QLabel(lang_manager.get_text("macro_ctrl_lbl_repeat_max"))
+        self.repeat_max_lbl = QLabel(language_manager.get_text("macro_control_lbl_repeat_max"))
 
         self.repeat_count_spin = QSpinBox()
         self.repeat_count_spin.setRange(0, 9999)
         self.repeat_count_spin.setValue(0)
-        self.repeat_count_spin.setToolTip(lang_manager.get_text("macro_ctrl_spin_repeat_tooltip"))
+        self.repeat_count_spin.setToolTip(language_manager.get_text("macro_control_spin_repeat_tooltip"))
 
-        self.script_save_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_save_script"))
-        self.script_save_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_save_script_tooltip"))
+        self.script_save_btn = QPushButton(language_manager.get_text("macro_control_btn_save_script"))
+        self.script_save_btn.setToolTip(language_manager.get_text("macro_control_btn_save_script_tooltip"))
         self.script_save_btn.clicked.connect(self.on_script_save_requested)
 
-        self.script_load_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_load_script"))
-        self.script_load_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_load_script_tooltip"))
+        self.script_load_btn = QPushButton(language_manager.get_text("macro_control_btn_load_script"))
+        self.script_load_btn.setToolTip(language_manager.get_text("macro_control_btn_load_script_tooltip"))
         self.script_load_btn.clicked.connect(self.on_script_load_requested)
 
         # Row 1: 자동 실행 제어
-        self.macro_repeat_start_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_repeat_start"))
-        self.macro_repeat_start_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_repeat_start_tooltip"))
+        self.macro_repeat_start_btn = QPushButton(language_manager.get_text("macro_control_btn_repeat_start"))
+        self.macro_repeat_start_btn.setToolTip(language_manager.get_text("macro_control_btn_repeat_start_tooltip"))
         self.macro_repeat_start_btn.setProperty("class", "accent") # 초록색 스타일
         self.macro_repeat_start_btn.clicked.connect(self.on_macro_repeat_start_clicked)
 
-        self.macro_repeat_stop_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_repeat_stop"))
-        self.macro_repeat_stop_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_repeat_stop_tooltip"))
+        self.macro_repeat_stop_btn = QPushButton(language_manager.get_text("macro_control_btn_repeat_stop"))
+        self.macro_repeat_stop_btn.setToolTip(language_manager.get_text("macro_control_btn_repeat_stop_tooltip"))
         self.macro_repeat_stop_btn.setEnabled(False)
         self.macro_repeat_stop_btn.setProperty("class", "danger") # 빨간색 스타일
         self.macro_repeat_stop_btn.clicked.connect(self.on_macro_repeat_stop_clicked)
 
-        self.macro_repeat_pause_btn = QPushButton(lang_manager.get_text("macro_ctrl_btn_repeat_pause"))
-        self.macro_repeat_pause_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_repeat_pause_tooltip"))
+        self.macro_repeat_pause_btn = QPushButton(language_manager.get_text("macro_control_btn_repeat_pause"))
+        self.macro_repeat_pause_btn.setToolTip(language_manager.get_text("macro_control_btn_repeat_pause_tooltip"))
         self.macro_repeat_pause_btn.setEnabled(False)
         self.macro_repeat_pause_btn.setProperty("class", "warning") # 노란색 스타일
         self.macro_repeat_pause_btn.clicked.connect(self.on_macro_repeat_pause_clicked)
@@ -109,8 +109,8 @@ class MacroCtrlWidget(QWidget):
         execution_layout.addWidget(self.macro_repeat_count_lbl, 1, 4)
 
         # 자동 실행 설정 그룹 (Repeat Settings Group)
-        self.execution_settings_grp = QGroupBox(lang_manager.get_text("macro_ctrl_grp_execution"))
-        self.execution_settings_grp.setFixedHeight(100) # 높이 고정 (SysLogViewWidget과 맞춤)
+        self.execution_settings_grp = QGroupBox(language_manager.get_text("macro_control_grp_execution"))
+        self.execution_settings_grp.setFixedHeight(100) # 높이 고정 (SysLogWidget과 맞춤)
         self.execution_settings_grp.setLayout(execution_layout)
 
         layout = QVBoxLayout()
@@ -125,20 +125,20 @@ class MacroCtrlWidget(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.script_save_btn.setText(lang_manager.get_text("macro_ctrl_btn_save_script"))
-        self.script_save_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_save_script_tooltip"))
+        self.script_save_btn.setText(language_manager.get_text("macro_control_btn_save_script"))
+        self.script_save_btn.setToolTip(language_manager.get_text("macro_control_btn_save_script_tooltip"))
 
-        self.script_load_btn.setText(lang_manager.get_text("macro_ctrl_btn_load_script"))
-        self.script_load_btn.setToolTip(lang_manager.get_text("macro_ctrl_btn_load_script_tooltip"))
+        self.script_load_btn.setText(language_manager.get_text("macro_control_btn_load_script"))
+        self.script_load_btn.setToolTip(language_manager.get_text("macro_control_btn_load_script_tooltip"))
 
-        self.execution_settings_grp.setTitle(lang_manager.get_text("macro_ctrl_grp_execution"))
+        self.execution_settings_grp.setTitle(language_manager.get_text("macro_control_grp_execution"))
 
-        self.interval_lbl.setText(lang_manager.get_text("macro_ctrl_lbl_interval"))
-        self.repeat_max_lbl.setText(lang_manager.get_text("macro_ctrl_lbl_repeat_max"))
-        self.repeat_count_spin.setToolTip(lang_manager.get_text("macro_ctrl_spin_repeat_tooltip"))
+        self.interval_lbl.setText(language_manager.get_text("macro_control_lbl_interval"))
+        self.repeat_max_lbl.setText(language_manager.get_text("macro_control_lbl_repeat_max"))
+        self.repeat_count_spin.setToolTip(language_manager.get_text("macro_control_spin_repeat_tooltip"))
 
-        self.macro_repeat_start_btn.setText(lang_manager.get_text("macro_ctrl_btn_repeat_start"))
-        self.macro_repeat_stop_btn.setText(lang_manager.get_text("macro_ctrl_btn_repeat_stop"))
+        self.macro_repeat_start_btn.setText(language_manager.get_text("macro_control_btn_repeat_start"))
+        self.macro_repeat_stop_btn.setText(language_manager.get_text("macro_control_btn_repeat_stop"))
 
     def on_macro_repeat_start_clicked(self) -> None:
         """자동 실행 시작 버튼 핸들러"""

@@ -8,7 +8,7 @@ from pathlib import Path
 # view 폴더의 모든 .py 파일에서 get_text 호출을 찾기
 root_dir = Path(__file__).parent.parent
 view_dir = root_dir / "view"
-lang_dir = root_dir / "resources/languages"
+language_dir = root_dir / "resources/languages"
 used_keys = set()
 
 for py_file in view_dir.rglob("*.py"):
@@ -18,8 +18,8 @@ for py_file in view_dir.rglob("*.py"):
     used_keys.update(matches)
 
 # JSON 파일의 키들 읽기
-en_json = lang_dir / "en.json"
-ko_json = lang_dir / "ko.json"
+en_json = language_dir / "en.json"
+ko_json = language_dir / "ko.json"
 
 en_keys = set(json.loads(en_json.read_text(encoding='utf-8')).keys())
 ko_keys = set(json.loads(ko_json.read_text(encoding='utf-8')).keys())

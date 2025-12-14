@@ -3,13 +3,13 @@ from PyQt5.QtCore import pyqtSignal
 from typing import Optional
 
 from view.widgets.port_settings import PortSettingsWidget
-from view.widgets.data_log_view import DataLogViewWidget
+from view.widgets.data_log import DataLogWidget
 from view.widgets.port_stats import PortStatsWidget
 
 class PortPanel(QWidget):
     """
     개별 시리얼 포트 탭의 메인 위젯 클래스입니다.
-    포트 설정(PortSettings), 통신 로그(DataLogViewWidget), 상태 로그(PortStats) 영역을 포함합니다.
+    포트 설정(PortSettings), 통신 로그(DataLogWidget), 상태 로그(PortStats) 영역을 포함합니다.
     """
 
     # 시그널 정의
@@ -23,8 +23,8 @@ class PortPanel(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
-        # self.sys_log_view_widget = None
-        self.data_log_view_widget = None
+        # self.sys_log_widget = None
+        self.data_log_widget = None
         self.port_stats_widget = None
         self.port_settings_widget = None
         self.custom_name = "Port"  # 커스텀 이름 (기본값)
@@ -42,7 +42,7 @@ class PortPanel(QWidget):
         # 컴포넌트 생성
         self.port_settings_widget = PortSettingsWidget()
         self.port_stats_widget = PortStatsWidget()
-        self.data_log_view_widget = DataLogViewWidget()
+        self.data_log_widget = DataLogWidget()
 
         # 레이아웃 구성
         # 상단: 설정 (Top: Settings)
@@ -52,10 +52,10 @@ class PortPanel(QWidget):
         layout.addWidget(self.port_stats_widget)
 
         # 중간: 로그 (Middle: Log)
-        layout.addWidget(self.data_log_view_widget, 1) # Stretch 1
+        layout.addWidget(self.data_log_widget, 1) # Stretch 1
 
         # 하단: 상태 로그 영역 (Bottom: Status Log Area)
-        # layout.addWidget(self.sys_log_view_widget) # Global로 이동
+        # layout.addWidget(self.sys_log_widget) # Global로 이동
 
         self.setLayout(layout)
 
@@ -115,7 +115,7 @@ class PortPanel(QWidget):
     def update_tab_title(self) -> None:
         """탭 제목 변경 시그널을 발생시킵니다."""
         title = self.get_tab_title()
-        self.data_log_view_widget.set_tab_name(title)
+        self.data_log_widget.set_tab_name(title)
         self.tab_title_changed.emit(title)
 
     def save_state(self) -> dict:
@@ -128,7 +128,7 @@ class PortPanel(QWidget):
         return {
             "custom_name": self.custom_name,
             "port_settings_widget": self.port_settings_widget.save_state(),
-            "data_log_view_widget": self.data_log_view_widget.save_state()
+            "data_log_widget": self.data_log_widget.save_state()
         }
 
     def load_state(self, state: dict) -> None:
@@ -142,5 +142,5 @@ class PortPanel(QWidget):
             return
         self.custom_name = state.get("custom_name", "Port")
         self.port_settings_widget.load_state(state.get("port_settings_widget", {}))
-        self.data_log_view_widget.load_state(state.get("data_log_view_widget", {}))
+        self.data_log_widget.load_state(state.get("data_log_widget", {}))
         self.update_tab_title()

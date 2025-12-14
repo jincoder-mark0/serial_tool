@@ -2,22 +2,22 @@
 View 위젯 모듈
 재사용 가능한 UI 위젯들을 포함합니다.
 """
-from .data_log_view import DataLogViewWidget
-from .sys_log_view import SysLogViewWidget
+from .data_log import DataLogWidget
+from .sys_log import SysLogWidget
 from .port_settings import PortSettingsWidget
-from .manual_ctrl import ManualCtrlWidget
+from .manual_control import ManualControlWidget
 from .macro_list import MacroListWidget
-from .macro_ctrl import MacroCtrlWidget
-from .packet_inspector import PacketInspectorWidget
+from .macro_control import MacroControlWidget
+from .packet import PacketWidget
 from .file_progress import FileProgressWidget
 
 __all__ = [
-    'DataLogViewWidget',
-    'SysLogViewWidget',
+    'DataLogWidget',
+    'SysLogWidget',
     'PortSettingsWidget',
-    'ManualCtrlWidget',
+    'ManualControlWidget',
     'MacroListWidget',
-    'MacroCtrlWidget',
-    'PacketInspectorWidget',
+    'MacroControlWidget',
+    'PacketWidget',
     'FileProgressWidget',
 ]

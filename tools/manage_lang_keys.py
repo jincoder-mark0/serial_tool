@@ -2,7 +2,7 @@
 언어 키 관리 도구
 
 이 스크립트는 다음 작업을 수행합니다:
-1. view 폴더의 모든 .py 파일에서 사용되는 lang_manager.get_text() 호출을 분석
+1. view 폴더의 모든 .py 파일에서 사용되는 language_manager.get_text() 호출을 분석
 2. 모듈별로 키를 그룹화
 3. 주석이 추가된 언어 템플릿 JSON 파일 생성
 4. 누락되거나 사용되지 않는 키 확인
@@ -35,7 +35,7 @@ def extract_keys_by_module(view_dir: Path) -> Dict[str, Set[str]]:
         if '__pycache__' in str(py_file) or py_file.name == '__init__.py':
             continue
 
-        # 모듈 경로 생성 (예: widgets/manual_ctrl, dialogs/font_settings)
+        # 모듈 경로 생성 (예: widgets/manual_control, dialogs/font_settings)
         try:
             relative_path = py_file.relative_to(view_dir)
             module_path = str(relative_path.with_suffix('')).replace('\\', '/')
@@ -154,13 +154,13 @@ def generate_template(keys_by_module: Dict[str, Set[str]], output_file: Path, la
     print(f"  - 모듈별 키: {sum(len(keys - common_keys) for keys in keys_by_module.values())}개")
     print(f"  - 발견된 모듈: {len(sorted_modules)}개")
 
-def check_missing_and_unused(view_dir: Path, lang_files: Dict[str, Path]):
+def check_missing_and_unused(view_dir: Path, language_files: Dict[str, Path]):
     """
     누락되거나 사용되지 않는 키를 확인
 
     Args:
         view_dir: view 폴더의 경로
-        lang_files: 언어 파일의 경로
+        language_files: 언어 파일의 경로
 
     """
 
@@ -174,27 +174,27 @@ def check_missing_and_unused(view_dir: Path, lang_files: Dict[str, Path]):
         used_keys.update(matches)
 
     # JSON 파일의 키들 읽기
-    lang_keys = {}
-    for lang, json_path in lang_files.items():
+    language_keys = {}
+    for lang, json_path in language_files.items():
         try:
             if not json_path.exists():
                 print(f"⚠ 경고: {lang}.json 파일이 존재하지 않습니다: {json_path}")
-                lang_keys[lang] = set()
+                language_keys[lang] = set()
                 continue
 
             content = json_path.read_text(encoding='utf-8')
-            lang_keys[lang] = set(json.loads(content).keys())
+            language_keys[lang] = set(json.loads(content).keys())
         except json.JSONDecodeError as e:
             print(f"⚠ 경고: {lang}.json 파일 파싱 오류: {e}")
-            lang_keys[lang] = set()
+            language_keys[lang] = set()
         except Exception as e:
             print(f"⚠ 경고: {lang}.json 파일 읽기 오류: {e}")
-            lang_keys[lang] = set()
+            language_keys[lang] = set()
 
     # 비교
     print("\n=== 누락된 키 확인 ===")
 
-    for lang, keys in lang_keys.items():
+    for lang, keys in language_keys.items():
         missing = used_keys - keys
         if missing:
             print(f"\n❌ {lang}.json에 없는 키 ({len(missing)}개):")
@@ -204,7 +204,7 @@ def check_missing_and_unused(view_dir: Path, lang_files: Dict[str, Path]):
             print(f"\n✓ {lang}.json: 모든 키가 존재합니다!")
 
     print("\n=== 사용되지 않는 키 확인 ===")
-    all_keys = set().union(*lang_keys.values()) if lang_keys.values() else set()
+    all_keys = set().union(*language_keys.values()) if language_keys.values() else set()
     unused = all_keys - used_keys
 
     if unused:
@@ -216,18 +216,18 @@ def check_missing_and_unused(view_dir: Path, lang_files: Dict[str, Path]):
 
     print(f"\n=== 통계 ===")
     print(f"코드에서 사용: {len(used_keys)}개")
-    for lang, keys in lang_keys.items():
+    for lang, keys in language_keys.items():
         print(f"{lang}.json: {len(keys)}개")
 
 
 def main():
     root_dir = Path(__file__).parent.parent
     view_dir = root_dir / "view"
-    lang_dir = root_dir / "resources/languages"
-    lang_template_file = lang_dir / "template_en.json"
-    lang_files = {
-        "en": lang_dir / "en.json",
-        "ko": lang_dir / "ko.json"
+    language_dir = root_dir / "resources/languages"
+    language_template_file = language_dir / "template_en.json"
+    language_files = {
+        "en": language_dir / "en.json",
+        "ko": language_dir / "ko.json"
     }
 
     """메인 함수"""
@@ -244,13 +244,13 @@ def main():
     print("\n[2] 언어 템플릿 생성 중...")
     generate_template(
         keys_by_module,
-        lang_template_file,
+        language_template_file,
         "en"
     )
 
     # 3. 누락/미사용 키 확인
     print("\n[3] 키 검증 중...")
-    check_missing_and_unused(view_dir,lang_files)
+    check_missing_and_unused(view_dir,language_files)
 
     print("\n" + "=" * 60)
     print("완료!")

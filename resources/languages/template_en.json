@@ -3,7 +3,6 @@
   // Main Window (main_window.py),
   // ============================================
   "main_title": "TODO: main_title",
-
   // ============================================
   // Data Log View Widget (widgets/data_log_view.py),
   // ============================================
@@ -11,29 +10,28 @@
   "data_log_newline_crlf": "TODO: data_log_newline_crlf",
   "data_log_newline_lf": "TODO: data_log_newline_lf",
   "data_log_newline_raw": "TODO: data_log_newline_raw",
-  "data_log_view_btn_clear": "TODO: rx_btn_clear",
-  "data_log_view_btn_clear_tooltip": "TODO: rx_btn_clear_tooltip",
-  "data_log_view_btn_search_next_tooltip": "TODO: rx_btn_search_next_tooltip",
-  "data_log_view_btn_search_prev_tooltip": "TODO: rx_btn_search_prev_tooltip",
-  "data_log_view_btn_toggle_logging": "TODO: rx_btn_toggle_logging",
-  "data_log_view_btn_toggle_logging_tooltip": "TODO: rx_btn_toggle_logging_tooltip",
-  "data_log_view_chk_filter": "TODO: rx_chk_filter",
-  "data_log_view_chk_filter_tooltip": "TODO: rx_chk_filter_tooltip",
-  "data_log_view_chk_hex": "TODO: rx_chk_hex",
-  "data_log_view_chk_hex_tooltip": "TODO: rx_chk_hex_tooltip",
-  "data_log_view_chk_pause": "TODO: rx_chk_pause",
-  "data_log_view_chk_pause_tooltip": "TODO: rx_chk_pause_tooltip",
-  "data_log_view_chk_timestamp": "TODO: rx_chk_timestamp",
-  "data_log_view_chk_timestamp_tooltip": "TODO: rx_chk_timestamp_tooltip",
-  "data_log_view_chk_tx_broadcast": "TODO: data_log_view_chk_tx_broadcast",
-  "data_log_view_chk_tx_broadcast_tooltip": "TODO: data_log_view_chk_tx_broadcast_tooltip",
-  "data_log_view_combo_newline_tooltip": "TODO: rx_combo_newline_tooltip",
-  "data_log_view_input_search_placeholder": "TODO: data_log_view_input_search_placeholder",
-  "data_log_view_input_search_tooltip": "TODO: data_log_view_input_search_tooltip",
-  "data_log_view_list_log_placeholder": "TODO: rx_list_log_placeholder",
-  "data_log_view_list_log_tooltip": "TODO: rx_list_log_tooltip",
-  "data_log_view_title": "TODO: data_log_view_title",
-
+  "data_log_btn_clear": "TODO: rx_btn_clear",
+  "data_log_btn_clear_tooltip": "TODO: rx_btn_clear_tooltip",
+  "data_log_btn_search_next_tooltip": "TODO: rx_btn_search_next_tooltip",
+  "data_log_btn_search_prev_tooltip": "TODO: rx_btn_search_prev_tooltip",
+  "data_log_btn_toggle_logging": "TODO: rx_btn_toggle_logging",
+  "data_log_btn_toggle_logging_tooltip": "TODO: rx_btn_toggle_logging_tooltip",
+  "data_log_chk_filter": "TODO: rx_chk_filter",
+  "data_log_chk_filter_tooltip": "TODO: rx_chk_filter_tooltip",
+  "data_log_chk_hex": "TODO: rx_chk_hex",
+  "data_log_chk_hex_tooltip": "TODO: rx_chk_hex_tooltip",
+  "data_log_chk_pause": "TODO: rx_chk_pause",
+  "data_log_chk_pause_tooltip": "TODO: rx_chk_pause_tooltip",
+  "data_log_chk_timestamp": "TODO: rx_chk_timestamp",
+  "data_log_chk_timestamp_tooltip": "TODO: rx_chk_timestamp_tooltip",
+  "data_log_chk_tx_broadcast": "TODO: data_log_chk_tx_broadcast",
+  "data_log_chk_tx_broadcast_tooltip": "TODO: data_log_chk_tx_broadcast_tooltip",
+  "data_log_combo_newline_tooltip": "TODO: rx_combo_newline_tooltip",
+  "data_log_input_search_placeholder": "TODO: data_log_input_search_placeholder",
+  "data_log_input_search_tooltip": "TODO: data_log_input_search_tooltip",
+  "data_log_list_log_placeholder": "TODO: rx_list_log_placeholder",
+  "data_log_list_log_tooltip": "TODO: rx_list_log_tooltip",
+  "data_log_title": "TODO: data_log_title",
   // ============================================
   // File Progress Widget (widgets/file_progress.py),
   // ============================================
@@ -43,25 +41,23 @@
   "file_prog_lbl_status_failed": "TODO: file_prog_lbl_status_failed",
   "file_prog_lbl_status_ready": "TODO: file_prog_lbl_status_ready",
   "file_prog_lbl_status_sending": "TODO: file_prog_lbl_status_sending",
-
   // ============================================
-  // Macro Ctrl Widget (widgets/macro_ctrl.py),
+  // Macro Ctrl Widget (widgets/macro_control.py),
   // ============================================
-  "macro_ctrl_btn_load_script": "TODO: macro_ctrl_btn_load_script",
-  "macro_ctrl_btn_load_script_tooltip": "TODO: macro_ctrl_btn_load_script_tooltip",
-  "macro_ctrl_btn_repeat_pause": "TODO: macro_ctrl_btn_repeat_pause",
-  "macro_ctrl_btn_repeat_pause_tooltip": "TODO: macro_ctrl_btn_repeat_pause_tooltip",
-  "macro_ctrl_btn_repeat_start": "TODO: macro_ctrl_btn_repeat_start",
-  "macro_ctrl_btn_repeat_start_tooltip": "TODO: macro_ctrl_btn_repeat_start_tooltip",
-  "macro_ctrl_btn_repeat_stop": "TODO: macro_ctrl_btn_repeat_stop",
-  "macro_ctrl_btn_repeat_stop_tooltip": "TODO: macro_ctrl_btn_repeat_stop_tooltip",
-  "macro_ctrl_btn_save_script": "TODO: macro_ctrl_btn_save_script",
-  "macro_ctrl_btn_save_script_tooltip": "TODO: macro_ctrl_btn_save_script_tooltip",
-  "macro_ctrl_grp_execution": "TODO: macro_ctrl_grp_execution",
-  "macro_ctrl_lbl_interval": "TODO: macro_ctrl_lbl_interval",
-  "macro_ctrl_lbl_repeat_max": "TODO: macro_ctrl_lbl_repeat_max",
-  "macro_ctrl_spin_repeat_tooltip": "TODO: macro_ctrl_spin_repeat_tooltip",
-
+  "macro_control_btn_load_script": "TODO: macro_control_btn_load_script",
+  "macro_control_btn_load_script_tooltip": "TODO: macro_control_btn_load_script_tooltip",
+  "macro_control_btn_repeat_pause": "TODO: macro_control_btn_repeat_pause",
+  "macro_control_btn_repeat_pause_tooltip": "TODO: macro_control_btn_repeat_pause_tooltip",
+  "macro_control_btn_repeat_start": "TODO: macro_control_btn_repeat_start",
+  "macro_control_btn_repeat_start_tooltip": "TODO: macro_control_btn_repeat_start_tooltip",
+  "macro_control_btn_repeat_stop": "TODO: macro_control_btn_repeat_stop",
+  "macro_control_btn_repeat_stop_tooltip": "TODO: macro_control_btn_repeat_stop_tooltip",
+  "macro_control_btn_save_script": "TODO: macro_control_btn_save_script",
+  "macro_control_btn_save_script_tooltip": "TODO: macro_control_btn_save_script_tooltip",
+  "macro_control_grp_execution": "TODO: macro_control_grp_execution",
+  "macro_control_lbl_interval": "TODO: macro_control_lbl_interval",
+  "macro_control_lbl_repeat_max": "TODO: macro_control_lbl_repeat_max",
+  "macro_control_spin_repeat_tooltip": "TODO: macro_control_spin_repeat_tooltip",
   // ============================================
   // Macro List Widget (widgets/macro_list.py),
   // ============================================
@@ -72,38 +68,35 @@
   "macro_list_btn_up_row_tooltip": "TODO: macro_list_btn_up_row_tooltip",
   "macro_list_chk_select_all": "TODO: macro_list_chk_select_all",
   "macro_list_chk_select_all_tooltip": "TODO: macro_list_chk_select_all_tooltip",
-  "macro_list_col_cmd": "TODO: macro_list_col_cmd",
+  "macro_list_col_command": "TODO: macro_list_col_command",
   "macro_list_col_delay": "TODO: macro_list_col_delay",
   "macro_list_col_hex": "TODO: macro_list_col_hex",
   "macro_list_col_prefix": "TODO: macro_list_col_prefix",
   "macro_list_col_send": "TODO: macro_list_col_send",
   "macro_list_col_suffix": "TODO: macro_list_col_suffix",
-  "macro_list_table_cmd": "TODO: macro_list_table_cmd",
-
+  "macro_list_table_command": "TODO: macro_list_table_command",
   // ============================================
-  // Manual Ctrl Widget (widgets/manual_ctrl.py),
+  // Manual Ctrl Widget (widgets/manual_control.py),
   // ============================================
-  "manual_ctrl_btn_history_down_tooltip": "TODO: manual_ctrl_btn_history_down_tooltip",
-  "manual_ctrl_btn_history_up_tooltip": "TODO: manual_ctrl_btn_history_up_tooltip",
-  "manual_ctrl_btn_send": "TODO: manual_ctrl_btn_send",
-  "manual_ctrl_chk_dtr": "TODO: manual_ctrl_chk_dtr",
-  "manual_ctrl_chk_dtr_tooltip": "TODO: manual_ctrl_chk_dtr_tooltip",
-  "manual_ctrl_chk_hex": "TODO: manual_ctrl_chk_hex",
-  "manual_ctrl_chk_hex_tooltip": "TODO: manual_ctrl_chk_hex_tooltip",
-  "manual_ctrl_chk_local_echo": "TODO: manual_ctrl_chk_local_echo",
-  "manual_ctrl_chk_prefix": "TODO: manual_ctrl_chk_prefix",
-  "manual_ctrl_chk_rts": "TODO: manual_ctrl_chk_rts",
-  "manual_ctrl_chk_rts_tooltip": "TODO: manual_ctrl_chk_rts_tooltip",
-  "manual_ctrl_chk_suffix": "TODO: manual_ctrl_chk_suffix",
-  "manual_ctrl_txt_cmd_placeholder": "TODO: manual_ctrl_txt_cmd_placeholder",
-
+  "manual_control_btn_history_down_tooltip": "TODO: manual_control_btn_history_down_tooltip",
+  "manual_control_btn_history_up_tooltip": "TODO: manual_control_btn_history_up_tooltip",
+  "manual_control_btn_send": "TODO: manual_control_btn_send",
+  "manual_control_chk_dtr": "TODO: manual_control_chk_dtr",
+  "manual_control_chk_dtr_tooltip": "TODO: manual_control_chk_dtr_tooltip",
+  "manual_control_chk_hex": "TODO: manual_control_chk_hex",
+  "manual_control_chk_hex_tooltip": "TODO: manual_control_chk_hex_tooltip",
+  "manual_control_chk_local_echo": "TODO: manual_control_chk_local_echo",
+  "manual_control_chk_prefix": "TODO: manual_control_chk_prefix",
+  "manual_control_chk_rts": "TODO: manual_control_chk_rts",
+  "manual_control_chk_rts_tooltip": "TODO: manual_control_chk_rts_tooltip",
+  "manual_control_chk_suffix": "TODO: manual_control_chk_suffix",
+  "manual_control_txt_command_placeholder": "TODO: manual_control_txt_command_placeholder",
   // ============================================
-  // Packet Inspector Widget (widgets/packet_inspector.py),
+  // Packet Inspector Widget (widgets/packet_packet.py),
   // ============================================
   "packet_col_field": "TODO: packet_col_field",
   "packet_col_value": "TODO: packet_col_value",
   "packet_grp_title": "TODO: packet_grp_title",
-
   // ============================================
   // Port Settings Widget (widgets/port_settings.py),
   // ============================================
@@ -132,45 +125,39 @@
   "port_lbl_protocol": "TODO: port_lbl_protocol",
   "port_lbl_speed": "TODO: port_lbl_speed",
   "port_lbl_stop": "TODO: port_lbl_stop",
-
   // ============================================
   // Port Stats Widget (widgets/port_stats.py),
   // ============================================
   "port_stats_grp_title": "TODO: port_stats_grp_title",
-
   // ============================================
   // Sys Log View Widget (widgets/sys_log_view.py),
   // ============================================
-  "sys_log_view_btn_clear": "TODO: sys_log_view_btn_clear",
-  "sys_log_view_btn_clear_tooltip": "TODO: sys_log_view_btn_clear_tooltip",
-  "sys_log_view_btn_search_next_tooltip": "TODO: sys_log_view_btn_search_next_tooltip",
-  "sys_log_view_btn_search_prev_tooltip": "TODO: sys_log_view_btn_search_prev_tooltip",
-  "sys_log_view_btn_toggle_logging": "TODO: sys_log_view_btn_toggle_logging",
-  "sys_log_view_btn_toggle_logging_tooltip": "TODO: sys_log_view_btn_toggle_logging_tooltip",
-  "sys_log_view_chk_filter": "TODO: sys_log_view_chk_filter",
-  "sys_log_view_chk_filter_tooltip": "TODO: sys_log_view_chk_filter_tooltip",
-  "sys_log_view_input_search_placeholder": "TODO: sys_log_view_input_search_placeholder",
-  "sys_log_view_input_search_tooltip": "TODO: sys_log_view_input_search_tooltip",
-  "sys_log_view_list_log_placeholder": "TODO: sys_log_view_list_log_placeholder",
-  "sys_log_view_list_log_tooltip": "TODO: sys_log_view_list_log_tooltip",
-  "sys_log_view_title": "TODO: sys_log_view_title",
-
+  "sys_log_btn_clear": "TODO: sys_log_btn_clear",
+  "sys_log_btn_clear_tooltip": "TODO: sys_log_btn_clear_tooltip",
+  "sys_log_btn_search_next_tooltip": "TODO: sys_log_btn_search_next_tooltip",
+  "sys_log_btn_search_prev_tooltip": "TODO: sys_log_btn_search_prev_tooltip",
+  "sys_log_btn_toggle_logging": "TODO: sys_log_btn_toggle_logging",
+  "sys_log_btn_toggle_logging_tooltip": "TODO: sys_log_btn_toggle_logging_tooltip",
+  "sys_log_chk_filter": "TODO: sys_log_chk_filter",
+  "sys_log_chk_filter_tooltip": "TODO: sys_log_chk_filter_tooltip",
+  "sys_log_input_search_placeholder": "TODO: sys_log_input_search_placeholder",
+  "sys_log_input_search_tooltip": "TODO: sys_log_input_search_tooltip",
+  "sys_log_list_log_placeholder": "TODO: sys_log_list_log_placeholder",
+  "sys_log_list_log_tooltip": "TODO: sys_log_list_log_tooltip",
+  "sys_log_title": "TODO: sys_log_title",
   // ============================================
   // Macro Panel Panel (panels/macro_panel.py),
   // ============================================
   "macro_panel_dialog_title_open": "TODO: macro_panel_dialog_title_open",
   "macro_panel_dialog_title_save": "TODO: macro_panel_dialog_title_save",
-
   // ============================================
-  // Packet Inspector Panel Panel (panels/packet_inspector_panel.py),
+  // Packet Inspector Panel Panel (panels/packet_packet_panel.py),
   // ============================================
   "packet_panel_btn_clear": "TODO: rx_btn_clear",
-
   // ============================================
   // Port Tab Panel Panel (panels/port_tab_panel.py),
   // ============================================
   "left_tooltip_port_tab": "TODO: left_tooltip_port_tab",
-
   // ============================================
   // About Dialog Dialog (dialogs/about_dialog.py),
   // ============================================
@@ -180,17 +167,15 @@
   "about_lbl_description": "TODO: about_lbl_description",
   "about_lbl_version": "TODO: about_lbl_version",
   "about_title": "TODO: about_title",
-
   // ============================================
   // File Transfer Dialog Dialog (dialogs/file_transfer_dialog.py),
   // ============================================
-  "manual_ctrl_btn_close": "TODO: manual_ctrl_btn_close",
-  "manual_ctrl_btn_select_file": "TODO: manual_ctrl_btn_select_file",
-  "manual_ctrl_btn_send_file": "TODO: manual_ctrl_btn_send_file",
-  "manual_ctrl_dialog_select_file": "TODO: manual_ctrl_dialog_select_file",
-  "manual_ctrl_grp_file": "TODO: manual_ctrl_grp_file",
-  "manual_ctrl_lbl_file_path_no_file": "TODO: manual_ctrl_lbl_file_path_no_file",
-
+  "manual_control_btn_close": "TODO: manual_control_btn_close",
+  "manual_control_btn_select_file": "TODO: manual_control_btn_select_file",
+  "manual_control_btn_send_file": "TODO: manual_control_btn_send_file",
+  "manual_control_dialog_select_file": "TODO: manual_control_dialog_select_file",
+  "manual_control_grp_file": "TODO: manual_control_grp_file",
+  "manual_control_lbl_file_path_no_file": "TODO: manual_control_lbl_file_path_no_file",
   // ============================================
   // Font Settings Dialog Dialog (dialogs/font_settings_dialog.py),
   // ============================================
@@ -204,7 +189,6 @@
   "font_lbl_preview": "TODO: font_lbl_preview",
   "font_lbl_size": "TODO: font_lbl_size",
   "font_title_settings": "TODO: font_title_settings",
-
   // ============================================
   // Preferences Dialog Dialog (dialogs/preferences_dialog.py),
   // ============================================
@@ -223,11 +207,11 @@
   "pref_chk_realtime_tracking": "TODO: pref_chk_realtime_tracking",
   "pref_dialog_title_select_dir": "TODO: pref_dialog_title_select_dir",
   "pref_grp_at_colors": "TODO: pref_grp_at_colors",
-  "pref_grp_cmd_format": "TODO: pref_grp_cmd_format",
+  "pref_grp_command_format": "TODO: pref_grp_command_format",
   "pref_grp_default": "TODO: pref_grp_default",
   "pref_grp_delimiter": "TODO: pref_grp_delimiter",
   "pref_grp_fixed_length": "TODO: pref_grp_fixed_length",
-  "pref_grp_inspector_options": "TODO: pref_grp_inspector_options",
+  "pref_grp_packet_options": "TODO: pref_grp_packet_options",
   "pref_grp_logging": "TODO: pref_grp_logging",
   "pref_grp_parser_type": "TODO: pref_grp_parser_type",
   "pref_grp_ui": "TODO: pref_grp_ui",
@@ -249,13 +233,12 @@
   "pref_parser_type_delimiter": "TODO: pref_parser_type_delimiter",
   "pref_parser_type_fixed": "TODO: pref_parser_type_fixed",
   "pref_parser_type_raw": "TODO: pref_parser_type_raw",
-  "pref_tab_cmd": "TODO: pref_tab_cmd",
+  "pref_tab_command": "TODO: pref_tab_command",
   "pref_tab_general": "TODO: pref_tab_general",
   "pref_tab_logging": "TODO: pref_tab_logging",
   "pref_tab_packet": "TODO: pref_tab_packet",
   "pref_tab_serial": "TODO: pref_tab_serial",
   "pref_title": "TODO: pref_title",
-
   // ============================================
   // Main Menu Bar Section (sections/main_menu_bar.py),
   // ============================================
@@ -269,8 +252,8 @@
   "main_menu_font_tooltip": "TODO: main_menu_font_tooltip",
   "main_menu_help": "TODO: main_menu_help",
   "main_menu_lang": "TODO: main_menu_lang",
-  "main_menu_lang_en": "TODO: main_menu_lang_en",
-  "main_menu_lang_ko": "TODO: main_menu_lang_ko",
+  "main_menu_language_en": "TODO: main_menu_language_en",
+  "main_menu_language_ko": "TODO: main_menu_language_ko",
   "main_menu_new_tab": "TODO: main_menu_new_tab",
   "main_menu_new_tab_tooltip": "TODO: main_menu_new_tab_tooltip",
   "main_menu_open_port": "TODO: main_menu_open_port",
@@ -282,7 +265,6 @@
   "main_menu_toggle_right_panel": "TODO: main_menu_toggle_right_panel",
   "main_menu_tools": "TODO: main_menu_tools",
   "main_menu_view": "TODO: main_menu_view",
-
   // ============================================
   // Main Right Section Section (sections/main_right_section.py),
   // ============================================
@@ -290,7 +272,6 @@
   "right_tab_packet": "TODO: right_tab_packet",
   "right_tooltip_macro_list": "TODO: right_tooltip_macro_list",
   "right_tooltip_packet": "TODO: right_tooltip_packet",
-
   // ============================================
   // Main Status Bar Section (sections/main_status_bar.py),
   // ============================================

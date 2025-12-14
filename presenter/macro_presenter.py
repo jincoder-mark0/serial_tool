@@ -115,10 +115,10 @@ class MacroPresenter(QObject):
         if not indices:
             return
 
-        # UI에서 설정값 가져오기 (MacroCtrlWidget 상태 조회)
-        ctrl_widget = self.panel.marco_ctrl
-        loop_count = ctrl_widget.get_repeat_count()
-        interval_ms = ctrl_widget.get_interval()
+        # UI에서 설정값 가져오기 (MacroControlWidget 상태 조회)
+        control_widget = self.panel.marco_control
+        loop_count = control_widget.get_repeat_count()
+        interval_ms = control_widget.get_interval()
 
         # 현재 리스트의 데이터를 MacroEntry로 변환
         raw_list = self.panel.macro_list.get_macro_list()
@@ -128,7 +128,7 @@ class MacroPresenter(QObject):
             if i in indices:
                 entry = MacroEntry(
                     enabled=raw['enabled'],
-                    cmd=raw['cmd'],
+                    command=raw['command'],
                     is_hex=raw['hex_mode'],
                     prefix=raw['prefix'],
                     suffix=raw['suffix'],
@@ -164,7 +164,7 @@ class MacroPresenter(QObject):
             raw = raw_list[row_index]
             # 일관성을 위해 Runner의 유틸리티 메서드를 사용하여 전송 요청
             self.runner.request_single_send(
-                raw['cmd'], raw['hex_mode'], raw['prefix'], raw['suffix']
+                raw['command'], raw['hex_mode'], raw['prefix'], raw['suffix']
             )
 
     def on_step_started(self, index: int, entry: MacroEntry) -> None:

@@ -37,8 +37,8 @@ class ConfigKeys:
     LANGUAGE = "settings.language"
     FONT_SIZE = "settings.proportional_font_size"
     RX_MAX_LINES = "settings.rx_max_lines"
-    CMD_PREFIX = "settings.cmd_prefix"
-    CMD_SUFFIX = "settings.cmd_suffix"
+    COMMAND_PREFIX = "settings.command_prefix"
+    COMMAND_SUFFIX = "settings.command_suffix"
 
     # Port Defaults
     PORT_BAUDRATE = "settings.port_baudrate"
@@ -70,17 +70,17 @@ class ConfigKeys:
     AT_COLOR_PROMPT = "packet.at_color_prompt"
 
     # Inspector Options
-    INSPECTOR_BUFFER_SIZE = "inspector.buffer_size"
-    INSPECTOR_REALTIME = "inspector.realtime"
-    INSPECTOR_AUTOSCROLL = "inspector.autoscroll"
+    PACKET_BUFFER_SIZE = "packet.buffer_size"
+    PACKET_REALTIME = "packet.realtime"
+    PACKET_AUTOSCROLL = "packet.autoscroll"
 
     # Logging
     LOG_PATH = "logging.path"
 
     # Persistence (State Saving)
-    MANUAL_CTRL_STATE = "manual_ctrl"
+    MANUAL_CONTROL_STATE = "manual_control"
     PORTS_TABS_STATE = "ports.tabs"
-    MACRO_COMMANDS = "macro_list.cmds"
+    MACRO_COMMANDS = "macro_list.commands"
     MACRO_CONTROL_STATE = "macro_list.control_state"
 
 
@@ -139,7 +139,7 @@ MAX_PACKET_SIZE: int = 4096
 MIN_SCAN_INTERVAL_MS: int = 1000
 MAX_SCAN_INTERVAL_MS: int = 60000
 DEFAULT_MACRO_DELAY_MS: int = 1000
-MAX_CMD_HISTORY_SIZE: int = 50    # 수동 명령 히스토리 최대 크기
+MAX_COMMAND_HISTORY_SIZE: int = 50    # 수동 명령 히스토리 최대 크기
 
 # ==========================================
 # Colors (For Text Logs)

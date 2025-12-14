@@ -58,8 +58,8 @@ class PortPresenter(QObject):
         # 설정에서 max_lines 읽어서 적용
         settings = SettingsManager()
         max_lines = settings.get(ConfigKeys.RX_MAX_LINES, 2000)
-        if self.current_port_panel and hasattr(self.current_port_panel, 'data_log_view_widget'):
-            self.current_port_panel.data_log_view_widget.set_max_lines(max_lines)
+        if self.current_port_panel and hasattr(self.current_port_panel, 'data_log_widget'):
+            self.current_port_panel.data_log_widget.set_max_lines(max_lines)
 
         # 초기 포트 스캔
         self.scan_ports()
@@ -188,8 +188,8 @@ class PortPresenter(QObject):
                 break
 
         # 시스템 로그 기록
-        if hasattr(self.left_panel, 'sys_log_view_widget'):
-            self.left_panel.sys_log_view_widget.log(f"[{port_name}] Port opened", "SUCCESS")
+        if hasattr(self.left_panel, 'sys_log_widget'):
+            self.left_panel.sys_log_widget.log(f"[{port_name}] Port opened", "SUCCESS")
 
     def on_connection_closed(self, port_name: str) -> None:
         """
@@ -215,8 +215,8 @@ class PortPresenter(QObject):
                 break
 
         # 시스템 로그 기록
-        if hasattr(self.left_panel, 'sys_log_view_widget'):
-            self.left_panel.sys_log_view_widget.log(f"[{port_name}] Port closed", "INFO")
+        if hasattr(self.left_panel, 'sys_log_widget'):
+            self.left_panel.sys_log_widget.log(f"[{port_name}] Port closed", "INFO")
 
     def on_error(self, port_name: str, message: str) -> None:
         """
@@ -230,8 +230,8 @@ class PortPresenter(QObject):
         QMessageBox.critical(self.left_panel, "Error", f"Port Error ({port_name}): {message}")
 
         # 시스템 로그 기록
-        if hasattr(self.left_panel, 'sys_log_view_widget'):
-            self.left_panel.sys_log_view_widget.log(f"[{port_name}] Error: {message}", "ERROR")
+        if hasattr(self.left_panel, 'sys_log_widget'):
+            self.left_panel.sys_log_widget.log(f"[{port_name}] Error: {message}", "ERROR")
 
         # 에러 발생 시 해당 포트 UI 동기화 (필요 시)
         # on_connection_closed가 호출되지 않는 에러 상황(예: 열기 실패)에 대비해 UI 상태 리셋 가능
@@ -258,5 +258,5 @@ class PortPresenter(QObject):
     def clear_log_current_port(self) -> None:
         """현재 포트의 로그 지우기 (단축키용)"""
         self.update_current_port_panel()
-        if self.current_port_panel and hasattr(self.current_port_panel, 'data_log_view_widget'):
-            self.current_port_panel.data_log_view_widget.on_clear_data_log_view_clicked()
+        if self.current_port_panel and hasattr(self.current_port_panel, 'data_log_widget'):
+            self.current_port_panel.data_log_widget.on_clear_data_log_clicked()

@@ -20,9 +20,9 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QTreeWidget, QTreeWidgetItem
 from PyQt5.QtCore import Qt
 from typing import Optional
-from view.managers.lang_manager import lang_manager
+from view.managers.language_manager import language_manager
 
-class PacketInspectorWidget(QWidget):
+class PacketWidget(QWidget):
     """
     패킷 구조를 트리 형태로 시각화하여 보여주는 위젯 클래스입니다.
     """
@@ -41,20 +41,20 @@ class PacketInspectorWidget(QWidget):
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
-        lang_manager.language_changed.connect(self.retranslate_ui)
+        language_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
 
-        self.title_lbl = QLabel(lang_manager.get_text("packet_grp_title"))
+        self.title_lbl = QLabel(language_manager.get_text("packet_grp_title"))
         layout.addWidget(self.title_lbl)
 
         self.tree = QTreeWidget()
         self.tree.setHeaderLabels([
-            lang_manager.get_text("packet_col_field"), # 예: Time, Type
-            lang_manager.get_text("packet_col_value")  # 예: Data
+            language_manager.get_text("packet_col_field"), # 예: Time, Type
+            language_manager.get_text("packet_col_value")  # 예: Data
         ])
         self.tree.setColumnWidth(0, 150)
         self.tree.setRootIsDecorated(False) # 최상위 루트 장식 제거 (리스트처럼 보이게)
@@ -64,10 +64,10 @@ class PacketInspectorWidget(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.title_lbl.setText(lang_manager.get_text("packet_grp_title"))
+        self.title_lbl.setText(language_manager.get_text("packet_grp_title"))
         self.tree.setHeaderLabels([
-            lang_manager.get_text("packet_col_field"),
-            lang_manager.get_text("packet_col_value")
+            language_manager.get_text("packet_col_field"),
+            language_manager.get_text("packet_col_value")
         ])
 
     def add_packet(self, time_str: str, packet_type: str, data_hex: str, data_ascii: str) -> None:

@@ -4,7 +4,7 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIntValidator
-from view.managers.lang_manager import lang_manager
+from view.managers.language_manager import language_manager
 from typing import Optional, List
 from core.port_state import PortState
 from constants import VALID_BAUDRATES, DEFAULT_BAUDRATE
@@ -28,7 +28,7 @@ class PortSettingsWidget(QGroupBox):
         Args:
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
-        super().__init__(lang_manager.get_text("port_grp_settings"), parent)
+        super().__init__(language_manager.get_text("port_grp_settings"), parent)
 
         # 공통 UI 요소
         self.protocol_lbl = None
@@ -41,13 +41,13 @@ class PortSettingsWidget(QGroupBox):
         # 하단 레이아웃 스택
         self.settings_stack = None
 
-        self.serial_ctrls_ui = {}
-        self.spi_ctrls_ui = {}
+        self.serial_controls_ui = {}
+        self.spi_controls_ui = {}
 
         self.init_ui()
 
         # 언어 변경 연결
-        lang_manager.language_changed.connect(self.retranslate_ui)
+        language_manager.language_changed.connect(self.retranslate_ui)
 
         # 초기 상태 설정
         self.set_connection_state(PortState.DISCONNECTED)
@@ -65,29 +65,29 @@ class PortSettingsWidget(QGroupBox):
         top_layout.setSpacing(5)
 
         # 프로토콜 선택 (Serial / SPI)
-        self.protocol_lbl = QLabel(lang_manager.get_text("port_lbl_protocol"))
+        self.protocol_lbl = QLabel(language_manager.get_text("port_lbl_protocol"))
         self.protocol_combo = QComboBox()
         self.protocol_combo.addItems(["Serial", "SPI"])
-        self.protocol_combo.setToolTip(lang_manager.get_text("port_combo_protocol_tooltip"))
+        self.protocol_combo.setToolTip(language_manager.get_text("port_combo_protocol_tooltip"))
         self.protocol_combo.currentIndexChanged.connect(self.on_protocol_changed)
 
         # 포트 선택
-        self.port_lbl = QLabel(lang_manager.get_text("port_lbl_port"))
+        self.port_lbl = QLabel(language_manager.get_text("port_lbl_port"))
         self.port_combo = QComboBox()
         self.port_combo.setMinimumWidth(100)
-        self.port_combo.setToolTip(lang_manager.get_text("port_combo_port_tooltip"))
+        self.port_combo.setToolTip(language_manager.get_text("port_combo_port_tooltip"))
 
         # 스캔 버튼
-        self.scan_btn = QPushButton(lang_manager.get_text("port_btn_scan"))
+        self.scan_btn = QPushButton(language_manager.get_text("port_btn_scan"))
         self.scan_btn.setFixedWidth(50)
-        self.scan_btn.setToolTip(lang_manager.get_text("port_btn_scan_tooltip"))
+        self.scan_btn.setToolTip(language_manager.get_text("port_btn_scan_tooltip"))
         self.scan_btn.clicked.connect(self.on_port_scan_clicked)
 
         # 연결 버튼
-        self.connect_btn = QPushButton(lang_manager.get_text("port_btn_connect"))
+        self.connect_btn = QPushButton(language_manager.get_text("port_btn_connect"))
         self.connect_btn.setCheckable(True)
         self.connect_btn.setFixedWidth(70)
-        self.connect_btn.setToolTip(lang_manager.get_text("port_btn_connect_tooltip"))
+        self.connect_btn.setToolTip(language_manager.get_text("port_btn_connect_tooltip"))
         self.connect_btn.clicked.connect(self.on_connect_clicked)
 
         top_layout.addWidget(self.protocol_lbl)
@@ -121,55 +121,55 @@ class PortSettingsWidget(QGroupBox):
         layout.setSpacing(5)
 
         # Baudrate
-        self.serial_ctrls_ui['baud_lbl'] = QLabel(lang_manager.get_text("port_lbl_baudrate"))
-        self.serial_ctrls_ui['baud_combo'] = QComboBox()
-        self.serial_ctrls_ui['baud_combo'].setEditable(True)
-        self.serial_ctrls_ui['baud_combo'].addItems([str(b) for b in VALID_BAUDRATES])
-        self.serial_ctrls_ui['baud_combo'].setCurrentText(str(DEFAULT_BAUDRATE))
-        self.serial_ctrls_ui['baud_combo'].setValidator(QIntValidator(50, 4000000))
-        self.serial_ctrls_ui['baud_combo'].setMinimumWidth(80)
-        self.serial_ctrls_ui['baud_combo'].setToolTip(lang_manager.get_text("port_combo_baudrate_tooltip"))
+        self.serial_controls_ui['baud_lbl'] = QLabel(language_manager.get_text("port_lbl_baudrate"))
+        self.serial_controls_ui['baud_combo'] = QComboBox()
+        self.serial_controls_ui['baud_combo'].setEditable(True)
+        self.serial_controls_ui['baud_combo'].addItems([str(b) for b in VALID_BAUDRATES])
+        self.serial_controls_ui['baud_combo'].setCurrentText(str(DEFAULT_BAUDRATE))
+        self.serial_controls_ui['baud_combo'].setValidator(QIntValidator(50, 4000000))
+        self.serial_controls_ui['baud_combo'].setMinimumWidth(80)
+        self.serial_controls_ui['baud_combo'].setToolTip(language_manager.get_text("port_combo_baudrate_tooltip"))
 
         # Data Bits
-        self.serial_ctrls_ui['data_lbl'] = QLabel(lang_manager.get_text("port_lbl_bytesize"))
-        self.serial_ctrls_ui['data_combo'] = QComboBox()
-        self.serial_ctrls_ui['data_combo'].addItems(["5", "6", "7", "8"])
-        self.serial_ctrls_ui['data_combo'].setCurrentText("8")
-        self.serial_ctrls_ui['data_combo'].setFixedWidth(40)
-        self.serial_ctrls_ui['data_combo'].setToolTip(lang_manager.get_text("port_combo_bytesize_tooltip"))
+        self.serial_controls_ui['data_lbl'] = QLabel(language_manager.get_text("port_lbl_bytesize"))
+        self.serial_controls_ui['data_combo'] = QComboBox()
+        self.serial_controls_ui['data_combo'].addItems(["5", "6", "7", "8"])
+        self.serial_controls_ui['data_combo'].setCurrentText("8")
+        self.serial_controls_ui['data_combo'].setFixedWidth(40)
+        self.serial_controls_ui['data_combo'].setToolTip(language_manager.get_text("port_combo_bytesize_tooltip"))
 
         # Parity
-        self.serial_ctrls_ui['parity_lbl'] = QLabel(lang_manager.get_text("port_lbl_parity"))
-        self.serial_ctrls_ui['parity_combo'] = QComboBox()
-        self.serial_ctrls_ui['parity_combo'].addItems(["N", "E", "O", "M", "S"])
-        self.serial_ctrls_ui['parity_combo'].setFixedWidth(40)
-        self.serial_ctrls_ui['parity_combo'].setToolTip(lang_manager.get_text("port_combo_parity_tooltip"))
+        self.serial_controls_ui['parity_lbl'] = QLabel(language_manager.get_text("port_lbl_parity"))
+        self.serial_controls_ui['parity_combo'] = QComboBox()
+        self.serial_controls_ui['parity_combo'].addItems(["N", "E", "O", "M", "S"])
+        self.serial_controls_ui['parity_combo'].setFixedWidth(40)
+        self.serial_controls_ui['parity_combo'].setToolTip(language_manager.get_text("port_combo_parity_tooltip"))
 
         # Stop Bits
-        self.serial_ctrls_ui['stop_lbl'] = QLabel(lang_manager.get_text("port_lbl_stop"))
-        self.serial_ctrls_ui['stop_combo'] = QComboBox()
-        self.serial_ctrls_ui['stop_combo'].addItems(["1", "1.5", "2"])
-        self.serial_ctrls_ui['stop_combo'].setFixedWidth(45)
-        self.serial_ctrls_ui['stop_combo'].setToolTip(lang_manager.get_text("port_combo_stopbits_tooltip"))
+        self.serial_controls_ui['stop_lbl'] = QLabel(language_manager.get_text("port_lbl_stop"))
+        self.serial_controls_ui['stop_combo'] = QComboBox()
+        self.serial_controls_ui['stop_combo'].addItems(["1", "1.5", "2"])
+        self.serial_controls_ui['stop_combo'].setFixedWidth(45)
+        self.serial_controls_ui['stop_combo'].setToolTip(language_manager.get_text("port_combo_stopbits_tooltip"))
 
         # Flow Control
-        self.serial_ctrls_ui['flow_lbl'] = QLabel(lang_manager.get_text("port_lbl_flow"))
-        self.serial_ctrls_ui['flow_combo'] = QComboBox()
-        self.serial_ctrls_ui['flow_combo'].addItems(["None", "RTS/CTS", "XON/XOFF"])
-        self.serial_ctrls_ui['flow_combo'].setMinimumWidth(70)
-        self.serial_ctrls_ui['flow_combo'].setToolTip(lang_manager.get_text("port_combo_flow_tooltip"))
+        self.serial_controls_ui['flow_lbl'] = QLabel(language_manager.get_text("port_lbl_flow"))
+        self.serial_controls_ui['flow_combo'] = QComboBox()
+        self.serial_controls_ui['flow_combo'].addItems(["None", "RTS/CTS", "XON/XOFF"])
+        self.serial_controls_ui['flow_combo'].setMinimumWidth(70)
+        self.serial_controls_ui['flow_combo'].setToolTip(language_manager.get_text("port_combo_flow_tooltip"))
 
         # 배치
-        layout.addWidget(self.serial_ctrls_ui['baud_lbl'])
-        layout.addWidget(self.serial_ctrls_ui['baud_combo'])
-        layout.addWidget(self.serial_ctrls_ui['data_lbl'])
-        layout.addWidget(self.serial_ctrls_ui['data_combo'])
-        layout.addWidget(self.serial_ctrls_ui['parity_lbl'])
-        layout.addWidget(self.serial_ctrls_ui['parity_combo'])
-        layout.addWidget(self.serial_ctrls_ui['stop_lbl'])
-        layout.addWidget(self.serial_ctrls_ui['stop_combo'])
-        layout.addWidget(self.serial_ctrls_ui['flow_lbl'])
-        layout.addWidget(self.serial_ctrls_ui['flow_combo'])
+        layout.addWidget(self.serial_controls_ui['baud_lbl'])
+        layout.addWidget(self.serial_controls_ui['baud_combo'])
+        layout.addWidget(self.serial_controls_ui['data_lbl'])
+        layout.addWidget(self.serial_controls_ui['data_combo'])
+        layout.addWidget(self.serial_controls_ui['parity_lbl'])
+        layout.addWidget(self.serial_controls_ui['parity_combo'])
+        layout.addWidget(self.serial_controls_ui['stop_lbl'])
+        layout.addWidget(self.serial_controls_ui['stop_combo'])
+        layout.addWidget(self.serial_controls_ui['flow_lbl'])
+        layout.addWidget(self.serial_controls_ui['flow_combo'])
         layout.addStretch()
 
         return widget
@@ -182,24 +182,24 @@ class PortSettingsWidget(QGroupBox):
         layout.setSpacing(10)
 
         # Speed (Frequency)
-        self.spi_ctrls_ui['speed_lbl'] = QLabel(lang_manager.get_text("port_lbl_speed"))
-        self.spi_ctrls_ui['speed_combo'] = QComboBox()
-        self.spi_ctrls_ui['speed_combo'].setEditable(True)
+        self.spi_controls_ui['speed_lbl'] = QLabel(language_manager.get_text("port_lbl_speed"))
+        self.spi_controls_ui['speed_combo'] = QComboBox()
+        self.spi_controls_ui['speed_combo'].setEditable(True)
         # 일반적인 SPI 속도 예시
-        self.spi_ctrls_ui['speed_combo'].addItems(["1000000", "500000", "100000", "50000"])
-        self.spi_ctrls_ui['speed_combo'].setValidator(QIntValidator(1000, 20000000))
-        self.spi_ctrls_ui['speed_combo'].setToolTip(lang_manager.get_text("port_combo_speed_tooltip"))
+        self.spi_controls_ui['speed_combo'].addItems(["1000000", "500000", "100000", "50000"])
+        self.spi_controls_ui['speed_combo'].setValidator(QIntValidator(1000, 20000000))
+        self.spi_controls_ui['speed_combo'].setToolTip(language_manager.get_text("port_combo_speed_tooltip"))
 
         # Mode (0, 1, 2, 3)
-        self.spi_ctrls_ui['mode_lbl'] = QLabel(lang_manager.get_text("port_lbl_mode"))
-        self.spi_ctrls_ui['mode_combo'] = QComboBox()
-        self.spi_ctrls_ui['mode_combo'].addItems(["0", "1", "2", "3"])
-        self.spi_ctrls_ui['mode_combo'].setToolTip(lang_manager.get_text("port_combo_mode_tooltip"))
+        self.spi_controls_ui['mode_lbl'] = QLabel(language_manager.get_text("port_lbl_mode"))
+        self.spi_controls_ui['mode_combo'] = QComboBox()
+        self.spi_controls_ui['mode_combo'].addItems(["0", "1", "2", "3"])
+        self.spi_controls_ui['mode_combo'].setToolTip(language_manager.get_text("port_combo_mode_tooltip"))
 
-        layout.addWidget(self.spi_ctrls_ui['speed_lbl'])
-        layout.addWidget(self.spi_ctrls_ui['speed_combo'])
-        layout.addWidget(self.spi_ctrls_ui['mode_lbl'])
-        layout.addWidget(self.spi_ctrls_ui['mode_combo'])
+        layout.addWidget(self.spi_controls_ui['speed_lbl'])
+        layout.addWidget(self.spi_controls_ui['speed_combo'])
+        layout.addWidget(self.spi_controls_ui['mode_lbl'])
+        layout.addWidget(self.spi_controls_ui['mode_combo'])
         layout.addStretch()
 
         return widget
@@ -219,20 +219,20 @@ class PortSettingsWidget(QGroupBox):
 
             if protocol == "Serial":
                 config.update({
-                    "baudrate": int(self.serial_ctrls_ui['baud_combo'].currentText()),
-                    "bytesize": int(self.serial_ctrls_ui['data_combo'].currentText()),
-                    "parity": self.serial_ctrls_ui['parity_combo'].currentText(),
-                    "stopbits": float(self.serial_ctrls_ui['stop_combo'].currentText()),
-                    "flowctrl": self.serial_ctrls_ui['flow_combo'].currentText(),
+                    "baudrate": int(self.serial_controls_ui['baud_combo'].currentText()),
+                    "bytesize": int(self.serial_controls_ui['data_combo'].currentText()),
+                    "parity": self.serial_controls_ui['parity_combo'].currentText(),
+                    "stopbits": float(self.serial_controls_ui['stop_combo'].currentText()),
+                    "flowctrl": self.serial_controls_ui['flow_combo'].currentText(),
                 })
             elif protocol == "SPI":
                 config.update({
-                    "speed": int(self.spi_ctrls_ui['speed_combo'].currentText()),
-                    "mode": int(self.spi_ctrls_ui['mode_combo'].currentText()),
+                    "speed": int(self.spi_controls_ui['speed_combo'].currentText()),
+                    "mode": int(self.spi_controls_ui['mode_combo'].currentText()),
                 })
 
             self.port_open_requested.emit(config)
-            self.connect_btn.setText(lang_manager.get_text("port_btn_disconnect"))
+            self.connect_btn.setText(language_manager.get_text("port_btn_disconnect"))
         else:
             # 해제 요청 (Request Close)
             self.port_close_requested.emit()
@@ -244,16 +244,16 @@ class PortSettingsWidget(QGroupBox):
 
         if protocol == "Serial":
             config.update({
-                "baudrate": int(self.serial_ctrls_ui['baud_combo'].currentText()),
-                "bytesize": int(self.serial_ctrls_ui['data_combo'].currentText()),
-                "parity": self.serial_ctrls_ui['parity_combo'].currentText(),
-                "stopbits": float(self.serial_ctrls_ui['stop_combo'].currentText()),
-                "flowctrl": self.serial_ctrls_ui['flow_combo'].currentText(),
+                "baudrate": int(self.serial_controls_ui['baud_combo'].currentText()),
+                "bytesize": int(self.serial_controls_ui['data_combo'].currentText()),
+                "parity": self.serial_controls_ui['parity_combo'].currentText(),
+                "stopbits": float(self.serial_controls_ui['stop_combo'].currentText()),
+                "flowctrl": self.serial_controls_ui['flow_combo'].currentText(),
             })
         elif protocol == "SPI":
             config.update({
-                "speed": int(self.spi_ctrls_ui['speed_combo'].currentText()),
-                "mode": int(self.spi_ctrls_ui['mode_combo'].currentText()),
+                "speed": int(self.spi_controls_ui['speed_combo'].currentText()),
+                "mode": int(self.spi_controls_ui['mode_combo'].currentText()),
             })
         return config
 
@@ -291,13 +291,13 @@ class PortSettingsWidget(QGroupBox):
 
         # 버튼 텍스트 업데이트
         if state == PortState.CONNECTED:
-            self.connect_btn.setText(lang_manager.get_text("port_btn_disconnect"))
+            self.connect_btn.setText(language_manager.get_text("port_btn_disconnect"))
             self.connect_btn.setChecked(True)
         elif state == PortState.DISCONNECTED:
-            self.connect_btn.setText(lang_manager.get_text("port_btn_connect"))
+            self.connect_btn.setText(language_manager.get_text("port_btn_connect"))
             self.connect_btn.setChecked(False)
         elif state == PortState.ERROR:
-            self.connect_btn.setText(lang_manager.get_text("port_btn_reconnect"))
+            self.connect_btn.setText(language_manager.get_text("port_btn_reconnect"))
             self.connect_btn.setChecked(False)
 
         # 설정 위젯 활성화/비활성화
@@ -329,37 +329,37 @@ class PortSettingsWidget(QGroupBox):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.setTitle(lang_manager.get_text("port_grp_settings"))
-        self.protocol_lbl.setText(lang_manager.get_text("port_lbl_protocol"))
-        self.protocol_combo.setToolTip(lang_manager.get_text("port_combo_protocol_tooltip"))
-        self.port_lbl.setText(lang_manager.get_text("port_lbl_port"))
-        self.port_combo.setToolTip(lang_manager.get_text("port_combo_port_tooltip"))
-        self.scan_btn.setText(lang_manager.get_text("port_btn_scan"))
-        self.scan_btn.setToolTip(lang_manager.get_text("port_btn_scan_tooltip"))
-        self.connect_btn.setToolTip(lang_manager.get_text("port_btn_connect_tooltip"))
+        self.setTitle(language_manager.get_text("port_grp_settings"))
+        self.protocol_lbl.setText(language_manager.get_text("port_lbl_protocol"))
+        self.protocol_combo.setToolTip(language_manager.get_text("port_combo_protocol_tooltip"))
+        self.port_lbl.setText(language_manager.get_text("port_lbl_port"))
+        self.port_combo.setToolTip(language_manager.get_text("port_combo_port_tooltip"))
+        self.scan_btn.setText(language_manager.get_text("port_btn_scan"))
+        self.scan_btn.setToolTip(language_manager.get_text("port_btn_scan_tooltip"))
+        self.connect_btn.setToolTip(language_manager.get_text("port_btn_connect_tooltip"))
 
         # 상태에 따라 버튼 텍스트 갱신
         current_state = PortState(self.connect_btn.property("state"))
         if current_state == PortState.DISCONNECTED:
-            self.connect_btn.setText(lang_manager.get_text("port_btn_connect"))
+            self.connect_btn.setText(language_manager.get_text("port_btn_connect"))
 
         # Serial Label 갱신
-        self.serial_ctrls_ui['baud_lbl'].setText(lang_manager.get_text("port_lbl_baudrate"))
-        self.serial_ctrls_ui['baud_combo'].setToolTip(lang_manager.get_text("port_combo_baudrate_tooltip"))
-        self.serial_ctrls_ui['data_lbl'].setText(lang_manager.get_text("port_lbl_bytesize"))
-        self.serial_ctrls_ui['data_combo'].setToolTip(lang_manager.get_text("port_combo_bytesize_tooltip"))
-        self.serial_ctrls_ui['parity_lbl'].setText(lang_manager.get_text("port_lbl_parity"))
-        self.serial_ctrls_ui['parity_combo'].setToolTip(lang_manager.get_text("port_combo_parity_tooltip"))
-        self.serial_ctrls_ui['stop_lbl'].setText(lang_manager.get_text("port_lbl_stop"))
-        self.serial_ctrls_ui['stop_combo'].setToolTip(lang_manager.get_text("port_combo_stopbits_tooltip"))
-        self.serial_ctrls_ui['flow_lbl'].setText(lang_manager.get_text("port_lbl_flow"))
-        self.serial_ctrls_ui['flow_combo'].setToolTip(lang_manager.get_text("port_combo_flow_tooltip"))
+        self.serial_controls_ui['baud_lbl'].setText(language_manager.get_text("port_lbl_baudrate"))
+        self.serial_controls_ui['baud_combo'].setToolTip(language_manager.get_text("port_combo_baudrate_tooltip"))
+        self.serial_controls_ui['data_lbl'].setText(language_manager.get_text("port_lbl_bytesize"))
+        self.serial_controls_ui['data_combo'].setToolTip(language_manager.get_text("port_combo_bytesize_tooltip"))
+        self.serial_controls_ui['parity_lbl'].setText(language_manager.get_text("port_lbl_parity"))
+        self.serial_controls_ui['parity_combo'].setToolTip(language_manager.get_text("port_combo_parity_tooltip"))
+        self.serial_controls_ui['stop_lbl'].setText(language_manager.get_text("port_lbl_stop"))
+        self.serial_controls_ui['stop_combo'].setToolTip(language_manager.get_text("port_combo_stopbits_tooltip"))
+        self.serial_controls_ui['flow_lbl'].setText(language_manager.get_text("port_lbl_flow"))
+        self.serial_controls_ui['flow_combo'].setToolTip(language_manager.get_text("port_combo_flow_tooltip"))
 
         # SPI Label 갱신
-        self.spi_ctrls_ui['speed_lbl'].setText(lang_manager.get_text("port_lbl_speed"))
-        self.spi_ctrls_ui['speed_combo'].setToolTip(lang_manager.get_text("port_combo_speed_tooltip"))
-        self.spi_ctrls_ui['mode_lbl'].setText(lang_manager.get_text("port_lbl_mode"))
-        self.spi_ctrls_ui['mode_combo'].setToolTip(lang_manager.get_text("port_combo_mode_tooltip"))
+        self.spi_controls_ui['speed_lbl'].setText(language_manager.get_text("port_lbl_speed"))
+        self.spi_controls_ui['speed_combo'].setToolTip(language_manager.get_text("port_combo_speed_tooltip"))
+        self.spi_controls_ui['mode_lbl'].setText(language_manager.get_text("port_lbl_mode"))
+        self.spi_controls_ui['mode_combo'].setToolTip(language_manager.get_text("port_combo_mode_tooltip"))
 
     def save_state(self) -> dict:
         """
@@ -372,15 +372,15 @@ class PortSettingsWidget(QGroupBox):
             "protocol": self.protocol_combo.currentText(),
             "port": self.port_combo.currentText(),
             "serial": {
-                "baudrate": self.serial_ctrls_ui['baud_combo'].currentText(),
-                "bytesize": self.serial_ctrls_ui['data_combo'].currentText(),
-                "parity": self.serial_ctrls_ui['parity_combo'].currentText(),
-                "stopbits": self.serial_ctrls_ui['stop_combo'].currentText(),
-                "flowctrl": self.serial_ctrls_ui['flow_combo'].currentText(),
+                "baudrate": self.serial_controls_ui['baud_combo'].currentText(),
+                "bytesize": self.serial_controls_ui['data_combo'].currentText(),
+                "parity": self.serial_controls_ui['parity_combo'].currentText(),
+                "stopbits": self.serial_controls_ui['stop_combo'].currentText(),
+                "flowctrl": self.serial_controls_ui['flow_combo'].currentText(),
             },
             "spi": {
-                "speed": self.spi_ctrls_ui['speed_combo'].currentText(),
-                "mode": self.spi_ctrls_ui['mode_combo'].currentText(),
+                "speed": self.spi_controls_ui['speed_combo'].currentText(),
+                "mode": self.spi_controls_ui['mode_combo'].currentText(),
             }
         }
         return state
@@ -405,12 +405,12 @@ class PortSettingsWidget(QGroupBox):
             self.port_combo.setCurrentText(port)
 
         serial_state = state.get("serial", {})
-        self.serial_ctrls_ui['baud_combo'].setCurrentText(str(serial_state.get("baudrate", "115200")))
-        self.serial_ctrls_ui['data_combo'].setCurrentText(str(serial_state.get("bytesize", "8")))
-        self.serial_ctrls_ui['parity_combo'].setCurrentText(serial_state.get("parity", "N"))
-        self.serial_ctrls_ui['stop_combo'].setCurrentText(str(serial_state.get("stopbits", "1")))
-        self.serial_ctrls_ui['flow_combo'].setCurrentText(serial_state.get("flowctrl", "None"))
+        self.serial_controls_ui['baud_combo'].setCurrentText(str(serial_state.get("baudrate", "115200")))
+        self.serial_controls_ui['data_combo'].setCurrentText(str(serial_state.get("bytesize", "8")))
+        self.serial_controls_ui['parity_combo'].setCurrentText(serial_state.get("parity", "N"))
+        self.serial_controls_ui['stop_combo'].setCurrentText(str(serial_state.get("stopbits", "1")))
+        self.serial_controls_ui['flow_combo'].setCurrentText(serial_state.get("flowctrl", "None"))
 
         spi_state = state.get("spi", {})
-        self.spi_ctrls_ui['speed_combo'].setCurrentText(str(spi_state.get("speed", "1000000")))
-        self.spi_ctrls_ui['mode_combo'].setCurrentText(str(spi_state.get("mode", "0")))
+        self.spi_controls_ui['speed_combo'].setCurrentText(str(spi_state.get("speed", "1000000")))
+        self.spi_controls_ui['mode_combo'].setCurrentText(str(spi_state.get("mode", "0")))

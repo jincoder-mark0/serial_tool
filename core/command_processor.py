@@ -21,13 +21,13 @@ from typing import Optional
 from core.settings_manager import SettingsManager # 주석 참조용으로 유지
 from constants import ConfigKeys # 주석 참조용으로 유지
 
-class CmdProcessor:
+class CommandProcessor:
     """
     명령어 가공 및 변환 유틸리티 클래스
     """
 
     @staticmethod
-    def process_cmd(text: str, hex_mode: bool, prefix: Optional[str] = None, suffix: Optional[str] = None) -> bytes:
+    def process_command(text: str, hex_mode: bool, prefix: Optional[str] = None, suffix: Optional[str] = None) -> bytes:
         """
         명령어 텍스트를 설정에 맞춰 바이트 데이터로 변환
 

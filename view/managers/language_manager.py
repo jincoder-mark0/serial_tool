@@ -34,7 +34,7 @@ from typing import Dict, Optional
 from PyQt5.QtCore import QObject, pyqtSignal
 from core.logger import logger
 
-class LangManager(QObject):
+class LanguageManager(QObject):
     """
     언어 관리자 (Singleton)
 
@@ -48,20 +48,20 @@ class LangManager(QObject):
     def __new__(cls, *args, **kwargs):
         """Singleton 인스턴스 생성"""
         if cls._instance is None:
-            cls._instance = super(LangManager, cls).__new__(cls)
+            cls._instance = super(LanguageManager, cls).__new__(cls)
             cls._instance._initialized = False
         return cls._instance
 
     def __init__(self, resource_path=None):
         """
-        LangManager 초기화
+        LanguageManager 초기화
 
         Args:
             resource_path: ResourcePath 인스턴스. None이면 기본 경로 사용
         """
         # ResourcePath가 전달되면 항상 업데이트하고 리로드
         if resource_path is not None:
-            LangManager._resource_path = resource_path
+            LanguageManager._resource_path = resource_path
             self.load_languages()
 
         if self._initialized:
@@ -88,42 +88,42 @@ class LangManager(QObject):
             - JSON 파싱 및 Dictionary에 저장
             - 에러 발생 시 로깅 후 계속 진행
         """
-        if LangManager._resource_path is not None:
+        if LanguageManager._resource_path is not None:
             # ResourcePath가 제공되었으면 사용
-            lang_dir = LangManager._resource_path.languages_dir
+            language_dir = LanguageManager._resource_path.languages_dir
         else:
             # Fallback: 상대 경로 계산
-            # view/managers/lang_manager.py → project_root
+            # view/managers/language_manager.py → project_root
             base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            lang_dir = os.path.join(base_dir, 'resources', 'languages')
+            language_dir = os.path.join(base_dir, 'resources', 'languages')
 
-        if not os.path.exists(lang_dir):
-            logger.error(f"Language directory not found: {lang_dir}")
+        if not os.path.exists(language_dir):
+            logger.error(f"Language directory not found: {language_dir}")
             return
 
         # 모든 JSON 파일 로드
-        for filename in os.listdir(lang_dir):
+        for filename in os.listdir(language_dir):
             if filename.endswith('.json'):
-                lang_code = os.path.splitext(filename)[0]
-                file_path = os.path.join(lang_dir, filename)
+                language_code = os.path.splitext(filename)[0]
+                file_path = os.path.join(language_dir, filename)
                 try:
                     with open(file_path, 'r', encoding='utf-8') as f:
-                        self.resources[lang_code] = json.load(f)
+                        self.resources[language_code] = json.load(f)
                 except Exception as e:
                     logger.error(f"Failed to load language file {filename}: {e}")
 
-    def set_language(self, lang_code: str) -> None:
+    def set_language(self, language_code: str) -> None:
         """
         현재 언어 설정 및 Signal 발행
 
         Args:
-            lang_code: 설정할 언어 코드 (예: 'en', 'ko')
+            language_code: 설정할 언어 코드 (예: 'en', 'ko')
         """
-        if lang_code in self.resources and self.current_language != lang_code:
-            self.current_language = lang_code
-            self.language_changed.emit(lang_code)
+        if language_code in self.resources and self.current_language != language_code:
+            self.current_language = language_code
+            self.language_changed.emit(language_code)
 
-    def get_text(self, key: str, lang_code: Optional[str] = None) -> str:
+    def get_text(self, key: str, language_code: Optional[str] = None) -> str:
         """
         언어 키에 해당하는 텍스트 반환
 
@@ -134,14 +134,14 @@ class LangManager(QObject):
 
         Args:
             key: 텍스트 키
-            lang_code: 언어 코드. None이면 현재 언어 사용
+            language_code: 언어 코드. None이면 현재 언어 사용
 
         Returns:
             str: 번역된 텍스트. 키가 없으면 키 자체 반환
         """
-        target_lang = lang_code if lang_code else self.current_language
-        lang_dict = self.resources.get(target_lang, {})
-        text = lang_dict.get(key)
+        target_lang = language_code if language_code else self.current_language
+        language_dict = self.resources.get(target_lang, {})
+        text = language_dict.get(key)
 
         # Fallback: 영어에서 조회
         if text is None and target_lang != 'en':
@@ -171,10 +171,10 @@ class LangManager(QObject):
         Returns:
             bool: 일치하면 True, 아니면 False
         """
-        for lang_code in self.get_supported_languages():
-            if text == self.get_text(key, lang_code):
+        for language_code in self.get_supported_languages():
+            if text == self.get_text(key, language_code):
                 return True
         return False
 
 # 전역 인스턴스
-lang_manager = LangManager()
+language_manager = LanguageManager()

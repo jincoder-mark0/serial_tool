@@ -153,17 +153,17 @@ class MacroRunner(QThread):
             self._cond.wakeAll()
         self._mutex.unlock()
 
-    def request_single_send(self, cmd: str, is_hex: bool, prefix: bool, suffix: bool) -> None:
+    def request_single_send(self, command: str, is_hex: bool, prefix: bool, suffix: bool) -> None:
         """
         단일 명령 전송을 요청합니다 (Presenter에서 사용).
 
         Args:
-            cmd (str): 명령어 텍스트
+            command (str): 명령어 텍스트
             is_hex (bool): HEX 모드 여부
             prefix (bool): 접두사 사용 여부
             suffix (bool): 접미사 사용 여부
         """
-        self.send_requested.emit(cmd, is_hex, prefix, suffix)
+        self.send_requested.emit(command, is_hex, prefix, suffix)
 
     def _on_data_received(self, data_dict: dict) -> None:
         """
@@ -231,7 +231,7 @@ class MacroRunner(QThread):
 
                 try:
                     # 2-1. 명령 전송 요청 (Signal)
-                    self.send_requested.emit(entry.cmd, entry.is_hex, entry.prefix, entry.suffix)
+                    self.send_requested.emit(entry.command, entry.is_hex, entry.prefix, entry.suffix)
 
                     # 2-2. Expect 처리 (응답 대기)
                     if entry.expect:

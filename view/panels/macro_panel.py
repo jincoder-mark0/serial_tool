@@ -1,7 +1,7 @@
 """
 매크로 패널 모듈
 
-MacroListWidget과 MacroCtrlWidget을 조합하여
+MacroListWidget과 MacroControlWidget을 조합하여
 커맨드 리스트 관리 및 실행 기능을 제공하는 패널 클래스입니다.
 
 ## WHY
@@ -24,8 +24,8 @@ from PyQt5.QtCore import pyqtSignal
 from typing import Optional, Dict, Any
 
 from view.widgets.macro_list import MacroListWidget
-from view.widgets.macro_ctrl import MacroCtrlWidget
-from view.managers.lang_manager import lang_manager
+from view.widgets.macro_control import MacroControlWidget
+from view.managers.language_manager import language_manager
 
 class MacroPanel(QWidget):
     """
@@ -52,7 +52,7 @@ class MacroPanel(QWidget):
             parent (Optional[QWidget]): 부모 위젯.
         """
         super().__init__(parent)
-        self.marco_ctrl = None
+        self.marco_control = None
         self.macro_list = None
         self._loading = False
         self.init_ui()
@@ -64,21 +64,21 @@ class MacroPanel(QWidget):
         layout.setSpacing(5)
 
         self.macro_list = MacroListWidget()
-        self.marco_ctrl = MacroCtrlWidget()
+        self.marco_control = MacroControlWidget()
 
         # 제어 위젯 시그널 연결
-        self.marco_ctrl.macro_repeat_start_requested.connect(self.on_repeat_start_requested)
-        self.marco_ctrl.macro_repeat_stop_requested.connect(self.on_repeat_stop_requested)
+        self.marco_control.macro_repeat_start_requested.connect(self.on_repeat_start_requested)
+        self.marco_control.macro_repeat_stop_requested.connect(self.on_repeat_stop_requested)
 
         # 저장/로드 버튼 클릭 시 파일 다이얼로그 호출 핸들러 연결
-        self.marco_ctrl.script_save_requested.connect(self.on_save_clicked)
-        self.marco_ctrl.script_load_requested.connect(self.on_load_clicked)
+        self.marco_control.script_save_requested.connect(self.on_save_clicked)
+        self.marco_control.script_load_requested.connect(self.on_load_clicked)
 
         # 데이터 변경 알림 연결
         self.macro_list.macro_list_changed.connect(self.state_changed.emit)
 
         layout.addWidget(self.macro_list)
-        layout.addWidget(self.marco_ctrl)
+        layout.addWidget(self.marco_control)
 
         self.setLayout(layout)
 
@@ -94,7 +94,7 @@ class MacroPanel(QWidget):
         filter_str = "JSON Files (*.json);;All Files (*)"
         path, _ = QFileDialog.getSaveFileName(
             self,
-            lang_manager.get_text("macro_panel_dialog_title_save"),
+            language_manager.get_text("macro_panel_dialog_title_save"),
             "",
             filter_str
         )
@@ -114,7 +114,7 @@ class MacroPanel(QWidget):
         filter_str = "JSON Files (*.json);;All Files (*)"
         path, _ = QFileDialog.getOpenFileName(
             self,
-            lang_manager.get_text("macro_panel_dialog_title_open"),
+            language_manager.get_text("macro_panel_dialog_title_open"),
             "",
             filter_str
         )
@@ -152,14 +152,14 @@ class MacroPanel(QWidget):
         self._loading = True
         try:
             # 커맨드 리스트 로드
-            cmds = state.get("cmds", [])
-            if cmds:
-                self.macro_list.load_state(cmds)
+            commands = state.get("commands", [])
+            if commands:
+                self.macro_list.load_state(commands)
 
             # 컨트롤 설정 로드
             control_state = state.get("control_state", {})
             if control_state:
-                self.marco_ctrl.load_state(control_state)
+                self.marco_control.load_state(control_state)
         finally:
             self._loading = False
 
@@ -171,8 +171,8 @@ class MacroPanel(QWidget):
             Dict[str, Any]: 현재 패널 상태 데이터.
         """
         return {
-            "cmds": self.macro_list.save_state(),
-            "control_state": self.marco_ctrl.save_state()
+            "commands": self.macro_list.save_state(),
+            "control_state": self.marco_control.save_state()
         }
 
     def on_repeat_start_requested(self, delay: int, max_runs: int) -> None:
@@ -186,9 +186,9 @@ class MacroPanel(QWidget):
         indices = self.macro_list.get_selected_indices()
         if indices:
             # Note: delay와 max_runs 파라미터는 현재 시그널에 포함되지 않음
-            # Presenter에서 MacroCtrlWidget의 상태를 직접 읽어서 사용해야 함
+            # Presenter에서 MacroControlWidget의 상태를 직접 읽어서 사용해야 함
             self.repeat_start_requested.emit(indices)
-            self.marco_ctrl.set_running_state(True, is_auto=True)
+            self.marco_control.set_running_state(True, is_auto=True)
 
     def on_repeat_stop_requested(self) -> None:
         """
@@ -205,4 +205,4 @@ class MacroPanel(QWidget):
         """
         # Note: 현재는 단순히 running 상태만 전달
         # 향후 is_repeat 파라미터를 추가하여 Repeat/Pause 버튼 상태를 구분할 수 있음
-        self.marco_ctrl.set_running_state(running)
+        self.marco_control.set_running_state(running)

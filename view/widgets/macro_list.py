@@ -5,7 +5,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtCore import Qt, pyqtSignal, QPoint
 from typing import Optional, List, Dict, Any
-from view.managers.lang_manager import lang_manager
+from view.managers.language_manager import language_manager
 
 class MacroListWidget(QWidget):
     """
@@ -36,7 +36,7 @@ class MacroListWidget(QWidget):
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
-        lang_manager.language_changed.connect(self.retranslate_ui)
+        language_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
@@ -47,29 +47,29 @@ class MacroListWidget(QWidget):
         header_layout = QHBoxLayout()
 
         # 전체 선택 체크박스 (Tristate 지원)
-        self.select_all_chk = QCheckBox(lang_manager.get_text("macro_list_chk_select_all"))
-        self.select_all_chk.setToolTip(lang_manager.get_text("macro_list_chk_select_all_tooltip"))
+        self.select_all_chk = QCheckBox(language_manager.get_text("macro_list_chk_select_all"))
+        self.select_all_chk.setToolTip(language_manager.get_text("macro_list_chk_select_all_tooltip"))
         self.select_all_chk.setTristate(True)
         self.select_all_chk.stateChanged.connect(self.on_select_all_changed)
 
         self.add_row_btn = QPushButton()
         self.add_row_btn.setObjectName("add_row_btn")
-        self.add_row_btn.setToolTip(lang_manager.get_text("macro_list_btn_add_row_tooltip"))
+        self.add_row_btn.setToolTip(language_manager.get_text("macro_list_btn_add_row_tooltip"))
         self.add_row_btn.setFixedSize(30, 30)
 
         self.del_row_btn = QPushButton()
         self.del_row_btn.setObjectName("del_row_btn")
-        self.del_row_btn.setToolTip(lang_manager.get_text("macro_list_btn_del_row_tooltip"))
+        self.del_row_btn.setToolTip(language_manager.get_text("macro_list_btn_del_row_tooltip"))
         self.del_row_btn.setFixedSize(30, 30)
 
         self.up_row_btn = QPushButton()
         self.up_row_btn.setObjectName("up_row_btn")
-        self.up_row_btn.setToolTip(lang_manager.get_text("macro_list_btn_up_row_tooltip"))
+        self.up_row_btn.setToolTip(language_manager.get_text("macro_list_btn_up_row_tooltip"))
         self.up_row_btn.setFixedSize(30, 30)
 
         self.down_row_btn = QPushButton()
         self.down_row_btn.setObjectName("down_row_btn")
-        self.down_row_btn.setToolTip(lang_manager.get_text("macro_list_btn_down_row_tooltip"))
+        self.down_row_btn.setToolTip(language_manager.get_text("macro_list_btn_down_row_tooltip"))
         self.down_row_btn.setFixedSize(30, 30)
 
         header_layout.addWidget(self.select_all_chk)
@@ -92,7 +92,7 @@ class MacroListWidget(QWidget):
         # 컬럼: 선택, 접두사, 명령어, 접미사, HEX, 지연시간, 전송버튼
         self.update_header_labels()
         self.macro_table.setModel(self.macro_table_model)
-        self.macro_table.setToolTip(lang_manager.get_text("macro_list_table_cmd"))
+        self.macro_table.setToolTip(language_manager.get_text("macro_list_table_command"))
 
         # 컨텍스트 메뉴 설정
         self.macro_table.setContextMenuPolicy(Qt.CustomContextMenu)
@@ -134,21 +134,21 @@ class MacroListWidget(QWidget):
         """컨텍스트 메뉴를 표시합니다."""
         menu = QMenu(self)
 
-        add_action = QAction(lang_manager.get_text("macro_list_btn_add_row_tooltip"), self)
+        add_action = QAction(language_manager.get_text("macro_list_btn_add_row_tooltip"), self)
         add_action.triggered.connect(self.add_macro_row)
         menu.addAction(add_action)
 
-        del_action = QAction(lang_manager.get_text("macro_list_btn_del_row_tooltip"), self)
+        del_action = QAction(language_manager.get_text("macro_list_btn_del_row_tooltip"), self)
         del_action.triggered.connect(self.remove_selected_rows)
         menu.addAction(del_action)
 
         menu.addSeparator()
 
-        up_action = QAction(lang_manager.get_text("macro_list_btn_up_row_tooltip"), self)
+        up_action = QAction(language_manager.get_text("macro_list_btn_up_row_tooltip"), self)
         up_action.triggered.connect(self.move_up_selected_row)
         menu.addAction(up_action)
 
-        down_action = QAction(lang_manager.get_text("macro_list_btn_down_row_tooltip"), self)
+        down_action = QAction(language_manager.get_text("macro_list_btn_down_row_tooltip"), self)
         down_action.triggered.connect(self.move_down_selected_row)
         menu.addAction(down_action)
 
@@ -156,15 +156,15 @@ class MacroListWidget(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
-        self.select_all_chk.setText(lang_manager.get_text("macro_list_chk_select_all"))
-        self.select_all_chk.setToolTip(lang_manager.get_text("macro_list_chk_select_all_tooltip"))
+        self.select_all_chk.setText(language_manager.get_text("macro_list_chk_select_all"))
+        self.select_all_chk.setToolTip(language_manager.get_text("macro_list_chk_select_all_tooltip"))
 
-        self.add_row_btn.setToolTip(lang_manager.get_text("macro_list_btn_add_row_tooltip"))
-        self.del_row_btn.setToolTip(lang_manager.get_text("macro_list_btn_del_row_tooltip"))
-        self.up_row_btn.setToolTip(lang_manager.get_text("macro_list_btn_up_row_tooltip"))
-        self.down_row_btn.setToolTip(lang_manager.get_text("macro_list_btn_down_row_tooltip"))
+        self.add_row_btn.setToolTip(language_manager.get_text("macro_list_btn_add_row_tooltip"))
+        self.del_row_btn.setToolTip(language_manager.get_text("macro_list_btn_del_row_tooltip"))
+        self.up_row_btn.setToolTip(language_manager.get_text("macro_list_btn_up_row_tooltip"))
+        self.down_row_btn.setToolTip(language_manager.get_text("macro_list_btn_down_row_tooltip"))
 
-        self.macro_table.setToolTip(lang_manager.get_text("macro_list_table_cmd"))
+        self.macro_table.setToolTip(language_manager.get_text("macro_list_table_command"))
         self.update_header_labels()
 
         # Send 버튼 텍스트 업데이트 (모든 행)
@@ -174,18 +174,18 @@ class MacroListWidget(QWidget):
             if widget:
                 btn_send = widget.findChild(QPushButton)
                 if btn_send:
-                    btn_send.setText(lang_manager.get_text("macro_list_btn_send"))
+                    btn_send.setText(language_manager.get_text("macro_list_btn_send"))
 
     def update_header_labels(self) -> None:
         """테이블 헤더 라벨을 업데이트합니다."""
         labels = [
             "",
-            lang_manager.get_text("macro_list_col_prefix"),
-            lang_manager.get_text("macro_list_col_cmd"),
-            lang_manager.get_text("macro_list_col_suffix"),
-            lang_manager.get_text("macro_list_col_hex"),
-            lang_manager.get_text("macro_list_col_delay"),
-            lang_manager.get_text("macro_list_col_send")
+            language_manager.get_text("macro_list_col_prefix"),
+            language_manager.get_text("macro_list_col_command"),
+            language_manager.get_text("macro_list_col_suffix"),
+            language_manager.get_text("macro_list_col_hex"),
+            language_manager.get_text("macro_list_col_delay"),
+            language_manager.get_text("macro_list_col_send")
         ]
         self.macro_table_model.setHorizontalHeaderLabels(labels)
 
@@ -208,47 +208,47 @@ class MacroListWidget(QWidget):
         Returns:
             List[Dict[str, Any]]: 커맨드 데이터 리스트.
         """
-        cmds = []
+        commands = []
         for row in range(self.macro_table_model.rowCount()):
-            cmd_data = {
+            command_data = {
                 "enabled": self.macro_table_model.item(row, 0).checkState() == Qt.Checked,
                 "prefix": self.macro_table_model.item(row, 1).checkState() == Qt.Checked,
-                "cmd": self.macro_table_model.item(row, 2).text(),
+                "command": self.macro_table_model.item(row, 2).text(),
                 "suffix": self.macro_table_model.item(row, 3).checkState() == Qt.Checked,
                 "hex_mode": self.macro_table_model.item(row, 4).checkState() == Qt.Checked,
                 "delay": self.macro_table_model.item(row, 5).text()
             }
-            cmds.append(cmd_data)
-        return cmds
+            commands.append(command_data)
+        return commands
 
-    def set_macro_list(self, cmds: List[Dict[str, Any]]) -> None:
+    def set_macro_list(self, commands: List[Dict[str, Any]]) -> None:
         """
         커맨드 리스트 데이터를 설정합니다.
 
         Args:
-            cmds (List[Dict[str, Any]]): 커맨드 데이터 리스트.
+            commands (List[Dict[str, Any]]): 커맨드 데이터 리스트.
         """
         self.macro_table_model.removeRows(0, self.macro_table_model.rowCount())
-        for i, cmd in enumerate(cmds):
+        for i, command in enumerate(commands):
             self._insert_row(
                 i,
-                cmd.get("cmd", ""),
-                cmd.get("prefix", True),
-                cmd.get("hex_mode", False),
-                cmd.get("suffix", True),
-                str(cmd.get("delay", "100")),
-                cmd.get("enabled", True)
+                command.get("command", ""),
+                command.get("prefix", True),
+                command.get("hex_mode", False),
+                command.get("suffix", True),
+                str(command.get("delay", "100")),
+                command.get("enabled", True)
             )
         self.update_select_all_state()
 
-    def add_dummy_row(self, cmd: str, hex_mode: bool, suffix: bool, delay: str) -> None:
+    def add_dummy_row(self, command: str, hex_mode: bool, suffix: bool, delay: str) -> None:
         """테스트용 더미 데이터를 추가합니다."""
-        self._insert_row(self.macro_table_model.rowCount(), cmd, True, hex_mode, suffix, delay)
+        self._insert_row(self.macro_table_model.rowCount(), command, True, hex_mode, suffix, delay)
 
     def add_macro_row(self) -> None:
         """빈 행을 추가합니다. 선택된 행이 있으면 그 아래에 추가하고 옵션을 복사합니다."""
         # 기본값
-        cmd = ""
+        command = ""
         prefix = True
         hex_mode = False
         suffix = True
@@ -275,23 +275,23 @@ class MacroListWidget(QWidget):
             # 옵션 복사
             enabled = self.macro_table_model.item(copy_source_row, 0).checkState() == Qt.Checked
             prefix = self.macro_table_model.item(copy_source_row, 1).checkState() == Qt.Checked
-            cmd = "" # 명령어는 복사하지 않음 (빈 칸)
+            command = "" # 명령어는 복사하지 않음 (빈 칸)
             suffix = self.macro_table_model.item(copy_source_row, 3).checkState() == Qt.Checked
             hex_mode = self.macro_table_model.item(copy_source_row, 4).checkState() == Qt.Checked
             delay = self.macro_table_model.item(copy_source_row, 5).text()
 
-        self._insert_row(insert_row_idx, cmd, prefix, hex_mode, suffix, delay, enabled)
+        self._insert_row(insert_row_idx, command, prefix, hex_mode, suffix, delay, enabled)
 
         # 추가된 행 선택
         self.macro_table.selectRow(insert_row_idx)
 
-    def _insert_row(self, row_idx: int, cmd: str, prefix: bool, hex_mode: bool, suffix: bool, delay: str, enabled: bool = True) -> None:
+    def _insert_row(self, row_idx: int, command: str, prefix: bool, hex_mode: bool, suffix: bool, delay: str, enabled: bool = True) -> None:
         """
         새로운 행을 모델의 특정 위치에 삽입합니다.
 
         Args:
             row_idx (int): 삽입할 행 인덱스.
-            cmd (str): 명령어.
+            command (str): 명령어.
             prefix (bool): 접두사 사용 여부.
             hex_mode (bool): HEX 모드 여부.
             suffix (bool): 접미사 사용 여부.
@@ -311,7 +311,7 @@ class MacroListWidget(QWidget):
         item_prefix.setEditable(False)
 
         # 2: Command
-        item_cmd = QStandardItem(cmd)
+        item_command = QStandardItem(command)
 
         # 3: Suffix Checkbox
         item_suffix = QStandardItem()
@@ -332,7 +332,7 @@ class MacroListWidget(QWidget):
         item_send = QStandardItem("")
         item_send.setEditable(False)
 
-        self.macro_table_model.insertRow(row_idx, [item_select, item_prefix, item_cmd, item_suffix, item_hex, item_delay, item_send])
+        self.macro_table_model.insertRow(row_idx, [item_select, item_prefix, item_command, item_suffix, item_hex, item_delay, item_send])
 
         # Send 버튼 설정
         self._set_send_button(row_idx)
@@ -357,7 +357,7 @@ class MacroListWidget(QWidget):
         layout.setContentsMargins(2, 2, 2, 2)
         layout.setAlignment(Qt.AlignCenter)
 
-        btn = QPushButton(lang_manager.get_text("macro_list_btn_send"))
+        btn = QPushButton(language_manager.get_text("macro_list_btn_send"))
         btn.setCursor(Qt.PointingHandCursor)
         # 현재 활성화 상태에 따라 설정
         btn.setEnabled(self._send_enabled)
@@ -484,8 +484,8 @@ class MacroListWidget(QWidget):
         Returns:
             list: 명령어 목록 데이터.
         """
-        cmds = self.get_macro_list()
-        return cmds
+        commands = self.get_macro_list()
+        return commands
 
     def load_state(self, state: list) -> None:
         """

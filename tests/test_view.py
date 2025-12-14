@@ -15,13 +15,13 @@ from PyQt5.QtCore import QTimer
 from PyQt5.QtWidgets import QLabel, QTextEdit
 from PyQt5.QtWidgets import QPushButton, QHBoxLayout
 
-from view.widgets.data_log_view import DataLogViewWidget
-from view.widgets.manual_ctrl import ManualCtrlWidget
+from view.widgets.data_log import DataLogWidget
+from view.widgets.manual_control import ManualControlWidget
 from view.widgets.macro_list import MacroListWidget
-from view.widgets.sys_log_view import SysLogViewWidget
+from view.widgets.sys_log import SysLogWidget
 from view.panels.port_panel import PortPanel
 from view.managers.theme_manager import ThemeManager
-from view.managers.lang_manager import lang_manager
+from view.managers.language_manager import language_manager
 from view.dialogs.preferences_dialog import PreferencesDialog
 from view.dialogs.about_dialog import AboutDialog
 from view.widgets.file_progress import FileProgressWidget
@@ -60,16 +60,16 @@ class ViewTestWindow(QMainWindow):
         tabs = QTabWidget()
 
         # Test 1: DataLogView (색상 규칙, Trim, 타임스탬프 테스트)
-        tabs.addTab(self.create_data_log_view_test(), "DataLogView Test")
+        tabs.addTab(self.create_data_log_test(), "DataLogView Test")
 
         # Test 2: ManualCtrl (입력, 파일 전송 테스트)
-        tabs.addTab(self.create_manual_ctrl_test(), "ManualCtrl Test")
+        tabs.addTab(self.create_manual_control_test(), "ManualCtrl Test")
 
         # Test 3: CommandList (커맨드 리스트 테스트)
         tabs.addTab(self.create_macro_list_test(), "CommandList Test")
 
         # Test 4: StatusArea (상태 로그 테스트)
-        tabs.addTab(self.create_sys_log_view_test(), "StatusArea Test")
+        tabs.addTab(self.create_sys_log_test(), "StatusArea Test")
 
         # Test 5: PortPanel (전체 패널 테스트)
         tabs.addTab(self.create_port_panel_test(), "PortPanel Test")
@@ -92,9 +92,9 @@ class ViewTestWindow(QMainWindow):
         # 상태 표시줄 (Status bar)
         self.statusBar().showMessage("Ready - View Components Test")
 
-    def create_data_log_view_test(self) -> QWidget:
+    def create_data_log_test(self) -> QWidget:
         """
-        DataLogViewWidget 테스트 위젯을 생성합니다.
+        DataLogWidget 테스트 위젯을 생성합니다.
 
         Returns:
             QWidget: 테스트 위젯.
@@ -104,24 +104,24 @@ class ViewTestWindow(QMainWindow):
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
-        # DataLogViewWidget 인스턴스
-        self.data_log_view_widget = DataLogViewWidget()
-        layout.addWidget(self.data_log_view_widget)
+        # DataLogWidget 인스턴스
+        self.data_log_widget = DataLogWidget()
+        layout.addWidget(self.data_log_widget)
 
         # 테스트 버튼 (Test buttons)
         button_layout = QHBoxLayout()
 
         # 테스트 데이터 버튼
         btn_ok = QPushButton("Add OK")
-        btn_ok.clicked.connect(lambda: self.data_log_view_widget.append_data(b"AT\r\nOK\r\n"))
+        btn_ok.clicked.connect(lambda: self.data_log_widget.append_data(b"AT\r\nOK\r\n"))
         button_layout.addWidget(btn_ok)
 
         btn_error = QPushButton("Add ERROR")
-        btn_error.clicked.connect(lambda: self.data_log_view_widget.append_data(b"AT+TEST\r\nERROR\r\n"))
+        btn_error.clicked.connect(lambda: self.data_log_widget.append_data(b"AT+TEST\r\nERROR\r\n"))
         button_layout.addWidget(btn_error)
 
         btn_urc = QPushButton("Add URC")
-        btn_urc.clicked.connect(lambda: self.data_log_view_widget.append_data(b"+CREG: 1,5\r\n"))
+        btn_urc.clicked.connect(lambda: self.data_log_widget.append_data(b"+CREG: 1,5\r\n"))
         button_layout.addWidget(btn_urc)
 
         btn_many = QPushButton("Add 100 Lines")
@@ -129,7 +129,7 @@ class ViewTestWindow(QMainWindow):
         button_layout.addWidget(btn_many)
 
         btn_clear = QPushButton("Clear")
-        btn_clear.clicked.connect(self.data_log_view_widget.on_clear_data_log_view_clicked)
+        btn_clear.clicked.connect(self.data_log_widget.on_clear_data_log_clicked)
         button_layout.addWidget(btn_clear)
 
         layout.addLayout(button_layout)
@@ -143,9 +143,9 @@ class ViewTestWindow(QMainWindow):
     def add_many_lines(self) -> None:
         """많은 라인을 추가하여 Trim 기능을 테스트합니다."""
         for i in range(100):
-            self.data_log_view_widget.append_data(f"Line {i+1}: Test data\r\n".encode())
+            self.data_log_widget.append_data(f"Line {i+1}: Test data\r\n".encode())
 
-    def create_manual_ctrl_test(self) -> QWidget:
+    def create_manual_control_test(self) -> QWidget:
         """
         ManualCtrl 테스트 위젯을 생성합니다.
 
@@ -157,8 +157,8 @@ class ViewTestWindow(QMainWindow):
         layout = QVBoxLayout(widget)
 
         # ManualCtrl 인스턴스
-        self.manual_ctrl = ManualCtrlWidget()
-        layout.addWidget(self.manual_ctrl)
+        self.manual_control = ManualControlWidget()
+        layout.addWidget(self.manual_control)
 
         # 출력 영역 (Output area)
         self.manual_output = QTextEdit()
@@ -169,15 +169,15 @@ class ViewTestWindow(QMainWindow):
         layout.addWidget(self.manual_output)
 
         # 시그널 연결
-        self.manual_ctrl.manual_cmd_send_requested.connect(
+        self.manual_control.manual_command_send_requested.connect(
             lambda text, hex_mode, prefix, suffix, local_echo: self.manual_output.append(
                 f"✅ Send: '{text}' (hex={hex_mode}, prefix={prefix}, suffix={suffix}, echo={local_echo})"
             )
         )
-        self.manual_ctrl.transfer_file_selected.connect(
+        self.manual_control.transfer_file_selected.connect(
             lambda path: self.manual_output.append(f"📁 File selected: {path}")
         )
-        self.manual_ctrl.transfer_file_send_requested.connect(
+        self.manual_control.transfer_file_send_requested.connect(
             lambda path: self.manual_output.append(f"📤 Send file requested: {path}")
         )
 
@@ -185,15 +185,15 @@ class ViewTestWindow(QMainWindow):
         history_layout = QHBoxLayout()
 
         btn_add_at = QPushButton("Add 'AT'")
-        btn_add_at.clicked.connect(lambda: self.manual_ctrl.add_to_history("AT"))
+        btn_add_at.clicked.connect(lambda: self.manual_control.add_to_history("AT"))
         history_layout.addWidget(btn_add_at)
 
         btn_add_ok = QPushButton("Add 'AT+GMR'")
-        btn_add_ok.clicked.connect(lambda: self.manual_ctrl.add_to_history("AT+GMR"))
+        btn_add_ok.clicked.connect(lambda: self.manual_control.add_to_history("AT+GMR"))
         history_layout.addWidget(btn_add_ok)
 
         btn_add_custom = QPushButton("Add 'AT+CREG?'")
-        btn_add_custom.clicked.connect(lambda: self.manual_ctrl.add_to_history("AT+CREG?"))
+        btn_add_custom.clicked.connect(lambda: self.manual_control.add_to_history("AT+CREG?"))
         history_layout.addWidget(btn_add_custom)
 
         btn_show_history = QPushButton("Show History")
@@ -217,11 +217,11 @@ class ViewTestWindow(QMainWindow):
         # 제어 활성화/비활성화 테스트
         btn_layout = QHBoxLayout()
         btn_enable = QPushButton("Enable Controls")
-        btn_enable.clicked.connect(lambda: self.manual_ctrl.set_controls_enabled(True))
+        btn_enable.clicked.connect(lambda: self.manual_control.set_controls_enabled(True))
         btn_layout.addWidget(btn_enable)
 
         btn_disable = QPushButton("Disable Controls")
-        btn_disable.clicked.connect(lambda: self.manual_ctrl.set_controls_enabled(False))
+        btn_disable.clicked.connect(lambda: self.manual_control.set_controls_enabled(False))
         btn_layout.addWidget(btn_disable)
 
         layout.addLayout(btn_layout)
@@ -230,12 +230,12 @@ class ViewTestWindow(QMainWindow):
 
     def show_manual_history(self) -> None:
         """히스토리 목록을 출력 영역에 표시합니다."""
-        history = self.manual_ctrl.cmd_history
+        history = self.manual_control.command_history
         if history:
             self.manual_output.append("\n📜 Command History:")
-            for i, cmd in enumerate(history):
-                self.manual_output.append(f"  [{i+1}] {cmd}")
-            self.manual_output.append(f"Current Index: {self.manual_ctrl.history_index}\n")
+            for i, command in enumerate(history):
+                self.manual_output.append(f"  [{i+1}] {command}")
+            self.manual_output.append(f"Current Index: {self.manual_control.history_index}\n")
         else:
             self.manual_output.append("📜 History is empty\n")
 
@@ -265,8 +265,8 @@ class ViewTestWindow(QMainWindow):
 
         btn_load = QPushButton("Load Dummy Data")
         btn_load.clicked.connect(lambda: self.macro_list.set_macro_list([
-            {"cmd": "LOADED_CMD_1", "delay": "200", "enabled": True},
-            {"cmd": "LOADED_CMD_2", "delay": "500", "enabled": False}
+            {"command": "LOADED_COMMAND_1", "delay": "200", "enabled": True},
+            {"command": "LOADED_COMMAND_2", "delay": "500", "enabled": False}
         ]))
 
         btn_layout.addWidget(btn_save)
@@ -275,7 +275,7 @@ class ViewTestWindow(QMainWindow):
 
         return widget
 
-    def create_sys_log_view_test(self) -> QWidget:
+    def create_sys_log_test(self) -> QWidget:
         """
         StatusArea 테스트 위젯을 생성합니다.
 
@@ -288,26 +288,26 @@ class ViewTestWindow(QMainWindow):
         layout = QVBoxLayout(widget)
 
         # StatusArea 인스턴스
-        self.sys_log_view_widget = SysLogViewWidget()
-        layout.addWidget(self.sys_log_view_widget)
+        self.sys_log_widget = SysLogWidget()
+        layout.addWidget(self.sys_log_widget)
 
         # 테스트 버튼
         button_layout = QHBoxLayout()
 
         btn_info = QPushButton("Log INFO")
-        btn_info.clicked.connect(lambda: self.sys_log_view_widget.log("This is an info message", "INFO"))
+        btn_info.clicked.connect(lambda: self.sys_log_widget.log("This is an info message", "INFO"))
         button_layout.addWidget(btn_info)
 
         btn_error = QPushButton("Log ERROR")
-        btn_error.clicked.connect(lambda: self.sys_log_view_widget.log("This is an error message", "ERROR"))
+        btn_error.clicked.connect(lambda: self.sys_log_widget.log("This is an error message", "ERROR"))
         button_layout.addWidget(btn_error)
 
         btn_warn = QPushButton("Log WARN")
-        btn_warn.clicked.connect(lambda: self.sys_log_view_widget.log("This is a warning message", "WARN"))
+        btn_warn.clicked.connect(lambda: self.sys_log_widget.log("This is a warning message", "WARN"))
         button_layout.addWidget(btn_warn)
 
         btn_success = QPushButton("Log SUCCESS")
-        btn_success.clicked.connect(lambda: self.sys_log_view_widget.log("This is a success message", "SUCCESS"))
+        btn_success.clicked.connect(lambda: self.sys_log_widget.log("This is a success message", "SUCCESS"))
         button_layout.addWidget(btn_success)
 
         layout.addLayout(button_layout)
@@ -539,12 +539,12 @@ class ViewTestWindow(QMainWindow):
         print(f"Added 1000 lines in {elapsed:.2f}s ({1000/elapsed:.0f} lines/sec)")
 
     def create_language_test(self) -> QWidget:
-        """LangManager 테스트 위젯을 생성합니다."""
+        """LanguageManager 테스트 위젯을 생성합니다."""
         widget = QWidget()
         layout = QVBoxLayout(widget)
 
-        self.lang_label = QLabel(lang_manager.get_text("main_title"))
-        self.lang_label.setStyleSheet("font-size: 20px; font-weight: bold;")
+        self.language_label = QLabel(language_manager.get_text("main_title"))
+        self.language_label.setStyleSheet("font-size: 20px; font-weight: bold;")
 
         btn_en = QPushButton("English")
         btn_en.clicked.connect(lambda: self.change_language("en"))
@@ -552,7 +552,7 @@ class ViewTestWindow(QMainWindow):
         btn_ko = QPushButton("한국어")
         btn_ko.clicked.connect(lambda: self.change_language("ko"))
 
-        layout.addWidget(self.lang_label)
+        layout.addWidget(self.language_label)
         layout.addWidget(btn_en)
         layout.addWidget(btn_ko)
         layout.addWidget(QLabel("✅ 테스트: 버튼 클릭 시 앱 타이틀 언어 변경 확인"))
@@ -562,8 +562,8 @@ class ViewTestWindow(QMainWindow):
 
     def change_language(self, lang: str) -> None:
         """언어를 변경하고 UI를 업데이트합니다."""
-        lang_manager.set_language(lang)
-        self.lang_label.setText(lang_manager.get_text("main_title"))
+        language_manager.set_language(lang)
+        self.language_label.setText(language_manager.get_text("main_title"))
 
     def closeEvent(self, event) -> None:
         """

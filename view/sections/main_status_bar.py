@@ -1,6 +1,6 @@
 from PyQt5.QtWidgets import QStatusBar, QLabel, QProgressBar
 from PyQt5.QtCore import Qt
-from view.managers.lang_manager import lang_manager
+from view.managers.language_manager import language_manager
 
 class MainStatusBar(QStatusBar):
     """
@@ -12,7 +12,7 @@ class MainStatusBar(QStatusBar):
 
     def init_ui(self) -> None:
         """상태바 초기화"""
-        self.showMessage(lang_manager.get_text("main_status_msg_ready"))
+        self.showMessage(language_manager.get_text("main_status_msg_ready"))
         self.init_widget()
 
     def init_widget(self):
@@ -81,5 +81,5 @@ class MainStatusBar(QStatusBar):
         """언어 변경 시 상태바 텍스트를 업데이트합니다."""
         # (임시 메시지가 떠있는 경우는 그대로 둠)
         current_msg = self.currentMessage()
-        if not current_msg or lang_manager.text_matches_key(current_msg, "main_status_msg_ready"):
-            self.showMessage(lang_manager.get_text("main_status_msg_ready"))
+        if not current_msg or language_manager.text_matches_key(current_msg, "main_status_msg_ready"):
+            self.showMessage(language_manager.get_text("main_status_msg_ready"))

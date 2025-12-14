@@ -1,7 +1,7 @@
 """
 수동 제어 패널 모듈
 
-ManualCtrlWidget을 래핑하여 섹션에 통합합니다.
+ManualControlWidget을 래핑하여 섹션에 통합합니다.
 
 ## WHY
 * 위젯과 레이아웃 관리의 분리
@@ -9,7 +9,7 @@ ManualCtrlWidget을 래핑하여 섹션에 통합합니다.
 * Presenter가 내부 위젯 구조를 알 필요 없도록 추상화
 
 ## WHAT
-* ManualCtrlWidget 생성 및 배치
+* ManualControlWidget 생성 및 배치
 * 하위 위젯의 사용자 입력/제어 시그널 중계
 * 상태 저장 및 복원 인터페이스 제공
 
@@ -20,30 +20,30 @@ ManualCtrlWidget을 래핑하여 섹션에 통합합니다.
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtCore import pyqtSignal
 from typing import Optional
-from view.widgets.manual_ctrl import ManualCtrlWidget
+from view.widgets.manual_control import ManualControlWidget
 
-class ManualCtrlPanel(QWidget):
+class ManualControlPanel(QWidget):
     """
     수동 제어 패널 클래스
 
     Attributes:
-        manual_ctrl_widget (ManualCtrlWidget): 수동 제어 위젯 인스턴스
+        manual_control_widget (ManualControlWidget): 수동 제어 위젯 인스턴스
     """
 
     # 하위 위젯 시그널 상위 전달 (Signal Bubbling)
-    manual_cmd_send_requested = pyqtSignal(dict)
+    manual_command_send_requested = pyqtSignal(dict)
     rts_changed = pyqtSignal(bool) # RTS 상태 변경 시그널
     dtr_changed = pyqtSignal(bool) # DTR 상태 변경 시그널
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
-        ManualCtrlPanel 초기화
+        ManualControlPanel 초기화
 
         Args:
             parent (Optional[QWidget]): 부모 위젯
         """
         super().__init__(parent)
-        self.manual_ctrl_widget: Optional[ManualCtrlWidget] = None
+        self.manual_control_widget: Optional[ManualControlWidget] = None
         self.init_ui()
 
     def init_ui(self) -> None:
@@ -52,14 +52,14 @@ class ManualCtrlPanel(QWidget):
         layout.setContentsMargins(0, 0, 0, 0)
 
         # 수동 제어 위젯 생성
-        self.manual_ctrl_widget = ManualCtrlWidget()
+        self.manual_control_widget = ManualControlWidget()
 
         # 위젯 시그널 -> 패널 시그널 연결 (Forwarding)
-        self.manual_ctrl_widget.manual_cmd_send_requested.connect(self.manual_cmd_send_requested.emit)
-        self.manual_ctrl_widget.rts_changed.connect(self.rts_changed.emit)
-        self.manual_ctrl_widget.dtr_changed.connect(self.dtr_changed.emit)
+        self.manual_control_widget.manual_command_send_requested.connect(self.manual_command_send_requested.emit)
+        self.manual_control_widget.rts_changed.connect(self.rts_changed.emit)
+        self.manual_control_widget.dtr_changed.connect(self.dtr_changed.emit)
 
-        layout.addWidget(self.manual_ctrl_widget)
+        layout.addWidget(self.manual_control_widget)
 
         self.setLayout(layout)
 
@@ -70,7 +70,7 @@ class ManualCtrlPanel(QWidget):
         Returns:
             dict: 저장된 상태 데이터
         """
-        return self.manual_ctrl_widget.save_state()
+        return self.manual_control_widget.save_state()
 
     def load_state(self, state: dict) -> None:
         """
@@ -79,7 +79,7 @@ class ManualCtrlPanel(QWidget):
         Args:
             state (dict): 복원할 상태 데이터
         """
-        self.manual_ctrl_widget.load_state(state)
+        self.manual_control_widget.load_state(state)
 
     def set_controls_enabled(self, enabled: bool) -> None:
         """
@@ -88,8 +88,8 @@ class ManualCtrlPanel(QWidget):
         Args:
             enabled (bool): 활성화 여부
         """
-        if self.manual_ctrl_widget:
-            self.manual_ctrl_widget.set_controls_enabled(enabled)
+        if self.manual_control_widget:
+            self.manual_control_widget.set_controls_enabled(enabled)
 
     def set_local_echo_state(self, checked: bool) -> None:
         """
@@ -98,4 +98,4 @@ class ManualCtrlPanel(QWidget):
         Args:
             checked (bool): 체크 여부
         """
-        self.manual_ctrl_widget.set_local_echo_state(checked)
+        self.manual_control_widget.set_local_echo_state(checked)

@@ -1,5 +1,5 @@
 """
-DataLogViewWidget 모듈
+DataLogWidget 모듈
 
 시리얼 포트 등 외부로부터 수신/송신된 데이터를 표시하고 관리하는 메인 위젯을 정의합니다.
 QSmartListView를 기반으로 하여 대량의 데이터 처리 성능을 최적화하였으며,
@@ -28,7 +28,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import QTimer, pyqtSignal, pyqtSlot, Qt
 from typing import Optional
 from view.managers.color_manager import color_manager
-from view.managers.lang_manager import lang_manager
+from view.managers.language_manager import language_manager
 
 from view.custom_qt.smart_list_view import QSmartListView
 
@@ -38,7 +38,7 @@ from constants import (
 )
 from core.logger import logger
 
-class DataLogViewWidget(QWidget):
+class DataLogWidget(QWidget):
     """
     데이터를 표시하는 뷰어 위젯 클래스 (구 RxLogWidget)
 
@@ -50,7 +50,7 @@ class DataLogViewWidget(QWidget):
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
-        DataLogViewWidget를 초기화합니다.
+        DataLogWidget를 초기화합니다.
 
         Args:
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
@@ -61,6 +61,8 @@ class DataLogViewWidget(QWidget):
         # 1. 상태 변수 초기화
         # ---------------------------------------------------------
         # UI Components
+        self.data_log_title = None
+        self.data_log_list = None
         self.data_log_search_prev_btn = None
         self.data_log_search_next_btn = None
         self.data_log_tx_broadcast_chk = None
@@ -72,8 +74,6 @@ class DataLogViewWidget(QWidget):
         self.data_log_hex_chk = None
         self.data_log_filter_chk = None
         self.data_log_newline_combo = None
-        self.data_log_view_title = None
-        self.data_log_list = None
 
         # State Variables
         self.tx_broadcast_enabled: bool = True
@@ -95,7 +95,7 @@ class DataLogViewWidget(QWidget):
         self.init_ui()
 
         # 언어 변경 연결
-        lang_manager.language_changed.connect(self.retranslate_ui)
+        language_manager.language_changed.connect(self.retranslate_ui)
 
         # ---------------------------------------------------------
         # 3. 타이머 설정 (성능 최적화)
@@ -113,19 +113,19 @@ class DataLogViewWidget(QWidget):
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
         # 1. 툴바 영역 (타이틀 + 도구들)
         # 타이틀 섹션
-        self.data_log_view_title = QLabel(lang_manager.get_text("data_log_view_title"))
-        self.data_log_view_title.setProperty("class", "section-title")  # 섹션 타이틀 스타일 적용
+        self.data_log_title = QLabel(language_manager.get_text("data_log_title"))
+        self.data_log_title.setProperty("class", "section-title")  # 섹션 타이틀 스타일 적용
 
         # 도구 섹션 (검색, 옵션, 액션)
         # TX Broadcast Checkbox
-        self.data_log_tx_broadcast_chk = QCheckBox(lang_manager.get_text("data_log_view_chk_tx_broadcast"))
-        self.data_log_tx_broadcast_chk.setToolTip(lang_manager.get_text("data_log_view_chk_tx_broadcast_tooltip"))
+        self.data_log_tx_broadcast_chk = QCheckBox(language_manager.get_text("data_log_chk_tx_broadcast"))
+        self.data_log_tx_broadcast_chk.setToolTip(language_manager.get_text("data_log_chk_tx_broadcast_tooltip"))
         self.data_log_tx_broadcast_chk.stateChanged.connect(self.on_data_log_tx_broadcast_changed)
 
         # Search Bar
         self.data_log_search_input = QLineEdit()
-        self.data_log_search_input.setPlaceholderText(lang_manager.get_text("data_log_view_input_search_placeholder"))
-        self.data_log_search_input.setToolTip(lang_manager.get_text("data_log_view_input_search_tooltip"))
+        self.data_log_search_input.setPlaceholderText(language_manager.get_text("data_log_input_search_placeholder"))
+        self.data_log_search_input.setToolTip(language_manager.get_text("data_log_input_search_tooltip"))
         self.data_log_search_input.setMaximumWidth(200)
         self.data_log_search_input.returnPressed.connect(self.on_data_log_search_next_clicked)
         # 검색어 변경 시 실시간 하이라이트 갱신
@@ -135,52 +135,51 @@ class DataLogViewWidget(QWidget):
         self.data_log_search_prev_btn = QPushButton()
         self.data_log_search_prev_btn.setObjectName("data_log_search_prev_btn")
         self.data_log_search_prev_btn.setText("<") # 아이콘이 없을 경우를 대비한 텍스트
-        self.data_log_search_prev_btn.setToolTip(lang_manager.get_text("data_log_view_btn_search_prev_tooltip"))
+        self.data_log_search_prev_btn.setToolTip(language_manager.get_text("data_log_btn_search_prev_tooltip"))
         self.data_log_search_prev_btn.setFixedWidth(30)
         self.data_log_search_prev_btn.clicked.connect(self.on_data_log_search_prev_clicked)
 
         self.data_log_search_next_btn = QPushButton()
         self.data_log_search_next_btn.setObjectName("data_log_search_next_btn")
         self.data_log_search_next_btn.setText(">") # 아이콘이 없을 경우를 대비한 텍스트
-        self.data_log_search_next_btn.setToolTip(lang_manager.get_text("data_log_view_btn_search_next_tooltip"))
+        self.data_log_search_next_btn.setToolTip(language_manager.get_text("data_log_btn_search_next_tooltip"))
         self.data_log_search_next_btn.setFixedWidth(30)
         self.data_log_search_next_btn.clicked.connect(self.on_data_log_search_next_clicked)
 
-        self.data_log_clear_log_btn = QPushButton(lang_manager.get_text("data_log_view_btn_clear"))
-        self.data_log_clear_log_btn.setToolTip(lang_manager.get_text("data_log_view_btn_clear_tooltip"))
-        self.data_log_clear_log_btn.clicked.connect(self.on_clear_data_log_view_clicked)
+        self.data_log_clear_log_btn = QPushButton(language_manager.get_text("data_log_btn_clear"))
+        self.data_log_clear_log_btn.setToolTip(language_manager.get_text("data_log_btn_clear_tooltip"))
+        self.data_log_clear_log_btn.clicked.connect(self.on_clear_data_log_clicked)
 
-        self.data_log_toggle_logging_btn = QPushButton(lang_manager.get_text("data_log_view_btn_toggle_logging"))
-        self.data_log_toggle_logging_btn.setToolTip(lang_manager.get_text("data_log_view_btn_toggle_logging_tooltip"))
+        self.data_log_toggle_logging_btn = QPushButton(language_manager.get_text("data_log_btn_toggle_logging"))
+        self.data_log_toggle_logging_btn.setToolTip(language_manager.get_text("data_log_btn_toggle_logging_tooltip"))
         self.data_log_toggle_logging_btn.setCheckable(True)  # 토글 버튼으로 변경
         self.data_log_toggle_logging_btn.toggled.connect(self.on_data_log_logging_toggled)
 
         # Options
-        self.data_log_filter_chk = QCheckBox(lang_manager.get_text("data_log_view_chk_filter"))
-        self.data_log_filter_chk.setToolTip(lang_manager.get_text("data_log_view_chk_filter_tooltip"))
+        self.data_log_filter_chk = QCheckBox(language_manager.get_text("data_log_chk_filter"))
+        self.data_log_filter_chk.setToolTip(language_manager.get_text("data_log_chk_filter_tooltip"))
         self.data_log_filter_chk.stateChanged.connect(self.on_data_log_filter_changed)
 
-        self.data_log_hex_chk = QCheckBox(lang_manager.get_text("data_log_view_chk_hex"))
-        self.data_log_hex_chk.setToolTip(lang_manager.get_text("data_log_view_chk_hex_tooltip"))
+        self.data_log_hex_chk = QCheckBox(language_manager.get_text("data_log_chk_hex"))
+        self.data_log_hex_chk.setToolTip(language_manager.get_text("data_log_chk_hex_tooltip"))
         self.data_log_hex_chk.stateChanged.connect(self.on_data_log_hex_mode_changed)
 
-        self.data_log_timestamp_chk = QCheckBox(lang_manager.get_text("data_log_view_chk_timestamp"))
-        self.data_log_timestamp_chk.setToolTip(lang_manager.get_text("data_log_view_chk_timestamp_tooltip"))
+        self.data_log_timestamp_chk = QCheckBox(language_manager.get_text("data_log_chk_timestamp"))
+        self.data_log_timestamp_chk.setToolTip(language_manager.get_text("data_log_chk_timestamp_tooltip"))
         self.data_log_timestamp_chk.stateChanged.connect(self.on_data_log_timestamp_changed)
 
-        self.data_log_pause_chk = QCheckBox(lang_manager.get_text("data_log_view_chk_pause"))
-        self.data_log_pause_chk.setToolTip(lang_manager.get_text("data_log_view_chk_pause_tooltip"))
+        self.data_log_pause_chk = QCheckBox(language_manager.get_text("data_log_chk_pause"))
+        self.data_log_pause_chk.setToolTip(language_manager.get_text("data_log_chk_pause_tooltip"))
         self.data_log_pause_chk.stateChanged.connect(self.on_data_log_pause_changed)
 
         # Newline Combo
         self.data_log_newline_combo = QComboBox()
-        self.data_log_newline_combo.setToolTip(lang_manager.get_text("data_log_view_combo_newline_tooltip"))
-        self.data_log_newline_combo.addItem(lang_manager.get_text("data_log_newline_raw"), "Raw")
-        self.data_log_newline_combo.addItem(lang_manager.get_text("data_log_newline_lf"), "LF")
-        self.data_log_newline_combo.addItem(lang_manager.get_text("data_log_newline_cr"), "CR")
-        self.data_log_newline_combo.addItem(lang_manager.get_text("data_log_newline_crlf"), "CRLF")
+        self.data_log_newline_combo.setToolTip(language_manager.get_text("data_log_combo_newline_tooltip"))
+        self.data_log_newline_combo.addItem(language_manager.get_text("data_log_newline_raw"), "Raw")
+        self.data_log_newline_combo.addItem(language_manager.get_text("data_log_newline_lf"), "LF")
+        self.data_log_newline_combo.addItem(language_manager.get_text("data_log_newline_cr"), "CR")
+        self.data_log_newline_combo.addItem(language_manager.get_text("data_log_newline_crlf"), "CRLF")
         self.data_log_newline_combo.setFixedWidth(100)
-
 
         # 2. 로그 뷰 영역
         self.data_log_list = QSmartListView()
@@ -189,13 +188,13 @@ class DataLogViewWidget(QWidget):
         self.data_log_list.set_color_manager(self.color_manager)
         self.data_log_list.set_hex_mode_enabled(self.hex_mode)
         self.data_log_list.set_timestamp_enabled(self.timestamp_enabled, timeout_ms=100)
-        self.data_log_list.setPlaceholderText(lang_manager.get_text("data_log_view_list_log_placeholder"))
-        self.data_log_list.setToolTip(lang_manager.get_text("data_log_view_list_log_tooltip"))
+        self.data_log_list.setPlaceholderText(language_manager.get_text("data_log_list_log_placeholder"))
+        self.data_log_list.setToolTip(language_manager.get_text("data_log_list_log_tooltip"))
         self.data_log_list.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
 
         # Layout 배치
         toolbar_layout = QHBoxLayout()
-        toolbar_layout.addWidget(self.data_log_view_title)
+        toolbar_layout.addWidget(self.data_log_title)
         toolbar_layout.addStretch()
         toolbar_layout.addWidget(self.data_log_tx_broadcast_chk)
         toolbar_layout.addStretch()
@@ -221,46 +220,46 @@ class DataLogViewWidget(QWidget):
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 현재 언어 설정에 맞게 업데이트합니다."""
         # Labels & Tooltips
-        self.data_log_view_title.setText(lang_manager.get_text("data_log_view_title"))
-        self.data_log_list.setToolTip(lang_manager.get_text("data_log_view_list_log_tooltip"))
-        self.data_log_list.setPlaceholderText(lang_manager.get_text("data_log_view_list_log_placeholder"))
+        self.data_log_title.setText(language_manager.get_text("data_log_title"))
+        self.data_log_list.setToolTip(language_manager.get_text("data_log_list_log_tooltip"))
+        self.data_log_list.setPlaceholderText(language_manager.get_text("data_log_list_log_placeholder"))
 
         # TX Broadcast Components
-        self.data_log_tx_broadcast_chk.setText(lang_manager.get_text("data_log_view_chk_tx_broadcast"))
-        self.data_log_tx_broadcast_chk.setToolTip(lang_manager.get_text("data_log_view_chk_tx_broadcast_tooltip"))
+        self.data_log_tx_broadcast_chk.setText(language_manager.get_text("data_log_chk_tx_broadcast"))
+        self.data_log_tx_broadcast_chk.setToolTip(language_manager.get_text("data_log_chk_tx_broadcast_tooltip"))
 
         # Search Components
-        self.data_log_search_input.setPlaceholderText(lang_manager.get_text("data_log_view_input_search_placeholder"))
-        self.data_log_search_input.setToolTip(lang_manager.get_text("data_log_view_input_search_tooltip"))
-        self.data_log_search_prev_btn.setToolTip(lang_manager.get_text("data_log_view_btn_search_prev_tooltip"))
-        self.data_log_search_next_btn.setToolTip(lang_manager.get_text("data_log_view_btn_search_next_tooltip"))
+        self.data_log_search_input.setPlaceholderText(language_manager.get_text("data_log_input_search_placeholder"))
+        self.data_log_search_input.setToolTip(language_manager.get_text("data_log_input_search_tooltip"))
+        self.data_log_search_prev_btn.setToolTip(language_manager.get_text("data_log_btn_search_prev_tooltip"))
+        self.data_log_search_next_btn.setToolTip(language_manager.get_text("data_log_btn_search_next_tooltip"))
 
         # Checkboxes
-        self.data_log_filter_chk.setText(lang_manager.get_text("data_log_view_chk_filter"))
-        self.data_log_filter_chk.setToolTip(lang_manager.get_text("data_log_view_chk_filter_tooltip"))
-        self.data_log_hex_chk.setText(lang_manager.get_text("data_log_view_chk_hex"))
-        self.data_log_hex_chk.setToolTip(lang_manager.get_text("data_log_view_chk_hex_tooltip"))
-        self.data_log_timestamp_chk.setText(lang_manager.get_text("data_log_view_chk_timestamp"))
-        self.data_log_timestamp_chk.setToolTip(lang_manager.get_text("data_log_view_chk_timestamp_tooltip"))
-        self.data_log_pause_chk.setText(lang_manager.get_text("data_log_view_chk_pause"))
-        self.data_log_pause_chk.setToolTip(lang_manager.get_text("data_log_view_chk_pause_tooltip"))
+        self.data_log_filter_chk.setText(language_manager.get_text("data_log_chk_filter"))
+        self.data_log_filter_chk.setToolTip(language_manager.get_text("data_log_chk_filter_tooltip"))
+        self.data_log_hex_chk.setText(language_manager.get_text("data_log_chk_hex"))
+        self.data_log_hex_chk.setToolTip(language_manager.get_text("data_log_chk_hex_tooltip"))
+        self.data_log_timestamp_chk.setText(language_manager.get_text("data_log_chk_timestamp"))
+        self.data_log_timestamp_chk.setToolTip(language_manager.get_text("data_log_chk_timestamp_tooltip"))
+        self.data_log_pause_chk.setText(language_manager.get_text("data_log_chk_pause"))
+        self.data_log_pause_chk.setToolTip(language_manager.get_text("data_log_chk_pause_tooltip"))
 
         # Buttons
-        self.data_log_clear_log_btn.setText(lang_manager.get_text("data_log_view_btn_clear"))
-        self.data_log_clear_log_btn.setToolTip(lang_manager.get_text("data_log_view_btn_clear_tooltip"))
+        self.data_log_clear_log_btn.setText(language_manager.get_text("data_log_btn_clear"))
+        self.data_log_clear_log_btn.setToolTip(language_manager.get_text("data_log_btn_clear_tooltip"))
 
         # 로깅 버튼 텍스트는 상태에 따라 달라짐 (토글 시)
         if not self.data_log_toggle_logging_btn.isChecked():
-            self.data_log_toggle_logging_btn.setText(lang_manager.get_text("data_log_view_btn_toggle_logging"))
-        self.data_log_toggle_logging_btn.setToolTip(lang_manager.get_text("data_log_view_btn_toggle_logging_tooltip"))
+            self.data_log_toggle_logging_btn.setText(language_manager.get_text("data_log_btn_toggle_logging"))
+        self.data_log_toggle_logging_btn.setToolTip(language_manager.get_text("data_log_btn_toggle_logging_tooltip"))
 
         # Newline Combo
         current_idx = self.data_log_newline_combo.currentIndex()
-        self.data_log_newline_combo.setItemText(0, lang_manager.get_text("data_log_newline_raw"))
-        self.data_log_newline_combo.setItemText(1, lang_manager.get_text("data_log_newline_lf"))
-        self.data_log_newline_combo.setItemText(2, lang_manager.get_text("data_log_newline_cr"))
-        self.data_log_newline_combo.setItemText(3, lang_manager.get_text("data_log_newline_crlf"))
-        self.data_log_newline_combo.setToolTip(lang_manager.get_text("data_log_view_combo_newline_tooltip"))
+        self.data_log_newline_combo.setItemText(0, language_manager.get_text("data_log_newline_raw"))
+        self.data_log_newline_combo.setItemText(1, language_manager.get_text("data_log_newline_lf"))
+        self.data_log_newline_combo.setItemText(2, language_manager.get_text("data_log_newline_cr"))
+        self.data_log_newline_combo.setItemText(3, language_manager.get_text("data_log_newline_crlf"))
+        self.data_log_newline_combo.setToolTip(language_manager.get_text("data_log_combo_newline_tooltip"))
         self.data_log_newline_combo.setCurrentIndex(current_idx)
 
     # -------------------------------------------------------------------------
@@ -334,7 +333,7 @@ class DataLogViewWidget(QWidget):
         self.data_log_list.set_search_pattern(text)
 
     @pyqtSlot()
-    def on_clear_data_log_view_clicked(self) -> None:
+    def on_clear_data_log_clicked(self) -> None:
         """화면에 표시된 로그와 대기 중인 버퍼를 모두 지웁니다."""
         self.data_log_list.clear()
         self.ui_update_buffer.clear()
@@ -349,7 +348,7 @@ class DataLogViewWidget(QWidget):
         """
         if checked:
             # 파일 저장 대화상자
-            title = lang_manager.get_text("data_log_view_btn_toggle_logging")
+            title = language_manager.get_text("data_log_btn_toggle_logging")
             if self.tab_name:
                 title = f"{self.tab_name}::{title}"
 
@@ -373,7 +372,7 @@ class DataLogViewWidget(QWidget):
             # 로깅 중단 시그널
             self.data_logging_stopped.emit()
             # 버튼 스타일 복구
-            self.data_log_toggle_logging_btn.setText(lang_manager.get_text("data_log_view_btn_toggle_logging"))
+            self.data_log_toggle_logging_btn.setText(language_manager.get_text("data_log_btn_toggle_logging"))
             self.data_log_toggle_logging_btn.setStyleSheet("")
 
     @pyqtSlot(int)

@@ -18,7 +18,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from view.main_window import MainWindow
 from presenter.main_presenter import MainPresenter
 from presenter.packet_presenter import PacketPresenter
-from presenter.manual_ctrl_presenter import ManualCtrlPresenter
+from presenter.manual_control_presenter import ManualControlPresenter
 from resource_path import ResourcePath
 from core.data_logger import data_logger_manager
 
@@ -47,8 +47,8 @@ def test_presenter_initialization(main_presenter):
     assert main_presenter.packet_presenter is not None
     assert isinstance(main_presenter.packet_presenter, PacketPresenter)
 
-    assert main_presenter.manual_ctrl_presenter is not None
-    assert isinstance(main_presenter.manual_ctrl_presenter, ManualCtrlPresenter)
+    assert main_presenter.manual_control_presenter is not None
+    assert isinstance(main_presenter.manual_control_presenter, ManualControlPresenter)
 
     # 3. EventRouter
     assert main_presenter.event_router is not None

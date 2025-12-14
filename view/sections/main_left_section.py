@@ -8,8 +8,8 @@
 * 포트 관리와 제어 기능의 그룹화
 
 ## WHAT
-* PortTabPanel 및 ManualCtrlPanel 배치
-* SysLogViewWidget 배치
+* PortTabPanel 및 ManualControlPanel 배치
+* SysLogWidget 배치
 * 하위 패널 간 상호작용 중재 (View 레벨)
 
 ## HOW
@@ -19,12 +19,12 @@
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtCore import pyqtSignal
 from typing import Optional, Dict, Any
-from view.managers.lang_manager import lang_manager
+from view.managers.language_manager import language_manager
 
 from view.panels.port_panel import PortPanel
-from view.panels.manual_ctrl_panel import ManualCtrlPanel
+from view.panels.manual_control_panel import ManualControlPanel
 from view.panels.port_tab_panel import PortTabPanel
-from view.widgets.sys_log_view import SysLogViewWidget
+from view.widgets.sys_log import SysLogWidget
 
 class MainLeftSection(QWidget):
     """
@@ -32,12 +32,12 @@ class MainLeftSection(QWidget):
 
     Attributes:
         port_tabs (PortTabPanel): 포트 탭 관리 패널
-        manual_ctrl (ManualCtrlPanel): 수동 제어 패널
-        sys_log_view_widget (SysLogViewWidget): 시스템 로그 위젯
+        manual_control (ManualControlPanel): 수동 제어 패널
+        sys_log_widget (SysLogWidget): 시스템 로그 위젯
     """
 
     # 하위 패널 이벤트 상위 전달 시그널
-    manual_cmd_send_requested = pyqtSignal(str, bool, bool, bool, bool)
+    manual_command_send_requested = pyqtSignal(str, bool, bool, bool, bool)
     port_tab_added = pyqtSignal(object) # PortPanel 객체 전달
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
@@ -49,11 +49,11 @@ class MainLeftSection(QWidget):
         """
         super().__init__(parent)
         self.port_tabs = None
-        self.manual_ctrl = None
-        self.sys_log_view_widget = None
+        self.manual_control = None
+        self.sys_log_widget = None
         self.init_ui()
 
-        lang_manager.language_changed.connect(self.retranslate_ui)
+        language_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃 초기화"""
@@ -71,17 +71,17 @@ class MainLeftSection(QWidget):
         # ---------------------------------------------------------
         # 2. 수동 제어 패널 (Manual Control)
         # ---------------------------------------------------------
-        self.manual_ctrl = ManualCtrlPanel()
-        self.manual_ctrl.manual_cmd_send_requested.connect(self.manual_cmd_send_requested.emit)
+        self.manual_control = ManualControlPanel()
+        self.manual_control.manual_command_send_requested.connect(self.manual_command_send_requested.emit)
 
         # ---------------------------------------------------------
         # 3. 시스템 로그 (System Log)
         # ---------------------------------------------------------
-        self.sys_log_view_widget = SysLogViewWidget()
+        self.sys_log_widget = SysLogWidget()
 
         layout.addWidget(self.port_tabs, 1)
-        layout.addWidget(self.manual_ctrl)
-        layout.addWidget(self.sys_log_view_widget)
+        layout.addWidget(self.manual_control)
+        layout.addWidget(self.sys_log_widget)
 
         self.setLayout(layout)
 
@@ -127,7 +127,7 @@ class MainLeftSection(QWidget):
         Logic:
             - 현재 탭 인덱스 조회
             - 해당 위젯이 PortPanel인지 확인
-            - DataLogViewWidget에 데이터 전달
+            - DataLogWidget에 데이터 전달
 
         Args:
             data (bytes): 추가할 데이터
@@ -136,8 +136,8 @@ class MainLeftSection(QWidget):
         current_widget = self.port_tabs.widget(current_index)
 
         if isinstance(current_widget, PortPanel):
-            if hasattr(current_widget, 'data_log_view_widget'):
-                current_widget.data_log_view_widget.append_data(data)
+            if hasattr(current_widget, 'data_log_widget'):
+                current_widget.data_log_widget.append_data(data)
 
     def _on_tab_added(self, panel: PortPanel) -> None:
         """
@@ -157,7 +157,7 @@ class MainLeftSection(QWidget):
         Returns:
             Dict[str, Any]: 통합된 상태 데이터
         """
-        manual_state = self.manual_ctrl.save_state()
+        manual_state = self.manual_control.save_state()
         port_states = []
         count = self.port_tabs.count()
 
@@ -171,7 +171,7 @@ class MainLeftSection(QWidget):
 
         # 통합된 상태 반환
         return {
-            "manual_ctrl": manual_state,
+            "manual_control": manual_state,
             "ports": port_states
         }
 
@@ -188,9 +188,9 @@ class MainLeftSection(QWidget):
             state (Dict[str, Any]): 복원할 상태 데이터
         """
         # 1. ManualCtrl 상태 복원
-        manual_state = state.get("manual_ctrl", {})
+        manual_state = state.get("manual_control", {})
         if manual_state:
-            self.manual_ctrl.load_state(manual_state)
+            self.manual_control.load_state(manual_state)
 
         # 2. Port Tabs 상태 복원
         port_states = state.get("ports", [])
@@ -236,4 +236,4 @@ class MainLeftSection(QWidget):
             if current_widget and hasattr(current_widget, 'port_settings_widget'):
                 if current_widget.port_settings_widget == sender_widget:
                     # 현재 탭의 변경이면 ManualCtrl 업데이트
-                    self.manual_ctrl.set_controls_enabled(connected)
+                    self.manual_control.set_controls_enabled(connected)

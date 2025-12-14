@@ -37,8 +37,8 @@ def test_apply_settings(presenter, mock_components):
     view, _ = mock_components
 
     # 설정값 강제 주입
-    presenter.settings_manager.set(ConfigKeys.INSPECTOR_BUFFER_SIZE, 500)
-    presenter.settings_manager.set(ConfigKeys.INSPECTOR_AUTOSCROLL, False)
+    presenter.settings_manager.set(ConfigKeys.PACKET_BUFFER_SIZE, 500)
+    presenter.settings_manager.set(ConfigKeys.PACKET_AUTOSCROLL, False)
 
     presenter.apply_settings()
 

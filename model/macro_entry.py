@@ -12,7 +12,7 @@
 ## WHAT
 * 매크로 명령 속성 정의
   - enabled: 활성화 여부
-  - cmd: 전송할 명령어
+  - command: 전송할 명령어
   - is_hex: HEX 모드 여부
   - prefix/suffix: 접두사/접미사 사용 여부
   - delay_ms: 다음 명령까지 대기 시간
@@ -34,7 +34,7 @@ class MacroEntry:
 
     Attributes:
         enabled: 활성화 여부
-        cmd: 전송할 명령어
+        command: 전송할 명령어
         is_hex: HEX 모드 여부
         prefix: 접두사 사용 여부
         suffix: 접미사 사용 여부
@@ -43,7 +43,7 @@ class MacroEntry:
         timeout_ms: 응답 대기 시간 (ms)
     """
     enabled: bool = True
-    cmd: str = ""
+    command: str = ""
     is_hex: bool = False
     prefix: bool = False
     suffix: bool = False
@@ -60,7 +60,7 @@ class MacroEntry:
         """
         return {
             "enabled": self.enabled,
-            "cmd": self.cmd,
+            "command": self.command,
             "is_hex": self.is_hex,
             "prefix": self.prefix,
             "suffix": self.suffix,
@@ -82,7 +82,7 @@ class MacroEntry:
         """
         return cls(
             enabled=data.get("enabled", True),
-            cmd=data.get("cmd", ""),
+            command=data.get("command", ""),
             is_hex=data.get("is_hex", False),
             prefix=data.get("prefix", False),
             suffix=data.get("suffix", False),

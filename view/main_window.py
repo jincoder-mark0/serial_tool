@@ -31,7 +31,7 @@ from view.dialogs import (
     FontSettingsDialog, AboutDialog, PreferencesDialog, FileTransferDialog
 )
 from view.managers.theme_manager import ThemeManager
-from view.managers.lang_manager import lang_manager, LangManager
+from view.managers.language_manager import language_manager, LanguageManager
 from view.managers.color_manager import ColorManager
 from core.settings_manager import SettingsManager
 from constants import ConfigKeys
@@ -59,7 +59,7 @@ class MainWindow(QMainWindow):
     file_transfer_dialog_opened = pyqtSignal(object)
 
     # 하위 컴포넌트 시그널 중계
-    manual_cmd_send_requested = pyqtSignal(dict)
+    manual_command_send_requested = pyqtSignal(dict)
     port_tab_added = pyqtSignal(object)
 
     def __init__(self, resource_path=None) -> None:
@@ -79,15 +79,15 @@ class MainWindow(QMainWindow):
 
         # 싱글톤이므로 첫 초기화 시에만 resource_path 전달
         if resource_path is not None:
-            LangManager(resource_path)
+            LanguageManager(resource_path)
             ColorManager(resource_path)
 
         # 초기 언어 설정
         lang = self.settings.get(ConfigKeys.LANGUAGE, 'en')
-        lang_manager.set_language(lang)
-        lang_manager.language_changed.connect(self.on_language_changed)
+        language_manager.set_language(lang)
+        language_manager.language_changed.connect(self.on_language_changed)
 
-        self.setWindowTitle(f"{lang_manager.get_text('main_title')} v1.0")
+        self.setWindowTitle(f"{language_manager.get_text('main_title')} v1.0")
         self.resize(1400, 900)
 
         # 우측 패널 숨김 전 왼쪽 패널 너비 저장용
@@ -138,7 +138,7 @@ class MainWindow(QMainWindow):
         self.splitter.setCollapsible(1, True)
 
         # 시그널 체이닝 (하위 -> 상위)
-        self.left_section.manual_cmd_send_requested.connect(self.manual_cmd_send_requested.emit)
+        self.left_section.manual_command_send_requested.connect(self.manual_command_send_requested.emit)
         self.left_section.port_tab_added.connect(self.port_tab_added.emit)
 
         main_layout.addWidget(self.splitter)
@@ -184,7 +184,7 @@ class MainWindow(QMainWindow):
             message (str): 메시지 내용
             level (str): 로그 레벨
         """
-        self.left_section.sys_log_view_widget.log(message, level)
+        self.left_section.sys_log_widget.log(message, level)
 
     def update_status_bar_stats(self, rx_bytes: int, tx_bytes: int) -> None:
         """상태바 통계 업데이트"""
@@ -207,7 +207,7 @@ class MainWindow(QMainWindow):
         """로그 저장 다이얼로그 호출"""
         current_index = self.left_section.port_tabs.currentIndex()
         current_widget = self.left_section.port_tabs.widget(current_index)
-        if hasattr(current_widget, 'data_log_view_widget'):
+        if hasattr(current_widget, 'data_log_widget'):
             current_widget.received_area_widget.on_data_log_logging_toggled(True) # 로깅 시작 요청
 
     def append_local_echo_data(self, data: bytes) -> None:
@@ -295,7 +295,7 @@ class MainWindow(QMainWindow):
 
         # 2. Left Section 상태 복원 (설정 파일 구조에 맞춰 데이터 매핑)
         left_section_state = {
-            "manual_ctrl": self.settings.get(ConfigKeys.MANUAL_CTRL_STATE, {}),
+            "manual_control": self.settings.get(ConfigKeys.MANUAL_CONTROL_STATE, {}),
             "ports": self.settings.get(ConfigKeys.PORTS_TABS_STATE, [])
         }
         self.left_section.load_state(left_section_state)
@@ -303,7 +303,7 @@ class MainWindow(QMainWindow):
         # 3. Right Section 상태 복원
         right_section_state = {
             "macro_panel": {
-                "cmds": self.settings.get(ConfigKeys.MACRO_COMMANDS, []),
+                "commands": self.settings.get(ConfigKeys.MACRO_COMMANDS, []),
                 "control_state": self.settings.get(ConfigKeys.MACRO_CONTROL_STATE, {})
             }
         }
@@ -328,8 +328,8 @@ class MainWindow(QMainWindow):
 
         # 2. Left Section 상태
         left_state = self.left_section.save_state()
-        if 'manual_ctrl' in left_state:
-            state[ConfigKeys.MANUAL_CTRL_STATE] = left_state['manual_ctrl']
+        if 'manual_control' in left_state:
+            state[ConfigKeys.MANUAL_CONTROL_STATE] = left_state['manual_control']
         if 'ports' in left_state:
             state[ConfigKeys.PORTS_TABS_STATE] = left_state['ports']
 
@@ -337,7 +337,7 @@ class MainWindow(QMainWindow):
         right_state = self.right_section.save_state()
         if 'macro_panel' in right_state:
             macro_data = right_state['macro_panel']
-            state[ConfigKeys.MACRO_COMMANDS] = macro_data.get('cmds', [])
+            state[ConfigKeys.MACRO_COMMANDS] = macro_data.get('commands', [])
             state[ConfigKeys.MACRO_CONTROL_STATE] = macro_data.get('control_state', {})
 
         return state
@@ -356,7 +356,7 @@ class MainWindow(QMainWindow):
         self.menu_bar.exit_requested.connect(self.close)
         self.menu_bar.theme_changed.connect(self.switch_theme)
         self.menu_bar.font_settings_requested.connect(self.open_font_settings_dialog)
-        self.menu_bar.language_changed.connect(lambda lang: lang_manager.set_language(lang))
+        self.menu_bar.language_changed.connect(lambda lang: language_manager.set_language(lang))
         self.menu_bar.preferences_requested.connect(self.open_preferences_dialog)
         self.menu_bar.about_requested.connect(self.open_about_dialog)
 
@@ -371,8 +371,8 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'left_section'):
             current_index = self.left_section.port_tabs.currentIndex()
             current_widget = self.left_section.port_tabs.widget(current_index)
-            if current_widget and hasattr(current_widget, 'data_log_view_widget'):
-                current_widget.data_log_view_widget.on_clear_data_log_view_clicked()
+            if current_widget and hasattr(current_widget, 'data_log_widget'):
+                current_widget.data_log_widget.on_clear_data_log_clicked()
 
     def switch_theme(self, theme_name: str) -> None:
         """
@@ -446,14 +446,14 @@ class MainWindow(QMainWindow):
         """설정 변경 요청 처리"""
         self.settings_save_requested.emit(settings)
 
-    def on_language_changed(self, lang_code: str) -> None:
+    def on_language_changed(self, language_code: str) -> None:
         """
         언어 변경 핸들러
 
         Args:
-            lang_code (str): 언어 코드
+            language_code (str): 언어 코드
         """
-        self.setWindowTitle(f"{lang_manager.get_text('main_title')} v1.0")
+        self.setWindowTitle(f"{language_manager.get_text('main_title')} v1.0")
 
         # 상태바 업데이트
         self.global_status_bar.retranslate_ui()
@@ -462,7 +462,7 @@ class MainWindow(QMainWindow):
         self.menu_bar.retranslate_ui()
 
         # 설정에 언어 저장
-        self.settings.set(ConfigKeys.LANGUAGE, lang_code)
+        self.settings.set(ConfigKeys.LANGUAGE, language_code)
 
     def toggle_right_panel(self, visible: bool) -> None:
         """우측 패널 가시성 토글"""
