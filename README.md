@@ -73,7 +73,7 @@
 
 ```bash
 # 1. 저장소 클론
-git clone [https://github.com/yourusername/SerialTool.git](https://github.com/yourusername/SerialTool.git)
+git clone https://github.com/yourusername/SerialTool.git
 cd SerialTool
 
 # 2. 가상 환경 생성 (권장)
@@ -111,6 +111,7 @@ serial_tool/
 │   ├── constants.py                    # 전역 상수, EventTopics, ConfigKeys
 │   ├── dtos.py                         # DTO (PortConfig, ManualCommand 등)
 │   ├── enums.py                        # 열거형 (PortState, ParserType)
+│   ├── schemas.py                      # JSON 스키마 정의
 │   └── version.py                      # 버전 정보
 │
 ├── core/                               # 인프라 및 유틸리티

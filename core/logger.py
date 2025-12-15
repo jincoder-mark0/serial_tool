@@ -109,9 +109,9 @@ class Logger:
         file_handler.setLevel(logging.DEBUG)
         file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(message)s'))
 
-        for  handler in self.logger. handlers[:]:
-            if isinstance( handler, RotatingFileHandler):
-                self.logger.removeHandler( handler)
+        for handler in self.logger.handlers[:]:
+            if isinstance(handler, RotatingFileHandler):
+                self.logger.removeHandler(handler)
 
         self.logger.addHandler(file_handler)
 

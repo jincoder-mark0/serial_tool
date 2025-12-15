@@ -324,7 +324,7 @@ class MainPresenter(QObject):
             font_size=settings.get(ConfigKeys.PROP_FONT_SIZE, 10),
             max_log_lines=settings.get(ConfigKeys.RX_MAX_LINES, 2000),
             baudrate=settings.get(ConfigKeys.PORT_BAUDRATE, 115200),
-            newline=str(s.get(ConfigKeys.PORT_NEWLINE, "\n")),
+            newline=str(settings.get(ConfigKeys.PORT_NEWLINE, "\n")),
             local_echo=settings.get(ConfigKeys.PORT_LOCAL_ECHO, False),
             scan_interval=settings.get(ConfigKeys.PORT_SCAN_INTERVAL, 1000),
             cmd_prefix=settings.get(ConfigKeys.COMMAND_PREFIX, ""),
@@ -391,14 +391,14 @@ class MainPresenter(QObject):
         # 저장된 패널 너비 저장 (Custom Key 사용)
         if state.saved_right_width is not None:
              self.settings_manager.set(ConfigKeys.SAVED_RIGHT_WIDTH, state.saved_right_width)
-        if ConfigKeys.MANUAL_CONTROL_STATE in state:
-            self.settings_manager.set(ConfigKeys.MANUAL_CONTROL_STATE, state[ConfigKeys.MANUAL_CONTROL_STATE])
-        if ConfigKeys.PORTS_TABS_STATE in state:
-            self.settings_manager.set(ConfigKeys.PORTS_TABS_STATE, state[ConfigKeys.PORTS_TABS_STATE])
-        if ConfigKeys.MACRO_COMMANDS in state:
-            self.settings_manager.set(ConfigKeys.MACRO_COMMANDS, state[ConfigKeys.MACRO_COMMANDS])
-        if ConfigKeys.MACRO_CONTROL_STATE in state:
-            self.settings_manager.set(ConfigKeys.MACRO_CONTROL_STATE, state[ConfigKeys.MACRO_CONTROL_STATE])
+        if ConfigKeys.MANUAL_CONTROL_STATE in state.left_section_state:
+            self.settings_manager.set(ConfigKeys.MANUAL_CONTROL_STATE, state.left_section_state[ConfigKeys.MANUAL_CONTROL_STATE])
+        if ConfigKeys.PORTS_TABS_STATE in state.left_section_state:
+            self.settings_manager.set(ConfigKeys.PORTS_TABS_STATE, state.left_section_state[ConfigKeys.PORTS_TABS_STATE])
+        if ConfigKeys.MACRO_COMMANDS in state.right_section_state:
+            self.settings_manager.set(ConfigKeys.MACRO_COMMANDS, state.right_section_state[ConfigKeys.MACRO_COMMANDS])
+        if ConfigKeys.MACRO_CONTROL_STATE in state.right_section_state:
+            self.settings_manager.set(ConfigKeys.MACRO_CONTROL_STATE, state.right_section_state[ConfigKeys.MACRO_CONTROL_STATE])
 
         # 파일 저장
         self.settings_manager.save_settings()
