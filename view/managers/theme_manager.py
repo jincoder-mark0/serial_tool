@@ -16,7 +16,8 @@
 * 고정폭 폰트 (데이터 표시용)
 * 테마별 아이콘 제공
 * 설정 저장/복원
-* 테마 목록 자동 감지
+* 테마 파일(*_theme.qss) 자동 감지
+
 ## HOW
 * QSS 파일로 테마 정의 (common + theme-specific)
 * QFont로 폰트 관리
@@ -69,16 +70,56 @@ class ThemeManager:
         self._fixed_font = QFont(fixed_family, fixed_size)
         self._fixed_font.setStyleHint(QFont.Monospace)
 
+    def get_available_themes(self) -> list[str]:
+        """
+        사용 가능한 테마 목록 반환 (파일 스캔 방식)
+
+        Logic:
+            - themes 디렉토리의 파일 스캔
+            - '*_theme.qss' 패턴과 일치하는 파일 찾기
+            - 파일명에서 '_theme.qss' 제거 후 대문자 변환하여 반환
+
+        Returns:
+            list[str]: 테마 이름 리스트 (예: ['Dark', 'Light', 'Dracula'])
+        """
+        themes = []
+
+        # ResourcePath 확인
+        if self._resource_path:
+            themes_dir = self._resource_path.themes_dir
+        else:
+            # Fallback
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            themes_dir = os.path.join(base_dir, 'resources', 'themes')
+
+        if not os.path.exists(themes_dir):
+            return ["Dark", "Light"] # 기본값
+
+        try:
+            for filename in os.listdir(themes_dir):
+                if filename.endswith("_theme.qss"):
+                    # 예: dracula_theme.qss -> Dracula
+                    name = filename.replace("_theme.qss", "").capitalize()
+                    themes.append(name)
+        except Exception as e:
+            logger.error(f"Error scanning themes directory: {e}")
+            return ["Dark", "Light"]
+
+        return sorted(themes)
+
     def load_theme(self, theme_name: str = "dark") -> str:
         """
-        지정된 테마의 QSS 콘텐츠를 로드합니다. 공통 스타일을 먼저 로드합니다.
+        지정된 테마의 QSS 콘텐츠를 로드합니다.
 
         Args:
-            theme_name (str): 로드할 테마 이름 (예: "dark", "light"). 기본값은 "dark".
+            theme_name (str): 로드할 테마 이름 (예: "Dark", "Dracula").
 
         Returns:
             str: 결합된 QSS 문자열.
         """
+        # 이름 소문자 변환 및 파일명 구성
+        theme_file = f"{theme_name.lower()}_theme.qss"
+
         if self._resource_path is not None:
             # AppConfig가 제공되었으면 그것을 사용
             common_path = self._resource_path.get_theme_file('common')
@@ -86,19 +127,15 @@ class ThemeManager:
 
             # 리소스 경로에 등록되지 않은 새 테마일 수 있으므로 직접 구성 시도
             if not theme_path:
-                 theme_file = f"{theme_name}_theme.qss"
-                 theme_path = self._resource_path.themes_dir / theme_file
+                theme_file = f"{theme_name}_theme.qss"
+                theme_path = self._resource_path.themes_dir / theme_file
 
         else:
-            # 하위 호환성: 기존 경로 사용
-            common_path = "resources/themes/common.qss"
-            theme_files = {
-                "dark": "resources/themes/dark_theme.qss",
-                "light": "resources/themes/light_theme.qss"
-            }
-            theme_path = theme_files.get(theme_name)
-            if not theme_path:
-                 theme_path = f"resources/themes/{theme_name}_theme.qss"
+            # Fallback
+            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
+            themes_dir = os.path.join(base_dir, 'resources', 'themes')
+            common_path = os.path.join(themes_dir, 'common.qss')
+            theme_path = os.path.join(themes_dir, theme_file)
 
         qss_content = ""
 
@@ -140,7 +177,7 @@ class ThemeManager:
         Returns:
             str: 폴백 QSS 문자열.
         """
-        if theme_name == "dark":
+        if theme_name.lower() == "dark":
             return """
             QMainWindow, QWidget { background-color: #2b2b2b; color: #ffffff; }
             QLineEdit, QTextEdit, QPlainTextEdit { background-color: #3b3b3b; color: #ffffff; border: 1px solid #555555; }
@@ -231,39 +268,6 @@ class ThemeManager:
             str: 현재 테마 이름.
         """
         return self._current_theme
-
-    def get_available_themes(self) -> list[str]:
-        """
-        사용 가능한 테마 목록 반환
-
-        Logic:
-            - themes 디렉토리의 .qss 파일 스캔
-            - 파일명(확장자 제외, '_theme' 접미사 제외 등) 반환
-            - 대문자로 변환하여 반환 (UI 표시용)
-
-        Returns:
-            list[str]: 테마 이름 리스트 (예: ['Dark', 'Light'])
-        """
-        themes = []
-
-        # ResourcePath 확인
-        if self._resource_path:
-            themes_dir = self._resource_path.themes_dir
-        else:
-            # Fallback
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            themes_dir = os.path.join(base_dir, 'resources', 'themes')
-
-        if not os.path.exists(themes_dir):
-            return ["Dark", "Light"] # 기본값
-
-        for filename in os.listdir(themes_dir):
-            if filename.endswith(".qss") and filename != "common.qss":
-                # dark_theme.qss -> Dark
-                name = filename.replace("_theme.qss", "").replace(".qss", "")
-                themes.append(name.capitalize())
-
-        return sorted(themes)
 
     # 가변폭(Proportional) 폰트 메서드
     def set_proportional_font(self, family: str, size: int):
@@ -395,7 +399,7 @@ class ThemeManager:
         """
         현재 테마에 맞는 아이콘을 반환합니다.
         아이콘 파일명 규칙: {name}_{theme}.svg (예: add_dark.svg, add_light.svg)
-        다크 테마인 경우 밝은 아이콘(_dark.svg)을, 라이트 테마인 경우 어두운 아이콘(_light.svg)을 찾습니다.
+        다크 테마(또는 Dracula)인 경우 밝은 아이콘(_dark.svg)을, 라이트 테마인 경우 어두운 아이콘(_light.svg)을 찾습니다.
 
         Args:
             name (str): 아이콘 이름 (예: "add").
@@ -403,9 +407,16 @@ class ThemeManager:
         Returns:
             QIcon: 테마에 맞는 QIcon 객체.
         """
+        # Dracula 등 다크 계열 테마는 white 아이콘(dark 접미사) 사용
+        target_theme = self._current_theme
+        if target_theme.lower() in ["dracula", "dark"]:
+            target_theme = "dark"
+        else:
+            target_theme = "light"
+
         if self._resource_path is not None:
             # AppConfig가 제공되었으면 그것을 사용
-            icon_path = self._resource_path.get_icon_path(name, self._current_theme)
+            icon_path = self._resource_path.get_icon_path(name, target_theme)
 
             if not os.path.exists(icon_path):
                 # 폴백: 테마 접미사 없이 시도
@@ -417,7 +428,7 @@ class ThemeManager:
             return QIcon(str(icon_path))
         else:
             # 하위 호환성: 기존 경로 사용
-            icon_path = f"resources/icons/{name}_{self._current_theme}.svg"
+            icon_path = f"resources/icons/{name}_{target_theme}.svg"
 
             if not os.path.exists(icon_path):
                 # 폴백: 테마 접미사 없이 시도

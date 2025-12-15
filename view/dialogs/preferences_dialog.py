@@ -5,9 +5,10 @@ from PyQt5.QtWidgets import (
     QButtonGroup, QListWidget, QCheckBox, QLineEdit
 )
 from PyQt5.QtCore import pyqtSignal, Qt
-from typing import Dict, Any, Optional
+from typing import Optional, Any
 import os
 from view.managers.language_manager import language_manager
+from view.managers.theme_manager import ThemeManager
 from common.constants import (
     VALID_BAUDRATES,
     DEFAULT_LOG_MAX_LINES,
@@ -16,22 +17,28 @@ from common.constants import (
     MAX_PACKET_SIZE,
     ConfigKeys
 )
+from common.dtos import PreferencesState
 
 class PreferencesDialog(QDialog):
     """
     설정 관리 대화상자
-    MVP 패턴 준수 (설정 직접 수정 안 함)
+    MVP 패턴 준수: View는 데이터를 보여주고 사용자 입력을 수집하여 반환만 함.
+    SettingsManager에 직접 접근하지 않음.
     """
 
-    settings_changed = pyqtSignal(dict)
+    # 변경된 설정을 DTO로 전달
+    settings_changed = pyqtSignal(object) # PreferencesState
 
-    def __init__(self, parent: Optional[QWidget] = None, current_settings: Dict[str, Any] = None) -> None:
+    def __init__(self, parent: Optional[QWidget] = None, state: PreferencesState = None) -> None:
         super().__init__(parent)
         self.setWindowTitle(language_manager.get_text("pref_title"))
         self.resize(500, 400)
-        self.current_settings = current_settings or {}
+
+        # DTO가 없으면 기본값 생성
+        self.state = state if state else PreferencesState()
+
         self.init_ui()
-        self.load_settings()
+        self.set_state_to_ui()
 
     def init_ui(self) -> None:
         """UI 컴포넌트를 초기화"""
@@ -240,7 +247,7 @@ class PreferencesDialog(QDialog):
         delimiter_layout = QVBoxLayout()
 
         self.delimiter_list = QListWidget()
-        # 기본값은 load_settings에서 처리하므로 여기서는 비워둡니다.
+        # 기본값은 set_state_to_ui에서 처리하므로 여기서는 비워둡니다.
         # self.delimiter_list.addItems(["\\r\\n", "0xFF", "0x7E"])
 
         delimiter_btn_layout = QHBoxLayout()
@@ -365,84 +372,96 @@ class PreferencesDialog(QDialog):
 
         return value
 
-    def load_settings(self) -> None:
-        """현재 설정을 UI에 반영합니다."""
+    def set_state_to_ui(self) -> None:
+        """
+        DTO 상태를 UI에 반영합니다.
+        """
         # General
-        theme = self._get_setting(ConfigKeys.THEME, "Dark").capitalize()
-        self.theme_combo.setCurrentText(theme)
+        # 대소문자 무시하고 매칭 (Dark vs dark)
+        index = self.theme_combo.findText(self.state.theme, Qt.MatchFixedString)
+        if index != -1:
+            self.theme_combo.setCurrentIndex(index)
+        else:
+             # 테마가 없을 경우 기본값 0번
+             self.theme_combo.setCurrentIndex(0)
 
-        language_code = self._get_setting(ConfigKeys.LANGUAGE, "en")
-        index = self.language_combo.findData(language_code)
+        index = self.language_combo.findData(self.state.language)
         if index != -1:
             self.language_combo.setCurrentIndex(index)
 
-        self.proportional_font_size_spin.setValue(self._get_setting(ConfigKeys.PROP_FONT_SIZE, 10))
-        self.max_lines_spin.setValue(self._get_setting(ConfigKeys.RX_MAX_LINES, DEFAULT_LOG_MAX_LINES))
+        self.proportional_font_size_spin.setValue(self.state.font_size)
+        self.max_lines_spin.setValue(self.state.max_log_lines)
 
         # Serial
-        self.port_baudrate_combo.setCurrentText(str(self._get_setting(ConfigKeys.PORT_BAUDRATE, 115200)))
-        self.port_newline_combo.setCurrentText(str(self._get_setting(ConfigKeys.PORT_NEWLINE, "\n")))
-        self.port_local_echo_chk.setChecked(self._get_setting(ConfigKeys.PORT_LOCAL_ECHO, False))
-        self.port_scan_interval_spin.setValue(self._get_setting(ConfigKeys.PORT_SCAN_INTERVAL, 5000))
+        self.port_baudrate_combo.setCurrentText(str(self.state.baudrate))
+        self.port_newline_combo.setCurrentText(self.state.newline)
+        self.port_local_echo_chk.setChecked(self.state.local_echo)
+        self.port_scan_interval_spin.setValue(self.state.scan_interval)
 
         # Command
-        self.prefix_combo.setCurrentText(self._get_setting(ConfigKeys.COMMAND_PREFIX, ""))
-        self.suffix_combo.setCurrentText(self._get_setting(ConfigKeys.COMMAND_SUFFIX, ""))
+        self.prefix_combo.setCurrentText(self.state.cmd_prefix)
+        self.suffix_combo.setCurrentText(self.state.cmd_suffix)
+
+        # Logging
+        self.log_path_edit.setText(self.state.log_path or os.getcwd())
 
         # Packet
-        parser_type = self._get_setting(ConfigKeys.PACKET_PARSER_TYPE, 0)
-        btn = self.parser_type_button_group.button(parser_type)
+        btn = self.parser_type_button_group.button(self.state.parser_type)
         if btn:
             btn.setChecked(True)
 
-        delimiters = self._get_setting(ConfigKeys.PACKET_DELIMITERS, ["\\r\\n"])
         self.delimiter_list.clear()
-        self.delimiter_list.addItems(delimiters)
+        self.delimiter_list.addItems(self.state.delimiters)
 
-        self.packet_length_spin.setValue(self._get_setting(ConfigKeys.PACKET_LENGTH, 64))
+        self.packet_length_spin.setValue(self.state.packet_length)
 
-        self.at_color_ok_chk.setChecked(self._get_setting(ConfigKeys.AT_COLOR_OK, True))
-        self.at_color_error_chk.setChecked(self._get_setting(ConfigKeys.AT_COLOR_ERROR, True))
-        self.at_color_urc_chk.setChecked(self._get_setting(ConfigKeys.AT_COLOR_URC, True))
-        self.at_color_prompt_chk.setChecked(self._get_setting(ConfigKeys.AT_COLOR_PROMPT, True))
+        self.at_color_ok_chk.setChecked(self.state.at_color_ok)
+        self.at_color_error_chk.setChecked(self.state.at_color_error)
+        self.at_color_urc_chk.setChecked(self.state.at_color_urc)
+        self.at_color_prompt_chk.setChecked(self.state.at_color_prompt)
 
-        self.buffer_size_spin.setValue(self._get_setting(ConfigKeys.PACKET_BUFFER_SIZE, 100))
-        self.realtime_tracking_chk.setChecked(self._get_setting(ConfigKeys.PACKET_REALTIME, True))
-        self.auto_scroll_chk.setChecked(self._get_setting(ConfigKeys.PACKET_AUTOSCROLL, True))
-
-        # Logging
-        self.log_path_edit.setText(self._get_setting(ConfigKeys.LOG_PATH, os.getcwd()))
+        self.buffer_size_spin.setValue(self.state.packet_buffer_size)
+        self.realtime_tracking_chk.setChecked(self.state.packet_realtime)
+        self.auto_scroll_chk.setChecked(self.state.packet_autoscroll)
 
     def apply_settings(self) -> None:
-        """변경된 설정을 수집하여 시그널을 발생시킵니다."""
+        """변경된 설정을 DTO로 수집하여 시그널을 발생시킵니다."""
         delimiters = [self.delimiter_list.item(i).text() for i in range(self.delimiter_list.count())]
 
-        new_settings = {
-            "theme": self.theme_combo.currentText(),
-            "language": self.language_combo.currentData(),
-            "proportional_font_size": self.proportional_font_size_spin.value(),
-            "port_baudrate": self.port_baudrate_combo.currentText(),
-            "port_newline": self.port_newline_combo.currentText(),
-            "port_local_echo": self.port_local_echo_chk.checkState() == Qt.Checked,
-            "port_scan_interval": self.port_scan_interval_spin.value(),
-            "command_prefix": self.prefix_combo.currentText(),
-            "command_suffix": self.suffix_combo.currentText(),
-            "log_path": self.log_path_edit.text(),
-            "max_log_lines": self.max_lines_spin.value(),
+        newline_val = self.port_newline_combo.currentText()
+
+        try:
+            baud_val = int(self.port_baudrate_combo.currentText())
+        except ValueError:
+            baud_val = 115200
+
+        new_state = PreferencesState(
+            theme=self.theme_combo.currentText(),
+            language=self.language_combo.currentData(),
+            font_size=self.proportional_font_size_spin.value(),
+            max_log_lines=self.max_lines_spin.value(),
+            baudrate=baud_val,
+            newline=newline_val,
+            local_echo=self.port_local_echo_chk.checkState() == Qt.Checked,
+            scan_interval=self.port_scan_interval_spin.value(),
+            cmd_prefix=self.prefix_combo.currentText(),
+            cmd_suffix=self.suffix_combo.currentText(),
+            log_path=self.log_path_edit.text(),
 
             # Packet Settings
-            "parser_type": self.parser_type_button_group.checkedId(),
-            "delimiters": delimiters,
-            "packet_length": self.packet_length_spin.value(),
-            "at_color_ok": self.at_color_ok_chk.checkState() == Qt.Checked,
-            "at_color_error": self.at_color_error_chk.checkState() == Qt.Checked,
-            "at_color_urc": self.at_color_urc_chk.checkState() == Qt.Checked,
-            "at_color_prompt": self.at_color_prompt_chk.checkState() == Qt.Checked,
-            "packet_buffer_size": self.buffer_size_spin.value(),
-            "packet_realtime": self.realtime_tracking_chk.checkState() == Qt.Checked,
-            "packet_autoscroll": self.auto_scroll_chk.checkState() == Qt.Checked
-        }
-        self.settings_changed.emit(new_settings)
+            parser_type=self.parser_type_button_group.checkedId(),
+            delimiters=delimiters,
+            packet_length=self.packet_length_spin.value(),
+            at_color_ok=self.at_color_ok_chk.checkState() == Qt.Checked,
+            at_color_error=self.at_color_error_chk.checkState() == Qt.Checked,
+            at_color_urc=self.at_color_urc_chk.checkState() == Qt.Checked,
+            at_color_prompt=self.at_color_prompt_chk.checkState() == Qt.Checked,
+            packet_buffer_size=self.buffer_size_spin.value(),
+            packet_realtime=self.realtime_tracking_chk.checkState() == Qt.Checked,
+            packet_autoscroll=self.auto_scroll_chk.checkState() == Qt.Checked
+        )
+
+        self.settings_changed.emit(new_state)
 
     def accept(self) -> None:
         """OK 버튼 클릭 시 설정을 적용하고 닫습니다."""
