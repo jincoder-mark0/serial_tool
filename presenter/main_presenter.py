@@ -44,6 +44,7 @@ from common.dtos import (
     ManualCommand, PortDataEvent, PortErrorEvent, PacketEvent, FontConfig,
     MainWindowState, PreferencesState, ManualControlState
 )
+from view.dialogs.file_transfer_dialog import FileTransferDialog # Type hinting
 
 class MainPresenter(QObject):
     """
@@ -158,6 +159,10 @@ class MainPresenter(QObject):
         # File Transfer Events
         self.event_router.file_transfer_completed.connect(self.on_file_transfer_completed)
         self.event_router.file_transfer_error.connect(self.on_file_transfer_error)
+
+        # 설정 변경 이벤트 구독 (MainPresenter도 구독 필요 시 여기에 추가)
+        self.event_router.settings_changed.connect(self.on_settings_change_requested)
+
 
         # --- 5. 내부 Model 시그널 연결 ---
         # MacroRunner의 전송 요청 처리
@@ -317,7 +322,6 @@ class MainPresenter(QObject):
         """Preferences 다이얼로그 요청 처리 (DTO 생성)"""
         settings = self.settings_manager
 
-        # PreferencesState DTO 생성
         state = PreferencesState(
             theme=settings.get(ConfigKeys.THEME, "Dark").capitalize(),
             language=settings.get(ConfigKeys.LANGUAGE, "en"),
@@ -608,6 +612,18 @@ class MainPresenter(QObject):
         Args:
             command (ManualCommand): 매크로 Command
         """
+        if command.is_broadcast:
+            prefix = self.settings_manager.get(ConfigKeys.COMMAND_PREFIX) if command.prefix else None
+            suffix = self.settings_manager.get(ConfigKeys.COMMAND_SUFFIX) if command.suffix else None
+            try:
+                data = CommandProcessor.process_command(command.text, command.hex_mode, prefix=prefix, suffix=suffix)
+                self.connection_controller.send_data_to_broadcasting(data)
+                return
+            except ValueError:
+                logger.error(f"Invalid hex string for broadcast: {command.text}")
+                return
+
+        # Unicast 모드
         active_port = self.port_presenter.get_active_port_name()
         if not active_port or not self.connection_controller.is_connection_open(active_port):
             logger.warning("Macro: No active port open")
@@ -630,8 +646,20 @@ class MainPresenter(QObject):
     # ---------------------------------------------------------
     # Event Handlers (File Transfer)
     # ---------------------------------------------------------
+    def _on_file_transfer_dialog_opened(self, dialog: FileTransferDialog) -> None:
+        """
+        파일 전송 다이얼로그 호출 중계 메서드
+        현재 활성 포트 정보를 가져와 FilePresenter에 전달합니다.
+        """
+        active_port = self.port_presenter.get_active_port_name()
+
+        if not active_port:
+             self.view.show_status_message("Please select an active port first.", 3000)
+             # 포트가 없어도 다이얼로그는 뜨지만 전송은 불가함. FilePresenter에서 처리.
+
+        self.file_presenter.on_file_transfer_dialog_opened(dialog, active_port)
+
     def on_file_transfer_completed(self, success: bool) -> None:
-        """파일 전송 완료 알림"""
         status = "Completed" if success else "Failed"
         level = "SUCCESS" if success else "WARN"
         self.view.log_system_message(f"File transfer {status}", level)
@@ -701,6 +729,15 @@ class MainPresenter(QObject):
             # 시그널 연결 (인자 없이 호출되므로 lambda로 panel 전달)
             rx_widget.logging_start_requested.connect(lambda: self._on_logging_start_requested(panel))
             rx_widget.logging_stop_requested.connect(lambda: self._on_logging_stop_requested(panel))
+
+    def _get_port_panel_from_sender(self):
+        sender = self.sender()
+        count = self.view.get_port_tabs_count()
+        for i in range(count):
+            widget = self.view.get_port_tab_widget(i)
+            if hasattr(widget, 'data_log_widget') and widget.data_log_widget == sender:
+                return widget
+        return None
 
     def _on_logging_start_requested(self, panel) -> None:
         """
