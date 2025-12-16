@@ -4,6 +4,34 @@
 
 ---
 
+### 아키텍처 및 안정성 강화 (2025-12-17)
+
+#### 리팩토링 (Refactoring)
+
+- **아키텍처 클린업 (Architecture Cleanup)**
+  - **Pure DTO 전환**: `EventRouter` 및 Presenter 계층(`Main`, `Packet`)에서 레거시 `dict` 타입 지원 로직을 완전히 제거하고, `PortDataEvent` 등 DTO 객체 사용을 강제하여 타입 안전성을 확보했습니다.
+  - **결합도 완화 (Decoupling)**: `DataHandler`가 View의 내부 위젯 구조를 직접 탐색하는 로직을 제거하고, `MainWindow` -> `MainLeftSection` -> `PortTabPanel`로 이어지는 추상화된 인터페이스(`append_rx_data`)를 통해 데이터를 전달하도록 구조를 개선했습니다.
+  - **문서화**: Google Style Guide에 맞춰 `SerialTransport`, `PortSettingsWidget` 등의 Docstring을 재정비했습니다.
+
+#### 기능 개선 (Feat)
+
+- **포트 스캔 최적화**
+  - **Lazy Loading**: `ClickableComboBox`를 구현하여 콤보박스 클릭 시(`showPopup`) 즉시 포트를 스캔하도록 개선, 항상 최신 포트 목록을 제공합니다.
+  - **동기화**: 포트 스캔 시 현재 탭뿐만 아니라 모든 열린 탭의 포트 목록을 일괄 업데이트하도록 로직을 수정했습니다.
+  - **사용자 경험**: 스캔 후 기존에 선택된 포트가 목록에 남아있다면 선택 상태를 유지하도록 개선했습니다.
+  - **정렬 개선**: `Natural Sorting` 알고리즘을 적용하여 포트 목록이 `COM1, COM2, ..., COM10` 순서로 직관적으로 정렬되도록 했습니다.
+
+#### 수정 사항 (Fixed)
+
+- **시리얼 통신 안정성**
+  - **UI 프리징 방지**: `SerialTransport`에 `write_timeout=0` 설정을 추가하여 쓰기 작업이 블로킹되지 않도록 했습니다.
+  - **데이터 유실 방지**: `write` 메서드에서 예외를 무시(`pass`)하던 로직을 제거하고 상위 계층으로 전파하여, 전송 실패 시 적절한 에러 처리가 가능하도록 했습니다.
+- **배포 안정성**
+  - **아이콘 경로**: `ThemeManager`에서 QSS 로딩 시 리소스 경로를 절대 경로로 치환하는 로직을 추가하여, PyInstaller 배포 환경에서 아이콘이 깨지는 문제를 해결했습니다.
+- **설정 복구 알림**: `SettingsManager`가 설정 파일 손상으로 초기화(Fallback)를 수행했을 때, 앱 시작 시 사용자에게 경고 다이얼로그를 표시하도록 개선했습니다.
+
+---
+
 ### 아키텍처 고도화 및 확장성 강화 (2025-12-15)
 
 #### 리팩토링 (Refactoring)
@@ -12,6 +40,7 @@
   - **DTO 도입**: `PreferencesState`, `MainWindowState`, `ManualControlState` DTO를 도입하여 View와 Presenter 간의 데이터 교환을 정형화했습니다.
   - **View 로직 제거**: `PreferencesDialog`의 설정 파싱 로직과 `MainWindow`의 상태 복원(`restore_state`) 로직을 Presenter로 이관했습니다.
   - **상태 관리 이관**: `ManualControlWidget`의 명령어 히스토리 관리와 `DataLogWidget`의 파일 다이얼로그 호출 로직을 각 Presenter로 이동시켜 View를 순수한 UI 컴포넌트로 전환했습니다.
+  - **스키마 분리**: `core/settings_manager.py`에 있던 `CORE_SETTINGS_SCHEMA`를 `common/schemas.py`로 이동하여 데이터 정의와 로직을 분리했습니다.
 
 #### 기능 추가 (Feat)
 
@@ -23,7 +52,9 @@
 #### 수정 사항 (Fixed)
 
 - **안정성 강화**
-  - `FileTransferEngine`(`QRunnable`)의 `run()` 메서드 전체에 예외 처리 안전망을 구축하고 `GlobalErrorHandler`와 연동하여, 백그라운드 스레드에서 발생하는 예외가 무시되지 않도록 수정했습니다.
+  - **매크로 브로드캐스트**: `MainPresenter`에서 매크로 전송 시 `is_broadcast` 플래그를 누락하던 버그를 수정했습니다.
+  - **파일 전송 타겟**: 파일 전송 다이얼로그 호출 시 현재 활성 포트 컨텍스트를 명시적으로 전달하여, 멀티탭 환경에서 엉뚱한 포트로 전송되는 문제를 방지했습니다.
+  - **종료 시 예외**: `MainWindowState` DTO를 iterable로 잘못 사용하여 발생하던 `TypeError`를 수정했습니다.
   - **UI 스타일**: `common.qss`에 `QSmartTextEdit`의 기본 속성(Fallback)을 명시하여 테마 로드 실패 시에도 UI 가독성을 보장하도록 개선했습니다.
 
 ---

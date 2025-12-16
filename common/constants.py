@@ -146,7 +146,10 @@ TX_QUEUE_SIZE: int = 128
 
 # UI 업데이트 Batch 설정 (SerialWorker → UI)
 # 고속 통신 시 UI 프리징 방지를 위해 데이터를 모아서 전송
-BATCH_SIZE_THRESHOLD: int = 1024  # 이 크기가 넘으면 즉시 전송 (bytes)
+# [Optimization] 2MB/s 대응을 위해 임계값 상향 (1KB -> 8KB)
+# 1KB 설정 시 2MB/s 전송 시 초당 2000회 시그널 발생 -> UI 스레드 과부하
+# 8KB 설정 시 초당 약 250회로 감소하여 안정성 확보
+BATCH_SIZE_THRESHOLD: int = 8192  # 이 크기가 넘으면 즉시 전송 (bytes)
 BATCH_TIMEOUT_MS: int = 50        # 이 시간이 지나면 크기가 작아도 전송 (ms)
 
 # ==========================================
@@ -154,7 +157,7 @@ BATCH_TIMEOUT_MS: int = 50        # 이 시간이 지나면 크기가 작아도 
 # ==========================================
 WORKER_IDLE_WAIT_MS: int = 1      # 데이터 없을 때 대기 시간 (CPU 방어)
 WORKER_BUSY_WAIT_US: int = 100    # 데이터 처리 중 짧은 대기 시간
-UI_REFRESH_INTERVAL_MS: int = 50  # 로그 뷰 갱신 주기
+UI_REFRESH_INTERVAL_MS: int = 30  # 로그 뷰 갱신 주기 (약 33 FPS)
 
 # ==========================================
 # UI Limits & Defaults

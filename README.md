@@ -108,8 +108,8 @@ serial_tool/
 ├── requirements.txt                    # 의존성 목록
 │
 ├── common/                             # 공통 데이터 (의존성 최하위)
-│   ├── constants.py                    # 전역 상수, EventTopics, ConfigKeys
 │   ├── app_info.py                     # 애플리케이션 버전 정보
+│   ├── constants.py                    # 전역 상수, EventTopics, ConfigKeys
 │   ├── dtos.py                         # DTO (PortConfig, ManualCommand 등)
 │   ├── enums.py                        # 열거형 (PortState, ParserType)
 │   └── schemas.py                      # JSON 스키마 정의
@@ -129,12 +129,13 @@ serial_tool/
 │   ├── connection_controller.py        # 연결 제어, Fast Path 시그널링
 │   ├── connection_manager.py           # 연결 인스턴스 관리
 │   ├── connection_worker.py            # I/O 워커 스레드 (Batch Processing)
-│   ├── file_transfer.py                # 파일 전송 엔진 (Backpressure)
+│   ├── file_transfer_engine.py         # 파일 전송 엔진 (Backpressure)
 │   ├── macro_runner.py                 # 매크로 엔진 (Broadcast/Expect)
 │   ├── packet_parser.py                # 패킷 파싱 및 ExpectMatcher
 │   └── serial_transport.py             # PySerial 구현체
 │
 ├── presenter/                          # [Presenter] UI 로직 및 중재자
+│   ├── data_handler.py                 # 데이터 처리 및 UI 업데이트
 │   ├── event_router.py                 # EventBus -> PyQt Signal 변환
 │   ├── file_presenter.py               # 파일 전송 로직 제어
 │   ├── macro_presenter.py              # 매크로 로직 제어

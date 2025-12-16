@@ -339,7 +339,8 @@ class ConnectionController(QObject):
 
         if not sent_any:
             # 브로드캐스팅 대상이 없으면 ?
-            pass
+            # TODO : 모르겠음. 일단 로그 남김
+            logger.warning("No active connections for broadcasting.")
 
     def send_data_to_all(self, data: bytes) -> None:
         """

@@ -8,6 +8,7 @@
 * 포트 상태 변경을 View에 반영
 * 다중 포트 탭 관리 및 설정 동기화
 * 포트 목록 스캔 및 정렬 (자연 정렬)
+* 포트 스캔 비동기화로 UI 멈춤 방지
 
 ## WHAT
 * PortSettingsWidget(View)와 ConnectionController(Model) 연결
@@ -18,10 +19,10 @@
 
 ## HOW
 * pyserial.tools.list_ports 사용
-* 정규식(re)을 사용한 자연 정렬(Natural Sort Key) 구현
+* QThread 기반 비동기 스캔 (PortScanWorker)
 * MainLeftSection의 포트 탭 관리 및 설정 동기화
 """
-from PyQt5.QtCore import QObject
+from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from PyQt5.QtWidgets import QMessageBox
 import serial.tools.list_ports
 import re
@@ -33,6 +34,41 @@ from core.settings_manager import SettingsManager
 from core.logger import logger
 from common.constants import ConfigKeys
 from common.dtos import PortConfig
+
+
+class PortScanWorker(QThread):
+    """
+    비동기 포트 스캔 워커
+
+    시스템의 시리얼 포트 목록을 백그라운드 스레드에서 조회합니다.
+    Windows 등에서 포트 스캔 시 발생하는 수백 ms의 지연으로 인한 UI 프리징을 방지합니다.
+    """
+    ports_found = pyqtSignal(list) # List[Tuple[str, str]]
+
+    def run(self) -> None:
+        """스캔 실행"""
+        try:
+            # 1. 포트 정보 수집
+            raw_ports = serial.tools.list_ports.comports()
+            port_list: List[Tuple[str, str]] = []
+
+            for port in raw_ports:
+                port_list.append((port.device, port.description))
+
+            # 2. Natural Sort (자연 정렬) 키 함수
+            def natural_sort_key(item):
+                return [int(text) if text.isdigit() else text.lower()
+                        for text in re.split('([0-9]+)', item[0])]
+
+            port_list.sort(key=natural_sort_key)
+
+            # 결과 전달
+            self.ports_found.emit(port_list)
+
+        except Exception as e:
+            logger.error(f"Port scan failed: {e}")
+            self.ports_found.emit([])
+
 
 class PortPresenter(QObject):
     """
@@ -51,6 +87,9 @@ class PortPresenter(QObject):
         super().__init__()
         self.left_section = left_section
         self.connection_controller = connection_controller
+
+        # 스캔 워커
+        self._scan_worker: Optional[PortScanWorker] = None
 
         # 현재 활성 포트 패널 가져오기
         self.current_port_panel = None
@@ -160,7 +199,6 @@ class PortPresenter(QObject):
 
         Logic:
             - View에서 현재 활성 탭의 PortPanel을 가져옴
-            - Model의 `set_active_connection`을 호출하여 활성 연결을 명시적으로 설정
         """
         index = self.left_section.port_tab_panel.currentIndex()
         if index >= 0:
@@ -170,36 +208,41 @@ class PortPresenter(QObject):
 
     def scan_ports(self) -> None:
         """
-        사용 가능한 시리얼 포트 스캔 및 모든 탭의 UI 업데이트
+        사용 가능한 시리얼 포트 비동기 스캔 요청
 
         Logic:
-            1. pyserial.tools.list_ports로 포트 정보(장치명, 설명) 획득
-            2. Natural Sorting (COM1, COM2, COM10 순) 적용
-            3. 모든 탭의 PortSettingsWidget에 (이름, 설명) 튜플 리스트 전달
+            1. 이전 스캔이 진행 중이면 중단하지 않고 무시 (또는 대기)
+            2. Worker 스레드 생성 및 시작
+            3. 완료 시 _on_scan_finished 호출
         """
-        # 1. 포트 정보 수집 (device, description)
-        raw_ports = serial.tools.list_ports.comports()
-        port_list: List[Tuple[str, str]] = []
+        if self._scan_worker and self._scan_worker.isRunning():
+            logger.debug("Port scan already in progress.")
+            return
 
-        for port in raw_ports:
-            # port.device: 'COM1', port.description: 'USB Serial Port (COM1)' 등
-            port_list.append((port.device, port.description))
+        logger.debug("Starting async port scan...")
+        self._scan_worker = PortScanWorker()
+        self._scan_worker.ports_found.connect(self._on_scan_finished)
+        self._scan_worker.start()
 
-        # 2. Natural Sort (자연 정렬) 키 함수
-        def natural_sort_key(item):
-            # 텍스트를 숫자와 비숫자로 분리 (예: 'COM10' -> ['COM', 10])
-            return [int(text) if text.isdigit() else text.lower()
-                    for text in re.split('([0-9]+)', item[0])]
+    def _on_scan_finished(self, port_list: List[Tuple[str, str]]) -> None:
+        """
+        포트 스캔 완료 핸들러 (UI 업데이트)
 
-        port_list.sort(key=natural_sort_key)
+        Args:
+            port_list: (device, description) 튜플 리스트
+        """
+        logger.debug(f"Scan finished. Found ports: {[p[0] for p in port_list]}")
 
-        # 3. 모든 탭 업데이트
+        # 모든 포트 패널의 리스트를 업데이트
         count = self.left_section.port_tab_panel.count()
         for i in range(count):
             widget = self.left_section.port_tab_panel.widget(i)
+            # PortPanel인지 확인 (플러스 탭 제외)
             if hasattr(widget, 'port_settings_widget'):
-                # (이름, 설명) 튜플 리스트 전달
                 widget.port_settings_widget.set_port_list(port_list)
+
+        # 워커 정리
+        self._scan_worker = None
 
     def handle_open_request(self, config: PortConfig) -> None:
         """
@@ -293,9 +336,6 @@ class PortPresenter(QObject):
         # 시스템 로그 기록
         if hasattr(self.left_section, 'system_log_widget'):
             self.left_section.system_log_widget.log(f"[{port_name}] Error: {message}", "ERROR")
-
-        # 에러 발생 시 해당 포트 UI 동기화 (필요 시)
-        # on_connection_closed가 호출되지 않는 에러 상황(예: 열기 실패)에 대비해 UI 상태 리셋 가능
 
     def connect_current_port(self) -> None:
         """현재 포트 연결 (단축키용)"""

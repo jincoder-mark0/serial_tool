@@ -102,6 +102,7 @@ class ConnectionWorker(QThread):
 
                         # 3. Batch 전송 로직
                         # 조건: 크기 임계값 초과 OR 시간 초과
+                        # BATCH_SIZE_THRESHOLD가 상향 조정되어 고속 통신 시 시그널 빈도 감소
                         current_time = time.monotonic() * 1000
                         time_diff = current_time - last_emit_time
 
