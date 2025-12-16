@@ -13,12 +13,13 @@ EventBus와 Presenter/View 사이의 이벤트를 라우팅합니다.
 * 포트 이벤트 라우팅 (Open, Close, Error, RX/TX Data, Packet)
 * 매크로 이벤트 라우팅 (Start, Finish, Error)
 * 파일 전송 이벤트 라우팅 (Progress, Complete, Error)
-* 설정 변경 이벤트 라우팅 [New]
+* 설정 변경 이벤트 라우팅
 
 ## HOW
 * QObject 상속으로 PyQt Signal 제공
 * EventBus.subscribe로 이벤트 구독
-* 콜백에서 데이터를 추출하여 PyQt Signal emit
+* 콜백에서 DTO 데이터를 추출하여 PyQt Signal emit
+* Legacy Dict 지원 제거 및 Pure DTO 전환
 """
 from PyQt5.QtCore import QObject, pyqtSignal
 from core.event_bus import event_bus
@@ -58,7 +59,7 @@ class EventRouter(QObject):
     file_transfer_error = pyqtSignal(str)
 
     # ---------------------------------------------------------
-    # 4. System Events [New]
+    # 4. System Events
     # ---------------------------------------------------------
     settings_changed = pyqtSignal(object) # PreferencesState DTO
 
@@ -96,7 +97,7 @@ class EventRouter(QObject):
         self.bus.subscribe(EventTopics.FILE_COMPLETED, self._on_file_completed)
         self.bus.subscribe(EventTopics.FILE_ERROR, self._on_file_error)
 
-        # System Events [New]
+        # System Events
         self.bus.subscribe(EventTopics.SETTINGS_CHANGED, self._on_settings_changed)
 
     # ---------------------------------------------------------
@@ -110,33 +111,21 @@ class EventRouter(QObject):
         """포트 닫힘 이벤트 처리"""
         self.port_closed.emit(port_name)
 
-    def _on_port_error(self, event):
+    def _on_port_error(self, event: PortErrorEvent):
         """포트 에러 이벤트 처리"""
-        if isinstance(event, PortErrorEvent):
-            self.port_error.emit(event)
-        elif isinstance(event, dict): # Legacy support
-            self.port_error.emit(PortErrorEvent(event.get('port'), event.get('message')))
+        self.port_error.emit(event)
 
-    def _on_data_received(self, event):
+    def _on_data_received(self, event: PortDataEvent):
         """포트 데이터 수신 이벤트 처리"""
-        if isinstance(event, PortDataEvent):
-            self.data_received.emit(event)
-        elif isinstance(event, dict):
-            self.data_received.emit(PortDataEvent(event.get('port'), event.get('data')))
+        self.data_received.emit(event)
 
-    def _on_data_sent(self, event):
+    def _on_data_sent(self, event: PortDataEvent):
         """포트 데이터 송신 이벤트 처리"""
-        if isinstance(event, PortDataEvent):
-            self.data_sent.emit(event)
-        elif isinstance(event, dict):
-            self.data_sent.emit(PortDataEvent(event.get('port'), event.get('data')))
+        self.data_sent.emit(event)
 
-    def _on_packet_received(self, event):
+    def _on_packet_received(self, event: PacketEvent):
         """패킷 파싱 완료 이벤트 처리"""
-        if isinstance(event, PacketEvent):
-            self.packet_received.emit(event)
-        elif isinstance(event, dict):
-            self.packet_received.emit(PacketEvent(event.get('port'), event.get('packet')))
+        self.packet_received.emit(event)
 
     # ---------------------------------------------------------
     # Event Handlers (Macro)
@@ -148,17 +137,14 @@ class EventRouter(QObject):
     # ---------------------------------------------------------
     # Event Handlers (File Transfer)
     # ---------------------------------------------------------
-    def _on_file_progress(self, event):
+    def _on_file_progress(self, event: FileProgressEvent):
         """
         파일 전송 진행률 이벤트 처리
 
         Args:
-            event: FileProgressEvent
+            event: FileProgressEvent DTO
         """
-        if isinstance(event, FileProgressEvent):
-            self.file_transfer_progress.emit(event.current, event.total)
-        elif isinstance(event, dict): # Legacy support
-            self.file_transfer_progress.emit(event.get('current', 0), event.get('total', 0))
+        self.file_transfer_progress.emit(event.current, event.total)
 
     def _on_file_completed(self, success: bool):
         """파일 전송 완료 이벤트 처리"""

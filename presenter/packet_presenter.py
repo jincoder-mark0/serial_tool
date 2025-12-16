@@ -12,12 +12,13 @@
 * 패킷 수신 이벤트 처리 및 데이터 포맷팅
 * View의 Clear 요청 처리
 * 설정값(Buffer Size, Autoscroll) 로드 및 적용
-* 설정 변경 이벤트에 따른 즉시 업데이트 [New]
+* 설정 변경 이벤트에 따른 즉시 업데이트
 
 ## HOW
 * EventRouter 시그널 구독
 * SettingsManager 설정값 조회
 * View 인터페이스(PacketPanel) 호출
+* Legacy Dict 지원 제거
 """
 from PyQt5.QtCore import QObject, QDateTime
 from view.panels.packet_panel import PacketPanel
@@ -95,12 +96,9 @@ class PacketPresenter(QObject):
             - View에 데이터 추가 요청
 
         Args:
-            event (PacketEvent): 수신된 패킷 이벤트
+            event (PacketEvent): 수신된 패킷 이벤트 (DTO)
         """
-        if isinstance(event, PacketEvent):
-            packet = event.packet
-        else: # Legacy dict
-            packet = event.get('packet')
+        packet = event.packet
 
         if not packet:
             return

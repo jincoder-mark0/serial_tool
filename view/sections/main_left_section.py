@@ -11,6 +11,7 @@
 * PortTabPanel 및 ManualControlPanel 배치
 * SystemLogWidget 배치
 * 하위 패널 간 상호작용 중재 (View 레벨)
+* 포트별 데이터 로그 전달
 
 ## HOW
 * QVBoxLayout으로 수직 배치
@@ -57,7 +58,9 @@ class MainLeftSection(QWidget):
         language_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self) -> None:
-        """UI 컴포넌트 및 레이아웃 초기화"""
+        """
+        UI 컴포넌트 및 레이아웃 초기화
+        """
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(10)
@@ -87,16 +90,22 @@ class MainLeftSection(QWidget):
         self.setLayout(layout)
 
     def retranslate_ui(self) -> None:
-        """다국어 텍스트 업데이트"""
+        """
+        다국어 텍스트 업데이트
+        """
         # 하위 컴포넌트들이 자체적으로 처리하므로 비워둠
         pass
 
     def add_new_port_tab(self) -> None:
-        """새 포트 탭 추가"""
+        """
+        새 포트 탭 추가
+        """
         self.port_tab_panel.add_new_port_tab()
 
     def open_current_port(self) -> None:
-        """현재 활성 탭의 포트 열기"""
+        """
+        현재 활성 탭의 포트 열기
+        """
         current_index = self.port_tab_panel.currentIndex()
         current_widget = self.port_tab_panel.widget(current_index)
         if isinstance(current_widget, PortPanel):
@@ -104,7 +113,9 @@ class MainLeftSection(QWidget):
                 current_widget.toggle_connection()
 
     def close_current_port(self) -> None:
-        """현재 활성 탭의 포트 닫기"""
+        """
+        현재 활성 탭의 포트 닫기
+        """
         current_index = self.port_tab_panel.currentIndex()
         current_widget = self.port_tab_panel.widget(current_index)
         if isinstance(current_widget, PortPanel):
@@ -112,7 +123,9 @@ class MainLeftSection(QWidget):
                 current_widget.toggle_connection()
 
     def close_current_tab(self) -> None:
-        """현재 활성 탭 닫기"""
+        """
+        현재 활성 탭 닫기
+        """
         current_index = self.port_tab_panel.currentIndex()
         # 마지막 탭(플러스 탭)은 닫을 수 없음
         if current_index == self.port_tab_panel.count() - 1:
@@ -139,6 +152,16 @@ class MainLeftSection(QWidget):
         if isinstance(current_widget, PortPanel):
             if hasattr(current_widget, 'data_log_widget'):
                 current_widget.data_log_widget.append_data(data)
+
+    def append_rx_data(self, port_name: str, data: bytes) -> None:
+        """
+        특정 포트에 데이터 추가 (중계)
+
+        Args:
+            port_name (str): 대상 포트 이름
+            data (bytes): 추가할 데이터
+        """
+        self.port_tab_panel.append_rx_data(port_name, data)
 
     def _on_port_tab_added(self, panel: PortPanel) -> None:
         """

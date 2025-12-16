@@ -13,6 +13,7 @@
 * 메뉴바, 상태바 관리
 * Presenter용 공개 API 제공
 * 경고 메시지창 표시 기능
+* 데이터 로그 추가 인터페이스 (append_rx_data)
 
 ## HOW
 * QMainWindow 상속
@@ -290,6 +291,19 @@ class MainWindow(QMainWindow):
             data (bytes): 표시할 송신 데이터
         """
         self.left_section.append_data_to_current_port(data)
+
+    def append_rx_data(self, port_name: str, data: bytes) -> None:
+        """
+        수신된 데이터를 해당 포트의 로그 뷰어에 추가합니다.
+
+        Logic:
+            - LeftSection으로 데이터 전달 (포트 탭 관리 책임)
+
+        Args:
+            port_name (str): 포트 이름
+            data (bytes): 수신 데이터
+        """
+        self.left_section.append_rx_data(port_name, data)
 
     # --------------------------------------------------------
     # 내부 로직 (Internal Logic)
