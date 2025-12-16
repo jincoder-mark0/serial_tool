@@ -12,13 +12,14 @@
 * 섹션(Section) 배치 및 스플리터 관리
 * 메뉴바, 상태바 관리
 * Presenter용 공개 API 제공
+* 경고 메시지창 표시 기능
 
 ## HOW
 * QMainWindow 상속
 * MVP 패턴을 위한 시그널 노출
 """
 from PyQt5.QtWidgets import (
-    QMainWindow, QWidget, QVBoxLayout, QSplitter, QApplication, QShortcut
+    QMainWindow, QWidget, QVBoxLayout, QSplitter, QApplication, QShortcut, QMessageBox
 )
 from PyQt5.QtGui import QKeySequence
 from PyQt5.QtCore import Qt, pyqtSignal, QByteArray
@@ -44,7 +45,7 @@ class MainWindow(QMainWindow):
 
     # Presenter 전달용 시그널
     close_requested = pyqtSignal()
-    settings_save_requested = pyqtSignal(object) # Changed to object (PreferencesState)
+    settings_save_requested = pyqtSignal(object) # PreferencesState
     preferences_requested = pyqtSignal()
 
     # FontConfig DTO 전달을 위해 object로 변경
@@ -59,7 +60,6 @@ class MainWindow(QMainWindow):
     file_transfer_dialog_opened = pyqtSignal(object)
 
     # 하위 컴포넌트 시그널 중계
-    # ManualCommand DTO 전달을 위해 object로 변경
     send_requested = pyqtSignal(object)
     port_tab_added = pyqtSignal(object)
 
@@ -114,7 +114,7 @@ class MainWindow(QMainWindow):
         self.splitter.addWidget(self.left_section)
         self.splitter.addWidget(self.right_section)
 
-        # 기본 비율 설정 (나중에 restore_state에서 덮어씌워짐)
+        # 기본 비율 설정
         self.splitter.setStretchFactor(0, 0)
         self.splitter.setStretchFactor(1, 1)
 
@@ -150,7 +150,6 @@ class MainWindow(QMainWindow):
             font_config (FontConfig): 폰트 설정 DTO (별도 분리 가능)
         """
         # 1. 폰트 적용
-        # ThemeManager의 restore 기능 대신 DTO 값으로 직접 설정
         self.theme_manager.set_proportional_font(font_config.prop_family, font_config.prop_size)
         self.theme_manager.set_fixed_font(font_config.fixed_family, font_config.fixed_size)
 
@@ -265,6 +264,16 @@ class MainWindow(QMainWindow):
     def show_status_message(self, message: str, timeout: int = 0) -> None:
         """상태바 메시지 표시"""
         self.global_status_bar.show_message(message, timeout)
+
+    def show_alert_message(self, title: str, message: str) -> None:
+        """
+        경고(Alert) 다이얼로그를 표시합니다.
+
+        Args:
+            title (str): 다이얼로그 제목
+            message (str): 표시할 내용
+        """
+        QMessageBox.warning(self, title, message)
 
     def manual_save_log(self) -> None:
         """로그 저장 다이얼로그 호출"""

@@ -17,6 +17,7 @@
 * 테마별 아이콘 제공
 * 설정 저장/복원
 * 테마 파일(*_theme.qss) 자동 감지
+* QSS 리소스 경로 절대 경로 치환
 
 ## HOW
 * QSS 파일로 테마 정의 (common + theme-specific)
@@ -111,11 +112,16 @@ class ThemeManager:
         """
         지정된 테마의 QSS 콘텐츠를 로드합니다.
 
+        Logic:
+            - 공통 QSS와 테마별 QSS를 로드하여 병합합니다.
+            - [Fix] QSS 내부의 'url(resources/...' 상대 경로를 절대 경로로 치환합니다.
+            - 이는 PyInstaller 배포 시 리소스 경로 문제 해결을 위함입니다.
+
         Args:
             theme_name (str): 로드할 테마 이름 (예: "Dark", "Dracula").
 
         Returns:
-            str: 결합된 QSS 문자열.
+            str: 결합되고 경로가 수정된 QSS 문자열.
         """
         # 이름 소문자 변환 및 파일명 구성
         theme_file = f"{theme_name.lower()}_theme.qss"
@@ -163,6 +169,14 @@ class ThemeManager:
         if not qss_content.strip():
             logger.warning("Failed to load theme file, using fallback stylesheet.")
             qss_content = self._get_fallback_stylesheet(theme_name)
+
+        # [Fix] 4. 리소스 경로 절대 경로 치환
+        # PyInstaller 배포 환경에서는 상대 경로가 깨질 수 있으므로 절대 경로로 변환
+        if self._resource_path:
+            # 윈도우 경로 역슬래시를 슬래시로 변환 (CSS url 호환성)
+            base_res_path = str(self._resource_path.base_dir).replace('\\', '/')
+            # QSS 내의 url(resources/...) 패턴을 url(절대경로/resources/...)로 변경
+            qss_content = qss_content.replace('url(resources/', f'url({base_res_path}/resources/')
 
         return qss_content
 

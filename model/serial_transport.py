@@ -123,22 +123,19 @@ class SerialTransport(BaseTransport):
         """
         데이터 쓰기
 
+        전송 실패 시 예외를 전파하여 상위 계층에서 인지하도록 수정함.
+        이를 통해 데이터 유실을 방지합니다.
+
         Args:
             data (bytes): 전송할 바이트 데이터
 
         Raises:
+            serial.SerialTimeoutException: 쓰기 타임아웃 발생 시
             serial.SerialException: 전송 실패 시
         """
         if self.is_open():
-            try:
-                self._serial.write(data)
-            except serial.SerialTimeoutException:
-                # Write Timeout 발생 시 무시하거나 로깅 (Non-blocking 특성상)
-                pass
-            except serial.SerialException as e:
-                raise e  # 상위에서 처리하도록 전파
-            except Exception:
-                pass
+            # 예외를 상위(Worker)로 전파하여 처리하도록 함
+            self._serial.write(data)
 
     @property
     def in_waiting(self) -> int:

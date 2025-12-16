@@ -17,6 +17,7 @@
 * ResourcePath를 통한 동적 경로 관리
 * 주석 지원 JSON (commentjson) 파싱
 * 필수 설정 필드 유효성 검사
+* 설정 초기화(Fallback) 발생 여부 플래그 제공
 
 ## HOW
 * 싱글톤 패턴으로 전역 인스턴스 제공
@@ -73,6 +74,10 @@ class SettingsManager:
         # 개발 모드에서는 설정 파일과 사용자 설정 파일이 동일
         self.user_settings_path = self._get_user_settings_path()
 
+        # [New] 설정 초기화(Reset) 발생 여부 플래그
+        self.config_was_reset = False
+        self.reset_reason = ""
+
         # 설정 로드
         self.load_settings()
         self._initialized = True
@@ -116,6 +121,7 @@ class SettingsManager:
         기본값(Fallback)을 사용하고 파일을 복구합니다.
         """
         fallback_settings = self._get_fallback_settings()
+        self.config_was_reset = False # 초기화
 
         try:
             if not self.config_path.exists():
@@ -141,13 +147,15 @@ class SettingsManager:
             self.settings = fallback_settings
             self.save_settings() # 복구된 설정 저장
 
+            # 리셋 플래그 설정
+            self.config_was_reset = True
+            self.reset_reason = f"Load failed: {str(e)}"
+
         except ValidationError as e:
             logger.error(f"Settings validation failed: {e.message}. Reverting to fallback for critical sections.")
-            # 스키마 불일치 시, 로드된 데이터 중 일부가 유효할 수 있으므로
-            # Fallback을 기본으로 하고, 로드된 데이터를 조심스럽게 병합하거나
-            # 안전을 위해 Fallback을 우선 사용함. 여기서는 Fallback 우선 정책.
+            # 스키마 불일치 시 Fallback 우선 사용
             self.settings = fallback_settings
-            # 잘못된 파일을 백업하고 새로 생성하는 것이 좋음
+            # 잘못된 파일을 백업하고 새로 생성
             backup_path = self.config_path.with_suffix('.json.bak')
             try:
                 if self.config_path.exists():
@@ -157,9 +165,17 @@ class SettingsManager:
                 pass
             self.save_settings()
 
+            # 리셋 플래그 설정
+            self.config_was_reset = True
+            self.reset_reason = f"Validation failed: {e.message}"
+
         except Exception as e:
             logger.error(f"Unexpected error loading settings: {e}")
             self.settings = fallback_settings
+
+            # 리셋 플래그 설정
+            self.config_was_reset = True
+            self.reset_reason = f"Unexpected error: {str(e)}"
 
     def _merge_settings(self, user_settings: Dict[str, Any]) -> None:
         """

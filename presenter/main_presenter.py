@@ -15,6 +15,7 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 * Model 상태 변화에 따른 View 업데이트 (EventRouter 활용)
 * 설정 저장/로드 및 애플리케이션 종료 처리
 * Fast Path: 고속 데이터 수신 처리를 위한 직접 연결 및 버퍼링
+* 설정 초기화 알림
 
 ## HOW
 * Signal/Slot 기반 통신
@@ -59,6 +60,7 @@ class MainPresenter(QObject):
 
         Logic:
             - SettingsManager를 통해 설정 로드
+            - 설정 초기화 여부 확인 및 경고 표시
             - DTO 변환 및 View 상태 복원 (apply_state 호출)
             - Model 인스턴스 생성
             - 하위 Presenter 초기화 및 의존성 주입
@@ -75,6 +77,14 @@ class MainPresenter(QObject):
 
         # --- 0. 설정 로드 및 View 초기화 (MVP) ---
         self.settings_manager = SettingsManager()
+
+        # 설정 초기화 알림 체크
+        if self.settings_manager.config_was_reset:
+            reason = self.settings_manager.reset_reason
+            self.view.show_alert_message(
+                "Settings Reset",
+                f"Configuration file corrupted or invalid.\nDefaults restored.\n\nReason: {reason}"
+            )
 
         # 설정 로드 및 DTO 변환
         all_settings = self.settings_manager.get_all_settings()
@@ -289,11 +299,10 @@ class MainPresenter(QObject):
         if not self._rx_buffer:
             return
 
-        # 현재 뷰의 탭 정보를 가져옴 (최적화: 탭이 많을 경우 매번 전체 검색은 비효율적일 수 있음)
-        # 하지만 여기서는 안전하게 전체 탭을 순회하며 매칭
+        # 현재 뷰의 탭 정보를 가져옴
         count = self.view.get_port_tabs_count()
 
-        # 처리할 데이터가 있는 포트 목록 복사 (Iterate 중 수정 방지)
+        # 처리할 데이터가 있는 포트 목록 복사
         pending_ports = list(self._rx_buffer.keys())
 
         for port_name in pending_ports:
@@ -367,7 +376,7 @@ class MainPresenter(QObject):
         # ManualControl 상태는 Presenter에서 최신 데이터(History 포함) 가져오기
         manual_state_dto = self.manual_control_presenter.get_state()
 
-        # DTO -> Dict 변환 (설정 파일 포맷 호환성 유지)
+        # DTO -> Dict 변환
         manual_state_dict = {
             "manual_control_widget": {
                 "input_text": manual_state_dto.input_text,
@@ -421,7 +430,7 @@ class MainPresenter(QObject):
             - 설정값 매핑 및 타입 변환
             - SettingsManager 업데이트
             - UI 테마/언어 즉시 적용
-            - 하위 Presenter(PacketPresenter) 설정 전파
+            - 하위 Presenter 설정 전파
 
         Args:
             new_state (PreferenceState) : 변경할 설정
@@ -606,8 +615,8 @@ class MainPresenter(QObject):
 
         Logic:
             - 연결 열림 확인
-            - CommandProcessor를 사용하여 데이터 가공 (Prefix/Suffix/Hex)
-            - 데이터 전송 (ConnectionController)
+            - CommandProcessor 데이터 가공
+            - 데이터 전송
 
         Args:
             command (ManualCommand): 매크로 Command
