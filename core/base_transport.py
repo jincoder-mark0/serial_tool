@@ -9,7 +9,7 @@
 * 테스트 용이성 확보 (Mock Object 사용 가능)
 
 ## WHAT
-* DeviceTransport 추상 클래스 정의
+* BaseTransport 추상 클래스 정의
 * 연결(Open/Close), 입출력(Read/Write), 상태 확인(IsOpen/InWaiting) 메서드 명세
 * 하드웨어 제어 신호(DTR/RTS) 인터페이스 제공
 
@@ -20,7 +20,7 @@
 """
 from abc import ABC, abstractmethod
 
-class DeviceTransport(ABC):
+class BaseTransport(ABC):
     """
     모든 통신 장치 드라이버가 구현해야 할 추상 기본 클래스
 

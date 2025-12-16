@@ -90,9 +90,9 @@ def generate_template(keys_by_module: Dict[str, Set[str]], output_file: Path, la
     priority_order = ['main_window', 'widgets', 'panels', 'dialogs']
 
     def get_sort_key(path):
-        for idx, priority in enumerate(priority_order):
+        for index, priority in enumerate(priority_order):
             if path.startswith(priority):
-                return idx, path
+                return index, path
         return len(priority_order), path
 
     sorted_modules = sorted(keys_by_module.keys(), key=get_sort_key)

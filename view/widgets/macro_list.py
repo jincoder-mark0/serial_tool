@@ -258,18 +258,18 @@ class MacroListWidget(QWidget):
         # 선택된 행 확인
         selected_rows = self.macro_table.selectionModel().selectedRows()
         copy_source_row = -1
-        insert_row_idx = -1
+        insert_row_index = -1
 
         if selected_rows:
             # 선택된 행 중 마지막 행을 기준으로 함
             last_selected_row = selected_rows[-1].row()
             copy_source_row = last_selected_row
-            insert_row_idx = last_selected_row + 1
+            insert_row_index = last_selected_row + 1
         else:
             # 선택된 행이 없으면 맨 뒤에 추가
             if self.macro_table_model.rowCount() > 0:
                 copy_source_row = self.macro_table_model.rowCount() - 1
-            insert_row_idx = self.macro_table_model.rowCount()
+            insert_row_index = self.macro_table_model.rowCount()
 
         if copy_source_row >= 0:
             # 옵션 복사
@@ -280,17 +280,17 @@ class MacroListWidget(QWidget):
             hex_mode = self.macro_table_model.item(copy_source_row, 4).checkState() == Qt.Checked
             delay = self.macro_table_model.item(copy_source_row, 5).text()
 
-        self._insert_row(insert_row_idx, command, prefix, hex_mode, suffix, delay, enabled)
+        self._insert_row(insert_row_index, command, prefix, hex_mode, suffix, delay, enabled)
 
         # 추가된 행 선택
-        self.macro_table.selectRow(insert_row_idx)
+        self.macro_table.selectRow(insert_row_index)
 
-    def _insert_row(self, row_idx: int, command: str, prefix: bool, hex_mode: bool, suffix: bool, delay: str, enabled: bool = True) -> None:
+    def _insert_row(self, row_index: int, command: str, prefix: bool, hex_mode: bool, suffix: bool, delay: str, enabled: bool = True) -> None:
         """
         새로운 행을 모델의 특정 위치에 삽입합니다.
 
         Args:
-            row_idx (int): 삽입할 행 인덱스.
+            row_index (int): 삽입할 행 인덱스.
             command (str): Command.
             prefix (bool): 접두사 사용 여부.
             hex_mode (bool): HEX 모드 여부.
@@ -332,10 +332,10 @@ class MacroListWidget(QWidget):
         item_send = QStandardItem("")
         item_send.setEditable(False)
 
-        self.macro_table_model.insertRow(row_idx, [item_select, item_prefix, item_command, item_suffix, item_hex, item_delay, item_send])
+        self.macro_table_model.insertRow(row_index, [item_select, item_prefix, item_command, item_suffix, item_hex, item_delay, item_send])
 
         # Send 버튼 설정
-        self._set_send_button(row_idx)
+        self._set_send_button(row_index)
 
         # Select All 상태 업데이트
         self.update_select_all_state()

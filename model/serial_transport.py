@@ -1,10 +1,10 @@
 """
 시리얼 전송 계층 모듈
 
-DeviceTransport 인터페이스의 구체적인 구현체를 제공합니다.
+BaseTransport 인터페이스의 구체적인 구현체를 제공합니다.
 
 ## WHY
-* 하드웨어 독립성 (DeviceTransport 추상화) 확보
+* 하드웨어 독립성 (BaseTransport 추상화) 확보
 * PySerial 라이브러리 캡슐화로 상위 계층 의존성 제거
 * 에러 처리 및 안전한 I/O 보장
 * 다양한 통신 설정(Baudrate, Parity 등) 지원
@@ -14,21 +14,21 @@ DeviceTransport 인터페이스의 구체적인 구현체를 제공합니다.
 * Non-blocking I/O 지원
 * 흐름 제어 (RTS/CTS) 설정
 * DTR/RTS 하드웨어 제어 신호 관리
-* 연결 예외 처리
+* 연결 예외 처리 및 Write Timeout 설정
 
 ## HOW
-* DeviceTransport 인터페이스 구현
+* BaseTransport 인터페이스 구현
 * serial.Serial 객체 래핑 및 위임
 * 설정 Dictionary로 유연한 파라미터 전달
 """
 import serial
 from typing import Optional
-from core.device_transport import DeviceTransport
+from core.base_transport import BaseTransport
 from common.dtos import PortConfig
 
-class SerialTransport(DeviceTransport):
+class SerialTransport(BaseTransport):
     """
-    PySerial 기반 DeviceTransport 구현체
+    PySerial 기반 BaseTransport 구현체
 
     시리얼 포트 통신을 위한 구체적인 전송 계층 구현입니다.
     """
@@ -51,6 +51,7 @@ class SerialTransport(DeviceTransport):
             - DTO에서 설정값 로드
             - 흐름 제어 설정 (RTS/CTS)
             - Non-blocking I/O 설정 (timeout=0)
+            - Write Timeout 설정 (GUI 프리징 방지)
             - serial.Serial 객체 생성
             - 에러 발생 시 Exception 전파
 
@@ -72,10 +73,11 @@ class SerialTransport(DeviceTransport):
                 bytesize=self.config.bytesize,
                 parity=self.config.parity,
                 stopbits=self.config.stopbits,
-                timeout=0,  # Non-blocking I/O
+                timeout=0,       # Read timeout (Non-blocking)
+                write_timeout=0, # Write timeout (Non-blocking)
                 xonxoff=xonxoff,
                 rtscts=rtscts,
-                dsrdtr=False
+                dsrdtr=False     # DTR 자동 제어 비활성화 (필요 시 수동 제어)
             )
             return self._serial.is_open
         except serial.SerialException as e:
@@ -130,6 +132,9 @@ class SerialTransport(DeviceTransport):
         if self.is_open():
             try:
                 self._serial.write(data)
+            except serial.SerialTimeoutException:
+                # Write Timeout 발생 시 무시하거나 로깅 (Non-blocking 특성상)
+                pass
             except serial.SerialException as e:
                 raise e  # 상위에서 처리하도록 전파
             except Exception:

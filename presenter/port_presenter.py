@@ -7,26 +7,25 @@
 * 포트 연결/해제 UI 이벤트 처리
 * 포트 상태 변경을 View에 반영
 * 다중 포트 탭 관리 및 설정 동기화
-* 단축키 기능 제공
+* 포트 목록 스캔 및 정렬 (자연 정렬)
 
 ## WHAT
 * PortSettingsWidget(View)와 ConnectionController(Model) 연결
-* 포트 스캔 및 모든 탭 목록 동기화
+* 포트 스캔 (Natural Sort & Friendly Name)
 * 연결/해제 토글 처리
 * 포트 상태별 UI 업데이트
 * 에러 처리 및 사용자 알림
 
 ## HOW
-* MainLeftSection의 포트 탭 관리
-* ConnectionController Signal을 View 업데이트로 변환
-* 현재 활성 탭 추적 및 설정 적용
-* QMessageBox로 에러 알림
-* 시스템 로그에 이벤트 기록
+* pyserial.tools.list_ports 사용
+* 정규식(re)을 사용한 자연 정렬(Natural Sort Key) 구현
+* MainLeftSection의 포트 탭 관리 및 설정 동기화
 """
 from PyQt5.QtCore import QObject
 from PyQt5.QtWidgets import QMessageBox
 import serial.tools.list_ports
-from typing import Optional
+import re
+from typing import Optional, List, Tuple
 
 from view.sections.main_left_section import MainLeftSection
 from model.connection_controller import ConnectionController
@@ -152,6 +151,7 @@ class PortPresenter(QObject):
             widget: 추가된 PortPanel
         """
         self._connect_tab_signals(widget)
+        # 탭 추가 시에도 포트 리스트 최신화
         self.scan_ports()
 
     def update_current_port_panel(self) -> None:
@@ -173,23 +173,33 @@ class PortPresenter(QObject):
         사용 가능한 시리얼 포트 스캔 및 모든 탭의 UI 업데이트
 
         Logic:
-            1. pyserial을 이용해 시스템의 COM 포트 목록을 가져옴
-            2. 정렬 후 모든 포트 탭을 순회
-            3. 각 탭의 set_port_list를 호출하여 목록 갱신
-            4. 각 탭은 내부적으로 기존 선택값을 유지하려 시도함
+            1. pyserial.tools.list_ports로 포트 정보(장치명, 설명) 획득
+            2. Natural Sorting (COM1, COM2, COM10 순) 적용
+            3. 모든 탭의 PortSettingsWidget에 (이름, 설명) 튜플 리스트 전달
         """
-        logger.debug("Starting port scan...")   # 추후 제거
-        ports = [port.device for port in serial.tools.list_ports.comports()]
-        ports.sort()
-        logger.debug(f"Found ports: {ports}")   # 추후 제거
+        # 1. 포트 정보 수집 (device, description)
+        raw_ports = serial.tools.list_ports.comports()
+        port_list: List[Tuple[str, str]] = []
 
-        # 모든 포트 패널의 리스트를 업데이트
+        for port in raw_ports:
+            # port.device: 'COM1', port.description: 'USB Serial Port (COM1)' 등
+            port_list.append((port.device, port.description))
+
+        # 2. Natural Sort (자연 정렬) 키 함수
+        def natural_sort_key(item):
+            # 텍스트를 숫자와 비숫자로 분리 (예: 'COM10' -> ['COM', 10])
+            return [int(text) if text.isdigit() else text.lower()
+                    for text in re.split('([0-9]+)', item[0])]
+
+        port_list.sort(key=natural_sort_key)
+
+        # 3. 모든 탭 업데이트
         count = self.left_section.port_tab_panel.count()
         for i in range(count):
             widget = self.left_section.port_tab_panel.widget(i)
-            # PortPanel인지 확인 (플러스 탭 제외)
             if hasattr(widget, 'port_settings_widget'):
-                widget.port_settings_widget.set_port_list(ports)
+                # (이름, 설명) 튜플 리스트 전달
+                widget.port_settings_widget.set_port_list(port_list)
 
     def handle_open_request(self, config: PortConfig) -> None:
         """

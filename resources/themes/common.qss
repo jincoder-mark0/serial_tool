@@ -34,7 +34,7 @@ QPushButton {
     border-style: solid;
 }
 
-QLineEdit, QTextEdit, QPlainTextEdit, QSmartTextEdit {
+QLineEdit, QTextEdit, QPlainTextEdit, QSmartTextEdit, QSmartListView {
     border-radius: 4px;
     padding: 4px;
     border-width: 1px;
@@ -127,6 +127,11 @@ QTableView QTableCornerButton::section {
 QListView, #SmartListView {
     border-width: 1px;
     border-style: solid;
+    outline: 0;
+}
+
+QSmartListView::item {
+    padding: 2px;
 }
 
 QListView QTableCornerButton::section, QSmartListView QTableCornerButton::section {

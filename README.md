@@ -109,15 +109,15 @@ serial_tool/
 │
 ├── common/                             # 공통 데이터 (의존성 최하위)
 │   ├── constants.py                    # 전역 상수, EventTopics, ConfigKeys
+│   ├── app_info.py                     # 애플리케이션 버전 정보
 │   ├── dtos.py                         # DTO (PortConfig, ManualCommand 등)
 │   ├── enums.py                        # 열거형 (PortState, ParserType)
-│   ├── schemas.py                      # JSON 스키마 정의
-│   └── version.py                      # 버전 정보
+│   └── schemas.py                      # JSON 스키마 정의
 │
 ├── core/                               # 인프라 및 유틸리티
+│   ├── base_transport.py               # 하드웨어 통신 추상화 인터페이스
 │   ├── command_processor.py            # Command 전처리 (Prefix/Suffix/Hex)
 │   ├── data_logger.py                  # Raw 데이터 로깅
-│   ├── device_transport.py             # 하드웨어 통신 추상화 인터페이스
 │   ├── error_handler.py                # 전역 예외 처리 (GlobalErrorHandler)
 │   ├── event_bus.py                    # Pub/Sub 이벤트 버스 (와일드카드 지원)
 │   ├── logger.py                       # 시스템 로거 (Singleton)

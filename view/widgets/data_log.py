@@ -256,13 +256,13 @@ class DataLogWidget(QWidget):
         self.data_log_toggle_logging_btn.setToolTip(language_manager.get_text("data_log_btn_toggle_logging_tooltip"))
 
         # Newline Combo
-        current_idx = self.data_log_newline_combo.currentIndex()
+        current_index = self.data_log_newline_combo.currentIndex()
         self.data_log_newline_combo.setItemText(0, language_manager.get_text("data_log_newline_raw"))
         self.data_log_newline_combo.setItemText(1, language_manager.get_text("data_log_newline_lf"))
         self.data_log_newline_combo.setItemText(2, language_manager.get_text("data_log_newline_cr"))
         self.data_log_newline_combo.setItemText(3, language_manager.get_text("data_log_newline_crlf"))
         self.data_log_newline_combo.setToolTip(language_manager.get_text("data_log_combo_newline_tooltip"))
-        self.data_log_newline_combo.setCurrentIndex(current_idx)
+        self.data_log_newline_combo.setCurrentIndex(current_index)
 
     # -------------------------------------------------------------------------
     # 데이터 처리 및 버퍼링

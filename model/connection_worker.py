@@ -1,11 +1,12 @@
 """
 연결 워커 모듈
 
-DeviceTransport 인터페이스를 사용하여 하드웨어 독립적인 I/O 처리를 수행합니다.
+BaseTransport 인터페이스를 사용하여 하드웨어 독립적인 I/O 처리를 수행합니다.
+UI/Settings 접근 금지 규칙 준수
 
 ## WHY
 * UI Thread 블로킹 방지 (별도 Thread에서 I/O 처리)
-* 하드웨어 독립성 (DeviceTransport 추상화 활용)
+* 하드웨어 독립성 (BaseTransport 추상화 활용)
 * 효율적인 데이터 처리 (Batch 처리, Queue 기반 전송)
 * Thread-safe한 송수신 보장
 
@@ -19,7 +20,7 @@ DeviceTransport 인터페이스를 사용하여 하드웨어 독립적인 I/O �
 
 ## HOW
 * QThread 상속으로 별도 Thread 실행
-* DeviceTransport로 하드웨어 추상화
+* BaseTransport로 하드웨어 추상화
 * ThreadSafeQueue로 비동기 전송 처리
 * Batch buffer로 수신 데이터 집계 후 발행
 * QMutex로 Thread-safe 상태 관리
@@ -28,7 +29,7 @@ DeviceTransport 인터페이스를 사용하여 하드웨어 독립적인 I/O �
 import time
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QMutexLocker, QObject
 from typing import Optional
-from core.device_transport import DeviceTransport
+from core.base_transport import BaseTransport
 from core.utils import ThreadSafeQueue
 from common.constants import (
     DEFAULT_READ_CHUNK_SIZE,
@@ -38,7 +39,7 @@ from common.constants import (
 
 class ConnectionWorker(QThread):
     """
-    DeviceTransport 기반 데이터 송수신 Worker Thread
+    BaseTransport 기반 데이터 송수신 Worker Thread
 
     별도 Thread에서 실행되어 UI 블로킹 없이 데이터를 처리합니다.
     """
@@ -49,12 +50,12 @@ class ConnectionWorker(QThread):
     connection_opened = pyqtSignal(str)
     connection_closed = pyqtSignal(str)
 
-    def __init__(self, transport: DeviceTransport, connection_name: str, parent: Optional[QObject] = None) -> None:
+    def __init__(self, transport: BaseTransport, connection_name: str, parent: Optional[QObject] = None) -> None:
         """
         ConnectionWorker 초기화
 
         Args:
-            transport (DeviceTransport): 하드웨어 전송 계층 구현체
+            transport (BaseTransport): 하드웨어 전송 계층 구현체
             connection_name (str): 연결 식별 이름 (예: 'COM1')
             parent (Optional[QObject]): 부모 QObject (선택)
         """

@@ -12,7 +12,7 @@
 * 프로토콜 선택(Serial/SPI) 및 하위 설정 스택 위젯 제공
 * 클릭 시 스캔을 요청하는 커스텀 콤보박스(ClickableComboBox) 구현
 * 연결/해제 및 스캔 버튼 제공
-* 현재 설정을 DTO로 변환하여 반환
+* 현재 설정을 DTO로 변환하여 반환 (포트 이름과 설명 분리 처리)
 
 ## HOW
 * QComboBox를 상속받아 showPopup 이벤트를 재정의
@@ -23,14 +23,14 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton,
     QLabel, QGroupBox, QStackedWidget
 )
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QIntValidator
 from view.managers.language_manager import language_manager
-from typing import Optional, List, Dict
+from typing import Optional, List, Dict, Tuple
 from common.enums import PortState
 from common.dtos import PortConfig
 from common.constants import VALID_BAUDRATES, DEFAULT_BAUDRATE
-from core.logger import logger  # 로거 추가
+from core.logger import logger
 
 class ClickableComboBox(QComboBox):
     """
@@ -49,7 +49,7 @@ class ClickableComboBox(QComboBox):
             - 부모 클래스의 showPopup 호출 전 시그널 발생
             - 이를 통해 팝업이 뜨기 직전 최신 포트 목록 갱신 가능
         """
-        logger.debug("ClickableComboBox: showPopup called")  # 디버그 로그, 추후 제거
+        # 팝업이 뜨기 직전에 스캔 요청 시그널 발생
         self.popup_show_requested.emit()
         super().showPopup()
 
@@ -125,7 +125,7 @@ class PortSettingsWidget(QGroupBox):
 
         # ClickableComboBox 사용하여 클릭 시 스캔 트리거
         self.port_combo = ClickableComboBox()
-        self.port_combo.setMinimumWidth(100)
+        self.port_combo.setMinimumWidth(150) # 설명이 들어가므로 너비 확장
         self.port_combo.setToolTip(language_manager.get_text("port_combo_port_tooltip"))
         self.port_combo.popup_show_requested.connect(self.on_port_combo_clicked)
 
@@ -159,7 +159,7 @@ class PortSettingsWidget(QGroupBox):
         top_layout.addWidget(self.protocol_lbl)
         top_layout.addWidget(self.protocol_combo)
         top_layout.addWidget(self.port_lbl)
-        top_layout.addWidget(self.port_combo, 1)
+        top_layout.addWidget(self.port_combo, 1) # Stretch 적용
         top_layout.addWidget(self.scan_btn)
         top_layout.addWidget(self.connect_btn)
 
@@ -284,7 +284,7 @@ class PortSettingsWidget(QGroupBox):
 
     def on_port_combo_clicked(self) -> None:
         """
-        포트 콤보박스 클릭 핸들러 (Lazy Loading)
+        포트 콤보박스 클릭 시 (연결되지 않았을 때만) 스캔 요청
 
         Logic:
             - 연결되어 있지 않을 때만 스캔 요청
@@ -320,9 +320,18 @@ class PortSettingsWidget(QGroupBox):
 
         Returns:
             PortConfig: 포트 설정 DTO
+
+        Note:
+            QComboBox의 currentData를 사용하여 실제 포트 이름을 가져옵니다.
+            (화면에는 'COM1 (Description)'이 보이지만 data는 'COM1')
         """
         protocol = self.protocol_combo.currentText()
-        port = self.port_combo.currentText()
+
+        # 화면 표시 텍스트가 아닌 실제 데이터(포트명)를 사용
+        port = self.port_combo.currentData()
+        if port is None:
+            # 데이터가 없으면 텍스트(직접 입력 등) 사용
+            port = self.port_combo.currentText()
 
         # DTO 생성
         config = PortConfig(port=port, protocol=protocol)
@@ -339,27 +348,34 @@ class PortSettingsWidget(QGroupBox):
 
         return config
 
-    def set_port_list(self, ports: List[str]) -> None:
+    def set_port_list(self, ports: List[Tuple[str, str]]) -> None:
         """
         포트 목록 업데이트
 
         Logic:
-            - 현재 선택된 포트를 기억
-            - 목록 갱신 중 불필요한 시그널 차단
-            - 목록 갱신 후, 이전에 선택했던 포트가 여전히 유효하면 재선택
+            - 입력: [(port, description), ...] 형태의 튜플 리스트
+            - 현재 선택된 포트(Data)를 기억
+            - 목록 갱신 (addItem(description, userData=port))
+            - 이전 선택 복구 시도
 
         Args:
-            ports (List[str]): 포트 이름 리스트
+            ports (List[Tuple[str, str]]): (포트이름, 설명) 튜플 리스트
         """
-        current_port = self.port_combo.currentText()
-        logger.debug(f"Updating port list. Current: {current_port}, New: {ports}") # 추후 제거
+        # 현재 선택된 포트의 실제 값(Data) 기억
+        current_port_data = self.port_combo.currentData()
+        if current_port_data is None:
+            current_port_data = self.port_combo.currentText()
 
         self.port_combo.blockSignals(True)
         self.port_combo.clear()
-        self.port_combo.addItems(ports)
 
-        # 이전 선택 유지 로직
-        index = self.port_combo.findText(current_port)
+        for port_name, description in ports:
+            # Display: "COM1 (USB Serial Port)", Data: "COM1"
+            display_text = f"{port_name} ({description})" if description else port_name
+            self.port_combo.addItem(display_text, port_name)
+
+        # 이전 선택 복구
+        index = self.port_combo.findData(current_port_data)
         if index != -1:
             self.port_combo.setCurrentIndex(index)
 
@@ -465,9 +481,13 @@ class PortSettingsWidget(QGroupBox):
         Returns:
             dict: 설정 데이터
         """
+        # 저장 시에는 실제 포트 이름(Data)을 저장
+        current_data = self.port_combo.currentData()
+        port_val = current_data if current_data else self.port_combo.currentText()
+
         state = {
             "protocol": self.protocol_combo.currentText(),
-            "port": self.port_combo.currentText(),
+            "port": port_val,
             "serial": {
                 "baudrate": self.serial_controls_ui['baud_combo'].currentText(),
                 "bytesize": self.serial_controls_ui['data_combo'].currentText(),
@@ -497,11 +517,16 @@ class PortSettingsWidget(QGroupBox):
         # 포트는 목록에 없을 수도 있으므로 addItem으로 추가 후 설정
         port = state.get("port", "")
         if port:
-            # 포트 목록에 없으면 임시 추가
-            if self.port_combo.findText(port) == -1:
-                self.port_combo.addItem(port)
-            self.port_combo.setCurrentText(port)
+            # 저장된 포트가 현재 목록(Data)에 있는지 확인
+            index = self.port_combo.findData(port)
+            if index != -1:
+                self.port_combo.setCurrentIndex(index)
+            else:
+                # 목록에 없으면 텍스트로 추가 (설명 없이)
+                self.port_combo.addItem(port, port)
+                self.port_combo.setCurrentIndex(self.port_combo.count() - 1)
 
+        # Serial/SPI 설정 복원 (기존 코드 유지)
         serial_state = state.get("serial", {})
         self.serial_controls_ui['baud_combo'].setCurrentText(str(serial_state.get("baudrate", "115200")))
         self.serial_controls_ui['data_combo'].setCurrentText(str(serial_state.get("bytesize", "8")))

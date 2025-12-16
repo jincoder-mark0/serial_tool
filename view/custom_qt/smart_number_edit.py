@@ -221,17 +221,17 @@ class SmartNumberEdit(QPlainTextEdit):
             return
 
         original_str = target.group()
-        start_idx, end_idx = target.span()
+        start_index, end_index = target.span()
         force_plus = original_str.startswith("+")
         digits_str = original_str[1:] if original_str.startswith(('+', '-')) else original_str
 
         if original_str.startswith(('+', '-')):
-            cursor_idx_in_digits = rel_pos - start_idx - 1
+            cursor_index_in_digits = rel_pos - start_index - 1
         else:
-            cursor_idx_in_digits = rel_pos - start_idx
+            cursor_index_in_digits = rel_pos - start_index
 
-        cursor_idx_left_digit = max(min(cursor_idx_in_digits - 1, len(digits_str) - 1), 0)
-        factor = 10 ** (len(digits_str) - 1 - cursor_idx_left_digit)
+        cursor_index_left_digit = max(min(cursor_index_in_digits - 1, len(digits_str) - 1), 0)
+        factor = 10 ** (len(digits_str) - 1 - cursor_index_left_digit)
 
         try:
             val = int(original_str)
@@ -246,8 +246,8 @@ class SmartNumberEdit(QPlainTextEdit):
 
         print(f"[Debug] Number change: {original_str} -> {new_str}, factor: {factor}, step: {step}")
 
-        cursor.setPosition(start_idx + line_start)
-        cursor.setPosition(end_idx + line_start, cursor.KeepAnchor)
+        cursor.setPosition(start_index + line_start)
+        cursor.setPosition(end_index + line_start, cursor.KeepAnchor)
         cursor.insertText(new_str)
 
         len_diff = len(new_str) - len(original_str)

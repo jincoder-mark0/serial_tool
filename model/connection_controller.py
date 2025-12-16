@@ -16,7 +16,7 @@
 * EventBus를 통한 상태 및 데이터 전파
 
 ## HOW
-* DeviceTransport 구현체(Serial 등)를 생성하여 ConnectionWorker에 주입
+* BaseTransport 구현체(Serial 등)를 생성하여 ConnectionWorker에 주입
 * PyQt Signal을 사용하여 비동기 이벤트 처리
 * EventBus로 데이터 브로드캐스팅
 """
@@ -189,7 +189,7 @@ class ConnectionController(QObject):
         Logic:
             - 필수 설정 확인
             - 중복 연결 방지
-            - DeviceTransport 생성
+            - BaseTransport 생성
             - ConnectionWorker 생성 및 의존성 주입
             - Parser 설정 및 생성
             - Worker 시작

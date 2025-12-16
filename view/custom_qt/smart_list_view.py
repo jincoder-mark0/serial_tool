@@ -14,7 +14,7 @@ from PyQt5.QtCore import (
     QSortFilterProxyModel, QTimer
 )
 from PyQt5.QtGui import (
-    QColor, QTextDocument, QAbstractTextDocumentLayout, QTextCharFormat, QPainter
+    QColor, QTextDocument, QAbstractTextDocumentLayout, QTextCharFormat, QPainter, QPalette
 )
 from PyQt5.QtCore import QDateTime
 
@@ -349,7 +349,7 @@ class QSmartListView(QListView):
         return "\n".join(lines)
 
     @staticmethod
-    def _create_pattern(self, text: str) -> QRegExp:
+    def _create_pattern(text: str) -> QRegExp:
         """
         검색 문자열을 QRegExp 객체로 변환
 
@@ -728,16 +728,27 @@ class LogDelegate(QStyledItemDelegate):
         """
         painter.save()
 
+        # 테마 색상 적용
+        # QTextDocument는 기본적으로 검은색 글자를 사용하므로,
+        # 테마가 다크 모드일 때 글자가 안 보이는 문제를 해결하기 위해
+        # option.palette에서 텍스트 색상을 가져와 기본 스타일시트로 설정합니다.
+        text_color = option.palette.text().color()
+        self.doc.setDefaultStyleSheet(f"body {{ color: {text_color.name()}; }}")
+
         # 선택된 항목 배경 그리기
         if option.state & QStyle.State_Selected:
             painter.fillRect(option.rect, option.palette.highlight())
+
+            # 선택된 경우 텍스트 색상을 HighlightedText 색상으로 변경 (선택적)
+            # highlighted_text_color = option.palette.highlightedText().color()
+            # self.doc.setDefaultStyleSheet(f"body {{ color: {highlighted_text_color.name()}; }}")
 
         # 데이터 설정
         text = index.data(Qt.DisplayRole)
         self.doc.setDefaultFont(option.font)
         self.doc.setHtml(text)
 
-        # [핵심] 정규식 객체를 사용하여 검색 및 하이라이트
+        # 정규식 객체를 사용하여 검색 및 하이라이트
         if self.search_pattern and not self.search_pattern.isEmpty():
             cursor = self.doc.find(self.search_pattern)
             while not cursor.isNull():

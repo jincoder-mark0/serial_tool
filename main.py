@@ -33,7 +33,7 @@ import logging
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtCore import Qt
 
-from common.version import __version__
+from common.app_info import __version__
 from core.resource_path import ResourcePath
 from view.main_window import MainWindow
 from presenter.main_presenter import MainPresenter
