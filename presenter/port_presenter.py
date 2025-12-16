@@ -178,8 +178,10 @@ class PortPresenter(QObject):
             3. 각 탭의 set_port_list를 호출하여 목록 갱신
             4. 각 탭은 내부적으로 기존 선택값을 유지하려 시도함
         """
+        logger.debug("Starting port scan...")   # 추후 제거
         ports = [port.device for port in serial.tools.list_ports.comports()]
         ports.sort()
+        logger.debug(f"Found ports: {ports}")   # 추후 제거
 
         # 모든 포트 패널의 리스트를 업데이트
         count = self.left_section.port_tab_panel.count()

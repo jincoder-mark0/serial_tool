@@ -30,7 +30,7 @@ from typing import Optional, List, Dict
 from common.enums import PortState
 from common.dtos import PortConfig
 from common.constants import VALID_BAUDRATES, DEFAULT_BAUDRATE
-
+from core.logger import logger  # 로거 추가
 
 class ClickableComboBox(QComboBox):
     """
@@ -49,6 +49,7 @@ class ClickableComboBox(QComboBox):
             - 부모 클래스의 showPopup 호출 전 시그널 발생
             - 이를 통해 팝업이 뜨기 직전 최신 포트 목록 갱신 가능
         """
+        logger.debug("ClickableComboBox: showPopup called")  # 디버그 로그, 추후 제거
         self.popup_show_requested.emit()
         super().showPopup()
 
@@ -290,7 +291,10 @@ class PortSettingsWidget(QGroupBox):
             - 팝업이 뜨기 전에 포트 목록을 최신화하기 위함
         """
         if not self.is_connected():
+            logger.debug("Port combo clicked, requesting scan...")
             self.port_scan_requested.emit()
+        else:
+            logger.debug("Port is connected, scan skipped.")
 
     def on_connect_clicked(self) -> None:
         """
@@ -348,6 +352,7 @@ class PortSettingsWidget(QGroupBox):
             ports (List[str]): 포트 이름 리스트
         """
         current_port = self.port_combo.currentText()
+        logger.debug(f"Updating port list. Current: {current_port}, New: {ports}") # 추후 제거
 
         self.port_combo.blockSignals(True)
         self.port_combo.clear()
@@ -398,8 +403,7 @@ class PortSettingsWidget(QGroupBox):
 
     def set_connected(self, connected: bool) -> None:
         """
-        PortPresenter와의 호환성을 위한 헬퍼 메서드입니다.
-        단순 boolean 값을 받아 내부의 PortState로 변환하여 처리합니다.
+        연결 상태 설정 (Boolean 헬퍼)
 
         Args:
             connected (bool): 연결 여부
