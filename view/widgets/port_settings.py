@@ -27,7 +27,7 @@ from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QIntValidator
 from view.managers.language_manager import language_manager
 from typing import Optional, List, Dict, Tuple
-from common.enums import PortState
+from common.enums import PortState, SerialParity, SerialStopBits, SerialFlowControl
 from common.dtos import PortConfig
 from common.constants import VALID_BAUDRATES, DEFAULT_BAUDRATE
 from core.logger import logger
@@ -200,21 +200,21 @@ class PortSettingsWidget(QGroupBox):
         # Parity
         self.serial_controls_ui['parity_lbl'] = QLabel(language_manager.get_text("port_lbl_parity"))
         self.serial_controls_ui['parity_combo'] = QComboBox()
-        self.serial_controls_ui['parity_combo'].addItems(["N", "E", "O", "M", "S"])
+        self.serial_controls_ui['parity_combo'].addItems([p.value for p in SerialParity])
         self.serial_controls_ui['parity_combo'].setFixedWidth(40)
         self.serial_controls_ui['parity_combo'].setToolTip(language_manager.get_text("port_combo_parity_tooltip"))
 
         # Stop Bits
         self.serial_controls_ui['stop_lbl'] = QLabel(language_manager.get_text("port_lbl_stop"))
         self.serial_controls_ui['stop_combo'] = QComboBox()
-        self.serial_controls_ui['stop_combo'].addItems(["1", "1.5", "2"])
+        self.serial_controls_ui['stop_combo'].addItems([str(s.value) for s in SerialStopBits])
         self.serial_controls_ui['stop_combo'].setFixedWidth(45)
         self.serial_controls_ui['stop_combo'].setToolTip(language_manager.get_text("port_combo_stopbits_tooltip"))
 
         # Flow Control
         self.serial_controls_ui['flow_lbl'] = QLabel(language_manager.get_text("port_lbl_flow"))
         self.serial_controls_ui['flow_combo'] = QComboBox()
-        self.serial_controls_ui['flow_combo'].addItems(["None", "RTS/CTS", "XON/XOFF"])
+        self.serial_controls_ui['flow_combo'].addItems([f.value for f in SerialFlowControl])
         self.serial_controls_ui['flow_combo'].setMinimumWidth(70)
         self.serial_controls_ui['flow_combo'].setToolTip(language_manager.get_text("port_combo_flow_tooltip"))
 
@@ -528,11 +528,11 @@ class PortSettingsWidget(QGroupBox):
 
         # Serial/SPI 설정 복원 (기존 코드 유지)
         serial_state = state.get("serial", {})
-        self.serial_controls_ui['baud_combo'].setCurrentText(str(serial_state.get("baudrate", "115200")))
+        self.serial_controls_ui['baud_combo'].setCurrentText(str(serial_state.get("baudrate", DEFAULT_BAUDRATE)))
         self.serial_controls_ui['data_combo'].setCurrentText(str(serial_state.get("bytesize", "8")))
-        self.serial_controls_ui['parity_combo'].setCurrentText(serial_state.get("parity", "N"))
-        self.serial_controls_ui['stop_combo'].setCurrentText(str(serial_state.get("stopbits", "1")))
-        self.serial_controls_ui['flow_combo'].setCurrentText(serial_state.get("flowctrl", "None"))
+        self.serial_controls_ui['parity_combo'].setCurrentText(serial_state.get("parity", SerialParity.NONE.value))
+        self.serial_controls_ui['stop_combo'].setCurrentText(str(serial_state.get("stopbits", SerialStopBits.ONE.value)))
+        self.serial_controls_ui['flow_combo'].setCurrentText(serial_state.get("flowctrl", SerialFlowControl.NONE.value))
 
         spi_state = state.get("spi", {})
         self.spi_controls_ui['speed_combo'].setCurrentText(str(spi_state.get("speed", "1000000")))

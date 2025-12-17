@@ -34,15 +34,15 @@ from view.custom_qt.smart_list_view import QSmartListView
 
 from common.constants import (
     DEFAULT_LOG_MAX_LINES,
-    UI_REFRESH_INTERVAL_MS
+    UI_REFRESH_INTERVAL_MS,
+    FILE_FILTER_LOG, FILE_FILTER_ALL
 )
+from common.enums import NewlineMode
 from core.logger import logger
 
 class DataLogWidget(QWidget):
     """
     데이터를 표시하는 뷰어 위젯 클래스
-
-    데이터(RX/TX)를 표시하고 HEX/ASCII 전환, 일시 정지 등의 기능을 제공합니다.
     """
 
     tx_broadcast_allow_changed = pyqtSignal(bool)
@@ -50,6 +50,7 @@ class DataLogWidget(QWidget):
     # 로깅 시그널 변경: 파일명 없이 의도만 전달
     logging_start_requested = pyqtSignal()
     logging_stop_requested = pyqtSignal()
+
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
         DataLogWidget를 초기화합니다.
@@ -116,7 +117,7 @@ class DataLogWidget(QWidget):
         # 1. 툴바 영역 (타이틀 + 도구들)
         # 타이틀 섹션
         self.data_log_title = QLabel(language_manager.get_text("data_log_title"))
-        self.data_log_title.setProperty("class", "section-title")  # 섹션 타이틀 스타일 적용
+        self.data_log_title.setProperty("class", "section-title")
 
         # 도구 섹션 (검색, 옵션, 액션)
         # TX Broadcast Checkbox
@@ -177,10 +178,10 @@ class DataLogWidget(QWidget):
         # Newline Combo
         self.data_log_newline_combo = QComboBox()
         self.data_log_newline_combo.setToolTip(language_manager.get_text("data_log_combo_newline_tooltip"))
-        self.data_log_newline_combo.addItem(language_manager.get_text("data_log_newline_raw"), "Raw")
-        self.data_log_newline_combo.addItem(language_manager.get_text("data_log_newline_lf"), "LF")
-        self.data_log_newline_combo.addItem(language_manager.get_text("data_log_newline_cr"), "CR")
-        self.data_log_newline_combo.addItem(language_manager.get_text("data_log_newline_crlf"), "CRLF")
+        self.data_log_newline_combo.addItem(language_manager.get_text("data_log_newline_raw"), NewlineMode.RAW.value)
+        self.data_log_newline_combo.addItem(language_manager.get_text("data_log_newline_lf"), NewlineMode.LF.value)
+        self.data_log_newline_combo.addItem(language_manager.get_text("data_log_newline_cr"), NewlineMode.CR.value)
+        self.data_log_newline_combo.addItem(language_manager.get_text("data_log_newline_crlf"), NewlineMode.CRLF.value)
         self.data_log_newline_combo.setFixedWidth(100)
 
         # 2. 로그 뷰 영역
@@ -192,7 +193,7 @@ class DataLogWidget(QWidget):
         self.data_log_list.set_timestamp_enabled(self.timestamp_enabled, timeout_ms=100)
         self.data_log_list.setPlaceholderText(language_manager.get_text("data_log_list_log_placeholder"))
         self.data_log_list.setToolTip(language_manager.get_text("data_log_list_log_tooltip"))
-        self.data_log_list.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
+        self.data_log_list.setProperty("class", "fixed-font")
 
         # Layout 배치
         toolbar_layout = QHBoxLayout()
@@ -280,13 +281,14 @@ class DataLogWidget(QWidget):
 
         # Newline 문자 설정 (QSmartListView에 전달)
         newline_mode = self.data_log_newline_combo.currentData()
-        if self.hex_mode or newline_mode == "Raw":
+
+        if self.hex_mode or newline_mode == NewlineMode.RAW.value:
             newline_char = None
         else:
             newline_char = {
-                "LF": "\n",
-                "CR": "\r",
-                "CRLF": "\r\n"
+                NewlineMode.LF.value: "\n",
+                NewlineMode.CR.value: "\r",
+                NewlineMode.CRLF.value: "\r\n"
             }.get(newline_mode, "\n")
 
         self.data_log_list.set_newline_char(newline_char)
@@ -392,7 +394,7 @@ class DataLogWidget(QWidget):
             self,
             title,
             "",
-            "Binary Files (*.bin);;All Files (*)"
+            f"{FILE_FILTER_LOG};;{FILE_FILTER_ALL}"
         )
         return filename
 

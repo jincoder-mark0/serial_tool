@@ -31,14 +31,25 @@
 * python dataclasses 활용
 * to_dict/from_dict 메서드를 통해 JSON 직렬화 지원
 * 안전한 타입 변환을 위한 헬퍼 메서드 적용
+* 기본값에 Enum/Constant 값 적용
 """
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List
+from common.constants import (
+    DEFAULT_BAUDRATE, DEFAULT_MACRO_DELAY_MS,
+    FONT_FAMILY_SEGOE, FONT_FAMILY_CONSOLAS
+)
+from common.enums import SerialParity, SerialStopBits, SerialFlowControl, FileStatus
 
 def _safe_cast(value: Any, target_type: type, default: Any) -> Any:
     """
     값을 안전하게 대상 타입으로 변환합니다.
     None이거나 변환 실패 시 기본값을 반환합니다.
+
+    Args:
+        value: 변환할 값
+        target_type: 대상 타입
+        default: 변환 실패 시 반환할 기본값
     """
     if value is None:
         return default
@@ -64,7 +75,13 @@ def _safe_cast(value: Any, target_type: type, default: Any) -> Any:
 class ManualCommand:
     """
     수동 Command 전송 데이터
-    View(ManualCtrl) -> Presenter -> Model로 전달됩니다.
+
+    Attributes:
+        text (str): 전송할 텍스트
+        hex_mode (bool): 16진수 모드
+        prefix (bool): 프리픽스 사용
+        suffix (bool): 사후缀 사용
+        local_echo (bool): 로컬 에코
     """
     text: str
     hex_mode: bool = False
@@ -77,17 +94,27 @@ class ManualCommand:
 class PortConfig:
     """
     포트 연결 설정 데이터
-    View(PortSettings) -> Presenter -> Model로 전달됩니다.
+
+    Attributes:
+        port (str): 포트 이름
+        protocol (str): 프로토콜
+        baudrate (int): 보드레이트
+        bytesize (int): 바이트 사이즈
+        parity (str): 페어리티
+        stopbits (float): 스탑비트
+        flowctrl (str): 흐름 제어
+        speed (int): 속도
+        mode (int): 모드
     """
     port: str
-    protocol: str = "Serial"  # Serial, SPI, I2C
+    protocol: str = "Serial"
 
     # Serial Options
-    baudrate: int = 115200
+    baudrate: int = DEFAULT_BAUDRATE
     bytesize: int = 8
-    parity: str = "N"
-    stopbits: float = 1.0
-    flowctrl: str = "None"
+    parity: str = SerialParity.NONE.value
+    stopbits: float = SerialStopBits.ONE.value
+    flowctrl: str = SerialFlowControl.NONE.value
 
     # SPI Options
     speed: int = 1000000
@@ -95,15 +122,23 @@ class PortConfig:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'PortConfig':
-        """Dictionary에서 안전하게 PortConfig 생성"""
+        """
+        Dictionary에서 안전하게 PortConfig 생성
+
+        Args:
+            data (Dict[str, Any]): JSON 데이터
+
+        Returns:
+            PortConfig: 생성된 PortConfig 객체
+        """
         return cls(
             port=_safe_cast(data.get("port"), str, ""),
             protocol=_safe_cast(data.get("protocol"), str, "Serial"),
-            baudrate=_safe_cast(data.get("baudrate"), int, 115200),
+            baudrate=_safe_cast(data.get("baudrate"), int, DEFAULT_BAUDRATE),
             bytesize=_safe_cast(data.get("bytesize"), int, 8),
-            parity=_safe_cast(data.get("parity"), str, "N"),
-            stopbits=_safe_cast(data.get("stopbits"), float, 1.0),
-            flowctrl=_safe_cast(data.get("flowctrl"), str, "None"),
+            parity=_safe_cast(data.get("parity"), str, SerialParity.NONE.value),
+            stopbits=_safe_cast(data.get("stopbits"), float, SerialStopBits.ONE.value),
+            flowctrl=_safe_cast(data.get("flowctrl"), str, SerialFlowControl.NONE.value),
             speed=_safe_cast(data.get("speed"), int, 1000000),
             mode=_safe_cast(data.get("mode"), int, 0)
         )
@@ -112,7 +147,12 @@ class PortConfig:
 class FontConfig:
     """
     폰트 설정 데이터
-    ThemeManager 및 설정 저장 시 사용됩니다.
+
+    Attributes:
+        prop_family (str): 비정비 폰트
+        prop_size (int): 비정비 폰트 크기
+        fixed_family (str): 정비 폰트
+        fixed_size (int): 정비 폰트 크기
     """
     prop_family: str
     prop_size: int
@@ -121,11 +161,19 @@ class FontConfig:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'FontConfig':
-        """Dictionary에서 안전하게 FontConfig 생성"""
+        """
+        Dictionary에서 안전하게 FontConfig 생성
+
+        Args:
+            data (Dict[str, Any]): JSON 데이터
+
+        Returns:
+            FontConfig: 생성된 FontConfig 객체
+        """
         return cls(
-            prop_family=_safe_cast(data.get("prop_family"), str, "Segoe UI"),
+            prop_family=_safe_cast(data.get("prop_family"), str, FONT_FAMILY_SEGOE),
             prop_size=_safe_cast(data.get("prop_size"), int, 9),
-            fixed_family=_safe_cast(data.get("fixed_family"), str, "Consolas"),
+            fixed_family=_safe_cast(data.get("fixed_family"), str, FONT_FAMILY_CONSOLAS),
             fixed_size=_safe_cast(data.get("fixed_size"), int, 9)
         )
 
@@ -197,21 +245,32 @@ class MacroEntry:
 class FileProgressState:
     """
     파일 전송 진행 상태 DTO
-    Model -> Presenter -> View
+
+    Attributes:
+        file_path (str): 파일 경로
+        sent_bytes (int): 전송된 바이트 수
+        total_bytes (int): 총 파일 크기
+        speed (float): 전송 속도 (바이트/초)
+        eta (float): 예상 완료 시간 (초)
+        status (str): 파일 전송 상태
+        error_msg (str): 에러 메시지
     """
     file_path: str = ""
     sent_bytes: int = 0
     total_bytes: int = 0
-    speed: float = 0.0      # bytes/sec
-    eta: float = 0.0        # seconds
-    status: str = "Sending" # Sending, Completed, Error, Cancelled
-    error_msg: str = ""     # 에러 발생 시 메시지
+    speed: float = 0.0
+    eta: float = 0.0
+    status: str = FileStatus.SENDING.value
+    error_msg: str = ""
 
 @dataclass
 class FileProgressEvent:
     """
     파일 전송 진행 이벤트 DTO
-    Model -> EventBus -> Router -> External/Plugins
+
+    Attributes:
+        current (int): 현재 전송된 바이트 수
+        total (int): 총 파일 크기
     """
     current: int
     total: int
@@ -220,7 +279,11 @@ class FileProgressEvent:
 class PortDataEvent:
     """
     포트 데이터 수신/송신 이벤트 DTO
-    Model -> EventBus -> Router -> Presenter
+
+    Attributes:
+        port (str): 포트 이름
+        data (bytes): 수신/송신 데이터
+        timestamp (float): 이벤트 발생 시간
     """
     port: str
     data: bytes
@@ -230,7 +293,10 @@ class PortDataEvent:
 class PortErrorEvent:
     """
     포트 에러 이벤트 DTO
-    Model -> EventBus -> Router -> Presenter
+
+    Attributes:
+        port (str): 포트 이름
+        message (str): 에러 메시지
     """
     port: str
     message: str
@@ -239,16 +305,25 @@ class PortErrorEvent:
 class PacketEvent:
     """
     패킷 파싱 완료 이벤트 DTO
-    Model -> EventBus -> Router -> Presenter
+
+    Attributes:
+        port (str): 포트 이름
+        packet (Any): 파싱된 패킷
     """
     port: str
-    packet: Any # model.packet_parser.Packet 객체
+    packet: Any
 
 @dataclass
 class ErrorContext:
     """
     시스템 에러 컨텍스트 DTO
-    GlobalErrorHandler -> UI
+
+    Attributes:
+        error_type (str): 에러 타입
+        message (str): 에러 메시지
+        traceback (str): 에러 추적 정보
+        level (str): 에러 레벨
+        timestamp (float): 에러 발생 시간
     """
     error_type: str
     message: str
@@ -259,11 +334,14 @@ class ErrorContext:
 @dataclass
 class MacroScriptData:
     """
-    매크로 스크립트 데이터 DTO (저장/로드)
-    View -> Presenter
+    매크로 스크립트 데이터 DTO
+
+    Attributes:
+        filepath (str): 스크립트 파일 경로
+        data (Dict[str, Any]): 스크립트 데이터
     """
     filepath: str
-    data: Dict[str, Any] # commands 리스트와 control_state 포함
+    data: Dict[str, Any]
 
     @classmethod
     def from_dict(cls, filepath: str, data: Dict[str, Any]) -> 'MacroScriptData':
@@ -281,7 +359,12 @@ class MacroScriptData:
 class MacroRepeatOption:
     """
     매크로 반복 실행 옵션 DTO
-    View(Widget) -> View(Panel) -> Presenter
+
+    Attributes:
+        delay_ms (int): 실행 간격 (밀리초)
+        max_runs (int): 최대 실행 횟수
+        interval_ms (int): 실행 간격 (밀리초)
+        is_broadcast (bool): 브로드캐스트 사용 여부
     """
     delay_ms: int
     max_runs: int = 0
@@ -292,18 +375,28 @@ class MacroRepeatOption:
 class MacroStepEvent:
     """
     매크로 실행 단계 이벤트 DTO
-    Model -> Presenter -> View
+
+    Attributes:
+        index (int): 단계 인덱스
+        entry (Optional[MacroEntry]): 실행된 매크로 엔트리
+        success (bool): 실행 성공 여부
+        type (str): 이벤트 타입
     """
     index: int
     entry: Optional[MacroEntry] = None
     success: bool = False
-    type: str = "started" # "started" or "completed"
+    type: str = "started"
 
 @dataclass
 class PreferencesState:
     """
     환경 설정 상태 DTO
-    PreferencesDialog와 Presenter 간 데이터 교환용
+
+    Attributes:
+        theme (str): 테마
+        language (str): 언어
+        font_size (int): 폰트 크기
+        max_log_lines (int): 최대 로그 라인 수
     """
     # General
     theme: str = "Dark"
@@ -312,7 +405,7 @@ class PreferencesState:
     max_log_lines: int = 1000
 
     # Serial Defaults
-    baudrate: int = 115200
+    baudrate: int = DEFAULT_BAUDRATE
     newline: str = "LF"
     local_echo: bool = False
     scan_interval: int = 1000
@@ -340,7 +433,17 @@ class PreferencesState:
 class MainWindowState:
     """
     메인 윈도우 상태 DTO
-    윈도우 복원 및 종료 시 상태 저장용
+
+    Attributes:
+        width (int): 너비
+        height (int): 높이
+        x (Optional[int]): x 좌표
+        y (Optional[int]): y 좌표
+        splitter_state (Optional[str]): 스플리터 상태
+        right_panel_visible (bool): 오른쪽 패널 표시 여부
+        saved_right_width (Optional[int]): 오른쪽 패널 너비
+        left_section_state (Dict[str, Any]): 왼쪽 섹션 상태
+        right_section_state (Dict[str, Any]): 오른쪽 섹션 상태
     """
     width: int = 1200
     height: int = 800
@@ -349,8 +452,6 @@ class MainWindowState:
     splitter_state: Optional[str] = None
     right_panel_visible: bool = True
     saved_right_width: Optional[int] = None
-
-    # Sub-component states (딕셔너리로 유지하여 유연성 확보)
     left_section_state: Dict[str, Any] = field(default_factory=dict)
     right_section_state: Dict[str, Any] = field(default_factory=dict)
 
@@ -358,6 +459,17 @@ class MainWindowState:
 class ManualControlState:
     """
     수동 제어 위젯의 상태 DTO
+
+    Attributes:
+        input_text (str): 입력 텍스트
+        hex_mode (bool): 헥스 모드
+        prefix_chk (bool): 프리픽스 체크
+        suffix_chk (bool): 사фф픽스 체크
+        rts_chk (bool): RTS 체크
+        dtr_chk (bool): DTR 체크
+        local_echo_chk (bool): 로컬 에코 체크
+        broadcast_chk (bool): 브로드캐스트 체크
+        command_history (List[str]): 명령어 히스토리
     """
     input_text: str = ""
     hex_mode: bool = False

@@ -6,10 +6,16 @@
 ## WHY
 * 상태 및 타입 정의를 한곳에서 관리하여 유지보수 용이성 확보
 * 계층 간 의존성 없이 참조 가능한 공통 위치 제공 (순환 참조 방지)
+* 하드코딩된 문자열 사용으로 인한 오타 방지 (Type Safety)
 
 ## WHAT
-* PortState: 포트 연결 상태 (연결됨, 끊김, 에러)
-* ParserType: 패킷 파싱 전략 타입 (Raw, AT, Delimiter 등)
+* PortState: 포트 연결 상태
+* ParserType: 패킷 파싱 전략 타입
+* SerialParity, SerialStopBits, SerialFlowControl: 시리얼 통신 설정
+* NewlineMode: 줄바꿈 모드
+* ThemeType: 테마 종류
+* MacroStepType: 매크로 실행 단계
+* FileStatus: 파일 전송 상태
 
 ## HOW
 * Python의 enum.Enum을 사용하여 상태 정의
@@ -44,3 +50,105 @@ class ParserType:
     AT = "AT"
     DELIMITER = "Delimiter"
     FIXED_LENGTH = "FixedLength"
+
+class SerialParity(Enum):
+    """
+    시리얼 패리티 비트 설정
+
+    Attributes:
+        NONE: 없음
+        EVEN: 짝수
+        ODD: 홀수
+        MARK: 마크
+        SPACE: 스페이스
+    """
+    NONE = 'N'
+    EVEN = 'E'
+    ODD = 'O'
+    MARK = 'M'
+    SPACE = 'S'
+
+class SerialStopBits(Enum):
+    """
+    시리얼 정지 비트 설정
+
+    Attributes:
+        ONE: 1비트
+        ONE_POINT_FIVE: 1.5비트
+        TWO: 2비트
+    """
+    ONE = 1.0
+    ONE_POINT_FIVE = 1.5
+    TWO = 2.0
+
+    def __str__(self):
+        return str(self.value)
+
+class SerialFlowControl(Enum):
+    """
+    시리얼 흐름 제어 설정
+
+    Attributes:
+        NONE: 없음
+        RTS_CTS: RTS/CTS
+        XON_XOFF: XON/XOFF
+    """
+    NONE = 'None'
+    RTS_CTS = 'RTS/CTS'
+    XON_XOFF = 'XON/XOFF'
+
+class NewlineMode(Enum):
+    """
+    줄바꿈 모드 설정
+
+    Attributes:
+        RAW: 바이너리 데이터 그대로 처리
+        LF: \n
+        CR: \r
+        CRLF: \r\n
+    """
+    RAW = "Raw"
+    LF = "LF"      # \n
+    CR = "CR"      # \r
+    CRLF = "CRLF"  # \r\n
+
+class ThemeType(Enum):
+    """
+    테마 타입
+
+    Attributes:
+        DARK: 어두운 테마
+        LIGHT: 밝은 테마
+        DRACULA: 드라큘라 테마
+    """
+    DARK = "dark"
+    LIGHT = "light"
+    DRACULA = "dracula"
+
+class MacroStepType(Enum):
+    """
+    매크로 실행 단계 타입
+
+    Attributes:
+        STARTED: 시작됨
+        COMPLETED: 완료됨
+    """
+    STARTED = "started"
+    COMPLETED = "completed"
+
+class FileStatus(Enum):
+    """
+    파일 전송 상태
+
+    Attributes:
+        READY: 준비됨
+        SENDING: 전송 중
+        COMPLETED: 완료됨
+        FAILED: 실패
+        CANCELLED: 취소됨
+    """
+    READY = "Ready"
+    SENDING = "Sending"
+    COMPLETED = "Completed"
+    FAILED = "Failed"
+    CANCELLED = "Cancelled"

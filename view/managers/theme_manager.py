@@ -32,21 +32,27 @@ from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QFont, QIcon
 from core.logger import logger
 from common.dtos import FontConfig
+from common.enums import ThemeType
+from common.constants import (
+    PLATFORM_WINDOWS, PLATFORM_LINUX, PLATFORM_MACOS,
+    FONT_FAMILY_SEGOE, FONT_FAMILY_UBUNTU, FONT_FAMILY_CONSOLAS,
+    FONT_FAMILY_MONOSPACE, FONT_FAMILY_MENLO
+)
 
 class ThemeManager:
     """애플리케이션 테마와 폰트 관리자"""
 
-    # 플랫폼별 기본 폰트 설정
+    # 플랫폼별 기본 폰트 설정 [Constants Use]
     _PROPORTIONAL_FONTS = {
-        "Windows": ("Segoe UI", 9),
-        "Linux": ("Ubuntu", 9),
-        "Darwin": ("SF Pro Text", 9)  # macOS
+        PLATFORM_WINDOWS: (FONT_FAMILY_SEGOE, 9),
+        PLATFORM_LINUX: (FONT_FAMILY_UBUNTU, 9),
+        PLATFORM_MACOS: ("SF Pro Text", 9)
     }
 
     _FIXED_FONTS = {
-        "Windows": ("Consolas", 9),
-        "Linux": ("Monospace", 9),
-        "Darwin": ("Menlo", 9)  # macOS
+        PLATFORM_WINDOWS: (FONT_FAMILY_CONSOLAS, 9),
+        PLATFORM_LINUX: (FONT_FAMILY_MONOSPACE, 9),
+        PLATFORM_MACOS: (FONT_FAMILY_MENLO, 9)
     }
 
     def __init__(self, resource_path=None):
@@ -56,7 +62,7 @@ class ThemeManager:
         Args:
             resource_path: ResourcePath 인스턴스. None이면 기본 경로 사용 (하위 호환성)
         """
-        self._current_theme = "dark"
+        self._current_theme = ThemeType.DARK.value
         self._app = None
         self._resource_path = resource_path
 
@@ -108,7 +114,7 @@ class ThemeManager:
 
         return sorted(themes)
 
-    def load_theme(self, theme_name: str = "dark") -> str:
+    def load_theme(self, theme_name: str = ThemeType.DARK.value) -> str:
         """
         지정된 테마의 QSS 콘텐츠를 로드합니다.
 
@@ -191,7 +197,7 @@ class ThemeManager:
         Returns:
             str: 폴백 QSS 문자열.
         """
-        if theme_name.lower() == "dark":
+        if theme_name.lower() == ThemeType.DARK.value:
             return """
             QMainWindow, QWidget { background-color: #2b2b2b; color: #ffffff; }
             QLineEdit, QTextEdit, QPlainTextEdit { background-color: #3b3b3b; color: #ffffff; border: 1px solid #555555; }
@@ -206,7 +212,7 @@ class ThemeManager:
             QComboBox, QPushButton { background-color: #e0e0e0; color: #000000; border: 1px solid #cccccc; padding: 5px; }
             """
 
-    def apply_theme(self, app: QApplication, theme_name: str = "dark"):
+    def apply_theme(self, app: QApplication, theme_name: str = ThemeType.DARK.value):
         """
         지정된 테마를 QApplication 인스턴스에 적용합니다.
 
@@ -423,10 +429,10 @@ class ThemeManager:
         """
         # Dracula 등 다크 계열 테마는 white 아이콘(dark 접미사) 사용
         target_theme = self._current_theme
-        if target_theme.lower() in ["dracula", "dark"]:
-            target_theme = "dark"
+        if target_theme.lower() in [ThemeType.DRACULA.value, ThemeType.DARK.value]:
+            target_theme = ThemeType.DARK.value
         else:
-            target_theme = "light"
+            target_theme = ThemeType.LIGHT.value
 
         if self._resource_path is not None:
             # AppConfig가 제공되었으면 그것을 사용

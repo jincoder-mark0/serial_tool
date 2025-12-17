@@ -17,7 +17,17 @@ from common.constants import (
     MAX_PACKET_SIZE,
     ConfigKeys
 )
+from common.enums import NewlineMode, ThemeType # [New]
 from common.dtos import PreferencesState
+from PyQt5.QtWidgets import (
+    QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
+    QLabel, QComboBox, QSpinBox, QPushButton,
+    QFileDialog, QGroupBox, QFormLayout, QRadioButton,
+    QButtonGroup, QListWidget, QCheckBox, QLineEdit
+)
+from PyQt5.QtCore import pyqtSignal, Qt
+from typing import Optional, Any
+import os
 
 class PreferencesDialog(QDialog):
     """
@@ -85,10 +95,10 @@ class PreferencesDialog(QDialog):
 
         # 테마 목록 동적 로드
         self.theme_combo = QComboBox()
-        theme_manager = ThemeManager() # 싱글톤
+        theme_manager = ThemeManager()
         themes = theme_manager.get_available_themes()
         if not themes:
-            themes = ["Dark", "Light"]
+            themes = [ThemeType.DARK.value.capitalize(), ThemeType.LIGHT.value.capitalize()]
         self.theme_combo.addItems(themes)
 
         # 언어 목록 동적 로드
@@ -133,7 +143,8 @@ class PreferencesDialog(QDialog):
         self.port_baudrate_combo.setEditable(True)
 
         self.port_newline_combo = QComboBox()
-        self.port_newline_combo.addItems(["\r", "\n", "\r\n"])
+
+        self.port_newline_combo.addItems([mode.value for mode in NewlineMode])
         self.port_newline_combo.setEditable(True)
 
         self.port_local_echo_chk = QCheckBox(language_manager.get_text("pref_chk_local_echo"))

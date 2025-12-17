@@ -16,6 +16,7 @@
 * 로그 색상 정의
 * ConfigKeys: 설정 키 상수 모음
 * EventTopics: 이벤트 버스 토픽 상수 모음
+* Platform & Filters: 시스템 및 파일 관련 상수
 
 ## HOW
 * 대문자 Snake Case로 상수 명명
@@ -145,10 +146,6 @@ RING_BUFFER_SIZE: int = 512 * 1024
 TX_QUEUE_SIZE: int = 128
 
 # UI 업데이트 Batch 설정 (SerialWorker → UI)
-# 고속 통신 시 UI 프리징 방지를 위해 데이터를 모아서 전송
-# [Optimization] 2MB/s 대응을 위해 임계값 상향 (1KB -> 8KB)
-# 1KB 설정 시 2MB/s 전송 시 초당 2000회 시그널 발생 -> UI 스레드 과부하
-# 8KB 설정 시 초당 약 250회로 감소하여 안정성 확보
 BATCH_SIZE_THRESHOLD: int = 8192  # 이 크기가 넘으면 즉시 전송 (bytes)
 BATCH_TIMEOUT_MS: int = 50        # 이 시간이 지나면 크기가 작아도 전송 (ms)
 
@@ -179,3 +176,21 @@ LOG_COLOR_ERROR: str = "#F44336"
 LOG_COLOR_WARN: str = "#FF9800"
 LOG_COLOR_PROMPT: str = '#00BCD4'
 LOG_COLOR_SUCCESS: str = "#4CAF50"
+
+# ==========================================
+# System & File Constants
+# ==========================================
+PLATFORM_WINDOWS = "Windows"
+PLATFORM_LINUX = "Linux"
+PLATFORM_MACOS = "Darwin"
+
+FILE_FILTER_JSON = "JSON Files (*.json);;All Files (*)"
+FILE_FILTER_LOG = "Binary Files (*.bin);;All Files (*)"
+FILE_FILTER_ALL = "All Files (*)"
+
+# Default Fonts
+FONT_FAMILY_SEGOE = "Segoe UI"
+FONT_FAMILY_CONSOLAS = "Consolas"
+FONT_FAMILY_UBUNTU = "Ubuntu"
+FONT_FAMILY_MONOSPACE = "Monospace"
+FONT_FAMILY_MENLO = "Menlo"
