@@ -15,7 +15,7 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 * Model 상태 변화에 따른 View 업데이트 (EventRouter 활용)
 * 설정 저장/로드 및 애플리케이션 종료 처리
 * Fast Path: 고속 데이터 수신 처리를 위한 직접 연결 및 버퍼링
-* Legacy Dict 지원 제거 및 DataTrafficHandler 활용
+* SettingsManager 주입 (DI)
 
 ## HOW
 * Signal/Slot 기반 통신
@@ -44,7 +44,7 @@ from common.dtos import (
     ManualCommand, PortDataEvent, PortErrorEvent, PacketEvent, FontConfig,
     MainWindowState, PreferencesState, ManualControlState
 )
-from view.dialogs.file_transfer_dialog import FileTransferDialog # Type hinting
+from view.dialogs.file_transfer_dialog import FileTransferDialog
 
 class MainPresenter(QObject):
     """
@@ -103,13 +103,24 @@ class MainPresenter(QObject):
         self.data_handler = DataTrafficHandler(self.view)
 
         # --- 2. Sub-Presenter 초기화 ---
+        # 2.1 Port Control
         self.port_presenter = PortPresenter(self.view.port_view, self.connection_controller)
+
+        # 2.2 Macro Control
         self.macro_presenter = MacroPresenter(self.view.macro_view, self.macro_runner)
+
+        # 2.3 File Transfer
         self.file_presenter = FilePresenter(self.connection_controller)
+
+        # 2.4 Packet Inspector
+        # [Refactor] Inject SettingsManager
         self.packet_presenter = PacketPresenter(
             self.view.right_section.packet_panel,
-            self.event_router
+            self.event_router,
+            self.settings_manager
         )
+
+        # 2.5 Manual Control
         self.manual_control_presenter = ManualControlPresenter(
             self.view.left_section.manual_control_panel,
             self.connection_controller,

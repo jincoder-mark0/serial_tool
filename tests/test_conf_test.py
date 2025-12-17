@@ -10,7 +10,7 @@ import pytest
 from unittest.mock import MagicMock
 from PyQt5.QtWidgets import QApplication
 
-# 프로젝트 루트 경로 설정 (테스트 실행 시 import 에러 방지)
+# 프로젝트 루트 경로 설정
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.resource_path import ResourcePath

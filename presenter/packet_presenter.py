@@ -16,9 +16,8 @@
 
 ## HOW
 * EventRouter 시그널 구독
-* SettingsManager 설정값 조회
+* SettingsManager 주입 (Dependency Injection)
 * View 인터페이스(PacketPanel) 호출
-* Legacy Dict 지원 제거
 """
 from PyQt5.QtCore import QObject, QDateTime
 from view.panels.packet_panel import PacketPanel
@@ -35,20 +34,19 @@ class PacketPresenter(QObject):
     View의 사용자 요청(Clear)을 처리합니다.
     """
 
-    def __init__(self, view: PacketPanel, event_router: EventRouter) -> None:
+    def __init__(self, view: PacketPanel, event_router: EventRouter, settings_manager: SettingsManager) -> None:
         """
         PacketPresenter 초기화
 
         Args:
             view (PacketPanel): 패킷 인스펙터 뷰
             event_router (EventRouter): 이벤트 라우터
+            settings_manager (SettingsManager): 설정 관리자 (주입)
         """
         super().__init__()
         self.view = view
         self.event_router = event_router
-
-        # 설정 관리자
-        self.settings_manager = SettingsManager()
+        self.settings_manager = settings_manage
 
         # 이벤트 구독
         self.event_router.packet_received.connect(self.on_packet_received)
@@ -118,10 +116,10 @@ class PacketPresenter(QObject):
 
         data_bytes = packet.data
 
-        # HEX 포맷팅 (예: 41 42 43)
+        # HEX 포맷팅
         data_hex = " ".join([f"{b:02X}" for b in data_bytes])
 
-        # ASCII 포맷팅 (제어 문자는 .으로 대체)
+        # ASCII 포맷팅
         try:
             data_ascii = "".join([chr(b) if 32 <= b <= 126 else "." for b in data_bytes])
         except Exception:

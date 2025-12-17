@@ -111,11 +111,13 @@ serial_tool/
 │   ├── app_info.py                     # 애플리케이션 버전 정보
 │   ├── constants.py                    # 전역 상수, EventTopics, ConfigKeys
 │   ├── dtos.py                         # DTO (PortConfig, ManualCommand 등)
-│   ├── enums.py                        # 열거형 (PortState, ParserType)
-│   └── settings_schema.py              # JSON 스키마 정의
+│   └── enums.py                        # 열거형 (PortState, ParserType)
 │
 ├── core/                               # 인프라 및 유틸리티
-│   ├── base_transport.py               # 하드웨어 통신 추상화 인터페이스
+│   ├── transpost/
+│   │   ├── base_transport.py           # 하드웨어 통신 추상화 인터페이스
+│   │   └── serial_transport.py         # PySerial 구현체
+│   │
 │   ├── command_processor.py            # Command 전처리 (Prefix/Suffix/Hex)
 │   ├── data_logger.py                  # Raw 데이터 로깅
 │   ├── error_handler.py                # 전역 예외 처리 (GlobalErrorHandler)
@@ -123,6 +125,7 @@ serial_tool/
 │   ├── logger.py                       # 시스템 로거 (Singleton)
 │   ├── resource_path.py                # 리소스 경로 관리
 │   ├── settings_manager.py             # 설정 관리 (JSON Schema 검증)
+│   ├── settings_schema.py              # 설정 스키마 정의
 │   └── structures.py                   # RingBuffer, ThreadSafeQueue
 │
 ├── model/                              # [Model] 비즈니스 로직 및 상태
@@ -132,7 +135,7 @@ serial_tool/
 │   ├── file_transfer_engine.py         # 파일 전송 엔진 (Backpressure)
 │   ├── macro_runner.py                 # 매크로 엔진 (Broadcast/Expect)
 │   ├── packet_parser.py                # 패킷 파싱 및 ExpectMatcher
-│   └── serial_transport.py             # PySerial 구현체
+│   └── port_scanner.py                 # 포트 스캔 엔진
 │
 ├── presenter/                          # [Presenter] UI 로직 및 중재자
 │   ├── data_handler.py                 # 데이터 처리 및 UI 업데이트

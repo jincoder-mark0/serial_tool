@@ -7,68 +7,30 @@
 * 포트 연결/해제 UI 이벤트 처리
 * 포트 상태 변경을 View에 반영
 * 다중 포트 탭 관리 및 설정 동기화
-* 포트 목록 스캔 및 정렬 (자연 정렬)
 * 포트 스캔 비동기화로 UI 멈춤 방지
 
 ## WHAT
 * PortSettingsWidget(View)와 ConnectionController(Model) 연결
-* 포트 스캔 (Natural Sort & Friendly Name)
+* 포트 스캔 (PortScanWorker 위임)
 * 연결/해제 토글 처리
 * 포트 상태별 UI 업데이트
 * 에러 처리 및 사용자 알림
 
 ## HOW
-* pyserial.tools.list_ports 사용
-* QThread 기반 비동기 스캔 (PortScanWorker)
+* Model의 PortScanWorker 사용
 * MainLeftSection의 포트 탭 관리 및 설정 동기화
 """
-from PyQt5.QtCore import QObject, QThread, pyqtSignal
+from PyQt5.QtCore import QObject
 from PyQt5.QtWidgets import QMessageBox
-import serial.tools.list_ports
-import re
 from typing import Optional, List, Tuple
 
 from view.sections.main_left_section import MainLeftSection
 from model.connection_controller import ConnectionController
+from model.port_scanner import PortScanWorker
 from core.settings_manager import SettingsManager
 from core.logger import logger
 from common.constants import ConfigKeys
 from common.dtos import PortConfig
-
-
-class PortScanWorker(QThread):
-    """
-    비동기 포트 스캔 워커
-
-    시스템의 시리얼 포트 목록을 백그라운드 스레드에서 조회합니다.
-    Windows 등에서 포트 스캔 시 발생하는 수백 ms의 지연으로 인한 UI 프리징을 방지합니다.
-    """
-    ports_found = pyqtSignal(list) # List[Tuple[str, str]]
-
-    def run(self) -> None:
-        """스캔 실행"""
-        try:
-            # 1. 포트 정보 수집
-            raw_ports = serial.tools.list_ports.comports()
-            port_list: List[Tuple[str, str]] = []
-
-            for port in raw_ports:
-                port_list.append((port.device, port.description))
-
-            # 2. Natural Sort (자연 정렬) 키 함수
-            def natural_sort_key(item):
-                return [int(text) if text.isdigit() else text.lower()
-                        for text in re.split('([0-9]+)', item[0])]
-
-            port_list.sort(key=natural_sort_key)
-
-            # 결과 전달
-            self.ports_found.emit(port_list)
-
-        except Exception as e:
-            logger.error(f"Port scan failed: {e}")
-            self.ports_found.emit([])
-
 
 class PortPresenter(QObject):
     """
