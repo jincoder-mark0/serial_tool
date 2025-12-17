@@ -23,7 +23,7 @@ BaseTransport 인터페이스의 구체적인 구현체를 제공합니다.
 """
 import serial
 from typing import Optional
-from core.base_transport import BaseTransport
+from core.transport.base_transport import BaseTransport
 from common.dtos import PortConfig
 
 class SerialTransport(BaseTransport):

@@ -9,9 +9,11 @@
 #### 리팩토링 (Refactoring)
 
 - **아키텍처 클린업 (Architecture Cleanup)**
-  - **Pure DTO 전환**: `EventRouter` 및 Presenter 계층(`Main`, `Packet`)에서 레거시 `dict` 타입 지원 로직을 완전히 제거하고, `PortDataEvent` 등 DTO 객체 사용을 강제하여 타입 안전성을 확보했습니다.
-  - **결합도 완화 (Decoupling)**: `DataHandler`가 View의 내부 위젯 구조를 직접 탐색하는 로직을 제거하고, `MainWindow` -> `MainLeftSection` -> `PortTabPanel`로 이어지는 추상화된 인터페이스(`append_rx_data`)를 통해 데이터를 전달하도록 구조를 개선했습니다.
-  - **문서화**: Google Style Guide에 맞춰 `SerialTransport`, `PortSettingsWidget` 등의 Docstring을 재정비했습니다.
+  - **Transport 계층 재구조화**: `core`와 `model`에 혼재되어 있던 통신 드라이버 로직을 `core/transport` 패키지로 통합 이동했습니다. 이를 통해 `Model`(비즈니스 로직)이 `Core`(인프라)에 의존하는 올바른 의존성 방향을 확립했습니다.
+  - **Pure DTO 전환**: `EventRouter` 및 Presenter 계층에서 레거시 `dict` 타입 지원 로직을 제거하고 DTO 사용을 강제했습니다.
+  - **결합도 완화**: `DataHandler`가 View 내부를 직접 탐색하는 로직을 제거하고, 추상화된 인터페이스(`append_rx_data`)를 통해 데이터를 전달하도록 개선했습니다.
+  - **기반 구조 정비**: `core/utils.py`를 `core/structures.py`로, `common/schemas.py`를 `core/settings_schema.py`로 이동하여 모듈의 책임과 역할을 명확히 했습니다.
+  - **테스트 환경 개선**: `test_conf_test.py`를 도입하여 `mock_transport`, `qapp` 등 공용 Fixture를 중앙화했습니다.
 
 #### 기능 개선 (Feat)
 

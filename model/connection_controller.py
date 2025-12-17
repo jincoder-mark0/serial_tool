@@ -24,7 +24,7 @@ from PyQt5.QtCore import QObject, pyqtSignal
 from typing import Optional, Dict, Any, List, TYPE_CHECKING
 
 from model.connection_worker import ConnectionWorker
-from model.serial_transport import SerialTransport
+from core.transport.serial_transport import SerialTransport
 from model.packet_parser import ParserFactory, PacketParser
 from common.enums import ParserType
 from common.dtos import PortConfig, PortDataEvent, PortErrorEvent, PacketEvent

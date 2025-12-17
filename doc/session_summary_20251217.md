@@ -2,55 +2,48 @@
 
 ## 1. 개요 (Overview)
 
-금일 세션은 **시스템 안정성(Stability) 및 배포 준비(Deployment Readiness)**와 **아키텍처 클린업(Refactoring)**에 주력했습니다.
-배포 시 발생할 수 있는 치명적인 버그(아이콘 경로 등)를 해결하고, 데이터 유실 방지를 위한 안전장치를 마련했습니다. 또한, 지난 세션에서 도입한 MVP 패턴을 더욱 엄격하게 적용하여 View와 Presenter/Model 간의 결합도를 낮췄습니다.
+금일 세션은 **시스템 안정성(Stability)** 확보를 시작으로 **아키텍처 클린업(Architecture Cleanup)**을 거쳐 **물리적 구조 재배치(Restructuring)**까지 단계적으로 진행되었습니다.
+배포 시 발생할 수 있는 치명적인 버그를 해결하고, MVP 패턴을 엄격히 적용하여 결합도를 낮췄으며, 마지막으로 Core와 Model 계층의 경계를 명확히 하여 유지보수하기 좋은 구조를 완성했습니다.
 
 ## 2. 주요 변경 사항 (Key Changes)
 
 ### 2.1 배포 및 데이터 안전성 긴급 보완 (Step 1)
 
-- **QSS 리소스 경로 절대 경로 치환**:
-  - `ThemeManager`에서 QSS 파일을 로드할 때, 상대 경로(`url(resources/...)`)를 런타임 절대 경로로 치환하는 로직을 추가했습니다.
-  - 이를 통해 PyInstaller 배포 환경(`_MEIPASS`)에서도 아이콘이 정상적으로 표시되도록 수정했습니다.
-- **Serial Write 예외 전파**:
-  - `SerialTransport.write`에서 전송 실패 시 예외를 무시(`pass`)하던 로직을 제거했습니다.
-  - 예외를 상위 `ConnectionWorker`로 전파하여 데이터 유실 상황을 로그로 남기고 적절히 처리할 수 있도록 개선했습니다.
-- **설정 파일 복구 알림**:
-  - `SettingsManager`가 손상된 설정 파일을 감지하고 초기화(Fallback)했을 때, 앱 시작 시 사용자에게 경고 다이얼로그(`show_alert_message`)를 띄워 상황을 인지할 수 있도록 했습니다.
+- **QSS 경로 및 설정 복구**: PyInstaller 배포 시 아이콘 깨짐 문제를 해결하고, 설정 파일 초기화 시 사용자 알림을 추가했습니다.
+- **Serial Write 안정화**: 전송 실패 시 예외를 무시하지 않고 전파하여 데이터 유실을 방지했습니다.
+- **기반 구조 정비**: `utils.py`를 `structures.py`로 명확히 하고, `schemas.py`를 `core` 패키지로 이동시켰습니다.
 
-### 2.2 아키텍처 클린업 (Step 2)
+### 2.2 아키텍처 클린업 및 UX 최적화 (Step 2)
 
-- **Pure DTO 전환**:
-  - `EventRouter`, `MainPresenter`, `PacketPresenter` 등에 남아있던 하위 호환용 `dict` 타입 검사 로직(`isinstance(event, dict)`)을 모두 제거했습니다.
-  - 모든 데이터 흐름을 DTO 객체로 통일하여 타입 안전성을 보장하고 코드 복잡도를 낮췄습니다.
-- **결합도 완화 (Decoupling)**:
-  - `DataTrafficHandler`가 UI 업데이트를 위해 `View`의 내부 위젯 구조(`tab_widget` 순회 등)를 직접 참조하던 로직을 제거했습니다.
-  - `MainWindow` -> `MainLeftSection` -> `PortTabPanel`로 이어지는 `append_rx_data` 인터페이스 메서드를 구현하여 캡슐화를 강화했습니다.
-- **스키마 분리**:
-  - `settings_manager.py`에 하드코딩되어 있던 `CORE_SETTINGS_SCHEMA`를 `common/schemas.py`로 분리하여 관리 효율성을 높였습니다.
+- **Pure DTO & Decoupling**: 레거시 `dict` 지원 코드를 제거하고, `DataHandler`와 `View` 사이의 결합도를 낮추는 인터페이스(`append_rx_data`)를 구현했습니다.
+- **포트 스캔/파일 로딩 비동기화**: `PortScanWorker`, `ScriptLoadWorker` (QThread)를 도입하여 무거운 작업 시 UI가 멈추는 현상을 제거했습니다.
+- **성능 튜닝**: `BATCH_SIZE_THRESHOLD`를 8KB로 상향하여 고속 통신 시 이벤트 루프 부하를 완화했습니다.
 
-### 2.3 사용자 경험 개선 (UX Optimization)
+### 2.3 물리적 구조 재배치 (Step 3)
 
-- **포트 스캔 최적화** (12/16 작업 포함):
-  - **Lazy Loading**: `ClickableComboBox`를 도입하여 콤보박스 클릭 시점에 포트 목록을 갱신하도록 개선했습니다.
-  - **Natural Sorting**: 포트 목록을 `COM1, COM2, ... COM10` 순서로 직관적으로 정렬했습니다.
-  - **동기화**: 스캔 결과를 현재 탭뿐만 아니라 모든 열린 탭에 동기화하고, 기존 선택 포트를 유지하도록 로직을 정교화했습니다.
+- **Transport 계층 이동**: `model`에 있던 `serial_transport.py`와 `core`에 있던 `base_transport.py`를 **`core/transport/`** 패키지로 통합 이동했습니다.
+- **의존성 방향 정립**: `Model`(비즈니스 로직)이 `Core`(인프라)를 참조하는 단방향 의존성을 확립했습니다.
 
 ## 3. 파일 변경 목록 (File Changes)
 
-### 수정 (Modified)
-- `view/managers/theme_manager.py`: QSS 경로 치환 로직 추가
-- `model/serial_transport.py`: Write 예외 처리 수정
-- `core/settings_manager.py`: 리셋 플래그 및 스키마 분리
-- `presenter/event_router.py`: Dict 지원 제거 (Pure DTO)
-- `presenter/data_handler.py`: View 의존성 제거
-- `view/main_window.py`: Alert 및 데이터 전달 인터페이스 추가
+### 이동 및 신규 (Moved & Created)
+- `core/transport/base_transport.py` (from `core/`)
+- `core/transport/serial_transport.py` (from `model/`)
+- `core/transport/__init__.py`
+- `core/structures.py` (from `core/utils.py`)
+- `core/settings_schema.py` (from `common/schemas.py`)
+- `tests/conftest.py` (공용 Fixture)
 
-### 신규 (Created)
-- `common/schemas.py`: 설정 스키마 정의
+### 수정 (Modified)
+- `view/managers/theme_manager.py`: 경로 절대값 치환
+- `model/connection_worker.py`, `model/connection_controller.py`: Import 경로 수정
+- `presenter/event_router.py`, `presenter/main_presenter.py`: Dict 지원 제거
+- `presenter/port_presenter.py`, `presenter/macro_presenter.py`: Worker 스레드 적용
+- `common/constants.py`: 배치 임계값 상향
 
 ## 4. 향후 계획 (Next Steps)
 
-- **비동기 최적화 (Step 3)**:
-  - 포트 스캔 및 대용량 파일 로딩 작업을 별도 스레드(`QThread`)로 분리하여 UI 프리징 현상을 완전히 제거할 예정입니다.
-  - 고속 데이터 수신 시 이벤트 루프 부하를 줄이기 위한 배치 파라미터 튜닝을 진행합니다.
+- **테스트 커버리지 확보**:
+  - `conftest.py`를 활용하여 리팩토링된 모듈(Transport, Presenter)에 대한 단위 테스트를 보강합니다.
+- **플러그인 시스템 준비**:
+  - 안정화된 Core 아키텍처를 기반으로 `core/plugin_base.py` 설계에 착수합니다.

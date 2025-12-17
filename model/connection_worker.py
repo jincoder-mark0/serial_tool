@@ -29,7 +29,7 @@ UI/Settings 접근 금지 규칙 준수
 import time
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QMutexLocker, QObject
 from typing import Optional
-from core.base_transport import BaseTransport
+from core.transport.base_transport import BaseTransport
 from core.structures import ThreadSafeQueue
 from common.constants import (
     DEFAULT_READ_CHUNK_SIZE,
