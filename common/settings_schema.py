@@ -1,9 +1,18 @@
 """
-공통 데이터 스키마 정의 모듈
+설정 스키마 정의 모듈
 
-JSON 파일 검증을 위한, jsonschema 정의를 포함
+설정 파일(settings.json)의 무결성을 검증하기 위한 JSON Schema를 정의합니다.
+
+## WHY
+* 설정 파일 검증 로직은 'Core' 계층의 역할입니다.
+* 설정 관리자(SettingsManager)와 밀접한 관련이 있습니다.
+
+## WHAT
+* CORE_SETTINGS_SCHEMA: 필수 설정 필드 및 타입 정의
+
+## HOW
+* jsonschema 표준 형식을 준수하는 딕셔너리 정의
 """
-
 
 # 핵심 설정 스키마 정의
 # 필수 필드만 엄격하게 검사하고, 나머지는 허용(additionalProperties: True)

@@ -30,7 +30,7 @@ import time
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QMutexLocker, QObject
 from typing import Optional
 from core.base_transport import BaseTransport
-from core.utils import ThreadSafeQueue
+from core.structures import ThreadSafeQueue
 from common.constants import (
     DEFAULT_READ_CHUNK_SIZE,
     BATCH_SIZE_THRESHOLD,

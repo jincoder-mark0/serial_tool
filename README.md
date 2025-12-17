@@ -112,7 +112,7 @@ serial_tool/
 │   ├── constants.py                    # 전역 상수, EventTopics, ConfigKeys
 │   ├── dtos.py                         # DTO (PortConfig, ManualCommand 등)
 │   ├── enums.py                        # 열거형 (PortState, ParserType)
-│   └── schemas.py                      # JSON 스키마 정의
+│   └── settings_schema.py              # JSON 스키마 정의
 │
 ├── core/                               # 인프라 및 유틸리티
 │   ├── base_transport.py               # 하드웨어 통신 추상화 인터페이스
@@ -123,7 +123,7 @@ serial_tool/
 │   ├── logger.py                       # 시스템 로거 (Singleton)
 │   ├── resource_path.py                # 리소스 경로 관리
 │   ├── settings_manager.py             # 설정 관리 (JSON Schema 검증)
-│   └── utils.py                        # RingBuffer, ThreadSafeQueue
+│   └── structures.py                   # RingBuffer, ThreadSafeQueue
 │
 ├── model/                              # [Model] 비즈니스 로직 및 상태
 │   ├── connection_controller.py        # 연결 제어, Fast Path 시그널링

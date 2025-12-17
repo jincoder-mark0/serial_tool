@@ -35,7 +35,7 @@ from jsonschema import validate, ValidationError
 from pathlib import Path
 from typing import Dict, Any
 from common.constants import DEFAULT_BAUDRATE, DEFAULT_LOG_MAX_LINES
-from common.schemas import CORE_SETTINGS_SCHEMA
+from core.settings_schema import CORE_SETTINGS_SCHEMA
 from core.logger import logger
 import os
 
