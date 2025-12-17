@@ -1,11 +1,10 @@
 """
 색상 규칙 관리자 (Color Manager)
+
 ReceivedArea에서 사용하는 패턴 매칭 색상 규칙을 관리합니다.
 AppConfig를 통해 설정 파일 경로를 관리하며, 싱글톤 패턴을 따릅니다.
 """
 import os
-import re
-from dataclasses import dataclass
 from typing import List
 from pathlib import Path
 
@@ -24,20 +23,14 @@ from common.constants import (
     LOG_COLOR_INFO,
     LOG_COLOR_TIMESTAMP,
 )
-
-@dataclass
-class ColorRule:
-    """단일 색상 규칙 데이터 클래스입니다."""
-    name: str           # 규칙 이름 (예: "AT_OK")
-    pattern: str        # 정규식 패턴 또는 문자열
-    color: str          # HTML 색상 코드 (예: "#FF0000")
-    is_regex: bool = True  # 정규식 사용 여부
-    enabled: bool = True   # 규칙 활성화 여부
+from common.dtos import ColorRule
+from view.services.color_service import ColorService
 
 class ColorManager:
     """
     색상 규칙 관리자 클래스입니다 (Singleton).
-    패턴 매칭을 통해 텍스트에 색상을 입히는 규칙들을 관리합니다.
+    규칙의 로드, 저장, 활성화/비활성화 상태를 관리하며,
+    실제 적용 로직은 ColorService에 위임합니다.
     """
 
     _instance = None
@@ -115,6 +108,7 @@ class ColorManager:
     def apply_rules(self, text: str) -> str:
         """
         텍스트에 모든 활성화된 색상 규칙을 적용합니다.
+        [Refactor] 실제 로직은 ColorService에 위임합니다.
 
         Args:
             text (str): 색상 규칙을 적용할 원본 텍스트.
@@ -122,11 +116,7 @@ class ColorManager:
         Returns:
             str: HTML span 태그로 색상이 적용된 텍스트.
         """
-        result = text
-        for rule in self.rules:
-            if rule.enabled:
-                result = self._apply_single_rule(result, rule)
-        return result
+        return ColorService.apply_rules(text, self.rules)
 
     def add_custom_rule(self, name: str, pattern: str, color: str, is_regex: bool = True) -> None:
         """

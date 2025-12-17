@@ -8,29 +8,35 @@
 
 #### 리팩토링 (Refactoring)
 
-- **아키텍처 클린업 (Architecture Cleanup)**
-  - **Transport 계층 재구조화**: `core`와 `model`에 혼재되어 있던 통신 드라이버 로직을 `core/transport` 패키지로 통합 이동했습니다. 이를 통해 `Model`(비즈니스 로직)이 `Core`(인프라)에 의존하는 올바른 의존성 방향을 확립했습니다.
-  - **Pure DTO 전환**: `EventRouter` 및 Presenter 계층에서 레거시 `dict` 타입 지원 로직을 제거하고 DTO 사용을 강제했습니다.
-  - **결합도 완화**: `DataHandler`가 View 내부를 직접 탐색하는 로직을 제거하고, 추상화된 인터페이스(`append_rx_data`)를 통해 데이터를 전달하도록 개선했습니다.
-  - **기반 구조 정비**: `core/utils.py`를 `core/structures.py`로, `common/schemas.py`를 `core/settings_schema.py`로 이동하여 모듈의 책임과 역할을 명확히 했습니다.
-  - **테스트 환경 개선**: `test_conf_test.py`를 도입하여 `mock_transport`, `qapp` 등 공용 Fixture를 중앙화했습니다.
+- **아키텍처 클린업 & 구조 개선 (Architecture Cleanup)**
+  - **Service 계층 도입 (Phase 2)**: `ColorService`를 신설하여 색상 매칭 로직을 분리하고, `ColorManager`는 상태 관리와 영속성(Persistence)에만 집중하도록 리팩토링했습니다.
+  - **DTO 중앙화 (Phase 2)**: `ColorRule` 데이터 구조를 `common/dtos.py`로 이동하여 순환 참조를 방지하고 데이터 정의를 일원화했습니다.
+  - **Transport 계층 재구조화 (Step 3)**: `core`와 `model`에 혼재되어 있던 통신 드라이버 로직을 `core/transport` 패키지로 통합 이동하여 의존성 방향(Model -> Core)을 바로잡았습니다.
+  - **Pure DTO 전환 (Step 2)**: `EventRouter` 및 Presenter 계층에서 레거시 `dict` 지원을 제거하고 DTO 사용을 강제했습니다.
+  - **결합도 완화 (Step 2)**: `DataHandler`가 View 내부를 탐색하지 않고 인터페이스(`append_rx_data`)를 통해 데이터를 전달하도록 개선했습니다.
+  - **기반 구조 정비 (Step 1)**: `core/utils.py`를 `core/structures.py`로, `common/schemas.py`를 `core/settings_schema.py`로 이동했습니다.
+  - **테스트 환경 개선**: `conftest.py`를 도입하여 공용 Fixture를 중앙화했습니다.
 
 #### 기능 개선 (Feat)
 
+- **자료구조 API 확장**
+  - `RingBuffer`에 `available()` 메서드를 추가하여 버퍼 상태 확인의 가독성을 높였습니다.
 - **포트 스캔 최적화**
-  - **Lazy Loading**: `ClickableComboBox`를 구현하여 콤보박스 클릭 시(`showPopup`) 즉시 포트를 스캔하도록 개선, 항상 최신 포트 목록을 제공합니다.
-  - **동기화**: 포트 스캔 시 현재 탭뿐만 아니라 모든 열린 탭의 포트 목록을 일괄 업데이트하도록 로직을 수정했습니다.
-  - **사용자 경험**: 스캔 후 기존에 선택된 포트가 목록에 남아있다면 선택 상태를 유지하도록 개선했습니다.
-  - **정렬 개선**: `Natural Sorting` 알고리즘을 적용하여 포트 목록이 `COM1, COM2, ..., COM10` 순서로 직관적으로 정렬되도록 했습니다.
+  - **비동기 스캔**: `PortScanWorker`를 `Model` 계층으로 이동시키고 비동기로 동작하게 하여 UI 프리징을 제거했습니다.
+  - **Lazy Loading**: `ClickableComboBox` 구현으로 클릭 시점 스캔을 지원합니다.
+  - **정렬 개선**: `Natural Sorting`을 적용하여 포트 목록 가독성을 높였습니다.
+- **매크로 로딩 최적화**
+  - **비동기 로드**: `ScriptLoadWorker`를 도입하여 대용량 JSON 로딩 시 반응성을 확보했습니다.
 
 #### 수정 사항 (Fixed)
 
 - **시리얼 통신 안정성**
-  - **UI 프리징 방지**: `SerialTransport`에 `write_timeout=0` 설정을 추가하여 쓰기 작업이 블로킹되지 않도록 했습니다.
-  - **데이터 유실 방지**: `write` 메서드에서 예외를 무시(`pass`)하던 로직을 제거하고 상위 계층으로 전파하여, 전송 실패 시 적절한 에러 처리가 가능하도록 했습니다.
-- **배포 안정성**
-  - **아이콘 경로**: `ThemeManager`에서 QSS 로딩 시 리소스 경로를 절대 경로로 치환하는 로직을 추가하여, PyInstaller 배포 환경에서 아이콘이 깨지는 문제를 해결했습니다.
-- **설정 복구 알림**: `SettingsManager`가 설정 파일 손상으로 초기화(Fallback)를 수행했을 때, 앱 시작 시 사용자에게 경고 다이얼로그를 표시하도록 개선했습니다.
+  - **UI 프리징 방지**: `SerialTransport`에 `write_timeout=0` 설정을 추가했습니다.
+  - **데이터 유실 방지**: `write` 예외 무시 로직을 제거하고 에러를 상위로 전파했습니다.
+  - **성능 최적화**: `BATCH_SIZE_THRESHOLD`를 8KB로 상향 조정했습니다.
+- **배포 및 데이터 안전성**
+  - **아이콘 경로**: PyInstaller 배포를 위해 QSS 로딩 시 절대 경로 치환 로직을 추가했습니다.
+  - **설정 복구 알림**: 설정 파일 초기화 시 사용자 경고 알림을 추가했습니다.
 
 ---
 
