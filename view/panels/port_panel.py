@@ -45,7 +45,6 @@ class PortPanel(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
-        # self.system_log_widget = None
         self.data_log_widget = None
         self.port_stats_widget = None
         self.port_settings_widget = None
@@ -139,22 +138,22 @@ class PortPanel(QWidget):
         self.data_log_widget.set_tab_name(title)
         self.tab_title_changed.emit(title)
 
-    def save_state(self) -> dict:
+    def get_state(self) -> dict:
         """
-        패널 상태를 저장합니다.
+        패널 상태 반환
 
         Returns:
             dict: 패널 상태 데이터.
         """
         return {
             "custom_name": self.custom_name,
-            "port_settings_widget": self.port_settings_widget.save_state(),
-            "data_log_widget": self.data_log_widget.save_state()
+            "port_settings_widget": self.port_settings_widget.get_state(),
+            "data_log_widget": self.data_log_widget.save_state() # DataLogWidget은 내부적으로 save_state 유지
         }
 
-    def load_state(self, state: dict) -> None:
+    def apply_state(self, state: dict) -> None:
         """
-        패널 상태를 복원합니다.
+        패널 상태 적용
 
         Args:
             state (dict): 패널 상태 데이터.
@@ -162,6 +161,6 @@ class PortPanel(QWidget):
         if not state:
             return
         self.custom_name = state.get("custom_name", "Port")
-        self.port_settings_widget.load_state(state.get("port_settings_widget", {}))
-        self.data_log_widget.load_state(state.get("data_log_widget", {}))
+        self.port_settings_widget.apply_state(state.get("port_settings_widget", {}))
+        self.data_log_widget.load_state(state.get("data_log_widget", {})) # DataLogWidget은 내부적으로 load_state 유지
         self.update_tab_title()

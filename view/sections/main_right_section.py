@@ -54,9 +54,9 @@ class MainRightSection(QWidget):
         self.tabs.setTabText(0, language_manager.get_text("right_tab_macro_list"))
         self.tabs.setTabText(1, language_manager.get_text("right_tab_packet"))
 
-    def save_state(self) -> Dict[str, Any]:
+    def get_state(self) -> Dict[str, Any]:
         """
-        하위 패널들의 상태를 수집하여 반환합니다.
+        하위 패널들의 상태를 수집하여 반환합니다
 
         Returns:
             Dict[str, Any]: {'macro_panel': {...}} 구조의 상태 데이터.
@@ -66,9 +66,9 @@ class MainRightSection(QWidget):
             # PacketInspector 상태가 있다면 여기에 추가
         }
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def apply_state(self, state: Dict[str, Any]) -> None:
         """
-        전달받은 상태 딕셔너리를 하위 패널에 주입합니다.
+        전달받은 상태 딕셔너리를 하위 패널에 주입합니다
 
         Args:
             state (Dict[str, Any]): {'macro_panel': {...}} 구조의 데이터.

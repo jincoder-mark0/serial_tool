@@ -174,14 +174,14 @@ class MainLeftSection(QWidget):
             self._on_port_connection_changed
         )
 
-    def save_state(self) -> Dict[str, Any]:
+    def get_state(self) -> Dict[str, Any]:
         """
         하위 위젯 상태 수집 및 반환
 
         Returns:
             Dict[str, Any]: 통합된 상태 데이터
         """
-        manual_state = self.manual_control_panel.save_state()
+        manual_state = self.manual_control_panel.get_state()
         port_states = []
         count = self.port_tab_panel.count()
 
@@ -191,7 +191,7 @@ class MainLeftSection(QWidget):
                 continue
             widget = self.port_tab_panel.widget(i)
             if isinstance(widget, PortPanel):
-                port_states.append(widget.save_state())
+                port_states.append(widget.get_state())
 
         # 통합된 상태 반환
         return {
@@ -199,7 +199,7 @@ class MainLeftSection(QWidget):
             "ports": port_states
         }
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def apply_state(self, state: Dict[str, Any]) -> None:
         """
         상태 데이터 복원
 
@@ -214,7 +214,7 @@ class MainLeftSection(QWidget):
         # 1. ManualControl 상태 복원
         manual_state = state.get("manual_control_panel", {})
         if manual_state:
-            self.manual_control_panel.load_state(manual_state)
+            self.manual_control_panel.apply_state(manual_state)
 
         # 2. Port Tabs 상태 복원
         port_states = state.get("ports", [])
@@ -238,7 +238,7 @@ class MainLeftSection(QWidget):
             # 상태 복원
             for state in port_states:
                 panel = self.port_tab_panel.add_new_port_tab()
-                panel.load_state(state)
+                panel.apply_state(state)
         finally:
             self.port_tab_panel.blockSignals(False)
 

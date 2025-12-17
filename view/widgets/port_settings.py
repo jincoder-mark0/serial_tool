@@ -474,9 +474,9 @@ class PortSettingsWidget(QGroupBox):
         self.spi_controls_ui['mode_lbl'].setText(language_manager.get_text("port_lbl_mode"))
         self.spi_controls_ui['mode_combo'].setToolTip(language_manager.get_text("port_combo_mode_tooltip"))
 
-    def save_state(self) -> dict:
+    def get_state(self) -> dict:
         """
-        현재 설정을 딕셔너리로 저장
+        현재 설정을 딕셔너리로 반환
 
         Returns:
             dict: 설정 데이터
@@ -502,9 +502,9 @@ class PortSettingsWidget(QGroupBox):
         }
         return state
 
-    def load_state(self, state: dict) -> None:
+    def apply_state(self, state: dict) -> None:
         """
-        저장된 설정을 UI에 복원
+        설정 데이터를 UI에 적용
 
         Args:
             state (dict): 설정 데이터

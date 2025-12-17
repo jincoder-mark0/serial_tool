@@ -336,9 +336,9 @@ class ManualControlWidget(QWidget):
         """
         self.local_echo_chk.setChecked(checked)
 
-    def save_state(self) -> dict:
+    def get_state(self) -> dict:
         """
-        상태 저장
+        현재 상태를 반환
 
         Returns:
             dict: 현재 위젯 상태
@@ -355,9 +355,9 @@ class ManualControlWidget(QWidget):
         }
         return state
 
-    def load_state(self, state: dict) -> None:
+    def apply_state(self, state: dict) -> None:
         """
-        상태 복원
+        상태 적용
 
         Args:
             state (dict): 복원할 상태 데이터

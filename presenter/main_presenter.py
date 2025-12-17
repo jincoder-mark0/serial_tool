@@ -185,18 +185,18 @@ class MainPresenter(QObject):
             settings (dict): 설정 딕셔너리
 
         Returns:
-            tuple[MainWindowState, FontConfig]: MainWindowState 및 FontConfig DTO
+            tuple[MainWindowState, FontConfig]: MainWindowState와 FontConfig DTO
         """
         def get_val(path, default=None):
             """
-            설정 딕셔너리에서 값 가져오기
+            설정 딕셔너리에서 값을 가져오는 헬퍼 메서드
 
             Args:
-                path (str): 설정 경로
-                default (Any, optional): 기본값. Defaults to None.
+                path (str): 설정 경로 (예: 'window.width')
+                default (any, optional): 기본값. Defaults to None.
 
             Returns:
-                Any: 설정 값
+                any: 설정 값 또는 기본값
             """
             keys = path.split('.')
             val = settings
@@ -296,7 +296,7 @@ class MainPresenter(QObject):
         settings.set(ConfigKeys.RIGHT_PANEL_VISIBLE, state.right_panel_visible)
 
         if state.saved_right_width is not None:
-            settings.set(ConfigKeys.SAVED_RIGHT_WIDTH, state.saved_right_width)
+             settings.set(ConfigKeys.SAVED_RIGHT_WIDTH, state.saved_right_width)
 
         if ConfigKeys.MANUAL_CONTROL_STATE in state.left_section_state:
             settings.set(ConfigKeys.MANUAL_CONTROL_STATE, state.left_section_state[ConfigKeys.MANUAL_CONTROL_STATE])

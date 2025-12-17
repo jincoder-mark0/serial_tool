@@ -69,7 +69,7 @@ class MainWindow(QMainWindow):
         MainWindow 초기화
 
         MVP 원칙에 따라 Model/Core(SettingsManager)를 직접 생성하지 않습니다.
-        초기 상태 복원은 Presenter가 restore_state()를 호출하여 수행합니다.
+        초기 상태 복원은 Presenter가 apply_state()를 호출하여 수행합니다.
         """
         super().__init__()
 
@@ -179,8 +179,8 @@ class MainWindow(QMainWindow):
 
         # 5. 하위 섹션 상태 복원
         # Sub-panel 상태는 딕셔너리로 전달됨 (DTO 내부 field)
-        self.left_section.load_state(state.left_section_state)
-        self.right_section.load_state(state.right_section_state)
+        self.left_section.apply_state(state.left_section_state)
+        self.right_section.apply_state(state.right_section_state)
 
     def get_window_state(self) -> MainWindowState:
         """
@@ -205,8 +205,8 @@ class MainWindow(QMainWindow):
             state.saved_right_width = getattr(self, '_saved_right_width', None)
 
         # 2. 하위 섹션 상태 (딕셔너리로 수집)
-        state.left_section_state = self.left_section.save_state()
-        state.right_section_state = self.right_section.save_state()
+        state.left_section_state = self.left_section.get_state()
+        state.right_section_state = self.right_section.get_state()
 
         return state
 

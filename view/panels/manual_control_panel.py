@@ -93,24 +93,24 @@ class ManualControlPanel(QWidget):
         if self.manual_control_widget:
             self.manual_control_widget.set_local_echo_state(checked)
 
-    def save_state(self) -> dict:
+    def get_state(self) -> dict:
         """
-        패널 상태 저장
+        패널 상태 반환
 
         Returns:
-            dict: 저장된 상태 데이터
+            dict: 상태 데이터
         """
         if self.manual_control_widget:
-            return {"manual_control_widget": self.manual_control_widget.save_state()}
+            return {"manual_control_widget": self.manual_control_widget.get_state()}
         return {}
 
-    def load_state(self, state: dict) -> None:
+    def apply_state(self, state: dict) -> None:
         """
-        패널 상태 복원
+        패널 상태 적용
 
         Args:
-            state (dict): 복원할 상태 데이터
+            state (dict): 적용할 상태 데이터
         """
         if not state or not self.manual_control_widget:
             return
-        self.manual_control_widget.load_state(state.get("manual_control_widget", {}))
+        self.manual_control_widget.apply_state(state.get("manual_control_widget", {}))
