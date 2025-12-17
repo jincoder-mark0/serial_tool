@@ -26,6 +26,7 @@
 * PreferencesState: 환경 설정 상태
 * MainWindowState: 메인 윈도우 상태
 * ManualControlState: 수동 제어 상태
+* ColorRule: 색상 규칙 데이터
 
 ## HOW
 * python dataclasses 활용
@@ -480,3 +481,21 @@ class ManualControlState:
     local_echo_chk: bool = False
     broadcast_chk: bool = False
     command_history: List[str] = field(default_factory=list)
+
+@dataclass
+class ColorRule:
+    """
+    단일 색상 규칙 데이터 클래스
+
+    Attributes:
+        name (str): 규칙 이름 (예: "AT_OK")
+        pattern (str): 정규식 패턴 또는 문자열
+        color (str): HTML 색상 코드 (예: "#FF0000")
+        is_regex (bool): 정규식 사용 여부
+        enabled (bool): 규칙 활성화 여부
+    """
+    name: str
+    pattern: str
+    color: str
+    is_regex: bool = True
+    enabled: bool = True

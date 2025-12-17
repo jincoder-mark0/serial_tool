@@ -33,7 +33,7 @@ from core.event_bus import event_bus
 from core.logger import logger
 
 if TYPE_CHECKING:
-    from model.file_transfer_service import FileTransferEngine
+    from model.file_transfer_service import FileTransferService
 
 class ConnectionController(QObject):
     """
@@ -68,8 +68,8 @@ class ConnectionController(QObject):
         self.connection_configs: dict[str, PortConfig] = {}
 
         # 진행 중인 파일 전송 엔진 추적 (Race Condition 방지)
-        # 연결 이름(str) -> FileTransferEngine 매핑
-        self._active_file_transfers: Dict[str, 'FileTransferEngine'] = {}
+        # 연결 이름(str) -> FileTransferService 매핑
+        self._active_file_transfers: Dict[str, 'FileTransferService'] = {}
 
         # EventBus 인스턴스
         self.event_bus = event_bus
@@ -101,15 +101,15 @@ class ConnectionController(QObject):
     # -------------------------------------------------------------------------
     # File Transfer Lifecycle Management (Race Condition Prevention)
     # -------------------------------------------------------------------------
-    def register_file_transfer(self, port_name: str, engine: 'FileTransferEngine') -> None:
+    def register_file_transfer(self, port_name: str, file_transfer_service: 'FileTransferService') -> None:
         """
         파일 전송 시작 시 엔진을 등록합니다.
 
         Args:
             port_name: 포트 이름
-            engine: 실행 중인 FileTransferEngine 인스턴스
+            file_transfer_service: 실행 중인 FileTransferService 인스턴스
         """
-        self._active_file_transfers[port_name] = engine
+        self._active_file_transfers[port_name] = file_transfer_service
         logger.debug(f"File transfer registered for port {port_name}")
 
     def unregister_file_transfer(self, port_name: str) -> None:

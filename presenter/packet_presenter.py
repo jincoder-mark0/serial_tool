@@ -46,7 +46,7 @@ class PacketPresenter(QObject):
         super().__init__()
         self.view = view
         self.event_router = event_router
-        self.settings_manager = settings_manage
+        self.settings_manager = settings_manager
 
         # 이벤트 구독
         self.event_router.packet_received.connect(self.on_packet_received)

@@ -3,7 +3,6 @@
 
 파일 전송 로직을 담당하는 엔진을 정의합니다.
 기존 'model/file_transfer.py'에서 'model/file_transfer_service.py'로 리네임되었습니다.
-[Refactor] 클래스명(FileTransferEngine)과 모듈명(Service)의 일관성을 확보했습니다.
 
 ## WHY
 * 대용량 파일의 안정적인 전송 (Backpressure 제어)
@@ -11,7 +10,7 @@
 * 전송 진행 상황 실시간 피드백
 
 ## WHAT
-* FileTransferEngine: QRunnable 기반 전송 엔진
+* FileTransferService: QRunnable 기반 전송 엔진
 * FileTransferSignals: 전송 상태 시그널
 
 ## HOW
@@ -35,7 +34,7 @@ class FileTransferSignals(QObject):
     transfer_completed = pyqtSignal(bool)
     error_occurred = pyqtSignal(str)
 
-class FileTransferEngine(QRunnable):
+class FileTransferService(QRunnable):
     """
     파일 전송을 담당하는 엔진 (QRunnable 기반)
 
@@ -44,7 +43,7 @@ class FileTransferEngine(QRunnable):
 
     def __init__(self, connection_controller: ConnectionController, file_path: str, config: PortConfig):
         """
-        FileTransferEngine 초기화
+        FileTransferService 초기화
 
         Args:
             connection_controller: 전송을 수행할 컨트롤러

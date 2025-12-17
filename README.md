@@ -245,7 +245,7 @@ serial_tool/
 │                                    MODEL LAYER                         │                │
 │                                                                        │                │
 │  ┌──────────────────┐   ┌──────────────────┐   ┌──────────────────┐    │                │
-│  │  PortController  │   │   MacroRunner    │   │FileTransferEngine│    │                │
+│  │  PortController  │   │   MacroRunner    │   │FileTransferService│    │                │
 │  │ (Manages Ports)  │   │    (QThread)     │   │   (QRunnable)    │    │                │
 │  └─────────┬────────┘   └────────┬─────────┘   └─────────┬────────┘    │                │
 │            │ (Owns)              │ (Publish)             │ (Publish)   │                │
@@ -376,8 +376,8 @@ graph TD
 > **핵심**: `Backpressure` 제어 및 스레드 풀 사용
 
 1. **User**: `ManualCtrlWidget` 파일 탭에서 'Send File' 클릭.
-2. **Presenter**: `FilePresenter`가 `FileTransferEngine`(`QRunnable`)을 생성하고 `QThreadPool`에서 실행.
-3. **Model (`FileTransferEngine`)**:
+2. **Presenter**: `FilePresenter`가 `FileTransferService`(`QRunnable`)을 생성하고 `QThreadPool`에서 실행.
+3. **Model (`FileTransferService`)**:
     * 파일을 Chunk 단위로 읽음.
     * **Backpressure**: 송신 큐(`TX Queue`) 크기를 모니터링하여 오버플로우 방지 (Flow Control).
     * **Race Condition 방지**: 시작 시 Controller에 등록, 종료 시 해제.

@@ -207,3 +207,13 @@ class RingBuffer:
             self._head = 0
             self._tail = 0
             self._stored_bytes = 0
+
+    def available(self) -> int:
+        """
+        읽기 가능한 바이트 수를 반환합니다.
+
+        Returns:
+            int: 버퍼에 저장된 바이트 수
+        """
+        with self._lock:
+            return self._stored_bytes

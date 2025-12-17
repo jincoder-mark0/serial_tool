@@ -337,7 +337,7 @@ class MainPresenter(QObject):
         logger.info("Shutdown completed.")
 
     def on_settings_change_requested(self, new_state: PreferencesState) -> None:
-                """
+        """
         설정 저장 요청 처리
 
         Logic:

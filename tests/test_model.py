@@ -1,7 +1,7 @@
 """
 Model 계층 핵심 로직 테스트
 
-Model 계층의 주요 컴포넌트(ConnectionController, MacroRunner, FileTransferEngine)의
+Model 계층의 주요 컴포넌트(ConnectionController, MacroRunner, FileTransferService)의
 비즈니스 로직과 상호작용을 검증합니다.
 
 ## WHY
@@ -12,7 +12,7 @@ Model 계층의 주요 컴포넌트(ConnectionController, MacroRunner, FileTrans
 ## WHAT
 * ConnectionController: Signal 발생 시 EventBus로의 자동 전파(Bridge) 검증
 * MacroRunner: QThread 기반 실행 흐름, Expect 대기 로직, 데이터 수신 연동 검증
-* FileTransferEngine: Backpressure(역압) 제어 로직 검증
+* FileTransferService: Backpressure(역압) 제어 로직 검증
 
 ## HOW
 * pytest-qt의 `qtbot`을 사용하여 비동기 시그널 대기 및 검증
@@ -31,7 +31,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 from model.connection_controller import ConnectionController
 from model.macro_runner import MacroRunner
 from common.dtos import MacroEntry
-from model.file_transfer_service import FileTransferEngine
+from model.file_transfer_service import FileTransferService
 from core.event_bus import event_bus
 
 # --- ConnectionController Tests ---
@@ -147,7 +147,7 @@ def test_macro_runner_expect(qtbot):
     runner.stop()
     runner.wait()
 
-# --- FileTransferEngine Tests ---
+# --- FileTransferService Tests ---
 
 class MockConnectionController(QObject):
     """FileTransfer 테스트용 Mock Controller"""
@@ -175,7 +175,7 @@ def test_file_transfer_backpressure(tmp_path):
     Logic:
         1. 임시 파일 생성
         2. Mock Controller의 큐 사이즈를 임계값 이상으로 설정
-        3. FileTransferEngine 초기화 시 Backpressure 설정값 확인
+        3. FileTransferService 초기화 시 Backpressure 설정값 확인
     """
     # 1. 임시 파일 생성 (10KB)
     test_file = tmp_path / "large_test.bin"
@@ -183,17 +183,17 @@ def test_file_transfer_backpressure(tmp_path):
         f.write(b"A" * 10240)
 
     mock_control = MockConnectionController()
-    engine = FileTransferEngine(mock_control, "COM1", str(test_file), baudrate=9600)
+    file_transfer_service = FileTransferService(mock_control, "COM1", str(test_file), baudrate=9600)
 
     # 청크 사이즈 강제 축소 (테스트 용이성)
-    engine.chunk_size = 100
+    file_transfer_service.chunk_size = 100
 
     # 2. Backpressure 시뮬레이션
     mock_control.queue_size = 100 # Threshold is usually 50
 
     # 엔진 속성 확인 (로직 존재 여부 검증)
-    assert engine.queue_threshold == 50
-    assert engine.flow_control == "None"
+    assert file_transfer_service.queue_threshold == 50
+    assert file_transfer_service.flow_control == "None"
 
 if __name__ == "__main__":
     pytest.main([__file__])

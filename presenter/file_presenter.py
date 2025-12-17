@@ -9,7 +9,7 @@
 * MVP 패턴 준수
 
 ## WHAT
-* FileTransferDialog(View)와 FileTransferEngine(Model) 연결
+* FileTransferDialog(View)와 FileTransferService(Model) 연결
 * 전송 속도 및 남은 시간(ETA) 계산 알고리즘 구현
 * 전송 시작/취소/완료/에러 처리 루틴
 * 대상 포트 컨텍스트 명시적 관리
@@ -21,7 +21,7 @@
 """
 from PyQt5.QtCore import QObject, QDateTime, QThreadPool
 from model.connection_controller import ConnectionController
-from model.file_transfer_service import FileTransferEngine
+from model.file_transfer_service import FileTransferService
 from view.dialogs.file_transfer_dialog import FileTransferDialog
 from core.logger import logger
 from common.dtos import FileProgressState
@@ -43,8 +43,8 @@ class FilePresenter(QObject):
         """
         super().__init__()
         self.connection_controller = connection_controller
-        self.current_engine: FileTransferEngine = None
-        self.current_dialog: FileTransferDialog = None
+        self.file_transfer_service: FileTransferService = None
+        self.file_transfer_dialog: FileTransferDialog = None
 
         # 전송 대상 포트 (다이얼로그 열림 시점에 결정됨)
         self.target_port: str = None
@@ -62,7 +62,7 @@ class FilePresenter(QObject):
             dialog: FileTransferDialog 인스턴스
             target_port: 파일 전송을 수행할 대상 포트 이름
         """
-        self.current_dialog = dialog
+        self.file_transfer_dialog = dialog
         self.target_port = target_port
 
         if not self.target_port:
@@ -78,7 +78,7 @@ class FilePresenter(QObject):
 
     def _on_dialog_closed(self) -> None:
         """다이얼로그 종료 시 정리"""
-        self.current_dialog = None
+        self.file_transfer_dialog = None
         self.target_port = None
 
     def start_transfer(self, filepath: str) -> None:
@@ -94,15 +94,15 @@ class FilePresenter(QObject):
         # [Fix] 임의의 활성 포트가 아닌, 다이얼로그 호출 시점의 명시적 포트 사용
         if not self.target_port:
             logger.error("File Transfer: No target port specified.")
-            if self.current_dialog:
-                self.current_dialog.set_complete(False, "No target port selected.")
+            if self.file_transfer_dialog:
+                self.file_transfer_dialog.set_complete(False, "No target port selected.")
             return
 
         # 포트 연결 확인 (이중 체크)
         if not self.connection_controller.is_connection_open(self.target_port):
              logger.error(f"File Transfer: Target port {self.target_port} is not open.")
-             if self.current_dialog:
-                 self.current_dialog.set_complete(False, "Port disconnected.")
+             if self.file_transfer_dialog:
+                 self.file_transfer_dialog.set_complete(False, "Port disconnected.")
              return
 
         # 포트 설정(DTO) 가져오기
@@ -114,16 +114,16 @@ class FilePresenter(QObject):
 
         try:
             # 엔진 생성 - DTO 전달
-            self.current_engine = FileTransferEngine(
+            self.file_transfer_service = FileTransferService(
                 self.connection_controller,
                 filepath,
                 port_config
             )
 
             # 엔진 시그널 연결
-            self.current_engine.signals.progress_updated.connect(self._on_progress)
-            self.current_engine.signals.transfer_completed.connect(self._on_completed)
-            self.current_engine.signals.error_occurred.connect(self._on_error)
+            self.file_transfer_service.signals.progress_updated.connect(self._on_progress)
+            self.file_transfer_service.signals.transfer_completed.connect(self._on_completed)
+            self.file_transfer_service.signals.error_occurred.connect(self._on_error)
 
             # 상태 초기화
             self._start_time = QDateTime.currentMSecsSinceEpoch()
@@ -131,19 +131,19 @@ class FilePresenter(QObject):
             self._last_sent_bytes = 0
 
             # 비동기 실행
-            QThreadPool.globalInstance().start(self.current_engine)
+            QThreadPool.globalInstance().start(self.file_transfer_service)
             logger.info(f"File transfer started: {filepath} -> {self.target_port}")
 
         except Exception as e:
             logger.error(f"Failed to start file transfer: {e}")
-            if self.current_dialog:
-                self.current_dialog.set_complete(False, str(e))
+            if self.file_transfer_dialog:
+                self.file_transfer_dialog.set_complete(False, str(e))
 
     def cancel_transfer(self) -> None:
         """전송 취소 요청"""
-        if self.current_engine:
+        if self.file_transfer_service:
             logger.info("Cancelling file transfer...")
-            self.current_engine.cancel()
+            self.file_transfer_service.cancel()
 
     def _on_progress(self, state: FileProgressState) -> None:
         """
@@ -158,7 +158,7 @@ class FilePresenter(QObject):
         Args:
             state (FileProgressState): 모델에서 전달받은 상태 객체
         """
-        if not self.current_dialog:
+        if not self.file_transfer_dialog:
             return
 
         # 계산 로직 (속도/ETA 계산하여 DTO 업데이트)
@@ -173,7 +173,7 @@ class FilePresenter(QObject):
             state.eta = remaining_bytes / state.speed
 
         # View 업데이트
-        self.current_dialog.update_progress(state)
+        self.file_transfer_dialog.update_progress(state)
 
     def _on_completed(self, success: bool) -> None:
         """
@@ -182,11 +182,11 @@ class FilePresenter(QObject):
         Args:
             success: 성공 여부
         """
-        if self.current_dialog:
+        if self.file_transfer_dialog:
             msg = "Transfer Completed" if success else "Transfer Failed"
-            self.current_dialog.set_complete(success, msg)
+            self.file_transfer_dialog.set_complete(success, msg)
 
-        self.current_engine = None
+        self.file_transfer_service = None
 
         if success:
             logger.info("File transfer completed successfully")
@@ -204,5 +204,5 @@ class FilePresenter(QObject):
         # 엔진이 에러 발생 후 completed(False)를 호출하므로,
         # 여기서는 로깅 외에 별도 UI 처리는 _on_completed에 위임하거나
         # 구체적인 에러 메시지를 UI에 전달할 수 있음.
-        if self.current_dialog:
-            self.current_dialog.set_complete(False, msg)
+        if self.file_transfer_dialog:
+            self.file_transfer_dialog.set_complete(False, msg)
