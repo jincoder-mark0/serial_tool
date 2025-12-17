@@ -33,7 +33,7 @@ from core.event_bus import event_bus
 from core.logger import logger
 
 if TYPE_CHECKING:
-    from model.file_transfer import FileTransferEngine
+    from model.file_transfer_service import FileTransferEngine
 
 class ConnectionController(QObject):
     """

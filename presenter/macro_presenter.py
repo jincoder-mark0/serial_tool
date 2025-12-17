@@ -170,8 +170,6 @@ class MacroPresenter(QObject):
         self.panel.show_error("Load Error", f"Failed to load script:\n{error_msg}")
         self._load_worker = None
 
-    # 동기 로드 메서드 제거 (비동기로 대체됨)
-
     def on_repeat_start(self, indices: List[int], option: MacroRepeatOption) -> None:
         """
         반복 실행 시작 요청 처리
@@ -182,7 +180,7 @@ class MacroPresenter(QObject):
         """
         if not indices: return
 
-        raw_list = self.panel.macro_list.get_macro_list()
+        raw_list = self.panel.macro_list.export_macros()
         entries = []
         for i, raw in enumerate(raw_list):
             if i in indices:
@@ -216,7 +214,7 @@ class MacroPresenter(QObject):
         Args:
             row_index (int): 실행할 매크로 인덱스
         """
-        raw_list = self.panel.macro_list.get_macro_list()
+        raw_list = self.panel.macro_list.export_macros()
         if 0 <= row_index < len(raw_list):
             raw = raw_list[row_index]
             self.runner.send_single_command(

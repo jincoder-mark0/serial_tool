@@ -1,3 +1,9 @@
+"""
+매크로 리스트 위젯 모듈
+
+매크로(Command) 목록을 관리하고 UI에 표시합니다.
+[Refactor] 데이터 추출/주입 메서드명을 export/import로 변경하여 동작의 성격을 명확히 했습니다.
+"""
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableView, QPushButton,
     QHeaderView, QCheckBox, QMenu, QAction
@@ -201,9 +207,9 @@ class MacroListWidget(QWidget):
         if item.column() != 0:
             self.macro_list_changed.emit()
 
-    def get_macro_list(self) -> List[Dict[str, Any]]:
+    def export_macros(self) -> List[Dict[str, Any]]:
         """
-        현재 커맨드 리스트 데이터를 반환합니다.
+        현재 커맨드 리스트 데이터를 추출하여 반환
 
         Returns:
             List[Dict[str, Any]]: 커맨드 데이터 리스트.
@@ -221,9 +227,10 @@ class MacroListWidget(QWidget):
             commands.append(command_data)
         return commands
 
-    def set_macro_list(self, commands: List[Dict[str, Any]]) -> None:
+    def import_macros(self, commands: List[Dict[str, Any]]) -> None:
         """
-        커맨드 리스트 데이터를 설정합니다.
+        커맨드 리스트 데이터를 UI에 주입
+        기존 데이터를 모두 지우고 새로 생성
 
         Args:
             commands (List[Dict[str, Any]]): 커맨드 데이터 리스트.
@@ -484,7 +491,7 @@ class MacroListWidget(QWidget):
         Returns:
             list: Command 목록 데이터.
         """
-        commands = self.get_macro_list()
+        commands = self.export_macros()
         return commands
 
     def load_state(self, state: list) -> None:
@@ -497,9 +504,7 @@ class MacroListWidget(QWidget):
         if not state:
             return
 
-        self.set_macro_list(state)
-
-
+        self.import_macros(state)
 
     def set_all_checked(self, checked: bool) -> None:
         """

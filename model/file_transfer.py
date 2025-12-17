@@ -1,5 +1,23 @@
 """
-파일 전송 모델
+파일 전송 서비스 모듈
+
+파일 전송 로직을 담당하는 엔진을 정의합니다.
+기존 'model/file_transfer.py'에서 'model/file_transfer_service.py'로 리네임되었습니다.
+[Refactor] 클래스명(FileTransferEngine)과 모듈명(Service)의 일관성을 확보했습니다.
+
+## WHY
+* 대용량 파일의 안정적인 전송 (Backpressure 제어)
+* UI 블로킹 없는 비동기 실행 (QRunnable)
+* 전송 진행 상황 실시간 피드백
+
+## WHAT
+* FileTransferEngine: QRunnable 기반 전송 엔진
+* FileTransferSignals: 전송 상태 시그널
+
+## HOW
+* 파일을 Chunk 단위로 읽어 ConnectionController로 전송
+* 전송 큐 크기를 모니터링하여 과부하 방지 (Backpressure)
+* 포트 설정에 따른 흐름 제어(Flow Control) 또는 속도 조절(Pacing)
 """
 import os
 import time
@@ -22,18 +40,6 @@ class FileTransferEngine(QRunnable):
     파일 전송을 담당하는 엔진 (QRunnable 기반)
 
     별도의 스레드 풀에서 실행되며, 파일을 청크 단위로 읽어 ConnectionController를 통해 전송합니다.
-
-    ## 흐름 제어 (Flow Control) 및 안정성 개선
-
-    - Backpressure (역압) 제어: `ConnectionController`의 송신 큐 크기를 모니터링하여
-      PC의 송신 버퍼가 가득 차면 일시 대기합니다. 이는 메모리 폭증과 데이터 유실을 방지합니다.
-    - Flow Control 지원: 포트 설정에 따라 속도 제어 방식을 달리합니다.
-      - RTS/CTS, XON/XOFF: 하드웨어/드라이버 레벨의 흐름 제어를 신뢰하여 불필요한 sleep을 제거합니다.
-      - None: Baudrate 기반의 타이밍 계산을 통해 전송 속도를 제한(Pacing)합니다.
-    - 예외 안전망: 실행 중 발생하는 모든 예외를 포착하여 GlobalErrorHandler에 보고합니다.
-
-    ## 향후 개선 계획
-    - Y-MODEM과 같은 프로토콜의 다양화
     """
 
     def __init__(self, connection_controller: ConnectionController, file_path: str, config: PortConfig):
@@ -80,7 +86,6 @@ class FileTransferEngine(QRunnable):
         """
         try:
             # 전송 시작 등록 (Race Condition 방지)
-            # 등록 과정에서 에러가 나더라도 포착하기 위해 try 블록 내부로 이동
             self.connection_controller.register_file_transfer(self.port_name, self)
 
             # 파일 존재 확인
@@ -95,7 +100,6 @@ class FileTransferEngine(QRunnable):
             with open(self.file_path, 'rb') as f:
                 while not self._is_cancelled:
                     # Backpressure Control (역압 제어)
-                    # ConnectionWorker의 큐가 비워질 때까지 대기하여 메모리 보호 및 유실 방지
                     while self.connection_controller.get_write_queue_size(self.port_name) > self.queue_threshold:
                         time.sleep(0.01) # 10ms 대기
                         if self._is_cancelled:
@@ -111,14 +115,12 @@ class FileTransferEngine(QRunnable):
                     # 데이터 전송
                     success = self.connection_controller.send_data_to_connection(self.port_name, chunk)
                     if not success:
-                        # 포트가 닫혔거나 워커가 없는 경우
                         raise Exception(f"Port {self.port_name} is not open or unavailable.")
 
                     # 진행률 업데이트
                     sent_bytes += len(chunk)
 
                     # 1. UI용 시그널 (FileProgressState DTO 사용)
-                    # 여기서는 기본 정보만 담아서 보내고 계산은 Presenter에 위임
                     state = FileProgressState(
                         file_path=self.file_path,
                         sent_bytes=sent_bytes,
@@ -131,14 +133,10 @@ class FileTransferEngine(QRunnable):
                     self.event_bus.publish(EventTopics.FILE_PROGRESS, FileProgressEvent(current=sent_bytes, total=total_size))
 
                     # Speed Control (속도 제어)
-                    # Flow Control이 활성화된 경우(RTS/CTS 등), 드라이버 레벨의 블로킹을 신뢰하고 sleep을 건너뜀
-                    # Flow Control이 없는 경우, Baudrate에 맞춰 소프트웨어적으로 속도 조절 (Pacing)
                     if self.config.flowctrl in ["RTS/CTS", "XON/XOFF"]:
-                        # 하드웨어/소프트웨어 흐름 제어에 맡김 (최대 속도)
-                        pass
+                        pass # 하드웨어 흐름 제어 신뢰
                     else:
                         # 전송 속도 조절 (Baudrate 기반 지연)
-                        # 1 byte = 10 bits (8N1: 1 start + 8 data + 1 stop)
                         wait_time = (len(chunk) * 10) / self.config.baudrate
                         time.sleep(wait_time)
 
@@ -153,17 +151,14 @@ class FileTransferEngine(QRunnable):
 
         except Exception as e:
             # 예외 발생 시 전역 에러 핸들러에 보고
-            # QRunnable은 sys.excepthook을 타지 않을 수 있으므로 명시적 호출 필요
             try:
                 from core.error_handler import get_error_handler
                 handler = get_error_handler()
                 if handler:
                     handler.report_error(type(e), e, e.__traceback__)
             except Exception:
-                # 에러 핸들러 호출 실패 시 최소한의 출력 (순환 참조 등 방지)
                 pass
 
-            # 오류 발생 시그널 및 이벤트 발행
             self.signals.error_occurred.emit(str(e))
             self.signals.transfer_completed.emit(False)
             self.event_bus.publish(EventTopics.FILE_ERROR, str(e))

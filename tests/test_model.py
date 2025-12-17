@@ -26,13 +26,12 @@ import os
 import pytest
 from PyQt5.QtCore import QObject
 
-# 프로젝트 루트 경로 설정
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from model.connection_controller import ConnectionController
 from model.macro_runner import MacroRunner
 from common.dtos import MacroEntry
-from model.file_transfer import FileTransferEngine
+from model.file_transfer_service import FileTransferEngine
 from core.event_bus import event_bus
 
 # --- ConnectionController Tests ---

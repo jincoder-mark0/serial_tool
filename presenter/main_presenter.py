@@ -60,7 +60,7 @@ class MainPresenter(QObject):
         Logic:
             - SettingsManager를 통해 설정 로드
             - 설정 초기화 여부 확인 및 경고 표시
-            - DTO 변환 및 View 상태 복원 (apply_state 호출)
+            - initialize_view_from_settings 메서드로 초기화 로직 분리
             - Model 인스턴스 생성
             - 하위 Presenter 초기화 및 의존성 주입
             - ManualControl 상태 복원
@@ -85,16 +85,8 @@ class MainPresenter(QObject):
                 f"Configuration file corrupted or invalid.\nDefaults restored.\n\nReason: {reason}"
             )
 
-        # 설정 로드 및 DTO 변환
-        all_settings = self.settings_manager.get_all_settings()
-        window_state, font_config = self._create_initial_states(all_settings)
-
-        # View에 설정 주입하여 초기 상태 복원
-        self.view.apply_state(window_state, font_config)
-
-        # 테마 적용
-        theme = self.settings_manager.get(ConfigKeys.THEME, 'dark')
-        self.view.switch_theme(theme)
+        # [Refactor] View 초기화 로직 분리
+        self.initialize_view_from_settings()
 
         # --- 1. Model 및 Handler 초기화 ---
         self.connection_controller = ConnectionController()
@@ -113,7 +105,6 @@ class MainPresenter(QObject):
         self.file_presenter = FilePresenter(self.connection_controller)
 
         # 2.4 Packet Inspector
-        # [Refactor] Inject SettingsManager
         self.packet_presenter = PacketPresenter(
             self.view.right_section.packet_panel,
             self.event_router,
@@ -128,7 +119,12 @@ class MainPresenter(QObject):
             self.port_presenter.get_active_port_name
         )
 
-        # ManualControl 상태 복원
+        # ManualControl 상태 복원 (이것도 별도 메서드로 분리 가능하나 일단 유지)
+        # Note: initialize_view_from_settings가 호출된 시점에서는 아직 하위 위젯들의 상태가 완전히 복원되지 않았을 수 있음
+        # (MainWindow.apply_state에서 복원하지만, ManualControl의 개별 상태는 여기서 추가 복원)
+        all_settings = self.settings_manager.get_all_settings()
+        window_state, _ = self._create_initial_states(all_settings)
+
         manual_settings_dict = window_state.left_section_state.get("manual_control", {}).get("manual_control_widget", {})
         manual_state_dto = ManualControlState(
             input_text=manual_settings_dict.get("input_text", ""),
@@ -188,6 +184,20 @@ class MainPresenter(QObject):
 
         self.view.log_system_message("Application initialized", "INFO")
 
+    def initialize_view_from_settings(self) -> None:
+        """
+        설정 파일에서 값을 읽어 View의 초기 상태를 구성합니다.
+        """
+        all_settings = self.settings_manager.get_all_settings()
+        window_state, font_config = self._create_initial_states(all_settings)
+
+        # View에 설정 주입하여 초기 상태 복원
+        self.view.apply_state(window_state, font_config)
+
+        # 테마 적용
+        theme = self.settings_manager.get(ConfigKeys.THEME, 'dark')
+        self.view.switch_theme(theme)
+
     def _create_initial_states(self, settings: dict) -> tuple[MainWindowState, FontConfig]:
         """
         설정 딕셔너리를 DTO로 변환하는 헬퍼 메서드
@@ -203,7 +213,7 @@ class MainPresenter(QObject):
             설정 딕셔너리에서 값을 가져오는 헬퍼 메서드
 
             Args:
-                path (str): 설정 경로 (예: 'window.width')
+                path (str): 설정 키 경로 (점으로 구분된 문자열)
                 default (any, optional): 기본값. Defaults to None.
 
             Returns:
@@ -248,7 +258,10 @@ class MainPresenter(QObject):
 
     def on_preferences_requested(self) -> None:
         """
-        Preferences 다이얼로그 요청 처리
+        설정을 변경할 수 있는 PreferencesDialog를 표시합니다.
+
+        Returns:
+            PreferencesState: 변경된 설정 DTO
         """
         settings = self.settings_manager
         state = PreferencesState(
@@ -324,7 +337,7 @@ class MainPresenter(QObject):
         logger.info("Shutdown completed.")
 
     def on_settings_change_requested(self, new_state: PreferencesState) -> None:
-        """
+                """
         설정 저장 요청 처리
 
         Logic:
@@ -515,13 +528,12 @@ class MainPresenter(QObject):
         self.data_handler.reset_counts()
         self.view.update_status_bar_time(QDateTime.currentDateTime().toString("HH:mm:ss"))
 
-    def on_shortcut_connect(self) -> None:
+    def on_shortcut_connect(self)-> None:
         """
         연결 단축키 처리
         """
         self.port_presenter.connect_current_port()
-
-    def on_shortcut_disconnect(self) -> None:
+    def on_shortcut_disconnect(self)-> None:
         """
         연결 해제 단축키 처리
         """

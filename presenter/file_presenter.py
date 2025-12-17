@@ -21,7 +21,7 @@
 """
 from PyQt5.QtCore import QObject, QDateTime, QThreadPool
 from model.connection_controller import ConnectionController
-from model.file_transfer import FileTransferEngine
+from model.file_transfer_service import FileTransferEngine
 from view.dialogs.file_transfer_dialog import FileTransferDialog
 from core.logger import logger
 from common.dtos import FileProgressState
