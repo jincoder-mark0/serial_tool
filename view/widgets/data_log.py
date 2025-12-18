@@ -26,8 +26,7 @@ from PyQt5.QtWidgets import (
     QPushButton, QCheckBox, QLabel, QLineEdit, QFileDialog, QComboBox
 )
 from PyQt5.QtCore import QTimer, pyqtSignal, pyqtSlot, Qt
-from typing import Optional
-from view.managers.color_manager import color_manager
+from typing import Optional, List
 from view.managers.language_manager import language_manager
 
 from view.custom_qt.smart_list_view import QSmartListView
@@ -38,7 +37,7 @@ from common.constants import (
     FILE_FILTER_LOG, FILE_FILTER_ALL
 )
 from common.enums import NewlineMode
-from core.logger import logger
+from common.dtos import ColorRule # [Refactor] Import DTO
 
 class DataLogWidget(QWidget):
     """
@@ -89,8 +88,7 @@ class DataLogWidget(QWidget):
         self.max_lines: int = DEFAULT_LOG_MAX_LINES
         self.tab_name: str = ""
 
-        # 색상 규칙 관리자
-        self.color_manager = color_manager
+        # [Refactor] Removed self.color_manager = color_manager
 
         # ---------------------------------------------------------
         # 2. UI 구성 및 시그널 연결
@@ -109,8 +107,22 @@ class DataLogWidget(QWidget):
         self.ui_update_timer.start()
 
     def set_tab_name(self, name: str) -> None:
-        """탭 이름을 설정합니다."""
+        """
+        탭 이름 설정
+
+        Args:
+            name: 탭 이름
+        """
         self.tab_name = name
+
+    def set_color_rules(self, rules: List[ColorRule]) -> None:
+        """
+        색상 규칙 설정 (External Injection)
+
+        Args:
+            rules: ColorRule 리스트
+        """
+        self.data_log_list.set_color_rules(rules)
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
@@ -184,18 +196,43 @@ class DataLogWidget(QWidget):
         self.data_log_newline_combo.addItem(language_manager.get_text("data_log_newline_crlf"), NewlineMode.CRLF.value)
         self.data_log_newline_combo.setFixedWidth(100)
 
-        # 2. 로그 뷰 영역
+        # Log View
         self.data_log_list = QSmartListView()
         self.data_log_list.set_max_lines(DEFAULT_LOG_MAX_LINES)
         self.data_log_list.setReadOnly(True)
-        self.data_log_list.set_color_manager(self.color_manager)
+        # [Refactor] set_color_manager 호출 제거, rules는 나중에 주입됨
         self.data_log_list.set_hex_mode_enabled(self.hex_mode)
         self.data_log_list.set_timestamp_enabled(self.timestamp_enabled, timeout_ms=100)
         self.data_log_list.setPlaceholderText(language_manager.get_text("data_log_list_log_placeholder"))
         self.data_log_list.setToolTip(language_manager.get_text("data_log_list_log_tooltip"))
         self.data_log_list.setProperty("class", "fixed-font")
 
-        # Layout 배치
+        # Components Init (Reuse existing initialization code)
+        self.data_log_title = QLabel(language_manager.get_text("data_log_title"))
+        self.data_log_title.setProperty("class", "section-title")
+        self.data_log_tx_broadcast_allow_chk = QCheckBox(language_manager.get_text("data_log_chk_tx_broadcast_allow"))
+        self.data_log_tx_broadcast_allow_chk.stateChanged.connect(self.on_data_log_tx_broadcast_allow_changed)
+        self.data_log_search_input = QLineEdit()
+        self.data_log_search_input.returnPressed.connect(self.on_data_log_search_next_clicked)
+        self.data_log_search_input.textChanged.connect(self.on_data_log_search_text_changed)
+        self.data_log_search_prev_btn = QPushButton("<")
+        self.data_log_search_prev_btn.clicked.connect(self.on_data_log_search_prev_clicked)
+        self.data_log_search_next_btn = QPushButton(">")
+        self.data_log_search_next_btn.clicked.connect(self.on_data_log_search_next_clicked)
+        self.data_log_clear_log_btn = QPushButton(language_manager.get_text("data_log_btn_clear"))
+        self.data_log_clear_log_btn.clicked.connect(self.on_clear_data_log_clicked)
+        self.data_log_toggle_logging_btn = QPushButton(language_manager.get_text("data_log_btn_toggle_logging"))
+        self.data_log_toggle_logging_btn.setCheckable(True)
+        self.data_log_toggle_logging_btn.toggled.connect(self.on_data_log_logging_toggled)
+        self.data_log_filter_chk = QCheckBox(language_manager.get_text("data_log_chk_filter"))
+        self.data_log_filter_chk.stateChanged.connect(self.on_data_log_filter_changed)
+        self.data_log_hex_chk = QCheckBox(language_manager.get_text("data_log_chk_hex"))
+        self.data_log_hex_chk.stateChanged.connect(self.on_data_log_hex_mode_changed)
+        self.data_log_timestamp_chk = QCheckBox(language_manager.get_text("data_log_chk_timestamp"))
+        self.data_log_timestamp_chk.stateChanged.connect(self.on_data_log_timestamp_changed)
+        self.data_log_pause_chk = QCheckBox(language_manager.get_text("data_log_chk_pause"))
+        self.data_log_pause_chk.stateChanged.connect(self.on_data_log_pause_changed)
+
         toolbar_layout = QHBoxLayout()
         toolbar_layout.addWidget(self.data_log_title)
         toolbar_layout.addStretch()
@@ -319,6 +356,7 @@ class DataLogWidget(QWidget):
     def on_data_log_search_next_clicked(self) -> None:
         """검색창의 텍스트로 다음 항목을 찾습니다."""
         text = self.data_log_search_input.text()
+
         if text:
             # 패턴 설정은 textChanged에서 실시간으로 되지만 안전을 위해 호출
             self.data_log_list.set_search_pattern(text)
@@ -351,13 +389,6 @@ class DataLogWidget(QWidget):
             - UI 상태 변경 없이 오직 시그널만 발행
             - 실제 UI 변경은 Presenter가 set_logging_active를 호출할 때 수행
         """
-        # 버튼 상태를 일단 원복 (Presenter의 응답 대기)
-        # 사용자가 눌렀을 때 checked 상태가 되지만,
-        # 로직 성공 여부를 모르므로 여기서 색상을 바꾸지 않음.
-        # 다만 QPushButon(checkable)은 자동으로 상태가 바뀌므로,
-        # 여기서는 시그널만 보내고, 실패 시 Presenter가 다시 끄도록 유도하거나
-        # 성공 시 스타일을 적용하도록 함.
-
         if checked:
             self.logging_start_requested.emit()
         else:
@@ -367,6 +398,9 @@ class DataLogWidget(QWidget):
         """
         외부(Presenter)에서 로깅 상태를 설정
         성공적으로 시작/중지되었을 때 호출됨
+
+        Args:
+            active (bool): 로깅 활성화 여부
         """
         self.data_log_toggle_logging_btn.blockSignals(True)
         self.data_log_toggle_logging_btn.setChecked(active)
@@ -426,7 +460,7 @@ class DataLogWidget(QWidget):
         HEX 모드 토글을 처리합니다.
 
         Args:
-            state (int): 체크박스 상태 (Qt.Checked 등).
+            state (int): 체크박스 상태.
         """
         self.hex_mode = (state == Qt.Checked)
         self.data_log_list.set_hex_mode_enabled(self.hex_mode)
@@ -434,7 +468,7 @@ class DataLogWidget(QWidget):
     @pyqtSlot(int)
     def on_data_log_timestamp_changed(self, state: int) -> None:
         """
-        타임스탬프 토글을 처리합니다.
+        Timestamp 토글을 처리합니다.
 
         Args:
             state (int): 체크박스 상태.
@@ -445,7 +479,7 @@ class DataLogWidget(QWidget):
     @pyqtSlot(int)
     def on_data_log_pause_changed(self, state: int) -> None:
         """
-        일시 정지 토글을 처리합니다.
+        Pause 토글을 처리
 
         Args:
             state (int): 체크박스 상태.
@@ -457,7 +491,7 @@ class DataLogWidget(QWidget):
     # -------------------------------------------------------------------------
     def set_max_lines(self, max_lines: int) -> None:
         """
-        표시할 최대 로그 라인 수를 설정합니다.
+        최대 라인 수를 설정합니다.
 
         Args:
             max_lines (int): 최대 라인 수.
@@ -468,21 +502,21 @@ class DataLogWidget(QWidget):
     @property
     def is_broadcast_enabled(self) -> bool:
         """
-        현재 브로드캐스팅 모드 상태를 반환합니다
+        TX Broadcast 토글의 상태를 반환
 
         Returns:
-            bool: 브로드캐스팅 모드 상태
+            bool: TX Broadcast 토글의 상태.
         """
         return self.tx_broadcast_allow_enabled
 
     def save_state(self) -> dict:
         """
-        현재 위젯의 UI 상태를 딕셔너리로 반환합니다 (설정 저장용).
+        현재 상태를 저장 (설정 저장용)
 
         Returns:
-            dict: {tx_broadcast_allow_enabled, hex_mode, timestamp, is_paused, search_text, filter_enabled}
+            dict: 현재 상태.
         """
-        state = {
+        return {
             "tx_broadcast_allow_enabled": self.tx_broadcast_allow_enabled,
             "hex_mode": self.hex_mode,
             "timestamp": self.timestamp_enabled,
@@ -511,13 +545,18 @@ class DataLogWidget(QWidget):
         self.data_log_filter_chk.setChecked(state.get("filter_enabled", False))
         self.data_log_search_input.setText(state.get("search_text", ""))
 
-        newline_mode = state.get("newline_mode", "Raw")
+        newline_mode = state.get("newline_mode", NewlineMode.RAW.value)
         index = self.data_log_newline_combo.findData(newline_mode)
         if index >= 0:
             self.data_log_newline_combo.setCurrentIndex(index)
 
     def closeEvent(self, event) -> None:
-        """위젯 종료 시 타이머를 안전하게 정지합니다."""
+        """
+        위젯 종료 시 타이머를 안전하게 정지
+
+        Args:
+            event (QCloseEvent): 종료 이벤트.
+        """
         if self.ui_update_timer.isActive():
             self.ui_update_timer.stop()
         super().closeEvent(event)

@@ -30,7 +30,6 @@ from PyQt5.QtWidgets import QApplication, QPlainTextEdit, QWidget, QVBoxLayout, 
 from PyQt5.QtCore import Qt, QEvent
 from PyQt5.QtGui import QKeyEvent, QTextCursor, QTextCharFormat, QColor
 
-
 class SmartNumberEdit(QPlainTextEdit):
     """
     커서 위치 기반 숫자 증감 QPlainTextEdit

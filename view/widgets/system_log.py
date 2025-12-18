@@ -1,17 +1,22 @@
+"""
+SystemLogWidget 모듈
+
+시스템 상태 메시지를 표시합니다.
+ColorManager 의존성 제거, ColorService 활용
+"""
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QCheckBox, QLabel, QLineEdit, QFileDialog, QComboBox
+    QPushButton, QCheckBox, QLabel, QLineEdit
 )
 from PyQt5.QtCore import pyqtSlot
-from typing import Optional
+from typing import Optional, List
 import datetime
 from view.managers.language_manager import language_manager
 from view.custom_qt.smart_list_view import QSmartListView
-from view.managers.color_manager import color_manager
-
-from common.constants import (
-    DEFAULT_LOG_MAX_LINES
-)
+# Removed ColorManager import
+from common.constants import DEFAULT_LOG_MAX_LINES
+from common.dtos import ColorRule
+from view.services.color_service import ColorService
 
 class SystemLogWidget(QWidget):
     """
@@ -32,18 +37,18 @@ class SystemLogWidget(QWidget):
         # 1. 상태 변수 초기화
         # ---------------------------------------------------------
         # UI Components
-        self.sys_log_title: Optional[QLabel] = None
-        self.sys_log_list: Optional[QSmartListView] = None
-        self.sys_log_search_input: Optional[QLineEdit] = None
-        self.sys_log_search_prev_btn: Optional[QPushButton] = None
-        self.sys_log_search_next_btn: Optional[QPushButton] = None
+        self.sys_log_title = None
+        self.sys_log_list = None
+        self.sys_log_search_input = None
+        self.sys_log_search_prev_btn = None
+        self.sys_log_search_next_btn = None
+        self.sys_log_toggle_logging_btn = None
+        self.sys_log_clear_log_btn = None
+        self.sys_log_filter_chk = None
+        self.filter_enabled = False
 
-        self.sys_log_toggle_logging_btn: Optional[QPushButton] = None
-        self.sys_log_clear_log_btn: Optional[QPushButton] = None
-        self.sys_log_filter_chk: Optional[QCheckBox] = None  # Filter Checkbox
-
-        # State Variables
-        self.filter_enabled: bool = False # Filter State
+        # Rules storage
+        self._color_rules: List[ColorRule] = []
 
         # ---------------------------------------------------------
         # 2. UI 구성 및 시그널 연결
@@ -52,6 +57,15 @@ class SystemLogWidget(QWidget):
 
         # 언어 변경 연결
         language_manager.language_changed.connect(self.retranslate_ui)
+
+    def set_color_rules(self, rules: List[ColorRule]) -> None:
+        """색상 규칙 설정"""
+        self._color_rules = rules
+        # 리스트 뷰에도 전달 (필요시) - 하지만 여기선 log()에서 직접 포맷팅함
+        # QSmartListView가 자체적으로 규칙을 가지고 포맷팅하게 할 수도 있지만,
+        # System Log는 라인 단위로 명확히 추가되므로 아래 log() 메서드에서 처리.
+        # 하지만 QSmartListView 일관성을 위해 전달 권장.
+        self.sys_log_list.set_color_rules(rules)
 
     def init_ui(self) -> None:
         self.setFixedHeight(100) # 위젯 전체 높이 고정
@@ -109,13 +123,12 @@ class SystemLogWidget(QWidget):
         self.sys_log_list.setToolTip(language_manager.get_text("sys_log_list_log_tooltip"))
         self.sys_log_list.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
 
-        # Layout 배치
         toolbar_layout = QHBoxLayout()
         toolbar_layout.addWidget(self.sys_log_title)
         toolbar_layout.addWidget(self.sys_log_search_input)
         toolbar_layout.addWidget(self.sys_log_search_prev_btn)
         toolbar_layout.addWidget(self.sys_log_search_next_btn)
-        toolbar_layout.addWidget(self.sys_log_filter_chk) # Filter Checkbox
+        toolbar_layout.addWidget(self.sys_log_filter_chk)
         toolbar_layout.addWidget(self.sys_log_clear_log_btn)
         toolbar_layout.addWidget(self.sys_log_toggle_logging_btn)
 
@@ -168,9 +181,10 @@ class SystemLogWidget(QWidget):
         timestamp = datetime.datetime.now().strftime("[%H:%M:%S]")
         full_text = f"{timestamp} {text}"
 
-        # 3. 색상 규칙 적용 (ColorManager 활용)
-        # ColorManager에 SYS_INFO, TIMESTAMP 등의 규칙이 정의되어 있어야 함
-        full_text = color_manager.apply_rules(full_text)
+        # 3. 색상 규칙 적용
+        # Use ColorService directly with injected rules
+        if self._color_rules:
+            full_text = ColorService.apply_rules(full_text, self._color_rules)
 
         # 4. 뷰에 추가
         self.sys_log_list.append(full_text)
@@ -206,12 +220,12 @@ class SystemLogWidget(QWidget):
     @pyqtSlot()
     def on_clear_sys_log_clicked(self) -> None:
         """화면에 표시된 로그와 대기 중인 버퍼를 모두 지웁니다."""
-        self.sys_log_list.clear()
+        self.clear()
 
     @pyqtSlot(bool)
     def on_sys_log_logging_toggled(self, checked: bool) -> None:
         """
-        로깅 시작/중단 토글을 처리합니다.
+        로깅 시작/중단 토글
 
         Args:
             checked: 버튼 체크 상태 (True=로깅 시작, False=로깅 중단)
@@ -262,14 +276,14 @@ class SystemLogWidget(QWidget):
     # -------------------------------------------------------------------------
     def save_state(self) -> dict:
         """
-        현재 위젯의 UI 상태를 딕셔너리로 반환합니다 (설정 저장용).
+        현재 상태를 저장합니다.
 
         Returns:
-            dict: {search_text, filter_enabled}
+            dict: 저장된 상태 정보.
         """
         state = {
-            "search_text": self.sys_log_search_input.text(),
             "filter_enabled": self.filter_enabled,
+            "search_text": self.sys_log_search_input.text(),
         }
         return state
 
@@ -283,12 +297,17 @@ class SystemLogWidget(QWidget):
         if not state:
             return
 
-        # 체크박스 상태 업데이트 (시그널 발생으로 내부 변수도 업데이트됨)
+        # 체크박스 상태 업데이트
         self.sys_log_filter_chk.setChecked(state.get("filter_enabled", False))
         self.sys_log_search_input.setText(state.get("search_text", ""))
 
     def closeEvent(self, event) -> None:
-        """위젯 종료 시 타이머를 안전하게 정지합니다."""
+        """
+        위젯 종료 시 타이머를 안전하게 정지
+
+        Args:
+            event (QCloseEvent): 종료 이벤트.
+        """
         if self.ui_update_timer.isActive():
             self.ui_update_timer.stop()
         super().closeEvent(event)

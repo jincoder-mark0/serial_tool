@@ -45,6 +45,7 @@ from common.dtos import (
     MainWindowState, PreferencesState, ManualControlState
 )
 from view.dialogs.file_transfer_dialog import FileTransferDialog
+from view.managers.color_manager import color_manager
 
 class MainPresenter(QObject):
     """
@@ -197,6 +198,8 @@ class MainPresenter(QObject):
         # 테마 적용
         theme = self.settings_manager.get(ConfigKeys.THEME, 'dark')
         self.view.switch_theme(theme)
+
+        self.view.left_section.system_log_widget.set_color_rules(color_manager.rules)
 
     def _create_initial_states(self, settings: dict) -> tuple[MainWindowState, FontConfig]:
         """
@@ -562,6 +565,10 @@ class MainPresenter(QObject):
             panel (PortPanel): 추가된 포트 패널
         """
         self._connect_single_port_logging(panel)
+
+        # Inject Color Rules into new DataLogWidget
+        if hasattr(panel, 'data_log_widget'):
+            panel.data_log_widget.set_color_rules(color_manager.rules)
 
     def _connect_single_port_logging(self, panel) -> None:
         """
