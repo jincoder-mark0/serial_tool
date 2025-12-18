@@ -11,7 +11,7 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 
 ## WHAT
 * 하위 Presenter 생성 및 연결
-* 설정 로드/저장 및 초기화 로직 (initialize_view_from_settings)
+* 설정 로드/저장 및 초기화 로직 (LifecycleManager 위임)
 * Fast Path 데이터 수신 처리 및 UI Throttling
 * 애플리케이션 종료 처리
 
@@ -31,6 +31,7 @@ from .packet_presenter import PacketPresenter
 from .manual_control_presenter import ManualControlPresenter
 from .event_router import EventRouter
 from .data_handler import DataTrafficHandler
+from .lifecycle_manager import AppLifecycleManager # [Refactor] Import LifecycleManager
 from core.command_processor import CommandProcessor
 from core.settings_manager import SettingsManager
 from core.data_logger import data_logger_manager
@@ -49,6 +50,7 @@ class MainPresenter(QObject):
     메인 프레젠터 클래스
 
     애플리케이션의 전체적인 흐름을 제어하고 하위 Presenter를 관리합니다.
+    초기화 로직은 AppLifecycleManager에 위임합니다.
     """
 
     def __init__(self, view: MainWindow) -> None:
@@ -56,64 +58,26 @@ class MainPresenter(QObject):
         MainPresenter 생성 및 초기화
 
         Logic:
-            - 설정 및 View 초기화
-            - Model 및 Core 시스템 초기화
-            - 하위 Presenter 초기화 및 의존성 주입
-            - 상태 복원 및 시그널 연결
-            - 백그라운드 서비스 시작
-
-        Args:
-            view (MainWindow): 메인 윈도우 뷰 인스턴스
+            - LifecycleManager를 통한 초기화 시퀀스 실행
         """
         super().__init__()
         self.view = view
-
-        # --- 0. 설정 로드 및 View 초기화 (MVP) ---
         self.settings_manager = SettingsManager()
+        self.status_timer = None # Initialized in LifecycleManager
 
-        # 1. 설정 로드 및 View 초기 구성
-        self._init_settings_and_view()
-
-        # 2. Model 및 Handler 초기화
-        self._init_core_systems()
-
-        # 3. Sub-Presenter 초기화
-        self._init_sub_presenters()
-
-        # 4. 하위 Presenter 상태 복원
-        self._restore_sub_presenter_states()
-
-        # 5. Fast Path 연결 (성능 최적화)
-        self.connection_controller.data_received.connect(self.data_handler.on_fast_data_received)
-
-        # 6. 이벤트 및 시그널 연결
-        self._connect_signals()
-
-        # 7. 서비스 시작 (타이머, 로깅 등)
-        self._start_services()
-
-    def _init_settings_and_view(self) -> None:
-        """설정 로드 및 View 초기화"""
-        # 설정 초기화 알림 체크
-        if self.settings_manager.config_was_reset:
-            reason = self.settings_manager.reset_reason
-            self.view.show_alert_message(
-                "Settings Reset",
-                f"Configuration file corrupted or invalid.\nDefaults restored.\n\nReason: {reason}"
-            )
-
-        # View 초기화 로직 수행
-        self.initialize_view_from_settings()
+        # LifecycleManager를 통해 초기화 위임
+        self.lifecycle_manager = AppLifecycleManager(self)
+        self.lifecycle_manager.initialize_app()
 
     def _init_core_systems(self) -> None:
-        """Model 및 Core 시스템 초기화"""
+        """Model 및 Core 시스템 초기화 (LifecycleManager에서 호출)"""
         self.connection_controller = ConnectionController()
         self.macro_runner = MacroRunner()
         self.event_router = EventRouter()
         self.data_handler = DataTrafficHandler(self.view)
 
     def _init_sub_presenters(self) -> None:
-        """하위 Presenter 인스턴스 생성 및 의존성 주입"""
+        """하위 Presenter 인스턴스 생성 (LifecycleManager에서 호출)"""
         # Port Control
         self.port_presenter = PortPresenter(self.view.port_view, self.connection_controller)
 
@@ -137,27 +101,6 @@ class MainPresenter(QObject):
             self.view.append_local_echo_data,
             self.port_presenter.get_active_port_name
         )
-
-    def _restore_sub_presenter_states(self) -> None:
-        """
-        하위 Presenter의 상태 복원 (설정 파일 기반)
-        """
-        all_settings = self.settings_manager.get_all_settings()
-        window_state, _ = self._create_initial_states(all_settings)
-
-        # ManualControl 상태 복원
-        manual_settings_dict = window_state.left_section_state.get("manual_control", {}).get("manual_control_widget", {})
-        manual_state_dto = ManualControlState(
-            input_text=manual_settings_dict.get("input_text", ""),
-            hex_mode=manual_settings_dict.get("hex_mode", False),
-            prefix_chk=manual_settings_dict.get("prefix_chk", False),
-            suffix_chk=manual_settings_dict.get("suffix_chk", False),
-            rts_chk=manual_settings_dict.get("rts_chk", False),
-            dtr_chk=manual_settings_dict.get("dtr_chk", False),
-            local_echo_chk=manual_settings_dict.get("local_echo_chk", False),
-            broadcast_chk=manual_settings_dict.get("broadcast_chk", False)
-        )
-        self.manual_control_presenter.load_state(manual_state_dto)
 
     def _connect_signals(self) -> None:
         """
@@ -196,99 +139,12 @@ class MainPresenter(QObject):
         self.view.file_transfer_dialog_opened.connect(self.file_presenter.on_file_transfer_dialog_opened)
         self.view.port_tab_added.connect(self._on_port_tab_added)
 
-        # 로깅 시그널 연결 (포트별 로깅 제어)
+        # 로깅 시그널 연결
         self._connect_logging_signals()
-
-    def _start_services(self) -> None:
-        """
-        백그라운드 서비스 및 타이머 시작
-        """
-        self.status_timer = QTimer()
-        self.status_timer.timeout.connect(self.update_status_bar)
-        self.status_timer.start(1000)
-
-        self.view.log_system_message("Application initialized", "INFO")
-
-    def initialize_view_from_settings(self) -> None:
-        """
-        설정 파일에서 값을 읽어 View의 초기 상태를 구성합니다.
-        """
-        all_settings = self.settings_manager.get_all_settings()
-        window_state, font_config = self._create_initial_states(all_settings)
-
-        # View에 설정 주입하여 초기 상태 복원
-        self.view.apply_state(window_state, font_config)
-
-        # 테마 적용
-        theme = self.settings_manager.get(ConfigKeys.THEME, 'dark')
-        self.view.switch_theme(theme)
-
-        self.view.left_section.system_log_widget.set_color_rules(color_manager.rules)
-
-    def _create_initial_states(self, settings: dict) -> tuple[MainWindowState, FontConfig]:
-        """
-        설정 딕셔너리를 DTO로 변환하는 헬퍼 메서드
-
-        Args:
-            settings (dict): 설정 딕셔너리
-
-        Returns:
-            tuple[MainWindowState, FontConfig]: MainWindowState와 FontConfig DTO
-        """
-        def get_val(path, default=None):
-            """
-            설정 딕셔너리에서 값을 가져오는 헬퍼 메서드
-
-            Args:
-                path (str): 설정 키 경로 (점으로 구분된 문자열)
-                default (any, optional): 기본값. Defaults to None.
-
-            Returns:
-                any: 설정 값 또는 기본값
-            """
-            keys = path.split('.')
-            val = settings
-            try:
-                for k in keys: val = val.get(k, {})
-                return val if val != {} else default
-            except AttributeError: return default
-
-        window_state = MainWindowState(
-            width=get_val(ConfigKeys.WINDOW_WIDTH, 1400),
-            height=get_val(ConfigKeys.WINDOW_HEIGHT, 900),
-            x=get_val(ConfigKeys.WINDOW_X),
-            y=get_val(ConfigKeys.WINDOW_Y),
-            splitter_state=get_val(ConfigKeys.SPLITTER_STATE),
-            right_panel_visible=get_val(ConfigKeys.RIGHT_PANEL_VISIBLE, True),
-            saved_right_width=get_val(ConfigKeys.SAVED_RIGHT_WIDTH),
-            left_section_state={
-                "manual_control": get_val(ConfigKeys.MANUAL_CONTROL_STATE, {}),
-                "ports": get_val(ConfigKeys.PORTS_TABS_STATE, [])
-            },
-            right_section_state={
-                "macro_panel": {
-                    "commands": get_val(ConfigKeys.MACRO_COMMANDS, []),
-                    "control_state": get_val(ConfigKeys.MACRO_CONTROL_STATE, {})
-                }
-            }
-        )
-
-        # FontConfig 생성
-        font_config = FontConfig(
-            prop_family=get_val(ConfigKeys.PROP_FONT_FAMILY, "Segoe UI"),
-            prop_size=get_val(ConfigKeys.PROP_FONT_SIZE, 9),
-            fixed_family=get_val(ConfigKeys.FIXED_FONT_FAMILY, "Consolas"),
-            fixed_size=get_val(ConfigKeys.FIXED_FONT_SIZE, 9)
-        )
-
-        return window_state, font_config
 
     def on_preferences_requested(self) -> None:
         """
-        설정을 변경할 수 있는 PreferencesDialog를 표시합니다.
-
-        Returns:
-            PreferencesState: 변경된 설정 DTO
+        설정을 변경할 수 있는 PreferencesDialog를 표시
         """
         settings = self.settings_manager
         state = PreferencesState(
@@ -321,7 +177,8 @@ class MainPresenter(QObject):
         애플리케이션 종료 처리
         """
         self.data_handler.stop()
-        self.status_timer.stop()
+        if self.status_timer:
+            self.status_timer.stop()
 
         state = self.view.get_window_state()
         manual_state_dto = self.manual_control_presenter.get_state()
@@ -365,16 +222,7 @@ class MainPresenter(QObject):
 
     def on_settings_change_requested(self, new_state: PreferencesState) -> None:
         """
-        설정 저장 요청 처리
-
-        Logic:
-            - 설정값 매핑 및 타입 변환
-            - SettingsManager 업데이트
-            - UI 테마/언어 즉시 적용
-            - 하위 Presenter 설정 전파
-
-        Args:
-            new_state (PreferenceState) : 변경할 설정
+        설정 변경 요청 처리
         """
         settings = self.settings_manager
         settings.set(ConfigKeys.THEME, new_state.theme.lower())
@@ -573,9 +421,6 @@ class MainPresenter(QObject):
         self.port_presenter.clear_log_current_port()
 
     def _connect_logging_signals(self) -> None:
-        """
-        포트 탭 로깅 시그널 연결
-        """
         count = self.view.get_port_tabs_count()
         for i in range(count):
             widget = self.view.get_port_tab_widget(i)
@@ -589,8 +434,7 @@ class MainPresenter(QObject):
             panel (PortPanel): 추가된 포트 패널
         """
         self._connect_single_port_logging(panel)
-
-        # Inject Color Rules into new DataLogWidget
+        # [Refactor] Inject Color Rules into new DataLogWidget
         if hasattr(panel, 'data_log_widget'):
             panel.data_log_widget.set_color_rules(color_manager.rules)
 
