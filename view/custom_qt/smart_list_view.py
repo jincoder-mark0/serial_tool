@@ -29,13 +29,13 @@ from PyQt5.QtCore import (
     QSortFilterProxyModel, QTimer, QDateTime
 )
 from PyQt5.QtGui import (
-    QColor, QTextDocument, QAbstractTextDocumentLayout, QTextCharFormat, QPainter
+    QColor, QTextDocument, QAbstractTextDocumentLayout, QTextCharFormat, QPainter, QPalette
 )
 
 from common.constants import DEFAULT_LOG_MAX_LINES, TRIM_CHUNK_RATIO
 from common.dtos import ColorRule
 from view.services.color_service import ColorService
-from view.managers.theme_manager import ThemeManager # Import
+from view.managers.theme_manager import ThemeManager
 
 class QSmartListView(QListView):
     """
@@ -92,6 +92,7 @@ class QSmartListView(QListView):
 
         # ColorManager 의존성 제거 -> ColorRule 리스트 사용
         self._color_rules: List[ColorRule] = []
+        self._theme_manager = ThemeManager()
 
         self._last_data_time = None
 
@@ -851,6 +852,7 @@ class LogDelegate(QStyledItemDelegate):
     """
     로그 아이템의 렌더링을 담당하는 델리게이트 클래스입니다.
 
+    paint 시점에 QPalette에서 현재 텍스트 색상을 가져와 HTML에 강제로 적용
     HTML 텍스트 렌더링 및 검색어 하이라이트 기능을 수행
     """
     def __init__(self, parent=None):
@@ -889,40 +891,46 @@ class LogDelegate(QStyledItemDelegate):
         """
         painter.save()
 
-        # 테마 색상 적용
-        # QTextDocument는 기본적으로 검은색 글자를 사용하므로,
-        # 테마가 다크 모드일 때 글자가 안 보이는 문제를 해결하기 위해
-        # option.palette에서 텍스트 색상을 가져와 기본 스타일시트로 설정합니다.
-        text_color = option.palette.text().color()
-        self.doc.setDefaultStyleSheet(f"body {{ color: {text_color.name()}; }}")
-
-        # 선택된 항목 배경 그리기
+        # 1. 배경 그리기
+        # 선택된 항목의 배경색 처리 (기본 스타일 준수)
         if option.state & QStyle.State_Selected:
             painter.fillRect(option.rect, option.palette.highlight())
 
-            # 선택된 경우 텍스트 색상을 HighlightedText 색상으로 변경 (선택적)
-            # highlighted_text_color = option.palette.highlightedText().color()
-            # self.doc.setDefaultStyleSheet(f"body {{ color: {highlighted_text_color.name()}; }}")
+        # 2. 텍스트 색상 결정 (테마 및 선택 상태 반영)
+        # 선택된 상태라면 HighlightedText 색상, 아니면 일반 Text 색상 사용
+        if option.state & QStyle.State_Selected:
+            text_color = option.palette.highlightedText().color().name()
+        else:
+            text_color = option.palette.text().color().name()
 
-        # 데이터 설정
-        text = index.data(Qt.DisplayRole)
+        # 3. 데이터 설정 및 HTML 래핑
+        # QTextDocument는 기본적으로 검은색을 사용하므로,
+        # 현재 테마의 색상을 적용한 <div> 태그로 감싸서 색상을 강제합니다.
+        raw_text = index.data(Qt.DisplayRole)
+
+        # 문서 기본 폰트 설정
         self.doc.setDefaultFont(option.font)
-        self.doc.setHtml(text)
 
-        # 정규식 객체를 사용하여 검색 및 하이라이트
+        # 색상이 적용된 HTML 생성
+        # 이미 HTML 태그(span style=...)가 있는 부분은 그 색상이 우선 적용되고,
+        # 그렇지 않은 일반 텍스트는 여기서 지정한 text_color를 따르게 됩니다.
+        styled_html = f'<div style="color: {text_color};">{raw_text}</div>'
+        self.doc.setHtml(styled_html)
+
+        # 4. 검색 하이라이트 적용
         if self.search_pattern and not self.search_pattern.isEmpty():
             cursor = self.doc.find(self.search_pattern)
             while not cursor.isNull():
                 cursor.mergeCharFormat(self.highlight_format)
                 cursor = self.doc.find(self.search_pattern, cursor)
 
-        # 그리기 위치 조정
+        # 5. 그리기
         painter.translate(option.rect.left(), option.rect.top())
-
-        # 클리핑 설정 (셀 영역 밖으로 나가지 않도록)
         ctx = QAbstractTextDocumentLayout.PaintContext()
-        # 선택된 텍스트의 글자색 처리 (QTextDocument는 기본적으로 HTML 색상 우선)
-        # 필요하다면 ctx.palette를 조작할 수 있음
+
+        # 선택된 경우 텍스트 색상 강제 조정 (QPalette 활용)
+        if option.state & QStyle.State_Selected:
+            ctx.palette.setColor(QPalette.Text, option.palette.highlightedText().color())
 
         self.doc.documentLayout().draw(painter, ctx)
         painter.restore()
