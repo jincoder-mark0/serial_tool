@@ -32,6 +32,7 @@ from common.constants import DEFAULT_BAUDRATE, DEFAULT_LOG_MAX_LINES
 from core.settings_schema import CORE_SETTINGS_SCHEMA
 from core.logger import logger
 import os
+from common.defaults import create_fallback_settings
 
 class SettingsManager:
     """
@@ -134,7 +135,7 @@ class SettingsManager:
                 # 마이그레이션 후 저장
                 self._save_to_file(loaded_settings)
 
-            # JSON Schema 검증
+            # JSON Schema 검증 (Optional: 스키마가 있다면)
             validate(instance=loaded_settings, schema=CORE_SETTINGS_SCHEMA)
 
             # 검증 성공 시 설정 적용 (기본값 위에 덮어쓰기하여 누락된 키 보완)
@@ -318,30 +319,7 @@ class SettingsManager:
     @staticmethod
     def _get_fallback_settings() -> Dict[str, Any]:
         """
-        기본 설정 파일 로드 실패 시 사용할 최소 설정을 반환합니다.
-
-        Returns:
-            Dict[str, Any]: 최소 설정 딕셔너리.
+        기본 설정값을 반환합니다.
+        실제 데이터는 common/defaults.py에서 관리합니다.
         """
-        return {
-            "version": "1.0",
-            "global": {
-                "theme": "dark",
-                "language": "ko"
-            },
-            "ui": {
-                "rx_max_lines": DEFAULT_LOG_MAX_LINES,
-                "proportional_font_family": "Segoe UI",
-                "proportional_font_size": 9,
-                "fixed_font_family": "Consolas",
-                "fixed_font_size": 9
-            },
-            "ports": {
-                "default_config": {
-                    "baudrate": DEFAULT_BAUDRATE,
-                    "parity": "N",
-                    "bytesize": 8,
-                    "stopbits": 1
-                }
-            }
-        }
+        return create_fallback_settings()

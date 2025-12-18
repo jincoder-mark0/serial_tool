@@ -245,7 +245,7 @@ class MacroControlWidget(QWidget):
         # 설정 입력 필드는 항상 활성화 유지할지, 비활성화할지 결정 가능
         # 여기서는 편의상 입력은 허용하되 실행만 막음
 
-    def save_state(self) -> dict:
+    def get_state(self) -> dict:
         """
         현재 위젯의 상태를 딕셔너리로 반환합니다.
 
@@ -259,7 +259,7 @@ class MacroControlWidget(QWidget):
         }
         return state
 
-    def load_state(self, state: dict) -> None:
+    def apply_state(self, state: dict) -> None:
         """
         저장된 상태를 위젯에 적용합니다.
 

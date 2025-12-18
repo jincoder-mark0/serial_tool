@@ -497,7 +497,7 @@ class MacroListWidget(QWidget):
         else:  # Qt.Unchecked
             self.set_all_checked(False)
 
-    def save_state(self) -> list:
+    def get_state(self) -> list:
         """
         현재 Command 목록을 리스트로 반환합니다.
 
@@ -507,7 +507,7 @@ class MacroListWidget(QWidget):
         commands = self.export_macros()
         return commands
 
-    def load_state(self, state: list) -> None:
+    def apply_state(self, state: list) -> None:
         """
         저장된 Command 목록을 위젯에 적용합니다.
 

@@ -112,9 +112,17 @@ class PortPanel(QWidget):
         """
         현재 선택된 포트 이름을 반환합니다.
 
+        Logic:
+            - 콤보박스의 텍스트(예: "COM1 (Serial Port)") 대신
+            - 내부 데이터(예: "COM1")를 우선적으로 반환하여 설명 문자열을 제외합니다.
+
         Returns:
             str: 포트 이름.
         """
+        # [Fix] Use itemData (clean port name) instead of currentText (display text with description)
+        port_data = self.port_settings_widget.port_combo.currentData()
+        if port_data:
+            return str(port_data)
         return self.port_settings_widget.port_combo.currentText()
 
     def get_tab_title(self) -> str:
@@ -146,7 +154,7 @@ class PortPanel(QWidget):
         return {
             "custom_name": self.custom_name,
             "port_settings_widget": self.port_settings_widget.get_state(),
-            "data_log_widget": self.data_log_widget.save_state() # DataLogWidget은 내부적으로 save_state 유지
+            "data_log_widget": self.data_log_widget.get_state() # DataLogWidget은 내부적으로 get_state 유지
         }
 
     def apply_state(self, state: dict) -> None:
@@ -160,5 +168,5 @@ class PortPanel(QWidget):
             return
         self.custom_name = state.get("custom_name", "Port")
         self.port_settings_widget.apply_state(state.get("port_settings_widget", {}))
-        self.data_log_widget.load_state(state.get("data_log_widget", {})) # DataLogWidget은 내부적으로 load_state 유지
+        self.data_log_widget.apply_state(state.get("data_log_widget", {})) # DataLogWidget은 내부적으로 apply_state 유지
         self.update_tab_title()

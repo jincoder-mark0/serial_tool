@@ -122,7 +122,7 @@ class AppLifecycleManager:
             local_echo_chk=manual_settings.get("local_echo_chk", False),
             broadcast_chk=manual_settings.get("broadcast_chk", False)
         )
-        self.mp.manual_control_presenter.load_state(manual_state_dto)
+        self.mp.manual_control_presenter.apply_state(manual_state_dto)
 
     def _start_services(self) -> None:
         """

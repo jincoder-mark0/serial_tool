@@ -290,7 +290,7 @@ class SystemLogWidget(QWidget):
     # -------------------------------------------------------------------------
     # 설정 및 상태 관리
     # -------------------------------------------------------------------------
-    def save_state(self) -> dict:
+    def get_state(self) -> dict:
         """
         현재 상태를 저장합니다.
 
@@ -303,7 +303,7 @@ class SystemLogWidget(QWidget):
         }
         return state
 
-    def load_state(self, state: dict) -> None:
+    def apply_state(self, state: dict) -> None:
         """
         저장된 상태 딕셔너리를 UI에 적용합니다.
 

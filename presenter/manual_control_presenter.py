@@ -168,7 +168,7 @@ class ManualControlPresenter(QObject):
         현재 상태(UI 상태)를 DTO로 반환
         """
         # View의 UI 상태 가져오기 (dict)
-        # Refactor: save_state -> get_state
+        # Refactor: get_state -> get_state
         ui_state = self.view.get_state()
 
         # DTO 생성 (내부 manual_control_widget 키에서 데이터 추출)
@@ -184,7 +184,7 @@ class ManualControlPresenter(QObject):
             broadcast_chk=manual_control_widget.get("broadcast_chk", False)
         )
 
-    def load_state(self, state: ManualControlState) -> None:
+    def apply_state(self, state: ManualControlState) -> None:
         """
         저장된 상태 DTO를 복원
         """
@@ -204,5 +204,5 @@ class ManualControlPresenter(QObject):
                 "broadcast_chk": state.broadcast_chk
             }
         }
-        # Refactor: load_state -> apply_state
+        # Refactor: apply_state -> apply_state
         self.view.apply_state(view_state)

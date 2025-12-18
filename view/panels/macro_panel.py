@@ -87,7 +87,7 @@ class MacroPanel(QWidget):
 
         Logic:
             1. 파일 저장 다이얼로그 표시
-            2. 사용자가 경로 선택 시 현재 상태(save_state) 수집
+            2. 사용자가 경로 선택 시 현재 상태(get_state) 수집
             3. DTO 생성 후 Presenter에 전달
         """
         filter_str = "JSON Files (*.json);;All Files (*)"
@@ -99,7 +99,7 @@ class MacroPanel(QWidget):
         )
 
         if path:
-            data = self.save_state()
+            data = self.get_state()
             # DTO 생성
             script_data = MacroScriptData(filepath=path, data=data)
             self.script_save_requested.emit(script_data)
@@ -143,7 +143,7 @@ class MacroPanel(QWidget):
         """
         QMessageBox.information(self, title, message)
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def apply_state(self, state: Dict[str, Any]) -> None:
         """
         외부에서 전달받은 상태 딕셔너리를 UI에 적용합니다.
 
@@ -155,16 +155,16 @@ class MacroPanel(QWidget):
             # 커맨드 리스트 로드
             commands = state.get("commands", [])
             if commands:
-                self.macro_list.load_state(commands)
+                self.macro_list.apply_state(commands)
 
             # 컨트롤 설정 로드
             control_state = state.get("control_state", {})
             if control_state:
-                self.marco_control.load_state(control_state)
+                self.marco_control.apply_state(control_state)
         finally:
             self._loading = False
 
-    def save_state(self) -> Dict[str, Any]:
+    def get_state(self) -> Dict[str, Any]:
         """
         현재 패널의 상태를 딕셔너리로 반환합니다.
 
@@ -172,8 +172,8 @@ class MacroPanel(QWidget):
             Dict[str, Any]: 현재 패널 상태 데이터.
         """
         return {
-            "commands": self.macro_list.save_state(),
-            "control_state": self.marco_control.save_state()
+            "commands": self.macro_list.get_state(),
+            "control_state": self.marco_control.get_state()
         }
 
     def on_repeat_start_requested(self, option: MacroRepeatOption) -> None:

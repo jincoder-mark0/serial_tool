@@ -10,15 +10,47 @@
     "proportional_font_size": 9,
     "fixed_font_family": "Consolas",
     "fixed_font_size": 9,
-    "window_width": 1332,
+    "window_width": 860,
     "window_height": 860,
     "window_x": 283,
     "window_y": 53,
     "splitter_state": "AAAA/wAAAAEAAAACAAADVwAAAdUB/////wEAAAABAA==",
-    "right_section_visible": true,
+    "right_section_visible": false,
     "saved_right_section_width": 469
   },
+  "serial": {
+    "baudrate": 115200,
+    "parity": "N",
+    "bytesize": 8,
+    "stopbits": 1,
+    "flowctrl": "None",
+    "newline": "LF",
+    "local_echo": false,
+    "scan_interval": 1000
+  },
+  "command": {
+    "prefix": "",
+    "suffix": ""
+  },
+  "logging": {
+    "log_path": ""
+  },
+  "packet": {
+    "parser_type": 0,
+    "delimiters": [
+      "\\r\\n"
+    ],
+    "packet_length": 64,
+    "at_color_ok": true,
+    "at_color_error": true,
+    "at_color_urc": true,
+    "at_color_prompt": true,
+    "buffer_size": 100,
+    "realtime": true,
+    "autoscroll": true
+  },
   "ports": {
+    "tabs": [],
     "default_config": {
       "baudrate": 115200,
       "parity": "N",
@@ -29,13 +61,21 @@
   "manual_control": {
     "manual_control_widget": {
       "input_text": "",
-      "hex_mode": false,
-      "prefix_chk": false,
-      "suffix_chk": false,
+      "hex_mode": true,
+      "prefix_chk": true,
+      "suffix_chk": true,
       "rts_chk": false,
       "dtr_chk": false,
-      "local_echo_chk": false,
-      "broadcast_chk": false
+      "local_echo_chk": true,
+      "broadcast_chk": true
+    }
+  },
+  "macro_list": {
+    "commands": [],
+    "control_state": {
+      "delay": "1000",
+      "max_runs": 0,
+      "broadcast": false
     }
   }
 }

@@ -515,7 +515,7 @@ class DataLogWidget(QWidget):
         """
         return self.tx_broadcast_allow_enabled
 
-    def save_state(self) -> dict:
+    def get_state(self) -> dict:
         """
         현재 상태를 저장 (설정 저장용)
 
@@ -533,7 +533,7 @@ class DataLogWidget(QWidget):
         }
         return state
 
-    def load_state(self, state: dict) -> None:
+    def apply_state(self, state: dict) -> None:
         """
         저장된 상태 딕셔너리를 UI에 적용합니다.
 

@@ -80,7 +80,7 @@ class MainRightSection(QWidget):
 
         state = {
             "current_tab_index": self.tabs.currentIndex(), # 현재 탭 인덱스 저장
-            "macro_panel": self.macro_panel.save_state(),
+            "macro_panel": self.macro_panel.get_state(),
         }
 
         return state
@@ -93,7 +93,7 @@ class MainRightSection(QWidget):
             state (Dict[str, Any]): {'macro_panel': {...}} 구조의 데이터.
         """
         if "macro_panel" in state:
-            self.macro_panel.load_state(state["macro_panel"])
+            self.macro_panel.apply_state(state["macro_panel"])
 
         if "current_tab_index" in state:
             index = state["current_tab_index"]
