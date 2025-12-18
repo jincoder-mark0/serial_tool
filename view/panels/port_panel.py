@@ -1,23 +1,21 @@
 """
 포트 패널 모듈
 
-개별 시리얼 포트 탭의 메인 위젯 클래스입니다.
-포트 설정(PortSettings), 통신 로그(DataLogWidget), 상태 로그(PortStats) 영역을 포함합니다.
+개별 포트 탭의 메인 컨테이너로서, 설정/상태/로그 위젯을 포함합니다.
 
 ## WHY
-* 포트 단위의 독립적인 UI 컴포넌트 구성
+* 포트 단위의 독립적인 UI 컴포넌트 구성 (탭 내부 콘텐츠)
 * 하위 위젯들의 레이아웃 및 상호작용 관리
-* Presenter에 단일 접근점 제공
+* 다중 포트 지원을 위한 인스턴스화 가능한 구조
 
 ## WHAT
-* PortSettingsWidget, PortStatsWidget, DataLogWidget 배치
-* 연결/해제 토글 기능
-* 탭 제목 관리 (커스텀 이름)
-* Broadcast 허용 상태 시그널 중계
+* PortSettings, PortStats, DataLog 위젯 배치
+* 탭 제목 관리(커스텀 이름) 및 연결 상태 표시
+* 데이터 로그 추가 인터페이스
 
 ## HOW
 * QVBoxLayout 사용
-* 시그널 체이닝 (Widget -> Panel -> Presenter)
+* 하위 위젯의 시그널을 집계하여 Presenter로 전달하거나 내부 처리
 """
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtCore import pyqtSignal

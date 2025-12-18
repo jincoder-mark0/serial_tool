@@ -1,26 +1,21 @@
 """
 매크로 프레젠터 모듈
 
-View와 Model 사이의 중재자 역할을 수행하며, I/O와 Action 메서드를 명확히 분리합니다.
+매크로 실행 및 관리를 담당하는 Presenter입니다.
 
 ## WHY
-* MVP 패턴을 통해 View와 Model의 결합도를 낮춤
-* UI 이벤트를 비즈니스 로직으로 변환하여 전달
-* 매크로 실행 상태 및 파일 I/O 결과를 UI에 반영
-* 대용량 파일 로딩을 비동기 Worker로 처리하여 UI 프리징 방지
+* 매크로 UI 이벤트와 실행 엔진(Model)의 분리
+* 파일 I/O(저장/로드)와 실행 로직의 조율
+* 대용량 파일 로딩 시 UI 반응성 확보
 
 ## WHAT
-* MacroPanel(View)의 사용자 입력을 MacroRunner(Model)로 전달
-* 파일 저장/로드 로직 수행 (JSON 처리)
-* MacroRunner의 실행 상태 및 에러를 UI에 반영
-* 단일 명령 전송 요청 처리
+* MacroPanel(View)과 MacroRunner(Model) 연결
+* 스크립트 파일 저장/로드 (비동기 Worker 사용)
+* 매크로 실행/정지/일시정지 제어 및 상태 업데이트
 
 ## HOW
-* PyQt 시그널/슬롯으로 View와 Model 연결
-* commentjson(또는 json)을 사용하여 스크립트 파일 처리
-* 예외 처리(try-except)를 통해 안전한 파일 I/O 구현
-* DTO를 사용하여 데이터 전송
-* QThread 기반 비동기 로딩 (ScriptLoadWorker)
+* ScriptLoadWorker(QThread)를 통한 비동기 로딩
+* DTO(MacroScriptData)를 사용한 데이터 전달
 """
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 from typing import List, Dict, Any

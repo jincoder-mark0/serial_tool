@@ -7,18 +7,16 @@
 * 단일 연결에 대한 상태 관리 및 로직 캡슐화 필요
 * 하드웨어(Worker)와 UI(Presenter) 사이의 중재자 역할
 * 데이터 파싱 및 이벤트 전파의 중심점
-* 브로드캐스팅 및 유니캐스트 전송 로직의 중앙화
 
 ## WHAT
 * 연결 열기/닫기(Open/Close) 관리
 * Worker 스레드 관리 및 Transport 주입
-* 패킷 파싱(Parser) 연결
-* EventBus를 통한 상태 및 데이터 전파
+* 패킷 파싱(Parser) 연결 및 데이터 브로드캐스팅
+* 파일 전송 엔진 등록 및 관리
 
 ## HOW
-* BaseTransport 구현체(Serial 등)를 생성하여 ConnectionWorker에 주입
-* PyQt Signal을 사용하여 비동기 이벤트 처리
-* EventBus로 데이터 브로드캐스팅
+* BaseTransport 구현체를 생성하여 ConnectionWorker에 주입
+* PyQt Signal 및 EventBus를 통한 비동기 이벤트 전파
 """
 from PyQt5.QtCore import QObject, pyqtSignal
 from typing import Optional, Dict, Any, List, TYPE_CHECKING

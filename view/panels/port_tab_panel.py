@@ -1,3 +1,22 @@
+"""
+포트 탭 패널 모듈
+
+여러 개의 PortPanel을 탭 형태로 관리하는 컨테이너입니다.
+
+## WHY
+* 멀티 포트 환경에서 효율적인 공간 활용
+* 탭 추가/삭제 및 동적 관리 기능 캡슐화
+* '플러스(+)' 탭을 통한 직관적인 추가 UX 제공
+
+## WHAT
+* QTabWidget 상속 및 커스텀 동작 구현
+* 탭 추가, 닫기, 이름 변경 기능
+* 특정 포트 탭으로의 데이터 라우팅 지원
+
+## HOW
+* EventFilter를 통한 탭바 더블클릭 감지
+* 플러스 탭 로직(항상 마지막에 위치, 클릭 시 새 탭 생성) 구현
+"""
 from PyQt5.QtWidgets import QTabWidget, QWidget, QTabBar, QInputDialog
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIcon

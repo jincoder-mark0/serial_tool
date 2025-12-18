@@ -1,27 +1,21 @@
 """
 스마트 텍스트 에디터 모듈
 
-라인 번호가 표시되는 향상된 텍스트 에디터입니다.
+라인 번호가 표시되고 현재 줄을 강조하는 향상된 텍스트 에디터입니다.
 
 ## WHY
-* 코드 편집 및 로그 뷰어에서 라인 번호 필요
-* 현재 라인 하이라이트로 가독성 향상
-* QSS로 테마 커스터마이징 지원
-* 다중 라인 입력 편의성 제공
+* 로그 뷰어 및 스크립트 편집 시 가독성 향상
+* 다중 라인 데이터의 위치 파악 용이성 제공
 
 ## WHAT
 * QPlainTextEdit 기반 커스텀 위젯
-* 왼쪽 라인 번호 영역
-* 현재 라인 하이라이트
-* QSS Property로 색상 커스터마이징
-* 자동 너비 조정
+* 좌측 라인 번호 표시 영역 (LineNumberArea)
+* 현재 커서가 위치한 라인 하이라이팅
+* QSS 프로퍼티를 통한 스타일링 지원
 
 ## HOW
-* LineNumberArea Widget으로 라인 번호 표시
-* blockCountChanged Signal로 너비 자동 조정
-* QPainter로 라인 번호 렌더링
-* ExtraSelection으로 현재 라인 하이라이트
-* pyqtProperty로 QSS 스타일링 지원
+* 별도의 QWidget을 사이드바에 배치하여 페인팅 처리
+* updateRequest 및 blockCountChanged 시그널을 통한 동적 갱신
 """
 from PyQt5.QtWidgets import QWidget, QPlainTextEdit, QTextEdit
 from PyQt5.QtCore import Qt, QRect, pyqtProperty

@@ -7,19 +7,15 @@ BaseTransport 인터페이스의 구체적인 구현체를 제공합니다.
 * 하드웨어 독립성 (BaseTransport 추상화) 확보
 * PySerial 라이브러리 캡슐화로 상위 계층 의존성 제거
 * 에러 처리 및 안전한 I/O 보장
-* 다양한 통신 설정(Baudrate, Parity 등) 지원
 
 ## WHAT
 * PySerial 기반 시리얼 통신 구현
-* Non-blocking I/O 지원
-* 흐름 제어 (RTS/CTS) 설정
-* DTR/RTS 하드웨어 제어 신호 관리
+* Non-blocking I/O 및 흐름 제어 지원
 * 연결 예외 처리 및 Write Timeout 설정
 
 ## HOW
 * BaseTransport 인터페이스 구현
 * serial.Serial 객체 래핑 및 위임
-* 설정 Dictionary로 유연한 파라미터 전달
 """
 import serial
 from typing import Optional

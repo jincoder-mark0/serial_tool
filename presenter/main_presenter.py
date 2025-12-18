@@ -10,18 +10,15 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 * 전역 이벤트(EventBus) 및 설정(Settings) 중앙 제어
 
 ## WHAT
-* 하위 Presenter (Port, Macro, File, Packet, Manual) 생성 및 연결
-* View 이벤트 처리 (시그널 구독)
-* Model 상태 변화에 따른 View 업데이트 (EventRouter 활용)
-* 설정 저장/로드 및 애플리케이션 종료 처리
-* Fast Path: 고속 데이터 수신 처리를 위한 직접 연결 및 버퍼링
-* SettingsManager 주입 (DI)
+* 하위 Presenter 생성 및 연결
+* 설정 로드/저장 및 초기화 로직 (initialize_view_from_settings)
+* Fast Path 데이터 수신 처리 및 UI Throttling
+* 애플리케이션 종료 처리
 
 ## HOW
-* Signal/Slot 기반 통신
-* EventRouter를 통한 전역 이벤트 수신 및 라우팅
-* SettingsManager를 통한 설정 동기화 및 View 초기 상태 복원
-* DTO를 활용한 데이터 교환 (View 로직 제거)
+* EventRouter 및 Signal/Slot 기반 통신
+* DTO를 활용한 데이터 교환
+* SettingsManager 주입 및 관리
 """
 from PyQt5.QtCore import QObject, QTimer, QDateTime
 from view.main_window import MainWindow
@@ -38,6 +35,7 @@ from core.command_processor import CommandProcessor
 from core.settings_manager import SettingsManager
 from core.data_logger import data_logger_manager
 from view.managers.language_manager import language_manager
+from view.managers.color_manager import color_manager
 from core.logger import logger
 from common.constants import ConfigKeys, EventTopics
 from common.dtos import (
@@ -45,7 +43,6 @@ from common.dtos import (
     MainWindowState, PreferencesState, ManualControlState
 )
 from view.dialogs.file_transfer_dialog import FileTransferDialog
-from view.managers.color_manager import color_manager
 
 class MainPresenter(QObject):
     """
@@ -59,15 +56,11 @@ class MainPresenter(QObject):
         MainPresenter 생성 및 초기화
 
         Logic:
-            - SettingsManager를 통해 설정 로드
-            - 설정 초기화 여부 확인 및 경고 표시
-            - initialize_view_from_settings 메서드로 초기화 로직 분리
-            - Model 인스턴스 생성
+            - 설정 및 View 초기화
+            - Model 및 Core 시스템 초기화
             - 하위 Presenter 초기화 및 의존성 주입
-            - ManualControl 상태 복원
-            - EventRouter 및 View 시그널 연결
-            - 데이터 수신 직접 연결(Fast Path) 및 UI 버퍼링 타이머 설정
-            - 상태바 업데이트 타이머 시작
+            - 상태 복원 및 시그널 연결
+            - 백그라운드 서비스 시작
 
         Args:
             view (MainWindow): 메인 윈도우 뷰 인스턴스
@@ -78,6 +71,29 @@ class MainPresenter(QObject):
         # --- 0. 설정 로드 및 View 초기화 (MVP) ---
         self.settings_manager = SettingsManager()
 
+        # 1. 설정 로드 및 View 초기 구성
+        self._init_settings_and_view()
+
+        # 2. Model 및 Handler 초기화
+        self._init_core_systems()
+
+        # 3. Sub-Presenter 초기화
+        self._init_sub_presenters()
+
+        # 4. 하위 Presenter 상태 복원
+        self._restore_sub_presenter_states()
+
+        # 5. Fast Path 연결 (성능 최적화)
+        self.connection_controller.data_received.connect(self.data_handler.on_fast_data_received)
+
+        # 6. 이벤트 및 시그널 연결
+        self._connect_signals()
+
+        # 7. 서비스 시작 (타이머, 로깅 등)
+        self._start_services()
+
+    def _init_settings_and_view(self) -> None:
+        """설정 로드 및 View 초기화"""
         # 설정 초기화 알림 체크
         if self.settings_manager.config_was_reset:
             reason = self.settings_manager.reset_reason
@@ -86,33 +102,35 @@ class MainPresenter(QObject):
                 f"Configuration file corrupted or invalid.\nDefaults restored.\n\nReason: {reason}"
             )
 
-        # [Refactor] View 초기화 로직 분리
+        # View 초기화 로직 수행
         self.initialize_view_from_settings()
 
-        # --- 1. Model 및 Handler 초기화 ---
+    def _init_core_systems(self) -> None:
+        """Model 및 Core 시스템 초기화"""
         self.connection_controller = ConnectionController()
         self.macro_runner = MacroRunner()
         self.event_router = EventRouter()
         self.data_handler = DataTrafficHandler(self.view)
 
-        # --- 2. Sub-Presenter 초기화 ---
-        # 2.1 Port Control
+    def _init_sub_presenters(self) -> None:
+        """하위 Presenter 인스턴스 생성 및 의존성 주입"""
+        # Port Control
         self.port_presenter = PortPresenter(self.view.port_view, self.connection_controller)
 
-        # 2.2 Macro Control
+        # Macro Control
         self.macro_presenter = MacroPresenter(self.view.macro_view, self.macro_runner)
 
-        # 2.3 File Transfer
+        # File Transfer
         self.file_presenter = FilePresenter(self.connection_controller)
 
-        # 2.4 Packet Inspector
+        # Packet Inspector (SettingsManager 주입)
         self.packet_presenter = PacketPresenter(
             self.view.right_section.packet_panel,
             self.event_router,
             self.settings_manager
         )
 
-        # 2.5 Manual Control
+        # Manual Control
         self.manual_control_presenter = ManualControlPresenter(
             self.view.left_section.manual_control_panel,
             self.connection_controller,
@@ -120,12 +138,14 @@ class MainPresenter(QObject):
             self.port_presenter.get_active_port_name
         )
 
-        # ManualControl 상태 복원 (이것도 별도 메서드로 분리 가능하나 일단 유지)
-        # Note: initialize_view_from_settings가 호출된 시점에서는 아직 하위 위젯들의 상태가 완전히 복원되지 않았을 수 있음
-        # (MainWindow.apply_state에서 복원하지만, ManualControl의 개별 상태는 여기서 추가 복원)
+    def _restore_sub_presenter_states(self) -> None:
+        """
+        하위 Presenter의 상태 복원 (설정 파일 기반)
+        """
         all_settings = self.settings_manager.get_all_settings()
         window_state, _ = self._create_initial_states(all_settings)
 
+        # ManualControl 상태 복원
         manual_settings_dict = window_state.left_section_state.get("manual_control", {}).get("manual_control_widget", {})
         manual_state_dto = ManualControlState(
             input_text=manual_settings_dict.get("input_text", ""),
@@ -139,11 +159,11 @@ class MainPresenter(QObject):
         )
         self.manual_control_presenter.load_state(manual_state_dto)
 
-        # --- 3. 데이터 수신 최적화 (Fast Path) ---
-        # DataHandler로 위임
-        self.connection_controller.data_received.connect(self.data_handler.on_fast_data_received)
-
-        # --- 4. EventRouter 시그널 연결 ---
+    def _connect_signals(self) -> None:
+        """
+        EventRouter, Model, View 간의 시그널 연결
+        """
+        # EventRouter 연결
         self.event_router.port_opened.connect(self.on_port_opened)
         self.event_router.port_closed.connect(self.on_port_closed)
         self.event_router.port_error.connect(self.on_port_error)
@@ -160,10 +180,10 @@ class MainPresenter(QObject):
 
         self.event_router.settings_changed.connect(self.on_settings_change_requested)
 
-        # --- 5. 내부 Model 시그널 연결 ---
+        # 내부 Model 연결
         self.macro_runner.send_requested.connect(self.on_macro_send_requested)
 
-        # --- 6. View 시그널 연결 ---
+        # View 연결
         self.view.settings_save_requested.connect(self.on_settings_change_requested)
         self.view.font_settings_changed.connect(self.on_font_settings_changed)
         self.view.close_requested.connect(self.on_close_requested)
@@ -174,11 +194,15 @@ class MainPresenter(QObject):
         self.view.shortcut_clear_requested.connect(self.on_shortcut_clear)
 
         self.view.file_transfer_dialog_opened.connect(self.file_presenter.on_file_transfer_dialog_opened)
-
-        self._connect_logging_signals()
         self.view.port_tab_added.connect(self._on_port_tab_added)
 
-        # --- 7. 초기화 완료 ---
+        # 로깅 시그널 연결 (포트별 로깅 제어)
+        self._connect_logging_signals()
+
+    def _start_services(self) -> None:
+        """
+        백그라운드 서비스 및 타이머 시작
+        """
         self.status_timer = QTimer()
         self.status_timer.timeout.connect(self.update_status_bar)
         self.status_timer.start(1000)

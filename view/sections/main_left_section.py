@@ -1,21 +1,20 @@
 """
 메인 윈도우 좌측 섹션 모듈
 
-포트 탭과 수동 제어 패널을 포함하는 좌측 영역을 정의합니다.
+포트 탭, 수동 제어 패널, 시스템 로그를 포함하는 좌측 영역입니다.
 
 ## WHY
 * 화면 레이아웃의 논리적 구획 분리
-* 포트 관리와 제어 기능의 그룹화
+* 포트 연결 및 제어와 관련된 기능 그룹화
 
 ## WHAT
-* PortTabPanel 및 ManualControlPanel 배치
-* SystemLogWidget 배치
-* 하위 패널 간 상호작용 중재 (View 레벨)
-* 포트별 데이터 로그 전달
+* PortTabPanel, ManualControlPanel, SystemLogWidget 배치
+* 하위 패널 간의 상호작용 중재 (View 레벨)
+* Presenter와의 통신을 위한 시그널 집계
 
 ## HOW
-* QVBoxLayout으로 수직 배치
-* 시그널 중계를 통해 MainWindow와 통신
+* QVBoxLayout 및 스플리터 내 배치를 위한 구조
+* 현재 활성 탭에 대한 컨텍스트 관리
 """
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtCore import pyqtSignal

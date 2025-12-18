@@ -1,3 +1,19 @@
+"""
+파일 전송 진행률 위젯 모듈
+
+파일 전송 시 진행 상황, 속도, 남은 시간을 시각화합니다.
+
+## WHY
+* 긴 시간 소요되는 작업에 대한 사용자 피드백 필수
+* 전송 취소와 같은 제어 기능 제공
+
+## WHAT
+* ProgressBar, 상태 라벨, 속도/ETA 표시, 취소 버튼
+* 진행률 데이터(bytes, speed)를 받아 UI 갱신
+
+## HOW
+* Presenter로부터 계산된 수치를 받아 표시만 담당 (Passive View)
+"""
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QProgressBar, QLabel, QPushButton
 from PyQt5.QtCore import pyqtSignal
 from typing import Optional

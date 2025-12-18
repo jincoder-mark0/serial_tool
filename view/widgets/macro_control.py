@@ -1,3 +1,20 @@
+"""
+매크로 제어 위젯 모듈
+
+매크로 실행(반복, 간격) 설정 및 스크립트 파일 관리를 담당합니다.
+
+## WHY
+* 매크로의 실행 조건 설정 및 제어 인터페이스 필요
+* 스크립트 파일의 저장/로드 진입점
+
+## WHAT
+* 반복 횟수, 지연 시간 설정 UI
+* 시작/정지/일시정지 버튼
+* 스크립트 저장/로드 버튼
+
+## HOW
+* 사용자 입력을 DTO(MacroRepeatOption)로 변환하여 시그널 발생
+"""
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton,
     QLabel, QLineEdit, QSpinBox, QGroupBox, QGridLayout, QCheckBox

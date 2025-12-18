@@ -11,16 +11,12 @@
 ## WHAT
 * Topic 기반 Publish/Subscribe 패턴 구현
 * 스레드 안전한 이벤트 발행 및 구독
-* 동적 구독자 추가/제거 지원
-* 전역 싱글톤 인스턴스 제공 (event_bus)
-* 와일드카드 패턴 매칭 (fnmatch)
-* 디버깅 모드 지원
+* 와일드카드 패턴 매칭 (fnmatch) 및 디버깅 모드 지원
 
 ## HOW
 * PyQt의 Signal/Slot 메커니즘으로 스레드 안전성 보장
 * Dictionary 기반 토픽별 콜백 관리
-* 내부 시그널(_dispatch_signal)로 메인 스레드에서 디스패칭
-* 에러 발생 시에도 다른 구독자에게 영향 없도록 격리
+* 내부 시그널(_dispatch_signal)로 메인 스레드 디스패칭
 """
 
 import fnmatch

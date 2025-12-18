@@ -1,3 +1,21 @@
+"""
+환경 설정 대화상자 모듈
+
+애플리케이션의 전반적인 설정을 탭 형태로 관리합니다.
+
+## WHY
+* 다양한 설정을 카테고리별로 그룹화하여 사용성 향상
+* MVP 패턴에 따라 View는 설정값의 수집 및 표시만 담당
+
+## WHAT
+* 일반, 시리얼, 명령, 패킷, 로깅 등 5개 탭 구성
+* 각 설정 항목에 대한 UI 컨트롤(콤보박스, 체크박스 등) 제공
+* 설정 변경 시그널 발행 (PreferencesState DTO)
+
+## HOW
+* QTabWidget을 사용하여 섹션 분리
+* DTO(PreferencesState)를 통해 초기 상태 로드 및 변경 사항 반환
+"""
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
     QLabel, QComboBox, QSpinBox, QPushButton,

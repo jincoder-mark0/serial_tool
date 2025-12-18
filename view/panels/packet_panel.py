@@ -4,18 +4,16 @@
 PacketWidget을 래핑하고 Presenter와의 인터페이스를 제공합니다.
 
 ## WHY
-* 위젯과 패널 계층 분리
-* Presenter가 위젯 내부 구현에 덜 의존하도록 추상화 제공
-* 상단 제어 버튼(Clear 등) 배치를 위한 레이아웃 관리
+* 패킷 분석 뷰와 제어 버튼(Clear 등)의 레이아웃 관리
+* Presenter에 추상화된 데이터 입력 인터페이스 제공
 
 ## WHAT
-* PacketWidget 배치
-* Clear 버튼 추가 및 시그널 정의
-* 패킷 추가 및 설정 변경 인터페이스 제공
+* PacketWidget 배치 및 헤더(Clear 버튼) 구성
+* 패킷 데이터 추가 및 옵션 설정 메서드 제공
 
 ## HOW
-* QVBoxLayout 사용
-* 위젯 메서드 래핑 및 시그널 중계
+* QVBoxLayout 및 QHBoxLayout 사용
+* View 로직 없이 UI 조작 메서드만 노출
 """
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QPushButton
 from PyQt5.QtCore import pyqtSignal

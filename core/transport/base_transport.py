@@ -5,18 +5,16 @@
 
 ## WHY
 * 다양한 하드웨어 통신 방식을 동일한 인터페이스로 제어하기 위함
-* 상위 계층(Worker, Controller)이 구체적인 하드웨어 구현에 의존하지 않도록 분리(DIP)
-* 테스트 용이성 확보 (Mock Object 사용 가능)
+* 상위 계층(Worker)이 구체적인 하드웨어 구현에 의존하지 않도록 분리(DIP)
 
 ## WHAT
 * BaseTransport 추상 클래스 정의
-* 연결(Open/Close), 입출력(Read/Write), 상태 확인(IsOpen/InWaiting) 메서드 명세
-* 하드웨어 제어 신호(DTR/RTS) 인터페이스 제공
+* 연결, 입출력, 상태 확인 메서드 명세
+* 하드웨어 제어 신호(DTR/RTS) 인터페이스
 
 ## HOW
 * ABC(Abstract Base Class)를 상속받아 인터페이스 정의
 * @abstractmethod로 필수 구현 메서드 강제
-* 제어 신호는 선택적 구현을 위해 기본값(pass) 제공
 """
 from abc import ABC, abstractmethod
 

@@ -11,13 +11,11 @@
 ## WHAT
 * 섹션(Section) 배치 및 스플리터 관리
 * 메뉴바, 상태바 관리
-* Presenter용 공개 API 제공
-* 경고 메시지창 표시 기능
-* 데이터 로그 추가 인터페이스 (append_rx_data)
+* Presenter용 공개 API 제공 및 DTO 기반 상태 관리
 
 ## HOW
 * QMainWindow 상속
-* MVP 패턴을 위한 시그널 노출
+* MVP 패턴을 위한 시그널 노출 및 apply_state/get_state 구현
 """
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QSplitter, QApplication, QShortcut, QMessageBox

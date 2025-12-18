@@ -1,3 +1,20 @@
+"""
+메인 상태바 모듈
+
+애플리케이션 하단에 상태 정보 및 통계를 표시합니다.
+
+## WHY
+* 시스템 상태, 통신 속도, 에러 등을 실시간으로 피드백
+* 사용자에게 현재 상황을 직관적으로 전달
+
+## WHAT
+* 포트 상태, RX/TX 속도, 버퍼 점유율, 시간 표시
+* 영구 위젯(Permanent Widget) 관리
+
+## HOW
+* QStatusBar 상속
+* Presenter로부터 업데이트 요청을 받아 라벨 텍스트 갱신
+"""
 from PyQt5.QtWidgets import QStatusBar, QLabel, QProgressBar
 from PyQt5.QtCore import Qt
 from view.managers.language_manager import language_manager

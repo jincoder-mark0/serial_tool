@@ -2,21 +2,17 @@
 데이터 처리 핸들러 모듈
 
 Fast Path를 통한 고속 데이터 수신 처리 및 UI 업데이트 스로틀링 로직을 담당합니다.
-MainPresenter의 역할을 분담하여 책임을 명확히 합니다.
 
 ## WHY
-* MainPresenter의 비대화 방지
-* 데이터 흐름(Data Flow) 로직의 캡슐화
+* MainPresenter의 비대화 방지 및 데이터 흐름 로직 캡슐화
 * 고속 처리 로직의 독립적 관리
-* [Refactor] View 내부 구조에 대한 의존성 제거 (Decoupling)
+* View 내부 구조에 대한 의존성 제거 (Decoupling)
 
 ## WHAT
 * Fast Path 수신 처리 (로깅, 통계 집계)
-* UI 업데이트 버퍼링 및 플러싱
-* DataLogger 연동
+* UI 업데이트 버퍼링 및 플러싱 (Throttling)
 
 ## HOW
-* ConnectionController와 직접 시그널 연결
 * QTimer를 사용한 배치 처리
 * View Interface (append_rx_data) 호출을 통한 UI 갱신
 """

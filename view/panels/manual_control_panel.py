@@ -5,17 +5,17 @@ ManualControlWidget을 래핑하여 섹션에 통합합니다.
 
 ## WHY
 * 위젯과 레이아웃 관리의 분리
-* 하위 위젯 시그널의 상위 전파(Bubbling)를 통한 캡슐화 유지
 * Presenter가 내부 위젯 구조를 알 필요 없도록 추상화
+* 패널 단위의 상태 관리
 
 ## WHAT
 * ManualControlWidget 생성 및 배치
-* 하위 위젯의 사용자 입력/제어 시그널 중계
-* 상태 저장 및 복원 인터페이스 제공
+* 송신 요청 및 제어 신호(RTS/DTR) 중계
+* 상태 저장 및 복원 인터페이스
 
 ## HOW
-* QVBoxLayout 사용
-* Signal Chain 패턴 적용 (Widget -> Panel -> Presenter)
+* 단순 래퍼(Wrapper) 구조
+* 시그널 체이닝 (Widget -> Panel -> Presenter)
 """
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtCore import pyqtSignal

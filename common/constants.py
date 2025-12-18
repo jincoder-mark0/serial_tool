@@ -13,18 +13,13 @@
 * 버퍼 및 성능 설정 (RingBuffer, Queue, Batch)
 * UI 제한값 및 기본값 (Log Lines, Scan Interval)
 * 타이밍 상수 (Worker Sleep, UI Refresh)
-* 로그 색상 정의
-* ConfigKeys: 설정 키 상수 모음
-* EventTopics: 이벤트 버스 토픽 상수 모음
-* Platform & Filters: 시스템 및 파일 관련 상수
+* 로그 색상 정의 및 ConfigKeys, EventTopics
 
 ## HOW
 * 대문자 Snake Case로 상수 명명
 * 타입 힌트로 타입 명시
-* 주석으로 단위 및 의미 설명
 * 논리적 그룹으로 섹션 구분
 """
-
 from typing import List
 
 # ==========================================

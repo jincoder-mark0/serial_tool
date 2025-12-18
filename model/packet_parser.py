@@ -1,29 +1,21 @@
 """
 패킷 파서 모듈
 
-수신 데이터를 다양한 방식으로 파싱하는 파서들을 제공합니다.
+수신 데이터를 다양한 방식으로 파싱하는 파서들과 Expect 매처를 제공합니다.
 
 ## WHY
-* 프로토콜별 데이터 파싱 지원
-* 버퍼 오버플로우 방지
-* 패킷 단위 처리로 데이터 무결성 보장
-* 확장 가능한 파서 아키텍처 (전략 패턴)
-* 매크로의 Expect 기능 지원 (패턴 매칭)
+* 프로토콜별 데이터 파싱 지원 (AT, Hex, Delimiter 등)
+* 버퍼 오버플로우 방지 및 데이터 무결성 보장
+* 매크로의 Expect 기능 지원
 
 ## WHAT
-* PacketParser 추상 클래스 정의 (구 IPacketParser)
-* RawParser (바이너리 그대로 전달)
-* ATParser (AT Command, \\r\\n 구분)
-* DelimiterParser (사용자 정의 구분자)
-* FixedLengthParser (고정 길이 패킷)
-* ExpectMatcher (정규식 기반 응답 대기)
-* ParserFactory (파서 생성 팩토리)
+* PacketParser 추상 클래스 및 구현체 (Raw, AT, Delimiter, FixedLength)
+* ExpectMatcher: 정규식 기반 응답 대기 매처
+* ParserFactory: 파서 생성 팩토리
 
 ## HOW
-* ABC로 인터페이스 정의
-* 내부 버퍼로 불완전한 패킷 보관
-* 버퍼 크기 제한으로 메모리 보호
-* Packet dataclass로 타임스탬프 및 메타데이터 포함
+* 전략 패턴을 사용하여 파서 알고리즘 캡슐화
+* 내부 버퍼 관리로 불완전한 패킷 처리
 """
 from abc import ABC, abstractmethod
 from typing import List, Optional

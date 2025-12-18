@@ -1,3 +1,20 @@
+"""
+포트 통계 위젯 모듈
+
+현재 연결된 포트의 통신 통계 정보를 표시합니다.
+
+## WHY
+* 데이터 송수신량 및 에러 발생 여부 모니터링
+* 연결 지속 시간(Uptime) 확인
+
+## WHAT
+* RX/TX 바이트 수, 에러 카운트, 가동 시간 표시
+* 마지막 수신 시간 표시
+
+## HOW
+* QGroupBox 내 그리드 레이아웃으로 라벨 배치
+* 외부에서 데이터를 주입받아 텍스트 갱신
+"""
 from PyQt5.QtWidgets import QWidget, QGroupBox, QGridLayout, QLabel
 from view.managers.language_manager import language_manager
 

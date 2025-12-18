@@ -4,20 +4,18 @@
 패킷 인스펙터의 비즈니스 로직을 담당합니다.
 
 ## WHY
-* 패킷 데이터의 포맷팅 및 가공 로직을 View에서 분리
-* Model 이벤트(packet_received)와 View 업데이트 연결
-* 사용자 설정(설정값) 반영 및 Clear 동작 처리
+* 패킷 데이터 포맷팅 로직을 View에서 분리
+* Model 이벤트와 View 업데이트 연결
+* 사용자 설정(Buffer Size, Scroll) 반영
 
 ## WHAT
-* 패킷 수신 이벤트 처리 및 데이터 포맷팅
+* 패킷 수신 이벤트 처리 및 데이터 포맷팅 (Hex/ASCII/Time)
 * View의 Clear 요청 처리
-* 설정값(Buffer Size, Autoscroll) 로드 및 적용
-* 설정 변경 이벤트에 따른 즉시 업데이트
+* 설정 변경에 따른 뷰 옵션 업데이트
 
 ## HOW
 * EventRouter 시그널 구독
-* SettingsManager 주입 (Dependency Injection)
-* View 인터페이스(PacketPanel) 호출
+* SettingsManager 주입 (DI)
 """
 from PyQt5.QtCore import QObject, QDateTime
 from view.panels.packet_panel import PacketPanel

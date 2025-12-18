@@ -2,11 +2,9 @@
 연결 워커 모듈
 
 BaseTransport 인터페이스를 사용하여 하드웨어 독립적인 I/O 처리를 수행합니다.
-UI/Settings 접근 금지 규칙 준수
 
 ## WHY
 * UI Thread 블로킹 방지 (별도 Thread에서 I/O 처리)
-* 하드웨어 독립성 (BaseTransport 추상화 활용)
 * 효율적인 데이터 처리 (Batch 처리, Queue 기반 전송)
 * Thread-safe한 송수신 보장
 
@@ -14,18 +12,13 @@ UI/Settings 접근 금지 규칙 준수
 * 별도 Thread에서 데이터 송수신 루프 실행
 * Batch 처리로 Signal 발행 빈도 최적화
 * Thread-safe Queue 기반 비동기 전송
-* DTR/RTS 하드웨어 제어 신호 지원
 * 연결 상태 모니터링 및 이벤트 발행
-* Broadcast 수신 허용 상태 관리
 
 ## HOW
 * QThread 상속으로 별도 Thread 실행
 * BaseTransport로 하드웨어 추상화
-* ThreadSafeQueue로 비동기 전송 처리
-* Batch buffer로 수신 데이터 집계 후 발행
 * QMutex로 Thread-safe 상태 관리
 """
-
 import time
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QMutexLocker, QObject
 from typing import Optional

@@ -1,8 +1,21 @@
 """
 매크로 리스트 위젯 모듈
 
-매크로(Command) 목록을 관리하고 UI에 표시합니다.
-[Refactor] 데이터 추출/주입 메서드명을 export/import로 변경하여 동작의 성격을 명확히 했습니다.
+전송할 명령어 목록을 테이블 형태로 관리합니다.
+
+## WHY
+* 다수의 명령어를 순차적으로 관리하고 편집할 UI 필요
+* 각 명령어별 옵션(Hex, Delay 등) 설정 지원
+
+## WHAT
+* QTableView 기반 명령어 목록 표시
+* 행 추가/삭제/이동 및 컨텍스트 메뉴
+* 체크박스를 통한 활성화/비활성화 제어
+* 데이터의 Export/Import 기능
+
+## HOW
+* QStandardItemModel 사용
+* 드래그 앤 드롭 및 키보드 조작 지원
 """
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableView, QPushButton,

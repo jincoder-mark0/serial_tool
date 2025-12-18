@@ -1,3 +1,21 @@
+"""
+메인 메뉴바 모듈
+
+애플리케이션의 상단 메뉴 구성을 담당합니다.
+
+## WHY
+* 기능 접근성 향상 및 단축키 안내
+* 테마, 언어 등 동적 메뉴 항목의 관리
+
+## WHAT
+* File, View, Tools, Help 메뉴 구성
+* 동적 테마/언어 목록 스캔 및 메뉴 아이템 생성
+* 각 액션에 대한 시그널 정의
+
+## HOW
+* QMenuBar 상속
+* ThemeManager/LanguageManager와 연동하여 메뉴 아이템 동적 생성
+"""
 from PyQt5.QtWidgets import QMenuBar, QAction, QActionGroup
 from PyQt5.QtCore import pyqtSignal
 

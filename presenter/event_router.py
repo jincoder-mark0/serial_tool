@@ -5,21 +5,15 @@ EventBus와 Presenter/View 사이의 이벤트를 라우팅합니다.
 
 ## WHY
 * EventBus의 범용 이벤트를 PyQt Signal로 변환하여 타입 안전성 확보
-* UI Thread에서 안전한 이벤트 처리 보장 (Qt Signal/Slot 메커니즘 활용)
-* Model 이벤트를 Presenter가 쉽게 구독할 수 있도록 중재
+* UI Thread에서 안전한 이벤트 처리 보장
 
 ## WHAT
 * EventBus 이벤트 구독 및 PyQt Signal 발행
-* 포트 이벤트 라우팅 (Open, Close, Error, RX/TX Data, Packet)
-* 매크로 이벤트 라우팅 (Start, Finish, Error)
-* 파일 전송 이벤트 라우팅 (Progress, Complete, Error)
-* 설정 변경 이벤트 라우팅
+* 포트, 매크로, 파일, 시스템 이벤트 라우팅
 
 ## HOW
 * QObject 상속으로 PyQt Signal 제공
-* EventBus.subscribe로 이벤트 구독
-* 콜백에서 DTO 데이터를 추출하여 PyQt Signal emit
-* Legacy Dict 지원 제거 및 Pure DTO 전환
+* EventBus.subscribe로 이벤트 구독 후 Signal emit
 """
 from PyQt5.QtCore import QObject, pyqtSignal
 from core.event_bus import event_bus

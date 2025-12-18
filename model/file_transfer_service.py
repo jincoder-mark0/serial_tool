@@ -2,7 +2,6 @@
 파일 전송 서비스 모듈
 
 파일 전송 로직을 담당하는 엔진을 정의합니다.
-기존 'model/file_transfer.py'에서 'model/file_transfer_service.py'로 리네임되었습니다.
 
 ## WHY
 * 대용량 파일의 안정적인 전송 (Backpressure 제어)
@@ -11,12 +10,12 @@
 
 ## WHAT
 * FileTransferService: QRunnable 기반 전송 엔진
-* FileTransferSignals: 전송 상태 시그널
+* 파일 청크 분할 및 흐름 제어(Flow Control)
+* 전송 진행률 및 상태 시그널 발행
 
 ## HOW
 * 파일을 Chunk 단위로 읽어 ConnectionController로 전송
 * 전송 큐 크기를 모니터링하여 과부하 방지 (Backpressure)
-* 포트 설정에 따른 흐름 제어(Flow Control) 또는 속도 조절(Pacing)
 """
 import os
 import time

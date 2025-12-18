@@ -5,18 +5,16 @@
 
 ## WHY
 * View와 Model 사이의 중재자 역할
-* SettingsManager에서 설정값(Prefix/Suffix) 주입
-* 하드웨어 제어 신호(RTS, DTR) 처리
+* 입력 데이터 가공(Prefix/Suffix/Hex) 로직 중앙화
 
 ## WHAT
-* 수동 전송 요청(send_requested) 처리
+* 수동 전송 요청 처리 및 데이터 가공
 * RTS/DTR 상태 변경 요청 처리
-* 설정 적용 및 Local Echo 처리
+* Local Echo 설정 관리
 
 ## HOW
-* View 시그널 구독
 * CommandProcessor를 통한 데이터 가공
-* ConnectionController 메서드 호출 (send_data, set_rts, set_dtr)
+* ConnectionController 메서드 호출
 """
 from PyQt5.QtCore import QObject
 from typing import Callable, Optional

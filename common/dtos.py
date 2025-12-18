@@ -10,29 +10,14 @@
 * 순환 참조(Circular Import) 방지를 위한 최하위 계층 위치
 
 ## WHAT
-* ManualCommand: 수동 제어 Command
-* PortConfig: 포트 연결 설정
-* FontConfig: 폰트 설정
-* MacroEntry: 매크로(자동화) 항목
-* FileProgressState: 파일 전송 상태
-* FileProgressEvent: 파일 전송 진행 이벤트
-* PortDataEvent: 포트 데이터 이벤트
-* PortErrorEvent: 포트 에러 이벤트
-* PacketEvent: 패킷 수신 이벤트
-* ErrorContext: 시스템 에러 컨텍스트
-* MacroScriptData: 매크로 스크립트 데이터
-* MacroRepeatOption: 매크로 반복 설정 옵션
-* MacroStepEvent: 매크로 실행 스텝 이벤트
-* PreferencesState: 환경 설정 상태
-* MainWindowState: 메인 윈도우 상태
-* ManualControlState: 수동 제어 상태
-* ColorRule: 색상 규칙 데이터
+* PortConfig, ManualCommand, MacroEntry 등 핵심 데이터 구조
+* Event, State 관련 DTO (FileProgressState, PacketEvent 등)
+* ColorRule 등 설정 관련 데이터 구조
 
 ## HOW
 * python dataclasses 활용
 * to_dict/from_dict 메서드를 통해 JSON 직렬화 지원
-* 안전한 타입 변환을 위한 헬퍼 메서드 적용
-* 기본값에 Enum/Constant 값 적용
+* 안전한 타입 변환을 위한 헬퍼 메서드(_safe_cast) 적용
 """
 from dataclasses import dataclass, field
 from typing import Optional, Dict, Any, List

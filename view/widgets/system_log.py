@@ -1,8 +1,20 @@
 """
-SystemLogWidget 모듈
+시스템 로그 위젯 모듈
 
-시스템 상태 메시지를 표시합니다.
-ColorManager 의존성 제거, ColorService 활용
+애플리케이션의 동작 상태 및 오류 메시지를 표시합니다.
+
+## WHY
+* 사용자에게 시스템 내부 동작 상황(연결, 에러, 파일 저장 등) 전달
+* 통신 데이터와 구분된 시스템 이벤트 기록
+
+## WHAT
+* QSmartListView 기반 로그 뷰어
+* 로그 레벨(INFO, ERROR 등)에 따른 색상 구분
+* 검색 및 필터링 기능
+
+## HOW
+* ColorService를 사용하여 로그 레벨별 색상 태그 적용
+* 타임스탬프 자동 추가
 """
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,

@@ -1,24 +1,21 @@
 """
 매크로 패널 모듈
 
-MacroListWidget과 MacroControlWidget을 조합하여
-커맨드 리스트 관리 및 실행 기능을 제공하는 패널 클래스입니다.
+매크로 리스트(List)와 제어(Control) 위젯을 통합하여 관리합니다.
 
 ## WHY
-* 매크로 리스트 관리와 실행 제어 UI를 하나의 패널로 통합
-* View 계층으로서 사용자 입력을 시그널로 변환하여 Presenter에 전달
-* MVP 패턴 준수를 위해 비즈니스 로직(파일 I/O 등) 제거
+* 매크로 관련 기능을 하나의 패널로 그룹화
+* 하위 위젯 간의 레이아웃 관리 및 시그널 중계
+* Presenter에 단일화된 뷰 인터페이스 제공
 
 ## WHAT
-* 매크로 리스트 및 제어 위젯 레이아웃 구성
-* 사용자 액션(저장/로드/실행)에 대한 시그널 정의
-* Presenter로부터 요청받은 상태 업데이트 및 메시지 표시
+* MacroListWidget과 MacroControlWidget 배치
+* 파일 저장/로드 및 실행 제어 시그널 정의
+* 상태 저장/복원 인터페이스
 
 ## HOW
-* QVBoxLayout으로 상/하위 위젯 배치
-* PyQt 시그널을 통해 Presenter와 통신
-* save_state/load_state로 데이터 직렬화 지원
-* DTO를 사용하여 데이터 전송
+* QVBoxLayout 사용
+* 하위 위젯의 이벤트를 상위로 전달(Bubbling)하거나 직접 처리
 """
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QFileDialog, QMessageBox
 from PyQt5.QtCore import pyqtSignal

@@ -5,17 +5,16 @@
 핵심 자료구조 클래스들을 제공합니다.
 
 ## WHY
-* 고속 데이터 처리를 위해 효율적인 버퍼링이 필요합니다.
-* 멀티스레드 환경에서 안전한 데이터 공유가 필요합니다.
-* 파일명을 통해 포함된 클래스의 성격을 명확히 합니다.
+* 고속 데이터 처리를 위해 효율적인 버퍼링이 필요
+* 멀티스레드 환경에서 안전한 데이터 공유 필요
 
 ## WHAT
 * ThreadSafeQueue: 스레드 안전 큐
-* RingBuffer: 고정 크기 원형 버퍼
+* RingBuffer: 고정 크기 원형 버퍼 (Zero-copy 지향)
 
 ## HOW
 * deque와 Lock을 이용한 큐 구현
-* memoryview와 bytearray를 이용한 제로 카피 버퍼링
+* memoryview와 bytearray를 이용한 고성능 버퍼링
 """
 
 import threading

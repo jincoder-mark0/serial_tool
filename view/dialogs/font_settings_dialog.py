@@ -1,3 +1,21 @@
+"""
+폰트 설정 대화상자 모듈
+
+UI용 폰트(Proportional)와 데이터용 폰트(Fixed)를 분리하여 설정합니다.
+
+## WHY
+* 사용자 가독성 취향에 맞춘 폰트 커스터마이징 지원
+* 코드/데이터 영역과 일반 UI 영역의 폰트 성격 분리
+
+## WHAT
+* 가변폭/고정폭 폰트 패밀리 및 크기 선택 UI
+* 실시간 미리보기(Preview) 제공
+* 기본값 리셋 기능
+
+## HOW
+* QFontComboBox 및 QSpinBox 사용
+* ThemeManager와 연동하여 즉시 적용 또는 되돌리기
+"""
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QGroupBox, QLabel,
     QPushButton, QFontComboBox, QSpinBox, QTextEdit, QDialogButtonBox

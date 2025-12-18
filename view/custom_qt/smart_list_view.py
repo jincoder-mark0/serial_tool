@@ -1,8 +1,22 @@
 """
 스마트 리스트 뷰 위젯 모듈
 
-QListView를 기반으로 대량의 로그 데이터를 효율적으로 표시하고 관리하는
-커스텀 위젯을 정의 검색, 하이라이트, 플레이스홀더, 전체 텍스트 추출 기능을 지원
+QListView를 기반으로 대량의 로그 데이터를 효율적으로 표시하고 관리하는 커스텀 위젯입니다.
+
+## WHY
+* 대량 데이터(로그)의 고성능 렌더링 필요
+* 검색, 필터링, 하이라이트 등 고급 기능 통합
+
+## WHAT
+* QAbstractListModel 기반 데이터 관리
+* 검색 탐색(Next/Prev) 및 필터링
+* HEX/ASCII 모드 및 타임스탬프 지원
+* ColorRule 주입을 통한 색상 적용
+
+## HOW
+* QSortFilterProxyModel로 필터링 구현
+* QStyledItemDelegate로 커스텀 렌더링
+* ColorService를 활용한 텍스트 포맷팅
 """
 import re
 from typing import List, Any, Optional

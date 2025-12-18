@@ -1,8 +1,20 @@
 """
 색상 규칙 관리자 (Color Manager)
 
-ReceivedArea에서 사용하는 패턴 매칭 색상 규칙을 관리합니다.
-AppConfig를 통해 설정 파일 경로를 관리하며, 싱글톤 패턴을 따릅니다.
+패턴 매칭 색상 규칙의 상태와 설정을 관리합니다.
+
+## WHY
+* 색상 규칙의 영속성(저장/로드) 관리
+* 전역적인 규칙 접근 포인트 제공
+
+## WHAT
+* 규칙 리스트 관리 (추가/삭제/토글)
+* 설정 파일(JSON) 로드 및 저장
+* 기본 규칙 제공
+
+## HOW
+* Singleton 패턴
+* 실제 로직은 ColorService에 위임
 """
 import os
 from typing import List

@@ -1,3 +1,19 @@
+"""
+메인 윈도우 우측 섹션 모듈
+
+매크로 리스트와 패킷 인스펙터를 탭으로 구성하여 표시합니다.
+
+## WHY
+* 부가 기능(자동화, 분석)을 우측 영역에 배치하여 공간 활용
+* 탭을 통한 기능 전환 지원
+
+## WHAT
+* QTabWidget을 사용하여 MacroPanel과 PacketPanel 배치
+* 하위 패널의 상태 저장/복원 중계
+
+## HOW
+* 레이아웃 관리 및 패널 인스턴스화
+"""
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QTabWidget
 from typing import Optional, Dict, Any
 from view.managers.language_manager import language_manager

@@ -2,18 +2,18 @@
 포트 스캐너 모듈
 
 시스템의 시리얼 포트를 검색하는 비동기 워커를 정의합니다.
-기존 'presenter/port_presenter.py'에서 Model 계층으로 이동되었습니다.
 
 ## WHY
-* 포트 검색은 데이터(Resource)를 조회하는 역할이므로 Model 계층이 적합합니다.
-* Presenter가 구체적인 스레드 구현이나 라이브러리(pyserial)에 직접 의존하는 것을 방지합니다.
+* 포트 검색 시 발생하는 I/O 지연으로 인한 UI 프리징 방지
+* 데이터 생성/조회 역할을 Model 계층으로 분리
 
 ## WHAT
 * PortScanWorker: QThread 기반 비동기 포트 스캐너
+* 포트 목록 검색 및 Natural Sorting
 
 ## HOW
 * serial.tools.list_ports 사용
-* Natural Sorting 알고리즘 적용
+* 정규식을 이용한 자연 정렬 알고리즘 적용
 """
 import re
 import serial.tools.list_ports

@@ -4,21 +4,19 @@
 사용자가 정의한 Command 시퀀스를 별도 스레드에서 순차적으로 실행하는 엔진입니다.
 
 ## WHY
-* UI 스레드(Main Thread)의 블로킹 없이 장시간 매크로를 실행해야 함
-* 윈도우 환경에서 `time.sleep`의 오차를 최소화하고 1ms 단위의 정밀 제어 필요
-* 실행 중 즉각적인 일시정지(Pause) 및 중단(Stop) 지원 필요
+* UI 스레드 블로킹 없는 장시간 매크로 실행
+* 1ms 단위의 정밀한 타이밍 제어 필요
+* 실행 중 즉각적인 일시정지(Pause) 및 중단(Stop) 지원
 
 ## WHAT
-* `QThread` 기반의 독립 실행 환경 제공
-* 매크로 항목(`MacroEntry`) 리스트 순차 실행 및 루프 제어
-* `Expect` 기능(특정 응답 대기) 및 타임아웃 처리
-* 실행 상태(시작, 진행, 완료, 에러) 이벤트 발행
+* QThread 기반의 독립 실행 환경 제공
+* 매크로 항목(MacroEntry) 순차 실행 및 루프 제어
+* Expect 기능(특정 응답 대기) 및 타임아웃 처리
 * Broadcast 실행 모드 지원
 
 ## HOW
-* `QThread`를 상속받아 `run()` 메서드 내에서 실행 루프 구현
-* `QWaitCondition`과 `QMutex`를 사용하여 정밀한 대기 및 스레드 동기화 구현
-* `EventBus`를 통해 수신 데이터를 구독하여 `Expect` 패턴 매칭 수행
+* QThread, QWaitCondition, QMutex를 사용한 정밀 제어
+* EventBus를 통해 수신 데이터를 구독하여 Expect 패턴 매칭
 """
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QWaitCondition
 from typing import List, Optional

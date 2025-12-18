@@ -4,20 +4,17 @@
 파일 전송 로직, 속도 계산, ETA 산출을 담당하는 Presenter입니다.
 
 ## WHY
-* 파일 전송 UI와 비즈니스 로직(계산, 흐름 제어) 분리
+* 파일 전송 UI와 비즈니스 로직 분리
 * 전송 상태에 대한 정밀한 제어 및 사용자 피드백 제공
-* MVP 패턴 준수
 
 ## WHAT
 * FileTransferDialog(View)와 FileTransferService(Model) 연결
-* 전송 속도 및 남은 시간(ETA) 계산 알고리즘 구현
-* 전송 시작/취소/완료/에러 처리 루틴
-* 대상 포트 컨텍스트 명시적 관리
+* 전송 속도 및 남은 시간(ETA) 계산
+* 전송 시작/취소/완료/에러 처리
 
 ## HOW
 * QThreadPool을 사용한 비동기 엔진 실행
-* QDateTime을 이용한 시간 경과 측정
-* Signal/Slot을 통한 이벤트 기반 통신
+* QDateTime을 이용한 시간 경과 측정 및 통계 계산
 """
 from PyQt5.QtCore import QObject, QDateTime, QThreadPool
 from model.connection_controller import ConnectionController

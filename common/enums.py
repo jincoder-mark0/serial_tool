@@ -5,21 +5,17 @@
 
 ## WHY
 * 상태 및 타입 정의를 한곳에서 관리하여 유지보수 용이성 확보
-* 계층 간 의존성 없이 참조 가능한 공통 위치 제공 (순환 참조 방지)
-* 하드코딩된 문자열 사용으로 인한 오타 방지 (Type Safety)
+* 문자열 하드코딩 방지 및 IDE 자동완성 지원
+* 계층 간 의존성 없이 참조 가능한 공통 위치 제공
 
 ## WHAT
-* PortState: 포트 연결 상태
-* ParserType: 패킷 파싱 전략 타입
-* SerialParity, SerialStopBits, SerialFlowControl: 시리얼 통신 설정
-* NewlineMode: 줄바꿈 모드
-* ThemeType: 테마 종류
-* MacroStepType: 매크로 실행 단계
-* FileStatus: 파일 전송 상태
+* PortState, ParserType, ThemeType 등 상태 열거형
+* SerialParity, SerialStopBits 등 통신 설정 열거형
+* FileStatus, MacroStepType 등 프로세스 상태
 
 ## HOW
 * Python의 enum.Enum을 사용하여 상태 정의
-* 클래스 상수를 사용하여 문자열 타입 정의
+* 문자열 값을 매핑하여 설정 파일 호환성 유지
 """
 from enum import Enum
 

@@ -4,21 +4,18 @@
 포트 설정 및 제어를 위한 Presenter입니다.
 
 ## WHY
-* 포트 연결/해제 UI 이벤트 처리
-* 포트 상태 변경을 View에 반영
+* 포트 연결/해제 UI 이벤트 처리 및 상태 반영
 * 다중 포트 탭 관리 및 설정 동기화
-* 포트 스캔 비동기화로 UI 멈춤 방지
+* 포트 스캔 비동기화 처리
 
 ## WHAT
 * PortSettingsWidget(View)와 ConnectionController(Model) 연결
-* 포트 스캔 (PortScanWorker 위임)
-* 연결/해제 토글 처리
-* 포트 상태별 UI 업데이트
-* 에러 처리 및 사용자 알림
+* 포트 스캔 (PortScanWorker) 관리
+* 연결/해제 요청 처리 및 에러 핸들링
 
 ## HOW
 * Model의 PortScanWorker 사용
-* MainLeftSection의 포트 탭 관리 및 설정 동기화
+* ConnectionController 메서드 호출 및 이벤트 구독
 """
 from PyQt5.QtCore import QObject
 from PyQt5.QtWidgets import QMessageBox

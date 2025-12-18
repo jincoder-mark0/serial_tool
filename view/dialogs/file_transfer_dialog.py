@@ -1,23 +1,21 @@
 """
-파일 전송 다이얼로그 모듈
+파일 전송 대화상자 모듈
 
-사용자로부터 파일을 선택받고 전송 진행 상황을 표시합니다.
+파일 선택부터 전송 완료까지의 과정을 시각화하고 제어합니다.
 
 ## WHY
-* 파일 전송 과정을 시각화하여 사용자 경험 향상
-* 전송 시작 및 취소에 대한 사용자 제어 제공
-* MVP 패턴의 View 역할 수행
+* 파일 전송은 긴 시간이 소요될 수 있으므로 전용 UI 필요
+* 전송 진행률, 속도, 남은 시간 등 상세 정보 제공
+* 사용자에게 취소 권한 부여
 
 ## WHAT
-* 파일 선택 및 경로 표시
-* 진행률(ProgressBar), 속도, ETA 표시
-* Presenter로 사용자 이벤트(전송, 취소) 전달
-* Presenter로부터 받은 데이터로 UI 갱신
+* 파일 선택 UI 및 전송/취소 버튼
+* FileProgressWidget을 포함하여 진행 상황 표시
+* Presenter와 통신하기 위한 시그널 정의
 
 ## HOW
-* QDialog 상속
-* PyQt Signal을 통한 이벤트 버블링
-* 수동적인 뷰(Passive View)로서 로직 없이 UI 업데이트만 수행
+* Passive View 패턴 적용 (로직은 FilePresenter에 위임)
+* Modal 다이얼로그로 동작
 """
 from PyQt5.QtWidgets import (
     QWidget, QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
