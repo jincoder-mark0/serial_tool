@@ -396,26 +396,27 @@ class PortSettingsWidget(QGroupBox):
         self.connect_btn.style().unpolish(self.connect_btn)
         self.connect_btn.style().polish(self.connect_btn)
 
-        connected = (state == PortState.CONNECTED)
+        is_connected = (state == PortState.CONNECTED)
+        is_disconnected = (state == PortState.DISCONNECTED)
 
         # 버튼 텍스트 업데이트
-        if state == PortState.CONNECTED:
+        if is_connected:
             self.connect_btn.setText(language_manager.get_text("port_btn_disconnect"))
             self.connect_btn.setChecked(True)
-        elif state == PortState.DISCONNECTED:
+        elif is_disconnected:
             self.connect_btn.setText(language_manager.get_text("port_btn_connect"))
             self.connect_btn.setChecked(False)
         elif state == PortState.ERROR:
             self.connect_btn.setText(language_manager.get_text("port_btn_reconnect"))
             self.connect_btn.setChecked(False)
 
-        # 연결 중에는 설정 변경 불가
-        self.protocol_combo.setEnabled(not connected)
-        self.port_combo.setEnabled(not connected)
-        self.scan_btn.setEnabled(not connected)
-        self.settings_stack.setEnabled(not connected)
+        # [Logic] 연결 중에는 설정 변경 불가 (Lock UI)
+        self.protocol_combo.setEnabled(is_disconnected)
+        self.port_combo.setEnabled(is_disconnected)
+        self.scan_btn.setEnabled(is_disconnected)
+        self.settings_stack.setEnabled(is_disconnected)
 
-        self.port_connection_changed.emit(connected)
+        self.port_connection_changed.emit(is_connected)
 
     def set_connected(self, connected: bool) -> None:
         """

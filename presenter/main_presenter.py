@@ -31,7 +31,7 @@ from .packet_presenter import PacketPresenter
 from .manual_control_presenter import ManualControlPresenter
 from .event_router import EventRouter
 from .data_handler import DataTrafficHandler
-from .lifecycle_manager import AppLifecycleManager # [Refactor] Import LifecycleManager
+from .lifecycle_manager import AppLifecycleManager
 from core.command_processor import CommandProcessor
 from core.settings_manager import SettingsManager
 from core.data_logger import data_logger_manager
@@ -44,6 +44,7 @@ from common.dtos import (
     MainWindowState, PreferencesState, ManualControlState
 )
 from view.dialogs.file_transfer_dialog import FileTransferDialog
+from view.panels.port_panel import PortPanel # Needed for type checking if used, or duck typing
 
 class MainPresenter(QObject):
     """
@@ -63,11 +64,14 @@ class MainPresenter(QObject):
         super().__init__()
         self.view = view
         self.settings_manager = SettingsManager()
-        self.status_timer = None # Initialized in LifecycleManager
+        self.status_timer = None
 
         # LifecycleManager를 통해 초기화 위임
         self.lifecycle_manager = AppLifecycleManager(self)
         self.lifecycle_manager.initialize_app()
+
+        # [New] 탭 변경 시 UI 상태 동기화를 위해 시그널 연결
+        self.view.left_section.port_tab_panel.currentChanged.connect(self._on_port_tab_changed)
 
     def _init_core_systems(self) -> None:
         """Model 및 Core 시스템 초기화 (LifecycleManager에서 호출)"""
@@ -302,6 +306,8 @@ class MainPresenter(QObject):
         self.view.update_status_bar_port(port_name, True)
         self.view.show_status_message(f"Connected to {port_name}", 3000)
 
+        self._update_controls_state_for_current_tab()
+
     def on_port_closed(self, port_name: str) -> None:
         """
         포트 닫힘 알림
@@ -312,6 +318,9 @@ class MainPresenter(QObject):
         self.view.update_status_bar_port(port_name, False)
         self.view.show_status_message(f"Disconnected from {port_name}", 3000)
 
+        # [New] 현재 활성 탭이 닫힌 포트라면 UI 비활성화
+        self._update_controls_state_for_current_tab()
+
     def on_port_error(self, event: PortErrorEvent) -> None:
         """
         포트 오류 알림
@@ -320,6 +329,35 @@ class MainPresenter(QObject):
             event (PortErrorEvent): 포트 오류 이벤트
         """
         self.view.show_status_message(f"Error ({event.port}): {event.message}", 5000)
+
+
+    def _on_port_tab_changed(self, index: int) -> None:
+        """
+        포트 탭 변경 시 호출됨
+        새로운 탭의 연결 상태에 따라 전역 컨트롤(매크로, 수동 제어) 활성화 상태 동기화
+        """
+        self._update_controls_state_for_current_tab()
+
+    def _update_controls_state_for_current_tab(self) -> None:
+        """
+        현재 선택된 포트 탭의 연결 상태를 확인하고
+        ManualControl과 MacroControl의 활성화 상태를 업데이트합니다.
+        """
+        current_index = self.view.left_section.port_tab_panel.currentIndex()
+        widget = self.view.left_section.port_tab_panel.widget(current_index)
+
+        is_connected = False
+        # PortPanel인지 확인 (플러스 탭 등 예외 처리)
+        # Duck typing: has method is_connected
+        if hasattr(widget, 'is_connected'):
+            is_connected = widget.is_connected()
+
+        # 하위 Presenter를 통해 View 제어
+        if self.manual_control_presenter:
+            self.manual_control_presenter.set_enabled(is_connected)
+
+        if self.macro_presenter:
+            self.macro_presenter.set_enabled(is_connected)
 
     def on_macro_started(self) -> None:
         """

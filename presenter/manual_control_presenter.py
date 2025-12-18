@@ -61,6 +61,15 @@ class ManualControlPresenter(QObject):
 
         self._apply_initial_settings()
 
+    def set_enabled(self, enabled: bool) -> None:
+        """
+        수동 제어 패널 활성화/비활성화 (MainPresenter에서 호출)
+
+        Args:
+            enabled (bool): 활성화 여부
+        """
+        self.view.set_controls_enabled(enabled)
+
     def _apply_initial_settings(self) -> None:
         """초기 실행 시 설정값 적용"""
         default_echo = self.settings_manager.get(ConfigKeys.PORT_LOCAL_ECHO, False)

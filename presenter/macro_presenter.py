@@ -58,7 +58,6 @@ class ScriptLoadWorker(QThread):
         except Exception as e:
             self.load_failed.emit(str(e))
 
-
 class MacroPresenter(QObject):
     """
     매크로 실행 및 관리를 담당하는 Presenter
@@ -77,9 +76,7 @@ class MacroPresenter(QObject):
         self.runner = runner
         self._load_worker = None
 
-        # ---------------------------------------------------------
         # View -> Presenter 연결
-        # ---------------------------------------------------------
         self.panel.repeat_start_requested.connect(self.on_repeat_start)
         self.panel.repeat_stop_requested.connect(self.on_repeat_stop)
 
@@ -90,13 +87,22 @@ class MacroPresenter(QObject):
         # MacroListWidget의 개별 전송 버튼
         self.panel.macro_list.send_row_requested.connect(self.on_single_send_requested)
 
-        # ---------------------------------------------------------
         # Model -> Presenter -> View 연결
-        # ---------------------------------------------------------
         self.runner.step_started.connect(self.on_step_started)
         self.runner.step_completed.connect(self.on_step_completed)
         self.runner.macro_finished.connect(self.on_macro_finished)
         self.runner.error_occurred.connect(self.on_error)
+
+    def set_enabled(self, enabled: bool) -> None:
+        """
+        매크로 제어 활성화/비활성화 (MainPresenter에서 호출)
+
+        Args:
+            enabled (bool): 활성화 여부
+        """
+        self.panel.marco_control.set_controls_enabled(enabled)
+        # 리스트의 전송 버튼들도 제어
+        self.panel.macro_list.set_send_enabled(enabled)
 
     def on_script_save(self, script_data: MacroScriptData) -> None:
         """

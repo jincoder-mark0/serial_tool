@@ -57,7 +57,7 @@ class MacroControlWidget(QWidget):
         self.execution_settings_grp = None
         self.script_load_btn: Optional[QPushButton] = None
         self.script_save_btn: Optional[QPushButton] = None
-        self.broadcast_chk: Optional[QCheckBox] = None # [New]
+        self.broadcast_chk: Optional[QCheckBox] = None
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
@@ -209,9 +209,11 @@ class MacroControlWidget(QWidget):
             self.macro_repeat_start_btn.setEnabled(False)
             if is_repeat:
                 self.macro_repeat_stop_btn.setEnabled(True)
+                self.macro_repeat_pause_btn.setEnabled(True)
         else:
-            self.macro_repeat_start_btn.setEnabled(True)
-            self.macro_repeat_stop_btn.setEnabled(False)
+            # 실행 중이 아닐 때, 연결 상태에 따라 활성화 여부가 결정됨
+            # 여기서는 단순히 토글 로직만 처리하고, 실제 활성화는 set_controls_enabled에서 결정
+            pass
 
     def update_auto_count(self, current: int, total: int) -> None:
         """
@@ -227,12 +229,21 @@ class MacroControlWidget(QWidget):
     def set_controls_enabled(self, enabled: bool) -> None:
         """
         제어 위젯들의 활성화 상태를 설정합니다.
+        포트 연결 상태에 따라 호출됩니다.
 
         Args:
             enabled (bool): 활성화 여부.
         """
+        # 시작 버튼 활성화 제어
         self.macro_repeat_start_btn.setEnabled(enabled)
-        # Stop 버튼은 실행 상태에 따라 별도 관리되므로 여기서는 건드리지 않음
+
+        # 연결 끊기면 정지/일시정지도 비활성화
+        if not enabled:
+            self.macro_repeat_stop_btn.setEnabled(False)
+            self.macro_repeat_pause_btn.setEnabled(False)
+
+        # 설정 입력 필드는 항상 활성화 유지할지, 비활성화할지 결정 가능
+        # 여기서는 편의상 입력은 허용하되 실행만 막음
 
     def save_state(self) -> dict:
         """
