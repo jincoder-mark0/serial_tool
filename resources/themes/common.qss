@@ -1,9 +1,9 @@
 /* Common Styles (Layout, Spacing, Fonts, Shapes) */
-/* 이 파일은 모든 테마의 기본(Base)이 되며, 특정 테마(Dark/Light)에서 오버라이딩됩니다. */
+/* 모든 테마의 베이스 스타일입니다. 구조적인 정의만 포함합니다. */
 
 /* Global Settings */
 QWidget {
-    /* Font settings are handled dynamically by ThemeManager */
+    outline: none; /* Focus dotted line 제거 */
 }
 
 /* QMainWindow Separator */
@@ -12,13 +12,29 @@ QMainWindow::separator {
     height: 2px;
 }
 
+/* QToolTip */
+QToolTip {
+    border-width: 1px;
+    border-style: solid;
+    border-radius: 4px;
+    padding: 4px;
+    opacity: 230;
+}
+
 /* QTabWidget */
+QTabWidget::pane {
+    border-width: 1px;
+    border-style: solid;
+}
+
 QTabBar::tab {
     padding: 8px 16px;
+    border-width: 1px;
+    border-style: solid;
+    border-bottom: none;
     border-top-left-radius: 4px;
     border-top-right-radius: 4px;
     margin-right: 2px;
-    border-bottom: none;
 }
 
 QTabBar::close-button {
@@ -32,8 +48,19 @@ QPushButton {
     padding: 6px 12px;
     border-width: 1px;
     border-style: solid;
+    font-weight: normal;
 }
 
+/* Custom Button Classes (Font Weight) */
+QPushButton[class="accent"],
+QPushButton[class="danger"],
+QPushButton[class="warning"],
+QPushButton[state="connected"],
+QPushButton[state="error"] {
+    font-weight: bold;
+}
+
+/* Inputs */
 QLineEdit, QTextEdit, QPlainTextEdit, QSmartTextEdit, QSmartListView {
     border-radius: 4px;
     padding: 4px;
@@ -41,11 +68,11 @@ QLineEdit, QTextEdit, QPlainTextEdit, QSmartTextEdit, QSmartListView {
     border-style: solid;
 }
 
-/* 테마 파일 로드 실패 시 적용될 안전한 기본값입니다. */
+/* 테마 로드 실패 시 안전 장치 (Fallback) */
 QSmartTextEdit {
-    qproperty-lineNumberBackgroundColor: #f0f0f0; /* 연한 회색 배경 */
-    qproperty-lineNumberColor: #808080;       /* 진한 회색 글자 */
-    qproperty-currentLineColor: #e8e8e8;      /* 현재 라인 강조 (연한 회색) */
+    qproperty-lineNumberBackgroundColor: #f0f0f0;
+    qproperty-lineNumberColor: #808080;
+    qproperty-currentLineColor: #e8e8e8;
 }
 
 /* QComboBox */
@@ -71,7 +98,19 @@ QComboBox::down-arrow {
     height: 10px;
 }
 
-/* QScrollBar */
+/* QProgressBar */
+QProgressBar {
+    border-width: 1px;
+    border-style: solid;
+    border-radius: 4px;
+    text-align: center;
+}
+
+QProgressBar::chunk {
+    border-radius: 3px;
+}
+
+/* QScrollBar (Vertical & Horizontal) */
 QScrollBar:vertical {
     border: none;
     width: 12px;
@@ -104,8 +143,8 @@ QScrollBar::add-line:horizontal, QScrollBar::sub-line:horizontal {
     width: 0px;
 }
 
-/* QTableView */
-QTableView {
+/* Views (Table, List, Tree) */
+QTableView, QListView, QTreeWidget, QSmartListView {
     border-width: 1px;
     border-style: solid;
 }
@@ -119,27 +158,12 @@ QHeaderView::section {
     border-bottom-style: solid;
 }
 
-QTableView QTableCornerButton::section {
+QTableCornerButton::section {
     border: none;
-}
-
-/* QListView */
-QListView, #SmartListView {
-    border-width: 1px;
-    border-style: solid;
-    outline: 0;
 }
 
 QSmartListView::item {
     padding: 2px;
-}
-
-QListView QTableCornerButton::section, QSmartListView QTableCornerButton::section {
-    border: none;
-}
-
-QListView[readOnly="true"], QSmartListView[readOnly="true"] {
-    border: 1px;
 }
 
 /* QCheckBox */
@@ -171,6 +195,13 @@ QGroupBox::title {
     font-weight: bold;
 }
 
+/* Section Title (Unified with GroupBox Title) */
+QLabel[class="section-title"] {
+    font-weight: bold;
+    padding: 0 5px;
+    margin-bottom: 2px;
+}
+
 /* QStatusBar */
 QStatusBar {
     border-top-width: 1px;
@@ -200,24 +231,17 @@ QToolBar QToolButton {
     padding: 4px;
 }
 
-/* Custom Classes Fonts */
-QPushButton[class="accent"], QPushButton[class="danger"], QPushButton[class="warning"] {
-    font-weight: bold;
-}
-
-/* Font Classes - Proportional (Variable-width) Font */
+/* Fonts (Dynamic) */
 .proportional-font {
     font-family: "Segoe UI", "Ubuntu", "Arial", sans-serif;
     font-size: 9pt;
 }
 
-/* Font Classes - Fixed (Monospace) Font */
 .fixed-font {
     font-family: "Consolas", "Monospace", "Courier New", monospace;
     font-size: 9pt;
 }
 
-/* Apply Fixed Font to Text Data Widgets */
 QTextEdit.fixed-font,
 QPlainTextEdit.fixed-font,
 QLineEdit.fixed-font,
@@ -225,11 +249,4 @@ QSmartListView.fixed-font,
 QSmartTextEdit.fixed-font {
     font-family: "Consolas", "Monospace", "Courier New", monospace;
     font-size: 9pt;
-}
-
-/* Section Title - Similar to QGroupBox::title */
-QLabel[class="section-title"] {
-    font-weight: bold;
-    padding: 0 5px;
-    margin-bottom: 2px;
 }

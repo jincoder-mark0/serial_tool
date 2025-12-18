@@ -4,6 +4,41 @@
 
 ---
 
+### UX 고도화 및 고급 기능 구현 (2025-12-18)
+
+#### 기능 추가 (Feat)
+
+- **스마트 헥사 덤프 (Smart Hex Dump Export)**
+  - **다중 포맷 지원**: 로그 저장 시 `.bin` (Raw Binary) 외에 `.txt` (Hex Dump), `.pcap` (Wireshark 호환) 포맷을 지원합니다.
+  - **자동 감지**: 파일 저장 다이얼로그에서 선택한 확장자에 따라 자동으로 저장 포맷을 결정합니다.
+  - **PCAP 지원**: Global Header와 Packet Header를 포함한 표준 PCAP 포맷 저장을 구현하여 외부 분석 도구와의 호환성을 확보했습니다.
+
+- **UI 상태 동기화 (UI State Synchronization)**
+  - **포트 연동 제어**: 현재 활성화된 탭의 포트 연결 상태(Open/Close)에 따라 `ManualControl` 및 `MacroControl` 패널의 활성화 여부를 실시간으로 동기화합니다.
+  - **설정 잠금**: 포트가 연결된 상태에서는 `PortSettingsWidget`의 설정 콤보박스들이 비활성화되어, 통신 중 설정 변경을 방지합니다.
+
+- **테마 기반 색상 매핑 (Hybrid Color Mapping)**
+  - **듀얼 컬러 지원**: `ColorRule`에 `light_color`와 `dark_color` 필드를 추가하여 테마별 최적의 색상을 지정할 수 있습니다.
+  - **자동 보정 (HLS Fallback)**: 색상이 지정되지 않은 경우, HLS 알고리즘을 사용하여 배경색 대비 가독성이 좋은 명도로 색상을 자동 보정합니다.
+
+#### 리팩토링 (Refactoring)
+
+- **생명주기 관리 분리 (Lifecycle Management)**
+  - **AppLifecycleManager**: `MainPresenter`의 비대한 초기화 로직(`_init_...`)을 별도의 매니저 클래스로 분리하여 코드 응집도를 높이고 유지보수성을 개선했습니다.
+- **설정 마이그레이션 (Settings Migration)**
+  - **버전 관리**: `SettingsManager`에 설정 파일 버전 확인 및 마이그레이션(`_migrate_settings`) 로직을 추가하여, 앱 업데이트 시 사용자 설정이 초기화되는 문제를 방지했습니다.
+- **View-Model 완전 분리**
+  - View 계층(`DataLogWidget`, `SystemLogWidget` 등)에서 `ColorManager` 등 Model 성격의 싱글톤 의존성을 완전히 제거하고, Presenter를 통해 데이터를 주입받도록 수정했습니다.
+- **코드 정리 (Clean Code)**
+  - `SmartNumberEdit` 위젯에 남아있던 디버깅용 `print` 문과 테스트 코드를 제거하고 `logger`로 대체했습니다.
+
+#### 수정 사항 (Fixed)
+
+- **런타임 오류 수정**: `MainPresenter`에서 누락된 `color_manager` import를 수정하여 `NameError`를 해결했습니다.
+- **정규식 성능 최적화**: `ColorService`에 정규식 컴파일 캐싱(`_regex_cache`)을 도입하여 반복적인 컴파일 오버헤드를 제거했습니다.
+
+---
+
 ### 아키텍처 및 안정성 강화 (2025-12-17)
 
 #### 리팩토링 (Refactoring)

@@ -37,7 +37,11 @@ from common.constants import (
     FILE_FILTER_LOG, FILE_FILTER_ALL
 )
 from common.enums import NewlineMode
-from common.dtos import ColorRule # Import DTO
+from common.dtos import ColorRule
+
+# [New] 추가된 파일 필터 상수 (로컬 상수로 정의하거나 constants.py로 이동 가능)
+# 여기서는 편의상 메서드 내에서 문자열로 조합 사용
+FILE_FILTERS = "Binary Files (*.bin);;Text Hex Dump (*.txt);;PCAP Files (*.pcap);;All Files (*)"
 
 class DataLogWidget(QWidget):
     """
@@ -416,6 +420,7 @@ class DataLogWidget(QWidget):
     def show_save_log_dialog(self) -> str:
         """
         파일 저장 다이얼로그 표시 (Presenter가 호출)
+        사용자가 선택한 확장자에 따라 저장 포맷이 결정됩니다.
 
         Returns:
             str: 선택된 파일 경로 (취소 시 빈 문자열)
@@ -424,11 +429,12 @@ class DataLogWidget(QWidget):
         if self.tab_name:
             title = f"{self.tab_name}::{title}"
 
+        # 파일 필터 확장
         filename, _ = QFileDialog.getSaveFileName(
             self,
             title,
             "",
-            f"{FILE_FILTER_LOG};;{FILE_FILTER_ALL}"
+            FILE_FILTERS
         )
         return filename
 

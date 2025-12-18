@@ -39,6 +39,7 @@ from view.managers.language_manager import language_manager
 from view.managers.color_manager import color_manager
 from core.logger import logger
 from common.constants import ConfigKeys, EventTopics
+from common.enums import LogFormat
 from common.dtos import (
     ManualCommand, PortDataEvent, PortErrorEvent, PacketEvent, FontConfig,
     MainWindowState, PreferencesState, ManualControlState
@@ -492,25 +493,43 @@ class MainPresenter(QObject):
             data_log_widget.logging_start_requested.connect(lambda: self._on_logging_start_requested(panel))
             data_log_widget.logging_stop_requested.connect(lambda: self._on_logging_stop_requested(panel))
 
-    def _on_logging_start_requested(self, panel) -> None:
+    def _on_logging_start_requested(self, panel):
         """
         로깅 시작 요청 처리
 
-        Args:
-            panel (PortPanel): 포트 패널
+        Logic:
+            - 파일 다이얼로그 표시
+            - 선택된 파일의 확장자를 기반으로 LogFormat 결정
+            - DataLoggerManager에 포맷과 함께 시작 요청
         """
         filepath = panel.data_log_widget.show_save_log_dialog()
         if not filepath:
             panel.data_log_widget.set_logging_active(False)
             return
+
         port = panel.get_port_name()
         if not port:
             panel.data_log_widget.set_logging_active(False)
             return
-        if data_logger_manager.start_logging(port, filepath):
+
+        # 확장자 기반 포맷 결정
+        _, ext = os.path.splitext(filepath)
+        ext = ext.lower()
+
+        log_format = LogFormat.BIN # 기본값
+        if ext == '.pcap':
+            log_format = LogFormat.PCAP
+        elif ext == '.txt':
+            log_format = LogFormat.HEX
+
+        # 포맷 전달
+        if data_logger_manager.start_logging(port, filepath, log_format):
             panel.data_log_widget.set_logging_active(True)
+            # 시작 메시지 (선택)
+            self.view.log_system_message(f"[{port}] Logging started ({log_format.value}): {filepath}", "INFO")
         else:
             panel.data_log_widget.set_logging_active(False)
+            self.view.log_system_message(f"[{port}] Failed to start logging", "ERROR")
 
     def _on_logging_stop_requested(self, panel):
         """
@@ -522,3 +541,4 @@ class MainPresenter(QObject):
         port = panel.get_port_name()
         if port: data_logger_manager.stop_logging(port)
         panel.data_log_widget.set_logging_active(False)
+

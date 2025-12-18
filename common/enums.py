@@ -12,6 +12,7 @@
 * PortState, ParserType, ThemeType 등 상태 열거형
 * SerialParity, SerialStopBits 등 통신 설정 열거형
 * FileStatus, MacroStepType 등 프로세스 상태
+* LogFormat 등 파일 저장 형식
 
 ## HOW
 * Python의 enum.Enum을 사용하여 상태 정의
@@ -46,6 +47,19 @@ class ParserType:
     AT = "AT"
     DELIMITER = "Delimiter"
     FIXED_LENGTH = "FixedLength"
+
+class LogFormat(Enum):
+    """
+    로그 파일 저장 형식 열거형
+
+    Attributes:
+        BIN: 바이너리 원본 (.bin)
+        HEX: 텍스트 헥사 덤프 (.txt)
+        PCAP: 패킷 캡처 포맷 (.pcap)
+    """
+    BIN = "bin"
+    HEX = "hex"
+    PCAP = "pcap"
 
 class SerialParity(Enum):
     """
