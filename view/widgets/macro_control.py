@@ -52,7 +52,7 @@ class MacroControlWidget(QWidget):
         self.macro_repeat_start_btn: Optional[QPushButton] = None
         self.repeat_count_spin = None
         self.repeat_max_lbl: Optional[QLabel] = None
-        self.repeat_delay_line_edit = None
+        self.repeat_delay_ms_line_edit = None
         self.interval_lbl: Optional[QLabel] = None
         self.execution_settings_grp = None
         self.script_load_btn: Optional[QPushButton] = None
@@ -69,9 +69,9 @@ class MacroControlWidget(QWidget):
         # Row 0: 자동 실행 설정
         self.interval_lbl = QLabel(language_manager.get_text("macro_control_lbl_interval"))
 
-        self.repeat_delay_line_edit = QLineEdit(str(DEFAULT_MACRO_DELAY_MS))
-        self.repeat_delay_line_edit.setFixedWidth(50)
-        self.repeat_delay_line_edit.setAlignment(Qt.AlignRight)
+        self.repeat_delay_ms_line_edit = QLineEdit(str(DEFAULT_MACRO_DELAY_MS))
+        self.repeat_delay_ms_line_edit.setFixedWidth(50)
+        self.repeat_delay_ms_line_edit.setAlignment(Qt.AlignRight)
 
         self.repeat_max_lbl = QLabel(language_manager.get_text("macro_control_lbl_repeat_max"))
 
@@ -120,7 +120,7 @@ class MacroControlWidget(QWidget):
 
         # Row 0 배치
         execution_layout.addWidget(self.interval_lbl, 0, 0)
-        execution_layout.addWidget(self.repeat_delay_line_edit, 0, 1)
+        execution_layout.addWidget(self.repeat_delay_ms_line_edit, 0, 1)
         execution_layout.addWidget(self.repeat_max_lbl, 0, 2)
         execution_layout.addWidget(self.repeat_count_spin, 0, 3)
         execution_layout.addWidget(self.broadcast_chk, 0, 4) # 체크박스 추가
@@ -168,13 +168,13 @@ class MacroControlWidget(QWidget):
     def get_repeat_option(self) -> MacroRepeatOption:
         """현재 UI 설정값을 바탕으로 MacroRepeatOption DTO 생성"""
         try:
-            delay = int(self.repeat_delay_line_edit.text())
+            delay_ms = int(self.repeat_delay_ms_line_edit.text())
         except ValueError:
-            delay = DEFAULT_MACRO_DELAY_MS
+            delay_ms = DEFAULT_MACRO_DELAY_MS
         max_runs = self.repeat_count_spin.value()
-        is_broadcast = self.broadcast_chk.isChecked()
+        broadcast_enabled = self.broadcast_chk.isChecked()
 
-        return MacroRepeatOption(delay_ms=delay, max_runs=max_runs, is_broadcast=is_broadcast)
+        return MacroRepeatOption(delay_ms=delay_ms, max_runs=max_runs, broadcast_enabled=broadcast_enabled)
 
     def on_macro_repeat_start_clicked(self) -> None:
         """자동 실행 시작 버튼 핸들러"""
@@ -253,7 +253,7 @@ class MacroControlWidget(QWidget):
             dict: 위젯 상태 데이터.
         """
         state = {
-            "delay": self.repeat_delay_line_edit.text(),
+            "delay": self.repeat_delay_ms_line_edit.text(),
             "max_runs": self.repeat_count_spin.value(),
             "broadcast": self.broadcast_chk.isChecked()
         }
@@ -269,6 +269,6 @@ class MacroControlWidget(QWidget):
         if not state:
             return
 
-        self.repeat_delay_line_edit.setText(state.get("delay", str(DEFAULT_MACRO_DELAY_MS)))
+        self.repeat_delay_ms_line_edit.setText(state.get("delay_ms", str(DEFAULT_MACRO_DELAY_MS)))
         self.repeat_count_spin.setValue(state.get("max_runs", 0))
-        self.broadcast_chk.setChecked(state.get("broadcast", False))
+        self.broadcast_chk.setChecked(state.get("broadcast_enabled", False))

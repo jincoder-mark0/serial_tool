@@ -44,7 +44,7 @@
     "macro_control_chk_broadcast": "브로드캐스트",
     "macro_control_chk_broadcast_tooltip": "브로드캐스트가 설정된 모든 활성 포트에 Command 전송",
     "macro_list_btn_add_row_tooltip": "새 명령 추가",
-    "macro_list_btn_del_row_tooltip": "선택한 명령 삭제",
+    "macro_list_btn_remove_row_tooltip": "선택한 명령 삭제",
     "macro_list_btn_down_row_tooltip": "명령 아래로 이동",
     "macro_list_btn_send": "전송",
     "macro_list_btn_up_row_tooltip": "명령 위로 이동",

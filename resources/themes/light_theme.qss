@@ -93,7 +93,7 @@ QPushButton:disabled {
 
 /* Icons */
 QPushButton#add_row_btn { qproperty-icon: url(resources/icons/light/add_light.svg); }
-QPushButton#del_row_btn { qproperty-icon: url(resources/icons/light/delete_light.svg); }
+QPushButton#remove_row_btn { qproperty-icon: url(resources/icons/light/delete_light.svg); }
 QPushButton#up_row_btn { qproperty-icon: url(resources/icons/light/up_light.svg); }
 QPushButton#down_row_btn { qproperty-icon: url(resources/icons/light/down_light.svg); }
 QPushButton#data_log_search_prev_btn { qproperty-icon: url(resources/icons/light/find_prev_light.svg); }

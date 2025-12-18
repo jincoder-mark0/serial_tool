@@ -115,12 +115,12 @@ class AppLifecycleManager:
         manual_state_dto = ManualControlState(
             input_text=manual_settings.get("input_text", ""),
             hex_mode=manual_settings.get("hex_mode", False),
-            prefix_chk=manual_settings.get("prefix_chk", False),
-            suffix_chk=manual_settings.get("suffix_chk", False),
-            rts_chk=manual_settings.get("rts_chk", False),
-            dtr_chk=manual_settings.get("dtr_chk", False),
-            local_echo_chk=manual_settings.get("local_echo_chk", False),
-            broadcast_chk=manual_settings.get("broadcast_chk", False)
+            prefix_enabled=manual_settings.get("prefix_enabled", False),
+            suffix_enabled=manual_settings.get("suffix_enabled", False),
+            rts_enabled=manual_settings.get("rts_enabled", False),
+            dtr_enabled=manual_settings.get("dtr_enabled", False),
+            local_echo_enabled=manual_settings.get("local_echo_enabled", False),
+            broadcast_enabled=manual_settings.get("broadcast_enabled", False)
         )
         self.mp.manual_control_presenter.apply_state(manual_state_dto)
 
@@ -160,7 +160,7 @@ class AppLifecycleManager:
             y=get_val(ConfigKeys.WINDOW_Y),
             splitter_state=get_val(ConfigKeys.SPLITTER_STATE),
             right_panel_visible=get_val(ConfigKeys.RIGHT_PANEL_VISIBLE, True),
-            saved_right_width=get_val(ConfigKeys.SAVED_RIGHT_WIDTH),
+            right_section_width=get_val(ConfigKeys.SAVED_RIGHT_WIDTH),
             left_section_state={
                 "manual_control": get_val(ConfigKeys.MANUAL_CONTROL_STATE, {}),
                 "ports": get_val(ConfigKeys.PORTS_TABS_STATE, [])

@@ -108,7 +108,7 @@ class ColorManager:
             # 경로 업데이트 시 설정 다시 로드
             self.config_path = self._get_config_path()
             if self.config_path.exists():
-                self.load_from_json(str(self.config_path))
+                self.load_rules(str(self.config_path))
 
         if self._initialized:
             return
@@ -118,13 +118,13 @@ class ColorManager:
 
         # 설정 파일 로드 시도, 실패 시 기본 규칙 사용
         if self.config_path.exists():
-            self.load_from_json(str(self.config_path))
+            self.load_rules(str(self.config_path))
         else:
             self.rules = self.DEFAULT_COLOR_RULES.copy()
             # 설정 디렉토리가 없으면 생성 (ResourcePath가 보장하지만 안전장치)
             if not self.config_path.parent.exists():
                 self.config_path.parent.mkdir(parents=True, exist_ok=True)
-            self.save_to_json(str(self.config_path))
+            self.save_rules(str(self.config_path))
 
         self._initialized = True
 
@@ -156,7 +156,7 @@ class ColorManager:
         """
         return ColorService.apply_rules(text, self.rules)
 
-    def add_custom_rule(self, name: str, pattern: str, color: str, is_regex: bool = True) -> None:
+    def add_custom_rule(self, name: str, pattern: str, color: str, regex_enabled: bool = True) -> None:
         """
         사용자 정의 색상 규칙을 추가합니다.
 
@@ -164,9 +164,9 @@ class ColorManager:
             name (str): 규칙 이름.
             pattern (str): 매칭 패턴 (정규식 또는 일반 문자열).
             color (str): HTML 색상 코드 (예: '#FF0000').
-            is_regex (bool, optional): 정규식 패턴 여부. 기본값은 True.
+            regex_enabled (bool, optional): 정규식 패턴 여부. 기본값은 True.
         """
-        self.rules.append(ColorRule(name, pattern, color, is_regex))
+        self.rules.append(ColorRule(name, pattern, color, regex_enabled))
 
     def remove_rule(self, name: str) -> None:
         """
@@ -189,12 +189,12 @@ class ColorManager:
                 rule.enabled = not rule.enabled
                 break
 
-    def save_to_json(self, filepath: str) -> None:
+    def save_rules(self, file_path: str) -> None:
         """
         현재 규칙들을 JSON 파일로 저장합니다.
 
         Args:
-            filepath (str): 읽을 파일 경로.
+            file_path (str): 읽을 파일 경로.
         """
         rules_data = [
             {
@@ -203,7 +203,7 @@ class ColorManager:
                 'color': r.color, # Legacy field preserved
                 'light_color': r.light_color,
                 'dark_color': r.dark_color,
-                'is_regex': r.is_regex,
+                'regex_enabled': r.regex_enabled,
                 'enabled': r.enabled
             }
             for r in self.rules
@@ -212,21 +212,21 @@ class ColorManager:
         data = {'color_rules': rules_data}
 
         try:
-            with open(filepath, 'w', encoding='utf-8') as f:
+            with open(file_path, 'w', encoding='utf-8') as f:
                 json.dump(data, f, indent=2, ensure_ascii=False)
         except IOError as e:
             logger.error(f"Error saving color rules: {e}")
 
-    def load_from_json(self, filepath: str) -> None:
+    def load_rules(self, file_path: str) -> None:
         """
         JSON 파일에서 규칙들을 로드합니다.
         파일이 없거나 잘못된 경우 기본 규칙을 사용합니다.
 
         Args:
-            filepath (str): 읽을 파일 경로.
+            file_path (str): 읽을 파일 경로.
         """
         try:
-            with open(filepath, 'r', encoding='utf-8') as f:
+            with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
 
             # 호환성: "color_rules" 키가 없으면 리스트 자체로 간주
@@ -242,14 +242,14 @@ class ColorManager:
                     color=r.get('color', ''), # Legacy support
                     light_color=r.get('light_color', ''),
                     dark_color=r.get('dark_color', ''),
-                    is_regex=r.get('is_regex', True),
+                    regex_enabled=r.get('regex_enabled', True),
                     enabled=r.get('enabled', True)
                 )
                 for r in rules_data
             ]
         except (FileNotFoundError, json.JSONDecodeError, KeyError) as e:
             # 파일이 없거나 잘못된 경우 기본 규칙 사용
-            logger.error(f"Failed to load color rules ({filepath}): {e}")
+            logger.error(f"Failed to load color rules ({file_path}): {e}")
             self.rules = self.DEFAULT_COLOR_RULES.copy()
 
     @staticmethod
@@ -286,7 +286,7 @@ class ColorManager:
         Returns:
             str: 규칙이 적용된 텍스트.
         """
-        if rule.is_regex:
+        if rule.regex_enabled:
             try:
                 return re.sub(
                     rule.pattern,

@@ -44,7 +44,7 @@
     "macro_control_chk_broadcast": "Broadcast",
     "macro_control_chk_broadcast_tooltip": "Send macro commands to all active ports",
     "macro_list_btn_add_row_tooltip": "Add new command",
-    "macro_list_btn_del_row_tooltip": "Delete selected command",
+    "macro_list_btn_remove_row_tooltip": "Delete selected command",
     "macro_list_btn_down_row_tooltip": "Move command down",
     "macro_list_btn_send": "Send",
     "macro_list_btn_up_row_tooltip": "Move command up",

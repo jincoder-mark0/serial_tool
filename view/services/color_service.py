@@ -57,7 +57,7 @@ class ColorService:
                 if not target_color:
                     continue
 
-                result = ColorService._apply_single_rule(result, rule.pattern, target_color, rule.is_regex)
+                result = ColorService._apply_single_rule(result, rule.pattern, target_color, rule.regex_enabled)
         return result
 
     @classmethod
@@ -152,7 +152,7 @@ class ColorService:
             return hex_color
 
     @classmethod
-    def _apply_single_rule(cls, text: str, pattern: str, color: str, is_regex: bool) -> str:
+    def _apply_single_rule(cls, text: str, pattern: str, color: str, regex_enabled: bool) -> str:
         """
         단일 색상 규칙을 텍스트에 적용합니다.
 
@@ -164,12 +164,12 @@ class ColorService:
             text (str): 텍스트
             pattern (str): 매칭 패턴
             color (str): 적용할 색상 코드
-            is_regex (bool): 정규식 여부
+            regex_enabled (bool): 정규식 여부
 
         Returns:
             str: 적용된 텍스트
         """
-        if is_regex:
+        if regex_enabled:
             try:
                 # 캐시 확인 및 컴파일
                 if pattern not in cls._regex_cache:

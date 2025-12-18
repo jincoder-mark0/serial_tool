@@ -31,7 +31,7 @@ CORE_SETTINGS_SCHEMA = {
         "ui": {
             "type": "object",
             "properties": {
-                "rx_max_lines": {"type": "integer"},
+                "max_log_lines": {"type": "integer"},
                 "proportional_font_family": {"type": "string"},
                 "proportional_font_size": {"type": "integer"},
                 "fixed_font_family": {"type": "string"},

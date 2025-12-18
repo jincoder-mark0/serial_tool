@@ -62,9 +62,9 @@ class PortSettingsWidget(QGroupBox):
     """
 
     # 사용자 요청 시그널
-    port_open_requested = pyqtSignal(object)  # PortConfig DTO 전달
+    connect_requested = pyqtSignal(object)  # PortConfig DTO 전달
 
-    port_close_requested = pyqtSignal()
+    disconnect_requested = pyqtSignal()
     port_scan_requested = pyqtSignal()
     port_connection_changed = pyqtSignal(bool)
 
@@ -308,11 +308,11 @@ class PortSettingsWidget(QGroupBox):
             config = self.get_current_config()
 
             # 연결 요청 시그널 발행
-            self.port_open_requested.emit(config)
+            self.connect_requested.emit(config)
             self.connect_btn.setText(language_manager.get_text("port_btn_disconnect"))
         else:
             # 해제 요청 (Request Close)
-            self.port_close_requested.emit()
+            self.disconnect_requested.emit()
 
     def get_current_config(self) -> PortConfig:
         """

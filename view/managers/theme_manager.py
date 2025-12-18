@@ -21,7 +21,9 @@
 import os
 import platform
 from PyQt5.QtWidgets import QApplication
-from PyQt5.QtGui import QFont, QIcon
+from PyQt5.QtGui import QPalette, QColor, QFont, QIcon
+from pathlib import Path
+from core.resource_path import ResourcePath
 from core.logger import logger
 from common.dtos import FontConfig
 from common.enums import ThemeType
@@ -32,7 +34,15 @@ from common.constants import (
 )
 
 class ThemeManager:
-    """애플리케이션 테마와 폰트 관리자"""
+    """
+    애플리케이션 테마 관리 클래스 (Singleton)
+    """
+    _instance = None
+    _resource_path = None
+    
+    _app = None
+    current_theme = None
+    _initialized = False
 
     # 플랫폼별 기본 폰트 설정 [Constants Use]
     _PROPORTIONAL_FONTS = {
@@ -47,14 +57,32 @@ class ThemeManager:
         PLATFORM_MACOS: (FONT_FAMILY_MENLO, 9)
     }
 
-    def __init__(self, resource_path=None):
+    def __new__(cls, *args, **kwargs):
+        """Singleton 인스턴스 생성"""
+        if cls._instance is None:
+            cls._instance = super(ThemeManager, cls).__new__(cls)
+            cls._instance._initialized = False
+        return cls._instance
+
+    def __init__(self, resource_path: ResourcePath = None):
         """
         ThemeManager를 초기화하고 플랫폼별 기본 폰트를 설정합니다.
 
         Args:
-            resource_path: ResourcePath 인스턴스. None이면 기본 경로 사용 (하위 호환성)
+            resource_path: ResourcePath 인스턴스. None이면 기본 경로 사용
         """
-        self._current_theme = ThemeType.DARK.value
+        # ResourcePath가 전달되면 항상 업데이트하고 리로드
+        if resource_path is not None:
+            ThemeManager._resource_path = resource_path
+
+        if self._initialized:
+            return
+
+        super().__init__()
+        self._initialized = True
+
+        # 기본값 설정
+        self.current_theme = ThemeType.DARK.value
         self._app = None
         self._resource_path = resource_path
 
@@ -68,6 +96,10 @@ class ThemeManager:
         self._proportional_font = QFont(prop_family, prop_size)
         self._fixed_font = QFont(fixed_family, fixed_size)
         self._fixed_font.setStyleHint(QFont.Monospace)
+        
+        # ResourcePath가 없는 경우(최초 import 시), Fallback 경로로 로드 시도
+        if resource_path is None:
+            self.load_languages()
 
     def is_dark_theme(self) -> bool:
         """
@@ -77,7 +109,7 @@ class ThemeManager:
         Returns:
             bool: 어두운 테마면 True, 밝은 테마면 False
         """
-        current = self._current_theme.lower()
+        current = self.current_theme.lower()
         # Dark 또는 Dracula는 True 반환
         return current in [ThemeType.DARK.value, ThemeType.DRACULA.value]
 
@@ -138,8 +170,8 @@ class ThemeManager:
 
         if self._resource_path is not None:
             # AppConfig가 제공되었으면 그것을 사용
-            common_path = self._resource_path.get_theme_file('common')
-            theme_path = self._resource_path.get_theme_file(theme_name)
+            common_path = self._resource_path.get_theme_path('common')
+            theme_path = self._resource_path.get_theme_path(theme_name)
 
             # 리소스 경로에 등록되지 않은 새 테마일 수 있으므로 직접 구성 시도
             if not theme_path:
@@ -191,6 +223,30 @@ class ThemeManager:
         return qss_content
 
     @staticmethod
+    def set_resource_path(resource_path: ResourcePath) -> None:
+        """ResourcePath 의존성을 주입합니다."""
+        ThemeManager._resource_path = resource_path
+
+    def _get_theme_path_path(self, theme_name: str) -> Path:
+        """
+        테마 이름에 해당하는 QSS 파일 경로를 반환합니다.
+        """
+        filename = f"{theme_name.lower()}.qss"
+
+        # 1. ResourcePath가 설정되어 있으면 그것을 사용
+        if ThemeManager._resource_path:
+            return ThemeManager._resource_path.get_theme_path(filename)
+
+        # 2. Fallback: 상대 경로 추론 (테스트 환경 등)
+        if hasattr(os, '_MEIPASS'):
+            base_path = Path(os._MEIPASS)
+        else:
+            # view/managers/theme_manager.py -> project_root
+            base_path = Path(__file__).parent.parent.parent
+
+        return base_path / 'resources' / 'themes' / filename
+
+    @staticmethod
     def _get_fallback_stylesheet(theme_name: str) -> str:
         """
         테마 파일이 없을 경우 사용할 최소한의 스타일시트를 반환합니다.
@@ -215,31 +271,6 @@ class ThemeManager:
             QLineEdit, QTextEdit, QPlainTextEdit { background-color: #ffffff; color: #000000; border: 1px solid #cccccc; }
             QComboBox, QPushButton { background-color: #e0e0e0; color: #000000; border: 1px solid #cccccc; padding: 5px; }
             """
-
-    def apply_theme(self, app: QApplication, theme_name: str = ThemeType.DARK.value):
-        """
-        지정된 테마를 QApplication 인스턴스에 적용합니다.
-
-        Args:
-            app (QApplication): 스타일을 적용할 애플리케이션 인스턴스.
-            theme_name (str): 적용할 테마 이름. 기본값은 "dark".
-        """
-        self._app = app
-        self._current_theme = theme_name
-
-        # 1. 기본 테마 로드 (공통 + 특정)
-        base_stylesheet = self.load_theme(theme_name)
-
-        # 2. 폰트 스타일시트 생성
-        font_stylesheet = self._generate_font_stylesheet()
-
-        # 3. 결합 및 적용
-        full_stylesheet = base_stylesheet + "\n" + font_stylesheet
-
-        if full_stylesheet:
-            app.setStyleSheet(full_stylesheet)
-        else:
-            logger.error(f"Failed to apply theme: {theme_name}")
 
     def _generate_font_stylesheet(self) -> str:
         """
@@ -284,6 +315,40 @@ class ThemeManager:
         }}
         """
 
+    def apply_theme(self, app: QApplication, theme_name: str) -> None:
+        """
+        지정된 테마를 애플리케이션 전체에 적용합니다.
+
+        Args:
+            app (QApplication): 적용할 앱 인스턴스
+            theme_name (str): 테마 이름 ('dark' or 'light')
+        """
+        self.current_theme = theme_name.lower()
+        qss_path = self._get_theme_path_path(self.current_theme)
+
+        logger.info(f"Applying theme: {self.current_theme} from {qss_path}")
+
+        try:
+            if qss_path.exists():
+                with open(qss_path, 'r', encoding='utf-8') as f:
+                    qss = f.read()
+
+                    # 아이콘 경로 등 리소스 경로 치환이 필요한 경우 처리
+                    # 예: url(@ICON_PATH/icon.png) -> url(C:/.../resources/icons/icon.png)
+                    # 현재 구조에서는 아이콘 처리를 별도로 하거나 상대 경로를 사용한다고 가정
+                    if ThemeManager._resource_path:
+                        icon_path = str(ThemeManager._resource_path.icons_dir).replace('\\', '/')
+                        qss = qss.replace("@ICON_PATH", icon_path)
+
+                    app.setStyleSheet(qss)
+            else:
+                logger.error(f"Theme file not found: {qss_path}")
+                # 파일이 없을 경우 안전을 위해 스타일시트 초기화 혹은 기본 동작 유지
+                # app.setStyleSheet("")
+
+        except Exception as e:
+            logger.error(f"Failed to load theme stylesheet: {e}")
+
     def get_current_theme(self) -> str:
         """
         현재 테마 이름을 반환합니다.
@@ -291,7 +356,7 @@ class ThemeManager:
         Returns:
             str: 현재 테마 이름.
         """
-        return self._current_theme
+        return self.current_theme
 
     # 가변폭(Proportional) 폰트 메서드
     def set_proportional_font(self, family: str, size: int):
@@ -306,7 +371,7 @@ class ThemeManager:
         if self._app:
             self._app.setFont(self._proportional_font)
             # 테마를 다시 적용하여 QSS 업데이트
-            self.apply_theme(self._app, self._current_theme)
+            self.apply_theme(self._app, self.current_theme)
 
     def get_proportional_font(self) -> QFont:
         """
@@ -339,7 +404,7 @@ class ThemeManager:
         self._fixed_font.setStyleHint(QFont.Monospace)
         if self._app:
             # 테마를 다시 적용하여 QSS 업데이트
-            self.apply_theme(self._app, self._current_theme)
+            self.apply_theme(self._app, self.current_theme)
 
     def get_fixed_font(self) -> QFont:
         """
@@ -385,7 +450,7 @@ class ThemeManager:
         # 참고: apply_theme이 초기화 직후 호출되므로 여기서 바로 적용하지 않아도 됨.
         # 하지만 app이 설정되어 있다면 명시적으로 적용.
         if self._app:
-             self.apply_theme(self._app, self._current_theme)
+             self.apply_theme(self._app, self.current_theme)
 
     def get_font_settings(self) -> FontConfig:
         """
@@ -432,7 +497,7 @@ class ThemeManager:
             QIcon: 테마에 맞는 QIcon 객체.
         """
         # Dracula 등 다크 계열 테마는 white 아이콘(dark 접미사) 사용
-        target_theme = self._current_theme
+        target_theme = self.current_theme
         if target_theme.lower() in [ThemeType.DRACULA.value, ThemeType.DARK.value]:
             target_theme = ThemeType.DARK.value
         else:
@@ -463,3 +528,7 @@ class ThemeManager:
                 return QIcon()
 
             return QIcon(icon_path)
+
+
+# 전역에서 접근 가능한 싱글톤 인스턴스 생성
+theme_manager = ThemeManager()

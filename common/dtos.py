@@ -63,18 +63,19 @@ class ManualCommand:
     수동 Command 전송 데이터
 
     Attributes:
-        text (str): 전송할 텍스트
+        command (str): 전송할 텍스트
         hex_mode (bool): 16진수 모드
-        prefix (bool): 프리픽스 사용
-        suffix (bool): 사후缀 사용
-        local_echo (bool): 로컬 에코
+        prefix_enabled (bool): 접두사 사용
+        suffix_enabled (bool): 접미사 사용
+        local_echo_enabled (bool): 로컬 에코
+        broadcast_enabled (bool): 브로드캐스트
     """
-    text: str
+    command: str
     hex_mode: bool = False
-    prefix: bool = False
-    suffix: bool = False
-    local_echo: bool = False
-    is_broadcast: bool = False
+    prefix_enabled: bool = False
+    suffix_enabled: bool = False
+    local_echo_enabled: bool = False
+    broadcast_enabled: bool = False
 
 @dataclass
 class PortConfig:
@@ -117,16 +118,19 @@ class PortConfig:
         Returns:
             PortConfig: 생성된 PortConfig 객체
         """
+        hex_mode_val = data.get("hex_mode")
+        if hex_mode_val is None:
+            hex_mode_val = data.get("is_hex", False)
+
         return cls(
-            port=_safe_cast(data.get("port"), str, ""),
-            protocol=_safe_cast(data.get("protocol"), str, "Serial"),
-            baudrate=_safe_cast(data.get("baudrate"), int, DEFAULT_BAUDRATE),
-            bytesize=_safe_cast(data.get("bytesize"), int, 8),
-            parity=_safe_cast(data.get("parity"), str, SerialParity.NONE.value),
-            stopbits=_safe_cast(data.get("stopbits"), float, SerialStopBits.ONE.value),
-            flowctrl=_safe_cast(data.get("flowctrl"), str, SerialFlowControl.NONE.value),
-            speed=_safe_cast(data.get("speed"), int, 1000000),
-            mode=_safe_cast(data.get("mode"), int, 0)
+            enabled=_safe_cast(data.get("enabled"), bool, True),
+            command=_safe_cast(data.get("command"), str, ""),
+            hex_mode=_safe_cast(hex_mode_val, bool, False),
+            prefix_enabled=_safe_cast(data.get("prefix_enabled"), bool, False),
+            suffix_enabled=_safe_cast(data.get("suffix_enabled"), bool, False),
+            delay_ms=_safe_cast(data.get("delay_ms"), int, 0),
+            expect=_safe_cast(data.get("expect"), str, ""),
+            timeout_ms=_safe_cast(data.get("timeout_ms"), int, 5000)
         )
 
 @dataclass
@@ -171,7 +175,7 @@ class MacroEntry:
     Attributes:
         enabled: 활성화 여부
         command: 전송할 Command
-        is_hex: HEX 모드 여부
+        hex_mode: HEX 모드 여부
         prefix: 접두사 사용 여부
         suffix: 접미사 사용 여부
         delay_ms: 다음 명령까지 대기 시간 (ms)
@@ -180,9 +184,9 @@ class MacroEntry:
     """
     enabled: bool = True
     command: str = ""
-    is_hex: bool = False
-    prefix: bool = False
-    suffix: bool = False
+    hex_mode: bool = False
+    prefix_enabled: bool = False
+    suffix_enabled: bool = False
     delay_ms: int = 0
     expect: str = ""
     timeout_ms: int = 5000
@@ -197,7 +201,7 @@ class MacroEntry:
         return {
             "enabled": self.enabled,
             "command": self.command,
-            "is_hex": self.is_hex,
+            "hex_mode": self.hex_mode,
             "prefix": self.prefix,
             "suffix": self.suffix,
             "delay_ms": self.delay_ms,
@@ -219,9 +223,9 @@ class MacroEntry:
         return cls(
             enabled=_safe_cast(data.get("enabled"), bool, True),
             command=_safe_cast(data.get("command"), str, ""),
-            is_hex=_safe_cast(data.get("is_hex"), bool, False),
-            prefix=_safe_cast(data.get("prefix"), bool, False),
-            suffix=_safe_cast(data.get("suffix"), bool, False),
+            hex_mode=_safe_cast(data.get("hex_mode"), bool, False),
+            prefix_enabled=_safe_cast(data.get("prefix_enabled"), bool, False),
+            suffix_enabled=_safe_cast(data.get("suffix_enabled"), bool, False),
             delay_ms=_safe_cast(data.get("delay_ms"), int, 0),
             expect=_safe_cast(data.get("expect"), str, ""),
             timeout_ms=_safe_cast(data.get("timeout_ms"), int, 5000)
@@ -323,14 +327,14 @@ class MacroScriptData:
     매크로 스크립트 데이터 DTO
 
     Attributes:
-        filepath (str): 스크립트 파일 경로
+        file_path (str): 스크립트 파일 경로
         data (Dict[str, Any]): 스크립트 데이터
     """
-    filepath: str
+    file_path: str
     data: Dict[str, Any]
 
     @classmethod
-    def from_dict(cls, filepath: str, data: Dict[str, Any]) -> 'MacroScriptData':
+    def from_dict(cls, file_path: str, data: Dict[str, Any]) -> 'MacroScriptData':
         """안전한 생성 메서드"""
         if not isinstance(data, dict):
             data = {}
@@ -339,7 +343,7 @@ class MacroScriptData:
             data["commands"] = []
         if "control_state" not in data:
             data["control_state"] = {}
-        return cls(filepath=filepath, data=data)
+        return cls(file_path=file_path, data=data)
 
 @dataclass
 class MacroRepeatOption:
@@ -350,12 +354,12 @@ class MacroRepeatOption:
         delay_ms (int): 실행 간격 (밀리초)
         max_runs (int): 최대 실행 횟수
         interval_ms (int): 실행 간격 (밀리초)
-        is_broadcast (bool): 브로드캐스트 사용 여부
+        broadcast_enabled (bool): 브로드캐스트 사용 여부
     """
     delay_ms: int
     max_runs: int = 0
     interval_ms: int = 0
-    is_broadcast: bool = False
+    broadcast_enabled: bool = False
 
 @dataclass
 class MacroStepEvent:
@@ -393,15 +397,15 @@ class PreferencesState:
     # Serial Defaults
     baudrate: int = DEFAULT_BAUDRATE
     newline: str = "LF"
-    local_echo: bool = False
-    scan_interval: int = 1000
+    local_echo_enabled: bool = False
+    scan_interval_ms: int = 1000
 
     # Command
-    cmd_prefix: str = ""
-    cmd_suffix: str = ""
+    command_prefix: str = ""
+    command_suffix: str = ""
 
     # Logging
-    log_path: str = ""
+    log_dir: str = ""
 
     # Packet
     parser_type: int = 0
@@ -427,7 +431,7 @@ class MainWindowState:
         y (Optional[int]): y 좌표
         splitter_state (Optional[str]): 스플리터 상태
         right_panel_visible (bool): 오른쪽 패널 표시 여부
-        saved_right_width (Optional[int]): 오른쪽 패널 너비
+        right_section_width (Optional[int]): 오른쪽 패널 너비
         left_section_state (Dict[str, Any]): 왼쪽 섹션 상태
         right_section_state (Dict[str, Any]): 오른쪽 섹션 상태
     """
@@ -437,7 +441,7 @@ class MainWindowState:
     y: Optional[int] = None
     splitter_state: Optional[str] = None
     right_panel_visible: bool = True
-    saved_right_width: Optional[int] = None
+    right_section_width: Optional[int] = None
     left_section_state: Dict[str, Any] = field(default_factory=dict)
     right_section_state: Dict[str, Any] = field(default_factory=dict)
 
@@ -449,21 +453,21 @@ class ManualControlState:
     Attributes:
         input_text (str): 입력 텍스트
         hex_mode (bool): 헥스 모드
-        prefix_chk (bool): 프리픽스 체크
-        suffix_chk (bool): 사фф픽스 체크
-        rts_chk (bool): RTS 체크
-        dtr_chk (bool): DTR 체크
-        local_echo_chk (bool): 로컬 에코 체크
-        broadcast_chk (bool): 브로드캐스트 체크
+        prefix_enabled (bool): 프리픽스 체크
+        suffix_enabled (bool): 사фф픽스 체크
+        rts_enabled (bool): RTS 체크
+        dtr_enabled (bool): DTR 체크
+        local_echo_enabled (bool): 로컬 에코 체크
+        broadcast_enabled (bool): 브로드캐스트 체크
     """
     input_text: str = ""
     hex_mode: bool = False
-    prefix_chk: bool = False
-    suffix_chk: bool = False
-    rts_chk: bool = False
-    dtr_chk: bool = False
-    local_echo_chk: bool = False
-    broadcast_chk: bool = False
+    prefix_enabled: bool = False
+    suffix_enabled: bool = False
+    rts_enabled: bool = False
+    dtr_enabled: bool = False
+    local_echo_enabled: bool = False
+    broadcast_enabled: bool = False
 
 @dataclass
 class ColorRule:
@@ -479,7 +483,7 @@ class ColorRule:
         color (str): (Deprecated) 기본 색상 코드
         light_color (str): 라이트 테마용 색상 코드
         dark_color (str): 다크 테마용 색상 코드
-        is_regex (bool): 정규식 사용 여부
+        regex_enabled (bool): 정규식 사용 여부
         enabled (bool): 규칙 활성화 여부
     """
     name: str
@@ -487,5 +491,5 @@ class ColorRule:
     color: str = "" # 하위 호환성 유지
     light_color: str = ""
     dark_color: str = ""
-    is_regex: bool = True
+    regex_enabled: bool = True
     enabled: bool = True

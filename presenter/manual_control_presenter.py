@@ -104,7 +104,7 @@ class ManualControlPresenter(QObject):
             return
 
         # DTO 속성 접근
-        if not command.text:
+        if not command.command:
             return
 
         # SettingsManager에서 값 획득 후 CommandProcessor에 주입
@@ -112,15 +112,15 @@ class ManualControlPresenter(QObject):
         suffix = self.settings_manager.get(ConfigKeys.COMMAND_SUFFIX) if command.suffix else None
 
         try:
-            data = CommandProcessor.process_command(command.text, command.hex_mode, prefix=prefix, suffix=suffix)
+            data = CommandProcessor.process_command(command.command, command.hex_mode, prefix=prefix, suffix=suffix)
         except ValueError:
-            logger.error(f"Invalid hex string for sending: {command.text}")
+            logger.error(f"Invalid hex string for sending: {command.command}")
             return
 
         # Broadcast 여부에 따른 전송 처리
-        if command.is_broadcast:
+        if command.broadcast_enabled:
             # 브로드캐스팅 허용된 모든 포트로 전송
-            self.connection_controller.send_data_to_broadcasting(data)
+            self.connection_controller.send_broadcast_data(data)
             logger.info(f"Manual command broadcasted: {command.text}")
         else:
             # 현재 활성 포트 조회
@@ -176,12 +176,12 @@ class ManualControlPresenter(QObject):
         return ManualControlState(
             input_text=manual_control_widget.get("input_text", ""),
             hex_mode=manual_control_widget.get("hex_mode", False),
-            prefix_chk=manual_control_widget.get("prefix_chk", False),
-            suffix_chk=manual_control_widget.get("suffix_chk", False),
-            rts_chk=manual_control_widget.get("rts_chk", False),
-            dtr_chk=manual_control_widget.get("dtr_chk", False),
-            local_echo_chk=manual_control_widget.get("local_echo_chk", False),
-            broadcast_chk=manual_control_widget.get("broadcast_chk", False)
+            prefix_enabled=manual_control_widget.get("prefix_enabled", False),
+            suffix_enabled=manual_control_widget.get("suffix_enabled", False),
+            rts_enabled=manual_control_widget.get("rts_enabled", False),
+            dtr_enabled=manual_control_widget.get("dtr_enabled", False),
+            local_echo_enabled=manual_control_widget.get("local_echo_enabled", False),
+            broadcast_enabled=manual_control_widget.get("broadcast_enabled", False)
         )
 
     def apply_state(self, state: ManualControlState) -> None:
@@ -196,12 +196,12 @@ class ManualControlPresenter(QObject):
             "manual_control_widget": {
                 "input_text": state.input_text,
                 "hex_mode": state.hex_mode,
-                "prefix_chk": state.prefix_chk,
-                "suffix_chk": state.suffix_chk,
-                "rts_chk": state.rts_chk,
-                "dtr_chk": state.dtr_chk,
-                "local_echo_chk": state.local_echo_chk,
-                "broadcast_chk": state.broadcast_chk
+                "prefix_enabled": state.prefix_enabled,
+                "suffix_enabled": state.suffix_enabled,
+                "rts_enabled": state.rts_enabled,
+                "dtr_enabled": state.dtr_enabled,
+                "local_echo_enabled": state.local_echo_enabled,
+                "broadcast_enabled": state.broadcast_enabled
             }
         }
         # Refactor: apply_state -> apply_state

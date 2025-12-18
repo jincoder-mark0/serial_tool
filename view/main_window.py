@@ -79,7 +79,7 @@ class MainWindow(QMainWindow):
 
         # 우측 패널 숨김 전 왼쪽 패널 너비 저장용
         self._saved_left_width = None
-        self._saved_right_width = None
+        self._right_section_width = None
 
         # UI 초기화
         self.init_ui()
@@ -163,7 +163,7 @@ class MainWindow(QMainWindow):
         # 3. 우측 패널 표시 상태
         self.menu_bar.set_right_section_checked(state.right_panel_visible)
         self.right_section.setVisible(state.right_panel_visible)
-        self._saved_right_width = state.saved_right_width
+        self._right_section_width = state.right_section_width
 
         # 4. 스플리터 상태
         if state.splitter_state:
@@ -198,9 +198,9 @@ class MainWindow(QMainWindow):
         state.right_panel_visible = self.right_section.isVisible()
 
         if self.right_section.isVisible():
-            state.saved_right_width = self.right_section.width()
+            state.right_section_width = self.right_section.width()
         else:
-            state.saved_right_width = getattr(self, '_saved_right_width', None)
+            state.right_section_width = getattr(self, '_right_section_width', None)
 
         # 2. 하위 섹션 상태 (딕셔너리로 수집)
         state.left_section_state = self.left_section.get_state()
@@ -245,7 +245,7 @@ class MainWindow(QMainWindow):
             message (str): 메시지 내용
             level (str): 로그 레벨
         """
-        self.left_section.system_log_widget.log(message, level)
+        self.left_section.system_log_widget.append_log(message, level)
 
     def update_status_bar_stats(self, rx_bytes: int, tx_bytes: int) -> None:
         """상태바 통계 업데이트"""
@@ -335,7 +335,7 @@ class MainWindow(QMainWindow):
         self.menu_bar.preferences_requested.connect(self.preferences_requested.emit)
         self.menu_bar.about_requested.connect(self.open_about_dialog)
 
-        self.menu_bar.port_open_requested.connect(self.left_section.open_current_port)
+        self.menu_bar.connect_requested.connect(self.left_section.open_current_port)
         self.menu_bar.tab_close_requested.connect(self.left_section.close_current_tab)
         self.menu_bar.data_log_save_requested.connect(self.manual_save_log)
         self.menu_bar.toggle_right_section_requested.connect(self.toggle_right_section)
@@ -456,8 +456,8 @@ class MainWindow(QMainWindow):
         if visible:
             # 보이기: 윈도우 폭 증가
             # 저장된 오른쪽 패널 너비가 있으면 사용, 없으면 기본값 400
-            if hasattr(self, '_saved_right_width') and self._saved_right_width is not None:
-                target_right_width = self._saved_right_width
+            if hasattr(self, '_right_section_width') and self._right_section_width is not None:
+                target_right_width = self._right_section_width
             else:
                 target_right_width = max(int(self.width() * 0.3), 300)
 
@@ -472,12 +472,12 @@ class MainWindow(QMainWindow):
 
             # 복원 후 저장된 값 초기화
             self._saved_left_width = None
-            self._saved_right_width = None
+            self._right_section_width = None
 
         else:
             # 숨기기: 윈도우 폭 감소
             # 현재 패널 너비 저장
-            self._saved_right_width = self.right_section.width()
+            self._right_section_width = self.right_section.width()
 
             # 왼쪽 패널의 현재 너비를 기준으로 윈도우 크기 재조정
             # 중앙 위젯의 좌우 마진을 동적으로 계산

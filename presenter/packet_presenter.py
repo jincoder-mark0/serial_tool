@@ -124,7 +124,7 @@ class PacketPresenter(QObject):
             data_ascii = str(data_bytes)
 
         # View 업데이트
-        self.view.add_packet_to_view(time_str, packet_type, data_hex, data_ascii)
+        self.view.append_packet(time_str, packet_type, data_hex, data_ascii)
 
     def on_clear_requested(self) -> None:
         """

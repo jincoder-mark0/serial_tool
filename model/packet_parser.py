@@ -224,29 +224,29 @@ class ExpectMatcher:
 
     매크로 Expect 기능에서 특정 응답을 기다릴 때 사용합니다.
     """
-    def __init__(self, pattern: str, is_regex: bool = False, max_buffer_size: int = 1024 * 1024):
+    def __init__(self, pattern: str, regex_enabled: bool = False, max_buffer_size: int = 1024 * 1024):
         """
         ExpectMatcher 초기화
 
         Args:
             pattern: 매칭할 패턴 (문자열 또는 정규식)
-            is_regex: 정규식 사용 여부
+            regex_enabled: 정규식 사용 여부
             max_buffer_size: 최대 버퍼 크기 (기본 1MB)
         """
         self.pattern = pattern
-        self.is_regex = is_regex
+        self.regex_enabled = regex_enabled
         self.max_buffer_size = max_buffer_size
         self._buffer = b""
         self._regex = None
         self._target_bytes = b""
 
-        if is_regex:
+        if regex_enabled:
             try:
                 # bytes로 매칭하기 위해 pattern을 bytes로 인코딩
                 self._regex = re.compile(pattern.encode('utf-8'))
             except re.error:
                 # 유효하지 않은 정규식인 경우 리터럴 매칭으로 fallback
-                self.is_regex = False
+                self.regex_enabled = False
                 self._target_bytes = pattern.encode('utf-8')
         else:
             self._target_bytes = pattern.encode('utf-8')
@@ -272,7 +272,7 @@ class ExpectMatcher:
         if len(self._buffer) > self.max_buffer_size:
             self._buffer = self._buffer[-self.max_buffer_size:]
 
-        if self.is_regex and self._regex:
+        if self.regex_enabled and self._regex:
             # search는 부분 매칭도 허용
             if self._regex.search(self._buffer):
                 return True

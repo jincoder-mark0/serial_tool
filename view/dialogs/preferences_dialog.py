@@ -167,15 +167,15 @@ class PreferencesDialog(QDialog):
 
         self.port_local_echo_chk = QCheckBox(language_manager.get_text("pref_chk_local_echo"))
 
-        self.port_scan_interval_spin = QSpinBox()
-        self.port_scan_interval_spin.setRange(MIN_SCAN_INTERVAL_MS, MAX_SCAN_INTERVAL_MS)
-        self.port_scan_interval_spin.setSingleStep(1000)
-        self.port_scan_interval_spin.setSuffix(" ms")
+        self.port_scan_interval_ms_spin = QSpinBox()
+        self.port_scan_interval_ms_spin.setRange(MIN_SCAN_INTERVAL_MS, MAX_SCAN_INTERVAL_MS)
+        self.port_scan_interval_ms_spin.setSingleStep(1000)
+        self.port_scan_interval_ms_spin.setSuffix(" ms")
 
         default_layout.addRow(language_manager.get_text("pref_lbl_baudrate"), self.port_baudrate_combo)
         default_layout.addRow(language_manager.get_text("pref_lbl_newline"), self.port_newline_combo)
         default_layout.addRow(language_manager.get_text("pref_lbl_local_echo"), self.port_local_echo_chk)
-        default_layout.addRow(language_manager.get_text("pref_lbl_scan"), self.port_scan_interval_spin)
+        default_layout.addRow(language_manager.get_text("pref_lbl_scan"), self.port_scan_interval_ms_spin)
         default_group.setLayout(default_layout)
 
         layout.addWidget(default_group)
@@ -425,11 +425,11 @@ class PreferencesDialog(QDialog):
         self.port_baudrate_combo.setCurrentText(str(self.state.baudrate))
         self.port_newline_combo.setCurrentText(self.state.newline)
         self.port_local_echo_chk.setChecked(self.state.local_echo)
-        self.port_scan_interval_spin.setValue(self.state.scan_interval)
+        self.port_scan_interval_ms_spin.setValue(self.state.scan_interval_ms)
 
         # Command
-        self.prefix_combo.setCurrentText(self.state.cmd_prefix)
-        self.suffix_combo.setCurrentText(self.state.cmd_suffix)
+        self.prefix_combo.setCurrentText(self.state.command_prefix)
+        self.suffix_combo.setCurrentText(self.state.command_suffix)
 
         # Logging
         self.log_path_edit.setText(self.state.log_path or os.getcwd())
@@ -472,9 +472,9 @@ class PreferencesDialog(QDialog):
             baudrate=baud_val,
             newline=newline_val,
             local_echo=self.port_local_echo_chk.checkState() == Qt.Checked,
-            scan_interval=self.port_scan_interval_spin.value(),
-            cmd_prefix=self.prefix_combo.currentText(),
-            cmd_suffix=self.suffix_combo.currentText(),
+            scan_interval_ms=self.port_scan_interval_ms_spin.value(),
+            command_prefix=self.prefix_combo.currentText(),
+            command_suffix=self.suffix_combo.currentText(),
             log_path=self.log_path_edit.text(),
 
             # Packet Settings

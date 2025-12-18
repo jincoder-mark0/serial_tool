@@ -41,7 +41,7 @@ class MacroPanel(QWidget):
 
     # 파일 저장/로드 요청 시그널 (DTO 사용)
     script_save_requested = pyqtSignal(object) # MacroScriptData
-    script_load_requested = pyqtSignal(str)    # filepath
+    script_load_requested = pyqtSignal(str)    # file_path
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -51,7 +51,7 @@ class MacroPanel(QWidget):
             parent (Optional[QWidget]): 부모 위젯.
         """
         super().__init__(parent)
-        self.marco_control = None
+        self.macro_control = None
         self.macro_list = None
         self._loading = False
         self.init_ui()
@@ -63,21 +63,21 @@ class MacroPanel(QWidget):
         layout.setSpacing(5)
 
         self.macro_list = MacroListWidget()
-        self.marco_control = MacroControlWidget()
+        self.macro_control = MacroControlWidget()
 
         # 제어 위젯 시그널 연결
-        self.marco_control.macro_repeat_start_requested.connect(self.on_repeat_start_requested)
-        self.marco_control.macro_repeat_stop_requested.connect(self.on_repeat_stop_requested)
+        self.macro_control.macro_repeat_start_requested.connect(self.on_repeat_start_requested)
+        self.macro_control.macro_repeat_stop_requested.connect(self.on_repeat_stop_requested)
 
         # 저장/로드 버튼 클릭 시 파일 다이얼로그 호출 핸들러 연결
-        self.marco_control.script_save_requested.connect(self.on_save_clicked)
-        self.marco_control.script_load_requested.connect(self.on_load_clicked)
+        self.macro_control.script_save_requested.connect(self.on_save_clicked)
+        self.macro_control.script_load_requested.connect(self.on_load_clicked)
 
         # 데이터 변경 알림 연결
         self.macro_list.macro_list_changed.connect(self.state_changed.emit)
 
         layout.addWidget(self.macro_list)
-        layout.addWidget(self.marco_control)
+        layout.addWidget(self.macro_control)
 
         self.setLayout(layout)
 
@@ -101,7 +101,7 @@ class MacroPanel(QWidget):
         if path:
             data = self.get_state()
             # DTO 생성
-            script_data = MacroScriptData(filepath=path, data=data)
+            script_data = MacroScriptData(file_path=path, data=data)
             self.script_save_requested.emit(script_data)
 
     def on_load_clicked(self) -> None:
@@ -160,7 +160,7 @@ class MacroPanel(QWidget):
             # 컨트롤 설정 로드
             control_state = state.get("control_state", {})
             if control_state:
-                self.marco_control.apply_state(control_state)
+                self.macro_control.apply_state(control_state)
         finally:
             self._loading = False
 
@@ -173,7 +173,7 @@ class MacroPanel(QWidget):
         """
         return {
             "commands": self.macro_list.get_state(),
-            "control_state": self.marco_control.get_state()
+            "control_state": self.macro_control.get_state()
         }
 
     def on_repeat_start_requested(self, option: MacroRepeatOption) -> None:
@@ -187,7 +187,7 @@ class MacroPanel(QWidget):
         if indices:
             # 선택된 인덱스와 옵션 DTO를 함께 전달
             self.repeat_start_requested.emit(indices, option)
-            self.marco_control.set_running_state(True, is_repeat=True)
+            self.macro_control.set_running_state(True, is_repeat=True)
 
     def on_repeat_stop_requested(self) -> None:
         """
@@ -204,4 +204,4 @@ class MacroPanel(QWidget):
         """
         # 현재는 단순히 running 상태만 전달
         # 향후 is_repeat 파라미터를 추가하여 Repeat/Pause 버튼 상태를 구분할 수 있음
-        self.marco_control.set_running_state(running)
+        self.macro_control.set_running_state(running)

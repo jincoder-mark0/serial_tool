@@ -80,7 +80,7 @@ def test_dynamic_language_switching(app, qtbot):
          lambda w: w.text(), "manual_control_btn_send"),
 
         # 5. Macro Control (Right Section -> MacroPanel -> MacroControl)
-        (lambda: app.right_section.macro_panel.marco_control.macro_repeat_start_btn,
+        (lambda: app.right_section.macro_panel.macro_control.macro_repeat_start_btn,
          lambda w: w.text(), "macro_control_btn_repeat_start"),
 
         # 6. Packet Inspector (Right Section -> PacketPanel -> PacketWidget)

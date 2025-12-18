@@ -24,7 +24,7 @@ from PyQt5.QtCore import pyqtSlot
 from typing import Optional, List
 import datetime
 from view.managers.language_manager import language_manager
-from view.managers.theme_manager import ThemeManager
+from view.managers.theme_manager import theme_manager
 from view.custom_qt.smart_list_view import QSmartListView
 # Removed ColorManager import
 from common.constants import DEFAULT_LOG_MAX_LINES
@@ -62,7 +62,6 @@ class SystemLogWidget(QWidget):
 
         # Rules storage
         self._color_rules: List[ColorRule] = []
-        self._theme_manager = ThemeManager()
 
         # ---------------------------------------------------------
         # 2. UI 구성 및 시그널 연결
@@ -75,9 +74,9 @@ class SystemLogWidget(QWidget):
     def set_color_rules(self, rules: List[ColorRule]) -> None:
         """색상 규칙 설정"""
         self._color_rules = rules
-        # 리스트 뷰에도 전달 (필요시) - 하지만 여기선 log()에서 직접 포맷팅함
+        # 리스트 뷰에도 전달 (필요시) - 하지만 여기선 append_log()에서 직접 포맷팅함
         # QSmartListView가 자체적으로 규칙을 가지고 포맷팅하게 할 수도 있지만,
-        # System Log는 라인 단위로 명확히 추가되므로 아래 log() 메서드에서 처리.
+        # System Log는 라인 단위로 명확히 추가되므로 아래 append_log() 메서드에서 처리.
         # 하지만 QSmartListView 일관성을 위해 전달 권장.
         self.sys_log_list.set_color_rules(rules)
 
@@ -180,7 +179,7 @@ class SystemLogWidget(QWidget):
             self.sys_log_toggle_logging_btn.setText(language_manager.get_text("sys_log_btn_toggle_logging"))
         self.sys_log_toggle_logging_btn.setToolTip(language_manager.get_text("sys_log_btn_toggle_logging_tooltip"))
 
-    def log(self, message: str, level: str = "INFO") -> None:
+    def append_log(self, message: str, level: str = "INFO") -> None:
         """
         상태 메시지를 로그에 추가합니다.
 
@@ -199,7 +198,7 @@ class SystemLogWidget(QWidget):
         # Use ColorService directly with injected rules
         if self._color_rules:
             # 현재 테마 상태 조회 및 전달
-            is_dark = self._theme_manager.is_dark_theme()
+            is_dark = theme_manager.is_dark_theme()
             full_text = ColorService.apply_rules(full_text, self._color_rules, is_dark)
 
         # 4. 뷰에 추가

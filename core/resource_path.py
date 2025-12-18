@@ -82,7 +82,7 @@ class ResourcePath:
         # 로그 경로
         self.logs_dir = self.base_dir / 'logs'
 
-    def get_language_file(self, language_code: str) -> Path:
+    def get_language_path(self, language_code: str) -> Path:
         """
         언어 코드에 해당하는 언어 파일 경로 반환
 
@@ -94,7 +94,7 @@ class ResourcePath:
         """
         return self.language_files.get(language_code, self.language_files['en'])
 
-    def get_theme_file(self, theme_name: str) -> Path:
+    def get_theme_path(self, theme_name: str) -> Path:
         """
         테마 이름에 해당하는 테마 파일 경로 반환
 

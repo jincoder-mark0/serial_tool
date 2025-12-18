@@ -20,7 +20,7 @@ DEFAULT_GLOBAL_SETTINGS = {
 }
 
 DEFAULT_UI_SETTINGS = {
-    "rx_max_lines": DEFAULT_LOG_MAX_LINES,
+    "max_log_lines": DEFAULT_LOG_MAX_LINES,
     "proportional_font_family": "Segoe UI",
     "proportional_font_size": 9,
     "fixed_font_family": "Consolas",
@@ -42,8 +42,8 @@ DEFAULT_SERIAL_SETTINGS = {
     "stopbits": 1,
     "flowctrl": "None",
     "newline": "LF",
-    "local_echo": False,
-    "scan_interval": 1000
+    "local_echo_enabled": False,
+    "scan_interval_ms": 1000
 }
 
 DEFAULT_COMMAND_SETTINGS = {
@@ -52,7 +52,7 @@ DEFAULT_COMMAND_SETTINGS = {
 }
 
 DEFAULT_LOGGING_SETTINGS = {
-    "log_path": ""
+    "log_dir": ""
 }
 
 DEFAULT_PACKET_SETTINGS = {
@@ -76,21 +76,21 @@ DEFAULT_MANUAL_CONTROL_STATE = {
     "manual_control_widget": {
         "input_text": "",
         "hex_mode": False,
-        "prefix_chk": False,
-        "suffix_chk": False,
-        "rts_chk": False,
-        "dtr_chk": False,
-        "local_echo_chk": False,
-        "broadcast_chk": False
+        "prefix_enabled": False,
+        "suffix_enabled": False,
+        "rts_enabled": False,
+        "dtr_enabled": False,
+        "local_echo_enabled": False,
+        "broadcast_enabled": False
     }
 }
 
 DEFAULT_MACRO_LIST_STATE = {
     "commands": [],
     "control_state": {
-        "delay": str(DEFAULT_MACRO_DELAY_MS),
+        "delay_ms": str(DEFAULT_MACRO_DELAY_MS),
         "max_runs": 0,
-        "broadcast": False
+        "broadcast_enabled": False
     }
 }
 

@@ -63,7 +63,7 @@ class ManualControlPanel(QWidget):
 
         self.setLayout(layout)
 
-    def _on_send_requested(self, command: ManualCommand) -> None:
+    def _on_send_requested(self, manual_command: ManualCommand) -> None:
         """
         수동 전송 요청 핸들러
 
@@ -71,7 +71,7 @@ class ManualControlPanel(QWidget):
             - Widget에서 완성된 DTO를 그대로 상위 Presenter로 전달합니다.
             - Panel 계층에서 비즈니스 로직(Broadcast 여부 판단 등)을 수행하지 않습니다.
         """
-        self.send_requested.emit(command)
+        self.send_requested.emit(manual_command)
 
     def set_controls_enabled(self, enabled: bool) -> None:
         """

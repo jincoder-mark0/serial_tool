@@ -226,24 +226,24 @@ class ManualControlWidget(QWidget):
         """
         전송 버튼 클릭 슬롯
         """
-        text = self.manual_command_txt.toPlainText()
+        command = self.manual_command_txt.toPlainText()
 
         # History에 추가
-        if text:
-            self.add_to_history(text)
-        if not text:
+        if command:
+            self.add_to_history(command)
+        if not command:
             return
 
         # 전송 데이터 패키징 (DTO)
         # View(Widget) 내부의 체크박스 상태로 DTO를 완결성 있게 생성합니다.
 
         command = ManualCommand(
-            text=text,
+            command=command,
             hex_mode=self.hex_chk.isChecked(),
-            prefix=self.prefix_chk.isChecked(),
-            suffix=self.suffix_chk.isChecked(),
-            local_echo=self.local_echo_chk.isChecked(),
-            is_broadcast=self.broadcast_chk.isChecked()
+            prefix_enabled=self.prefix_chk.isChecked(),
+            suffix_enabled=self.suffix_chk.isChecked(),
+            local_echo_enabled=self.local_echo_chk.isChecked(),
+            broadcast_enabled=self.broadcast_chk.isChecked()
         )
         self.send_requested.emit(command)
 
@@ -346,12 +346,12 @@ class ManualControlWidget(QWidget):
         state = {
             "input_text": self.manual_command_txt.toPlainText(),
             "hex_mode": self.hex_chk.isChecked(),
-            "prefix_chk": self.prefix_chk.isChecked(),
-            "suffix_chk": self.suffix_chk.isChecked(),
-            "rts_chk": self.rts_chk.isChecked(),
-            "dtr_chk": self.dtr_chk.isChecked(),
-            "local_echo_chk": self.local_echo_chk.isChecked(),
-            "broadcast_chk": self.broadcast_chk.isChecked()
+            "prefix_enabled": self.prefix_chk.isChecked(),
+            "suffix_enabled": self.suffix_chk.isChecked(),
+            "rts_enabled": self.rts_chk.isChecked(),
+            "dtr_enabled": self.dtr_chk.isChecked(),
+            "local_echo_enabled": self.local_echo_chk.isChecked(),
+            "broadcast_enabled": self.broadcast_chk.isChecked()
         }
         return state
 
@@ -366,9 +366,9 @@ class ManualControlWidget(QWidget):
             return
         self.manual_command_txt.setPlainText(state.get("input_text", ""))
         self.hex_chk.setChecked(state.get("hex_mode", False))
-        self.prefix_chk.setChecked(state.get("prefix_chk", False))
-        self.suffix_chk.setChecked(state.get("suffix_chk", False))
-        self.rts_chk.setChecked(state.get("rts_chk", False))
-        self.dtr_chk.setChecked(state.get("dtr_chk", False))
-        self.local_echo_chk.setChecked(state.get("local_echo_chk", False))
-        self.broadcast_chk.setChecked(state.get("broadcast_chk", False))
+        self.prefix_chk.setChecked(state.get("prefix_enabled", False))
+        self.suffix_chk.setChecked(state.get("suffix_enabled", False))
+        self.rts_chk.setChecked(state.get("rts_enabled", False))
+        self.dtr_chk.setChecked(state.get("dtr_enabled", False))
+        self.local_echo_chk.setChecked(state.get("local_echo_enabled", False))
+        self.broadcast_chk.setChecked(state.get("broadcast_enabled", False))

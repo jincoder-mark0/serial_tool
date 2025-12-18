@@ -227,10 +227,10 @@ class ViewTestWindow(QMainWindow):
 
         return widget
 
-    def _on_manual_send(self, cmd: ManualCommand):
+    def _on_manual_send(self, command: ManualCommand):
         """DTO 수신 확인"""
         self.manual_output.append(
-            f"✅ Send: '{cmd.text}' (hex={cmd.hex_mode}, broadcast={cmd.is_broadcast})"
+            f"✅ Send: '{command.command}' (hex={command.hex_mode}, broadcast={command.broadcast_enabled})"
         )
 
     def show_manual_history(self) -> None:
@@ -300,19 +300,19 @@ class ViewTestWindow(QMainWindow):
         button_layout = QHBoxLayout()
 
         btn_info = QPushButton("Log INFO")
-        btn_info.clicked.connect(lambda: self.system_log_widget.log("This is an info message", "INFO"))
+        btn_info.clicked.connect(lambda: self.system_log_widget.append_log("This is an info message", "INFO"))
         button_layout.addWidget(btn_info)
 
         btn_error = QPushButton("Log ERROR")
-        btn_error.clicked.connect(lambda: self.system_log_widget.log("This is an error message", "ERROR"))
+        btn_error.clicked.connect(lambda: self.system_log_widget.append_log("This is an error message", "ERROR"))
         button_layout.addWidget(btn_error)
 
         btn_warn = QPushButton("Log WARN")
-        btn_warn.clicked.connect(lambda: self.system_log_widget.log("This is a warning message", "WARN"))
+        btn_warn.clicked.connect(lambda: self.system_log_widget.append_log("This is a warning message", "WARN"))
         button_layout.addWidget(btn_warn)
 
         btn_success = QPushButton("Log SUCCESS")
-        btn_success.clicked.connect(lambda: self.system_log_widget.log("This is a success message", "SUCCESS"))
+        btn_success.clicked.connect(lambda: self.system_log_widget.append_log("This is a success message", "SUCCESS"))
         button_layout.addWidget(btn_success)
 
         layout.addLayout(button_layout)

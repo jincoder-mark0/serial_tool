@@ -75,7 +75,7 @@ class PacketPanel(QWidget):
         """언어 변경 시 UI 텍스트 업데이트"""
         self.clear_btn.setText(language_manager.get_text("packet_panel_btn_clear"))
 
-    def add_packet_to_view(self, time_str: str, packet_type: str, data_hex: str, data_ascii: str) -> None:
+    def append_packet(self, time_str: str, packet_type: str, data_hex: str, data_ascii: str) -> None:
         """
         패킷 데이터를 뷰에 추가
 

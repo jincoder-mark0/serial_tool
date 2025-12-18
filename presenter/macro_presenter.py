@@ -37,22 +37,22 @@ class ScriptLoadWorker(QThread):
     load_finished = pyqtSignal(dict)
     load_failed = pyqtSignal(str)
 
-    def __init__(self, filepath: str):
+    def __init__(self, file_path: str):
         """
         ScriptLoadWorker 초기화
 
         Args:
-            filepath (str): 로드할 파일 경로
+            file_path (str): 로드할 파일 경로
         """
         super().__init__()
-        self.filepath = filepath
+        self.file_path = file_path
 
     def run(self):
         """
         스크립트 파일 로드 실행
         """
         try:
-            with open(self.filepath, 'r', encoding='utf-8') as f:
+            with open(self.file_path, 'r', encoding='utf-8') as f:
                 data = commentjson.load(f)
             self.load_finished.emit(data)
         except Exception as e:
@@ -100,7 +100,7 @@ class MacroPresenter(QObject):
         Args:
             enabled (bool): 활성화 여부
         """
-        self.panel.marco_control.set_controls_enabled(enabled)
+        self.panel.macro_control.set_controls_enabled(enabled)
         # 리스트의 전송 버튼들도 제어
         self.panel.macro_list.set_send_enabled(enabled)
 
@@ -112,39 +112,39 @@ class MacroPresenter(QObject):
             script_data (MacroScriptData): 저장할 스크립트 데이터
         """
         try:
-            self._save_script_file(script_data.filepath, script_data.data)
+            self._save_script_file(script_data.file_path, script_data.data)
             self.panel.show_info("Success", "Script saved successfully.")
         except Exception as e:
             logger.error(f"Failed to save script: {e}")
             self.panel.show_error("Save Error", f"Failed to save script:\n{str(e)}")
 
-    def _save_script_file(self, filepath: str, data: dict) -> None:
+    def _save_script_file(self, file_path: str, data: dict) -> None:
         """
         [I/O] 파일 저장 수행
 
         Args:
-            filepath (str): 저장할 파일 경로
+            file_path (str): 저장할 파일 경로
             data (dict): 저장할 데이터
         """
-        with open(filepath, 'w', encoding='utf-8') as f:
+        with open(file_path, 'w', encoding='utf-8') as f:
             commentjson.dump(data, f, indent=4)
-        logger.info(f"Macro script saved to: {filepath}")
+        logger.info(f"Macro script saved to: {file_path}")
 
-    def on_script_load(self, filepath: str) -> None:
+    def on_script_load(self, file_path: str) -> None:
         """
         스크립트 파일 로드 요청 처리 (비동기)
 
         Args:
-            filepath (str): 로드할 파일 경로
+            file_path (str): 로드할 파일 경로
         """
-        logger.debug(f"Starting async script load: {filepath}")
+        logger.debug(f"Starting async script load: {file_path}")
 
         # 기존 워커가 실행 중이면 대기 (또는 취소)
         if self._load_worker and self._load_worker.isRunning():
             logger.warning("Script loading already in progress.")
             return
 
-        self._load_worker = ScriptLoadWorker(filepath)
+        self._load_worker = ScriptLoadWorker(file_path)
         self._load_worker.load_finished.connect(self._on_load_success)
         self._load_worker.load_failed.connect(self._on_load_failed)
         self._load_worker.start()
@@ -189,7 +189,7 @@ class MacroPresenter(QObject):
                 entry = MacroEntry(
                     enabled=raw['enabled'],
                     command=raw['command'],
-                    is_hex=raw['hex_mode'],
+                    hex_mode=raw['hex_mode'],
                     prefix=raw['prefix'],
                     suffix=raw['suffix'],
                     delay_ms=delay
@@ -199,7 +199,7 @@ class MacroPresenter(QObject):
         if not entries: return
 
         self.runner.load_macro(entries)
-        self.runner.start(option.max_runs, option.interval_ms, option.is_broadcast)
+        self.runner.start(option.max_runs, option.interval_ms, option.broadcast_enabled)
         self.panel.set_running_state(True)
 
     def on_repeat_stop(self) -> None:

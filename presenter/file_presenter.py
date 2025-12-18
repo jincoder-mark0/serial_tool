@@ -78,7 +78,7 @@ class FilePresenter(QObject):
         self.file_transfer_dialog = None
         self.target_port = None
 
-    def start_transfer(self, filepath: str) -> None:
+    def start_transfer(self, file_path: str) -> None:
         """
         파일 전송 시작 로직
 
@@ -113,7 +113,7 @@ class FilePresenter(QObject):
             # 엔진 생성 - DTO 전달
             self.file_transfer_service = FileTransferService(
                 self.connection_controller,
-                filepath,
+                file_path,
                 port_config
             )
 
@@ -129,7 +129,7 @@ class FilePresenter(QObject):
 
             # 비동기 실행
             QThreadPool.globalInstance().start(self.file_transfer_service)
-            logger.info(f"File transfer started: {filepath} -> {self.target_port}")
+            logger.info(f"File transfer started: {file_path} -> {self.target_port}")
 
         except Exception as e:
             logger.error(f"Failed to start file transfer: {e}")

@@ -42,7 +42,7 @@ class DataLogger:
         self._queue: Queue = Queue() # (timestamp, data) 튜플 저장
         self._thread: Optional[Thread] = None
         self._is_logging = False
-        self.filepath: str = ""
+        self.file_path: str = ""
         self.format: LogFormat = LogFormat.BIN
 
     @property
@@ -50,7 +50,7 @@ class DataLogger:
         """현재 로깅 중인지 여부 반환"""
         return self._is_logging
 
-    def start_logging(self, filepath: str, log_format: LogFormat = LogFormat.BIN) -> bool:
+    def start_logging(self, file_path: str, log_format: LogFormat = LogFormat.BIN) -> bool:
         """
         로깅을 시작합니다.
 
@@ -61,20 +61,20 @@ class DataLogger:
             - 백그라운드 스레드 시작
 
         Args:
-            filepath: 저장할 파일 경로
+            file_path: 저장할 파일 경로
             log_format: 저장 포맷 (BIN, HEX, PCAP)
 
         Returns:
             bool: 시작 성공 여부
         """
         try:
-            os.makedirs(os.path.dirname(filepath), exist_ok=True)
+            os.makedirs(os.path.dirname(file_path), exist_ok=True)
 
             self.format = log_format
-            self.filepath = filepath
+            self.file_path = file_path
 
             # 모든 포맷을 바이너리 모드로 엽니다 (텍스트 인코딩 이슈 방지 및 PCAP 호환)
-            self._file = open(filepath, 'wb')
+            self._file = open(file_path, 'wb')
 
             # PCAP 포맷인 경우 글로벌 헤더 작성
             if self.format == LogFormat.PCAP:
@@ -108,7 +108,7 @@ class DataLogger:
             finally:
                 self._file = None
 
-        self.filepath = ""
+        self.file_path = ""
 
     def write(self, data: bytes) -> None:
         """
@@ -208,13 +208,13 @@ class DataLoggerManager:
     def __init__(self):
         self._loggers: Dict[str, DataLogger] = {}
 
-    def start_logging(self, port_name: str, filepath: str, log_format: LogFormat = LogFormat.BIN) -> bool:
+    def start_logging(self, port_name: str, file_path: str, log_format: LogFormat = LogFormat.BIN) -> bool:
         """
         특정 포트의 로깅을 시작합니다.
 
         Args:
             port_name: 포트 이름
-            filepath: 저장할 파일 경로
+            file_path: 저장할 파일 경로
             log_format: 저장 포맷 (기본 BIN)
 
         Returns:
@@ -224,7 +224,7 @@ class DataLoggerManager:
             self.stop_logging(port_name)
 
         logger_instance = DataLogger()
-        if logger_instance.start_logging(filepath, log_format):
+        if logger_instance.start_logging(file_path, log_format):
             self._loggers[port_name] = logger_instance
             return True
         return False
@@ -279,7 +279,7 @@ class DataLoggerManager:
             str: 파일 경로, 로깅 중이 아니면 빈 문자열
         """
         if port_name in self._loggers:
-            return self._loggers[port_name].filepath
+            return self._loggers[port_name].file_path
         return ""
 
 # 전역 인스턴스 (Singleton)

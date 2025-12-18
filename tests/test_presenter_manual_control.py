@@ -43,16 +43,16 @@ def test_send_text_with_prefix_suffix(presenter, mock_components):
     connection_controller.has_active_connection = True
 
     # DTO 생성
-    cmd = ManualCommand(
-        text="command",
+    manual_command = ManualCommand(
+        command="command",
         hex_mode=False,
-        prefix=True,
-        suffix=True,
-        local_echo=False
+        prefix_enabled=True,
+        suffix_enabled=True,
+        local_echo_enabled=False
     )
 
     # 전송 요청
-    presenter.on_send_requested(cmd)
+    presenter.on_send_requested(manual_command)
 
     # 검증: "start_command_end"가 인코딩되어 전송되었는지
     expected_data = b"start_command_end"
@@ -64,12 +64,12 @@ def test_send_hex_mode(presenter, mock_components):
     connection_controller.has_active_connection = True
 
     # DTO 생성 ("A1 B2" -> b'\xA1\xB2')
-    cmd = ManualCommand(
-        text="A1 B2",
+    manual_command = ManualCommand(
+        command="A1 B2",
         hex_mode=True
     )
 
-    presenter.on_send_requested(cmd)
+    presenter.on_send_requested(manual_command)
 
     expected_data = b"\xA1\xB2"
     connection_controller.send_data.assert_called_once_with("COM1", expected_data)
@@ -79,8 +79,8 @@ def test_send_blocked_when_port_closed(presenter, mock_components):
     _, connection_controller, _, _ = mock_components
     connection_controller.has_active_connection = False  # 포트 닫힘
 
-    cmd = ManualCommand(text="test")
-    presenter.on_send_requested(cmd)
+    manual_command = ManualCommand(command="test")
+    presenter.on_send_requested(manual_command)
 
     # 전송 메서드가 호출되지 않아야 함
     connection_controller.send_data.assert_not_called()
@@ -90,12 +90,12 @@ def test_local_echo_callback(presenter, mock_components):
     _, connection_controller, local_echo_callback, _ = mock_components
     connection_controller.has_active_connection = True
 
-    cmd = ManualCommand(
-        text="echo",
-        local_echo=True
+    manual_command = ManualCommand(
+        command="echo",
+        local_echo_enabled=True
     )
 
-    presenter.on_send_requested(cmd)
+    presenter.on_send_requested(manual_command)
 
     expected_data = b"echo"
     local_echo_callback.assert_called_once_with(expected_data)

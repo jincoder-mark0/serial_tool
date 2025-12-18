@@ -72,10 +72,10 @@ class ConfigKeys:
     PORT_BAUDRATE = "settings.port_baudrate"
     PORT_NEWLINE = "settings.port_newline"
     PORT_LOCAL_ECHO = "settings.port_local_echo"
-    PORT_SCAN_INTERVAL = "settings.port_scan_interval"
+    PORT_SCAN_INTERVAL = "settings.port_scan_interval_ms"
 
     # UI (화면 표시 관련)
-    RX_MAX_LINES = "settings.rx_max_lines"
+    RX_MAX_LINES = "settings.max_log_lines"
 
     # Command (Command 형식)
     COMMAND_PREFIX = "settings.command_prefix"

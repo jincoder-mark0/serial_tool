@@ -103,15 +103,15 @@ class PortPresenter(QObject):
             # 중복 연결 방지를 위해 disconnect 시도
             try:
                 settings_widget.port_scan_requested.disconnect(self.scan_ports)
-                settings_widget.port_open_requested.disconnect(self.handle_open_request)
-                settings_widget.port_close_requested.disconnect(self.handle_close_request)
+                settings_widget.connect_requested.disconnect(self.handle_open_request)
+                settings_widget.disconnect_requested.disconnect(self.handle_close_request)
             except TypeError:
                 pass
 
             # 시그널 연결
             settings_widget.port_scan_requested.connect(self.scan_ports)
-            settings_widget.port_open_requested.connect(self.handle_open_request)
-            settings_widget.port_close_requested.connect(self.handle_close_request)
+            settings_widget.connect_requested.connect(self.handle_open_request)
+            settings_widget.disconnect_requested.connect(self.handle_close_request)
 
         # Broadcast 체크박스 시그널 연결
         if hasattr(widget, 'broadcast_allow_changed'):
@@ -252,7 +252,7 @@ class PortPresenter(QObject):
 
         # 시스템 로그 기록
         if hasattr(self.left_section, 'system_log_widget'):
-            self.left_section.system_log_widget.log(f"[{port_name}] Port opened", "SUCCESS")
+            self.left_section.system_log_widget.append_log(f"[{port_name}] Port opened", "SUCCESS")
 
     def on_connection_closed(self, port_name: str) -> None:
         """
@@ -279,7 +279,7 @@ class PortPresenter(QObject):
 
         # 시스템 로그 기록
         if hasattr(self.left_section, 'system_log_widget'):
-            self.left_section.system_log_widget.log(f"[{port_name}] Port closed", "INFO")
+            self.left_section.system_log_widget.append_log(f"[{port_name}] Port closed", "INFO")
 
     def on_error(self, port_name: str, message: str) -> None:
         """
@@ -294,7 +294,7 @@ class PortPresenter(QObject):
 
         # 시스템 로그 기록
         if hasattr(self.left_section, 'system_log_widget'):
-            self.left_section.system_log_widget.log(f"[{port_name}] Error: {message}", "ERROR")
+            self.left_section.system_log_widget.append_log(f"[{port_name}] Error: {message}", "ERROR")
 
     def connect_current_port(self) -> None:
         """현재 포트 연결 (단축키용)"""

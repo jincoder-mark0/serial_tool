@@ -4,42 +4,42 @@
             "name": "AT_OK",
             "pattern": "\\bOK\\b",
             "color": "#4CAF50",
-            "is_regex": true,
+            "regex_enabled": true,
             "enabled": true
         },
         {
             "name": "AT_ERROR",
             "pattern": "\\bERROR\\b",
             "color": "#F44336",
-            "is_regex": true,
+            "regex_enabled": true,
             "enabled": true
         },
         {
             "name": "URC",
             "pattern": "(\\+\\w+:)",
             "color": "#FFEB3B",
-            "is_regex": true,
+            "regex_enabled": true,
             "enabled": true
         },
         {
             "name": "PROMPT",
             "pattern": "^>",
             "color": "#00BCD4",
-            "is_regex": true,
+            "regex_enabled": true,
             "enabled": true
         },
         {
             "name": "INFO",
             "pattern": "\\bINFO\\b",
             "color": "#2196F3",
-            "is_regex": true,
+            "regex_enabled": true,
             "enabled": true
         },
         {
             "name": "WARNING",
             "pattern": "\\b(WARN|WARNING)\\b",
             "color": "#FF9800",
-            "is_regex": true,
+            "regex_enabled": true,
             "enabled": true
         }
     ]

@@ -86,7 +86,7 @@ def test_data_logger_manager(temp_log_dir):
 
 def test_expect_matcher_literal():
     """문자열 리터럴 매칭 테스트"""
-    matcher = ExpectMatcher("OK", is_regex=False)
+    matcher = ExpectMatcher("OK", regex_enabled=False)
 
     assert matcher.match(b"User Input") is False
     assert matcher.match(b"Command") is False
@@ -99,7 +99,7 @@ def test_expect_matcher_literal():
 def test_expect_matcher_regex():
     """정규식 매칭 테스트"""
     # 숫자 3자리를 기다리는 정규식
-    matcher = ExpectMatcher(r"\d{3}", is_regex=True)
+    matcher = ExpectMatcher(r"\d{3}", regex_enabled=True)
 
     assert matcher.match(b"abc") is False
     assert matcher.match(b"12") is False

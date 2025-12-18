@@ -48,7 +48,7 @@ class MacroListWidget(QWidget):
         self.macro_table = None
         self.down_row_btn: Optional[QPushButton] = None
         self.up_row_btn: Optional[QPushButton] = None
-        self.del_row_btn: Optional[QPushButton] = None
+        self.remove_row_btn: Optional[QPushButton] = None
         self.add_row_btn: Optional[QPushButton] = None
         self.select_all_chk: Optional[QCheckBox] = None
         self._send_enabled = False # Send 버튼 활성화 상태 추적
@@ -76,10 +76,10 @@ class MacroListWidget(QWidget):
         self.add_row_btn.setToolTip(language_manager.get_text("macro_list_btn_add_row_tooltip"))
         self.add_row_btn.setFixedSize(30, 30)
 
-        self.del_row_btn = QPushButton()
-        self.del_row_btn.setObjectName("del_row_btn")
-        self.del_row_btn.setToolTip(language_manager.get_text("macro_list_btn_del_row_tooltip"))
-        self.del_row_btn.setFixedSize(30, 30)
+        self.remove_row_btn = QPushButton()
+        self.remove_row_btn.setObjectName("remove_row_btn")
+        self.remove_row_btn.setToolTip(language_manager.get_text("macro_list_btn_remove_row_tooltip"))
+        self.remove_row_btn.setFixedSize(30, 30)
 
         self.up_row_btn = QPushButton()
         self.up_row_btn.setObjectName("up_row_btn")
@@ -94,13 +94,13 @@ class MacroListWidget(QWidget):
         header_layout.addWidget(self.select_all_chk)
         header_layout.addStretch()
         header_layout.addWidget(self.add_row_btn)
-        header_layout.addWidget(self.del_row_btn)
+        header_layout.addWidget(self.remove_row_btn)
         header_layout.addWidget(self.up_row_btn)
         header_layout.addWidget(self.down_row_btn)
 
         # 시그널 연결
         self.add_row_btn.clicked.connect(self.add_macro_row)
-        self.del_row_btn.clicked.connect(self.remove_selected_rows)
+        self.remove_row_btn.clicked.connect(self.remove_selected_rows)
         self.up_row_btn.clicked.connect(self.move_up_selected_row)
         self.down_row_btn.clicked.connect(self.move_down_selected_row)
 
@@ -157,7 +157,7 @@ class MacroListWidget(QWidget):
         add_action.triggered.connect(self.add_macro_row)
         menu.addAction(add_action)
 
-        del_action = QAction(language_manager.get_text("macro_list_btn_del_row_tooltip"), self)
+        del_action = QAction(language_manager.get_text("macro_list_btn_remove_row_tooltip"), self)
         del_action.triggered.connect(self.remove_selected_rows)
         menu.addAction(del_action)
 
@@ -179,7 +179,7 @@ class MacroListWidget(QWidget):
         self.select_all_chk.setToolTip(language_manager.get_text("macro_list_chk_select_all_tooltip"))
 
         self.add_row_btn.setToolTip(language_manager.get_text("macro_list_btn_add_row_tooltip"))
-        self.del_row_btn.setToolTip(language_manager.get_text("macro_list_btn_del_row_tooltip"))
+        self.remove_row_btn.setToolTip(language_manager.get_text("macro_list_btn_remove_row_tooltip"))
         self.up_row_btn.setToolTip(language_manager.get_text("macro_list_btn_up_row_tooltip"))
         self.down_row_btn.setToolTip(language_manager.get_text("macro_list_btn_down_row_tooltip"))
 

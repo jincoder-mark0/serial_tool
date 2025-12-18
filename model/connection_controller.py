@@ -313,13 +313,13 @@ class ConnectionController(QObject):
 
         self.send_data_to_connection(port_name, data)
 
-    def send_data_to_broadcasting(self, data: bytes) -> None:
+    def send_broadcast_data(self, data: bytes) -> None:
         """
         broadcasting 활성 연결로 데이터 Broadcasting
 
         Logic:
             - 현재 broadcasting 활성화된 워커 리스트를 순회하며 데이터를 전송
-            - Worker의 is_broadcasting() 상태 확인
+            - Worker의 broadcast_enableding() 상태 확인
 
         Args:
             data: 전송할 바이트 데이터
@@ -330,7 +330,7 @@ class ConnectionController(QObject):
 
         sent_any = False
         for name, worker in self.workers.items():
-            if worker.isRunning() and worker.is_broadcasting():
+            if worker.isRunning() and worker.broadcast_enableding():
                 self.send_data_to_connection(name, data)
                 sent_any = True
 

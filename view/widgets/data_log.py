@@ -506,7 +506,7 @@ class DataLogWidget(QWidget):
         self.data_log_list.set_max_lines(max_lines)
 
     @property
-    def is_broadcast_enabled(self) -> bool:
+    def broadcast_enabled_enabled(self) -> bool:
         """
         TX Broadcast 토글의 상태를 반환
 

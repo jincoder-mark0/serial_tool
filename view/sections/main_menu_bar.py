@@ -35,7 +35,7 @@ class MainMenuBar(QMenuBar):
     language_changed = pyqtSignal(str)
     preferences_requested = pyqtSignal()
     about_requested = pyqtSignal()
-    port_open_requested = pyqtSignal()
+    connect_requested = pyqtSignal()
     tab_close_requested = pyqtSignal()
     data_log_save_requested = pyqtSignal()
     toggle_right_section_requested = pyqtSignal(bool)
@@ -63,7 +63,7 @@ class MainMenuBar(QMenuBar):
 
         open_port_action = QAction(language_manager.get_text("main_menu_open_port"), self)
         open_port_action.setShortcut("Ctrl+O")
-        open_port_action.triggered.connect(self.port_open_requested.emit)
+        open_port_action.triggered.connect(self.connect_requested.emit)
         file_menu.addAction(open_port_action)
 
         close_tab_action = QAction(language_manager.get_text("main_menu_close_tab"), self)

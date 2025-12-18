@@ -160,9 +160,9 @@ class MainPresenter(QObject):
             baudrate=settings.get(ConfigKeys.PORT_BAUDRATE, 115200),
             newline=str(settings.get(ConfigKeys.PORT_NEWLINE, "\n")),
             local_echo=settings.get(ConfigKeys.PORT_LOCAL_ECHO, False),
-            scan_interval=settings.get(ConfigKeys.PORT_SCAN_INTERVAL, 1000),
-            cmd_prefix=settings.get(ConfigKeys.COMMAND_PREFIX, ""),
-            cmd_suffix=settings.get(ConfigKeys.COMMAND_SUFFIX, ""),
+            scan_interval_ms=settings.get(ConfigKeys.PORT_SCAN_INTERVAL, 1000),
+            command_prefix=settings.get(ConfigKeys.COMMAND_PREFIX, ""),
+            command_suffix=settings.get(ConfigKeys.COMMAND_SUFFIX, ""),
             log_path=settings.get(ConfigKeys.LOG_PATH, ""),
             parser_type=settings.get(ConfigKeys.PACKET_PARSER_TYPE, 0),
             delimiters=settings.get(ConfigKeys.PACKET_DELIMITERS, ["\\r\\n"]),
@@ -191,12 +191,12 @@ class MainPresenter(QObject):
             "manual_control_widget": {
                 "input_text": manual_state_dto.input_text,
                 "hex_mode": manual_state_dto.hex_mode,
-                "prefix_chk": manual_state_dto.prefix_chk,
-                "suffix_chk": manual_state_dto.suffix_chk,
-                "rts_chk": manual_state_dto.rts_chk,
-                "dtr_chk": manual_state_dto.dtr_chk,
-                "local_echo_chk": manual_state_dto.local_echo_chk,
-                "broadcast_chk": manual_state_dto.broadcast_chk
+                "prefix_enabled": manual_state_dto.prefix_enabled,
+                "suffix_enabled": manual_state_dto.suffix_enabled,
+                "rts_enabled": manual_state_dto.rts_enabled,
+                "dtr_enabled": manual_state_dto.dtr_enabled,
+                "local_echo_enabled": manual_state_dto.local_echo_enabled,
+                "broadcast_enabled": manual_state_dto.broadcast_enabled
             }
         }
 
@@ -208,8 +208,8 @@ class MainPresenter(QObject):
         settings.set(ConfigKeys.SPLITTER_STATE, state.splitter_state)
         settings.set(ConfigKeys.RIGHT_PANEL_VISIBLE, state.right_panel_visible)
 
-        if state.saved_right_width is not None:
-             settings.set(ConfigKeys.SAVED_RIGHT_WIDTH, state.saved_right_width)
+        if state.right_section_width is not None:
+             settings.set(ConfigKeys.SAVED_RIGHT_WIDTH, state.right_section_width)
 
         if ConfigKeys.MANUAL_CONTROL_STATE in state.left_section_state:
             settings.set(ConfigKeys.MANUAL_CONTROL_STATE, state.left_section_state[ConfigKeys.MANUAL_CONTROL_STATE])
@@ -237,9 +237,9 @@ class MainPresenter(QObject):
         settings.set(ConfigKeys.PORT_BAUDRATE, new_state.baudrate)
         settings.set(ConfigKeys.PORT_NEWLINE, new_state.newline)
         settings.set(ConfigKeys.PORT_LOCAL_ECHO, new_state.local_echo)
-        settings.set(ConfigKeys.PORT_SCAN_INTERVAL, new_state.scan_interval)
-        settings.set(ConfigKeys.COMMAND_PREFIX, new_state.cmd_prefix)
-        settings.set(ConfigKeys.COMMAND_SUFFIX, new_state.cmd_suffix)
+        settings.set(ConfigKeys.PORT_SCAN_INTERVAL, new_state.scan_interval_ms)
+        settings.set(ConfigKeys.COMMAND_PREFIX, new_state.command_prefix)
+        settings.set(ConfigKeys.COMMAND_SUFFIX, new_state.command_suffix)
         settings.set(ConfigKeys.LOG_PATH, new_state.log_path)
 
         settings.set(ConfigKeys.PACKET_PARSER_TYPE, new_state.parser_type)
@@ -384,19 +384,19 @@ class MainPresenter(QObject):
         self.view.log_system_message(f"Macro Error: {error_msg}", "ERROR")
         self.view.show_status_message(f"Macro Error: {error_msg}", 5000)
 
-    def on_macro_send_requested(self, command: ManualCommand) -> None:
+    def on_macro_send_requested(self, manual_command: ManualCommand) -> None:
         """
         매크로 전송 요청 처리
 
         Args:
-            command (ManualCommand): 매크로 명령어
+            manual_command (ManualCommand): 매크로 명령어
         """
-        if command.is_broadcast:
-            prefix = self.settings_manager.get(ConfigKeys.COMMAND_PREFIX) if command.prefix else None
-            suffix = self.settings_manager.get(ConfigKeys.COMMAND_SUFFIX) if command.suffix else None
+        if manual_command.broadcast_enabled:
+            prefix = self.settings_manager.get(ConfigKeys.COMMAND_PREFIX) if manual_command.prefix_enabled else None
+            suffix = self.settings_manager.get(ConfigKeys.COMMAND_SUFFIX) if manual_command.suffix_enabled else None
             try:
-                data = CommandProcessor.process_command(command.text, command.hex_mode, prefix=prefix, suffix=suffix)
-                self.connection_controller.send_data_to_broadcasting(data)
+                data = CommandProcessor.process_command(manual_command.text, manual_command.hex_mode, prefix=prefix, suffix=suffix)
+                self.connection_controller.send_broadcast_data(data)
             except ValueError as e:
                 logger.error(f"Broadcast error: {e}")
             return
@@ -406,10 +406,10 @@ class MainPresenter(QObject):
             logger.warning("No active port")
             return
 
-        prefix = self.settings_manager.get(ConfigKeys.COMMAND_PREFIX) if command.prefix else None
-        suffix = self.settings_manager.get(ConfigKeys.COMMAND_SUFFIX) if command.suffix else None
+        prefix = self.settings_manager.get(ConfigKeys.COMMAND_PREFIX) if manual_command.prefix_enabled else None
+        suffix = self.settings_manager.get(ConfigKeys.COMMAND_SUFFIX) if manual_command.suffix_enabled else None
         try:
-            data = CommandProcessor.process_command(command.text, command.hex_mode, prefix=prefix, suffix=suffix)
+            data = CommandProcessor.process_command(manual_command.text, manual_command.hex_mode, prefix=prefix, suffix=suffix)
             self.connection_controller.send_data(active_port, data)
         except ValueError as e:
             logger.error(f"Send error: {e}")
@@ -502,8 +502,8 @@ class MainPresenter(QObject):
             - 선택된 파일의 확장자를 기반으로 LogFormat 결정
             - DataLoggerManager에 포맷과 함께 시작 요청
         """
-        filepath = panel.data_log_widget.show_save_log_dialog()
-        if not filepath:
+        file_path = panel.data_log_widget.show_save_log_dialog()
+        if not file_path:
             panel.data_log_widget.set_logging_active(False)
             return
 
@@ -513,7 +513,7 @@ class MainPresenter(QObject):
             return
 
         # 확장자 기반 포맷 결정
-        _, ext = os.path.splitext(filepath)
+        _, ext = os.path.splitext(file_path)
         ext = ext.lower()
 
         log_format = LogFormat.BIN # 기본값
@@ -523,10 +523,10 @@ class MainPresenter(QObject):
             log_format = LogFormat.HEX
 
         # 포맷 전달
-        if data_logger_manager.start_logging(port, filepath, log_format):
+        if data_logger_manager.start_logging(port, file_path, log_format):
             panel.data_log_widget.set_logging_active(True)
             # 시작 메시지 (선택)
-            self.view.log_system_message(f"[{port}] Logging started ({log_format.value}): {filepath}", "INFO")
+            self.view.log_system_message(f"[{port}] Logging started ({log_format.value}): {file_path}", "INFO")
         else:
             panel.data_log_widget.set_logging_active(False)
             self.view.log_system_message(f"[{port}] Failed to start logging", "ERROR")

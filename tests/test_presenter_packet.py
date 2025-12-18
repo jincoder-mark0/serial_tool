@@ -75,7 +75,7 @@ def test_packet_formatting(presenter, mock_components):
 
     # 3. View 호출 검증
     # 인자: time_str, packet_type, data_hex, data_ascii
-    args = view.add_packet_to_view.call_args[0]
+    args = view.append_packet.call_args[0]
 
     assert args[0].endswith(".123") # 밀리초 확인
     assert args[1] == "TEST"        # 타입 확인
@@ -92,7 +92,7 @@ def test_control_character_handling(presenter, mock_components):
 
     presenter.on_packet_received(event)
 
-    args = view.add_packet_to_view.call_args[0]
+    args = view.append_packet.call_args[0]
     assert args[2] == "41 00 42" # Hex
     assert args[3] == "A.B"      # ASCII (0x00 -> .)
 

@@ -57,7 +57,7 @@ class MacroRunner(QThread):
         # 실행 제어 플래그
         self._is_running = False
         self._is_paused = False
-        self._is_broadcast = False
+        self.broadcast_enabled = False
 
         # 반복 설정
         self._loop_count = 0
@@ -81,7 +81,7 @@ class MacroRunner(QThread):
         """
         self._entries = entries
 
-    def start(self, loop_count: int = 1, interval_ms: int = 0, is_broadcast: bool = False) -> None:
+    def start(self, loop_count: int = 1, interval_ms: int = 0, broadcast_enabled: bool = False) -> None:
         """
         매크로 실행을 시작합니다.
 
@@ -94,7 +94,7 @@ class MacroRunner(QThread):
         Args:
             loop_count (int): 반복 횟수 (0=무한). 기본값 1.
             interval_ms (int): 루프 간 대기 시간 (ms). 기본값 0.
-            is_broadcast (bool): 브로드캐스트 모드 여부.
+            broadcast_enabled (bool): 브로드캐스트 모드 여부.
         """
         if not self._entries:
             self.error_occurred.emit("No macro entries loaded.")
@@ -105,7 +105,7 @@ class MacroRunner(QThread):
         self._is_paused = False
         self._loop_count = loop_count
         self._loop_interval_ms = interval_ms
-        self._is_broadcast = is_broadcast # 상태 저장
+        self.broadcast_enabled = broadcast_enabled # 상태 저장
         self._mutex.unlock()
 
         self.event_bus.publish(EventTopics.MACRO_STARTED)
@@ -159,24 +159,24 @@ class MacroRunner(QThread):
             self._cond.wakeAll()
         self._mutex.unlock()
 
-    def send_single_command(self, command: str, is_hex: bool, prefix: bool, suffix: bool) -> None:
+    def send_single_command(self, command: str, hex_mode: bool, prefix_enabled: bool, suffix_enabled: bool) -> None:
         """
         단일 명령 전송을 요청합니다 (Presenter에서 사용).
 
         Args:
             command (str): Command 텍스트
-            is_hex (bool): HEX 모드 여부
-            prefix (bool): 접두사 사용 여부
-            suffix (bool): 접미사 사용 여부
+            hex_mode (bool): HEX 모드 여부
+            prefix_enabled (bool): 접두사 사용 여부
+            suffix_enabled (bool): 접미사 사용 여부
         """
-        cmd = ManualCommand(
-            text=command,
-            hex_mode=is_hex,
-            prefix=prefix,
-            suffix=suffix,
-            is_broadcast=False
+        manual_command = ManualCommand(
+            command=command,
+            hex_mode=hex_mode,
+            prefix_enabled=prefix_enabled,
+            suffix_enabled=suffix_enabled,
+            broadcast_enabled=False
         )
-        self.send_requested.emit(cmd)
+        self.send_requested.emit(manual_command)
 
     def _on_data_received(self, data_dict: dict) -> None:
         """
@@ -250,20 +250,20 @@ class MacroRunner(QThread):
 
                 try:
                     # DTO 생성 및 전송
-                    cmd = ManualCommand(
-                        text=entry.command,
-                        hex_mode=entry.is_hex,
-                        prefix=entry.prefix,
-                        suffix=entry.suffix,
-                        is_broadcast=self._is_broadcast # 설정된 브로드캐스트 모드 적용
+                    manual_command = ManualCommand(
+                        command=entry.command,
+                        hex_mode=entry.hex_mode,
+                        prefix_enabled=entry.prefix_enabled,
+                        suffix_enabled=entry.suffix_enabled,
+                        broadcast_enabled=self.broadcast_enabled # 설정된 브로드캐스트 모드 적용
                     )
                     # 2-1. 명령 전송 요청 (Signal)
-                    self.send_requested.emit(cmd)
+                    self.send_requested.emit(manual_command)
 
                     # 2-2. Expect 처리 (응답 대기)
                     if entry.expect:
                         # [안전 장치] 브로드캐스트 모드에서는 동기화 문제로 인해 Expect를 무시하고 경고 로그 출력
-                        if self._is_broadcast:
+                        if self.broadcast_enabled:
                             logger.warning(f"Macro: Expect pattern '{entry.expect}' ignored in broadcast mode.")
                             step_success = True # 무조건 성공 처리하고 Delay로 넘어감
                         else:
@@ -365,7 +365,7 @@ class MacroRunner(QThread):
         self._mutex.lock()
 
         # Matcher 설정
-        self._expect_matcher = ExpectMatcher(pattern, is_regex=True)
+        self._expect_matcher = ExpectMatcher(pattern, regex_enabled=True)
         self._expect_found = False
 
         start_time = time.monotonic()
