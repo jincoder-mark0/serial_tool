@@ -357,6 +357,7 @@ class PortSettingsWidget(QGroupBox):
             - 현재 선택된 포트(Data)를 기억
             - 목록 갱신 (addItem(description, userData=port))
             - 이전 선택 복구 시도
+            - 갱신 후 currentTextChanged 시그널 강제 발생 (탭 제목 동기화용)
 
         Args:
             ports (List[Tuple[str, str]]): (포트이름, 설명) 튜플 리스트
@@ -366,6 +367,7 @@ class PortSettingsWidget(QGroupBox):
         if current_port_data is None:
             current_port_data = self.port_combo.currentText()
 
+        # 시그널 차단 (불필요한 중간 변경 이벤트 방지)
         self.port_combo.blockSignals(True)
         self.port_combo.clear()
 
@@ -379,7 +381,12 @@ class PortSettingsWidget(QGroupBox):
         if index != -1:
             self.port_combo.setCurrentIndex(index)
 
+        # 시그널 차단 해제
         self.port_combo.blockSignals(False)
+
+        # 목록 갱신 후 현재 선택된 포트 정보를 상위(PortPanel)로 전파
+        if self.port_combo.count() > 0:
+            self.port_combo.currentTextChanged.emit(self.port_combo.currentText())
 
     def set_connection_state(self, state: PortState) -> None:
         """
