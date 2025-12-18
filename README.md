@@ -1,6 +1,6 @@
 # SerialTool v1.0
 
-**최종 업데이트**: 2025-12-14
+**최종 업데이트**: 2025-12-18
 
 **SerialTool**은 Python과 PyQt5로 개발된 고성능 통신 유틸리티입니다.
 **Strict MVP (Model-View-Presenter)** 아키텍처를 기반으로 설계되어 유지보수성과 확장성이 뛰어나며,
@@ -18,8 +18,9 @@
   * **UI Throttling**: 30ms 주기로 UI 업데이트를 배칭(Batching)하여 CPU 점유율 최적화
   * **고속 I/O**: RingBuffer 및 Non-blocking I/O 적용
 * **데이터 무결성 및 안정성**:
-  * **설정 검증**: JSON Schema를 통한 `settings.json` 무결성 검사 및 자동 복구
+  * **설정 검증 및 마이그레이션**: JSON Schema를 통한 무결성 검사 및 버전 관리를 통한 설정 자동 마이그레이션 지원
   * **경합 조건 방지**: 파일 전송 중 포트 강제 종료 시 스레드 안전 종료 보장
+  * **전역 에러 핸들링**: 메인 및 워커 스레드의 예외를 통합 포착하여 안정성 확보
 * **송신**:
   * HEX/ASCII 모드
   * Prefix/Suffix
@@ -27,32 +28,32 @@
   * **파일 전송**: Backpressure(역압) 제어를 통한 대용량 파일 전송 (진행률/속도/ETA 표시)
   * **Local Echo**: 송신 데이터 실시간 표시
   * **Broadcast**: 연결된 모든 포트에 동시 명령 전송 (매크로/수동)
+  * **히스토리 관리**: 최근 전송 명령어 저장 및 탐색
 * **매크로 자동화**:
   * 여러 Command를 리스트로 관리
-  * 순차 명령 실행
+  * 순차 명령 실행 (Expect 응답 대기 지원)
   * Repeat 및 Delay 설정
   * 스크립트 저장 및 불러오기 (JSON 형식)
-* **수신**:
-  * HEX/ASCII 모드
-  * Tx/Rx 바이트 카운트
-  * 실시간 모니터링
-  * 색상 규칙 기반 로그 강조 (OK=녹색, ERROR=빨강)
-  * 정규식 검색
-  * 타임스탬프 표시
-  * 로그 저장 및 화면(newline 설정, max line 수 설정) 클리어
+* **수신 및 로깅**:
+  * HEX/ASCII 모드 및 Newline 처리 옵션 (Raw, LF, CR, CRLF)
+  * Tx/Rx 바이트 카운트 및 실시간 속도 모니터링
+  * 색상 규칙 기반 로그 강조 (OK=녹색, ERROR=빨강) 및 정규식 검색
+  * **스마트 헥사 덤프**: `.bin`(Raw), `.txt`(Hex Dump), `.pcap`(Wireshark) 포맷 저장 지원
+  * **전이중 레코딩**: 송/수신 데이터를 모두 기록
 
 ### 1.2 UI/UX 특징
 
 * **현대적 인터페이스**:
-  * 다크/라이트 테마 전환
+  * 다크/라이트 테마 전환 및 **하이브리드 색상 매핑** (테마별 최적 색상 자동 보정)
   * 듀얼 폰트 시스템 (Proportional/Fixed)
   * SVG 기반 테마 적응형 아이콘
   * 컴팩트한 2줄 포트 설정 레이아웃
   * 3단계 Select All 체크박스
   * PortState Enum 기반 연결 상태 표시
-* **사용성**:
-  * 모든 기능 툴팁 제공
-  * 설정 자동 저장 (창 크기, 테마, 폰트)
+* **사용성 및 동기화**:
+  * **UI 상태 동기화**: 포트 연결 상태에 따라 제어 패널 활성화/비활성화 및 설정 잠금 처리
+  * 전역 단축키 지원 (F2: 연결, F3: 해제, F5: 클리어)
+  * 설정 자동 저장 (창 크기, 테마, 폰트, 히스토리)
   * 견고한 폴백 메커니즘 (설정 파일 누락 시 복구)
 
 ### 1.3 다국어 지원
@@ -110,21 +111,21 @@ serial_tool/
 ├── common/                             # 공통 데이터 (의존성 최하위)
 │   ├── app_info.py                     # 애플리케이션 버전 정보
 │   ├── constants.py                    # 전역 상수, EventTopics, ConfigKeys
-│   ├── dtos.py                         # DTO (PortConfig, ManualCommand 등)
-│   └── enums.py                        # 열거형 (PortState, ParserType)
+│   ├── dtos.py                         # DTO (PortConfig, ManualCommand, ColorRule 등)
+│   └── enums.py                        # 열거형 (PortState, ParserType, LogFormat)
 │
 ├── core/                               # 인프라 및 유틸리티
-│   ├── transpost/
+│   ├── transport/
 │   │   ├── base_transport.py           # 하드웨어 통신 추상화 인터페이스
 │   │   └── serial_transport.py         # PySerial 구현체
 │   │
 │   ├── command_processor.py            # Command 전처리 (Prefix/Suffix/Hex)
-│   ├── data_logger.py                  # Raw 데이터 로깅
+│   ├── data_logger.py                  # Raw/Hex/Pcap 데이터 로깅
 │   ├── error_handler.py                # 전역 예외 처리 (GlobalErrorHandler)
 │   ├── event_bus.py                    # Pub/Sub 이벤트 버스 (와일드카드 지원)
 │   ├── logger.py                       # 시스템 로거 (Singleton)
 │   ├── resource_path.py                # 리소스 경로 관리
-│   ├── settings_manager.py             # 설정 관리 (JSON Schema 검증)
+│   ├── settings_manager.py             # 설정 관리 (JSON Schema 검증 및 마이그레이션)
 │   ├── settings_schema.py              # 설정 스키마 정의
 │   └── structures.py                   # RingBuffer, ThreadSafeQueue
 │
@@ -132,7 +133,7 @@ serial_tool/
 │   ├── connection_controller.py        # 연결 제어, Fast Path 시그널링
 │   ├── connection_manager.py           # 연결 인스턴스 관리
 │   ├── connection_worker.py            # I/O 워커 스레드 (Batch Processing)
-│   ├── file_transfer_engine.py         # 파일 전송 엔진 (Backpressure)
+│   ├── file_transfer_service.py        # 파일 전송 엔진 (Backpressure)
 │   ├── macro_runner.py                 # 매크로 엔진 (Broadcast/Expect)
 │   ├── packet_parser.py                # 패킷 파싱 및 ExpectMatcher
 │   └── port_scanner.py                 # 포트 스캔 엔진
@@ -141,6 +142,7 @@ serial_tool/
 │   ├── data_handler.py                 # 데이터 처리 및 UI 업데이트
 │   ├── event_router.py                 # EventBus -> PyQt Signal 변환
 │   ├── file_presenter.py               # 파일 전송 로직 제어
+│   ├── lifecycle_manager.py            # 앱 초기화 및 종료 생명주기 관리
 │   ├── macro_presenter.py              # 매크로 로직 제어
 │   ├── main_presenter.py               # 메인 로직, UI Throttling, Fast Path 처리
 │   ├── manual_control_presenter.py     # 수동 제어 로직
@@ -149,16 +151,17 @@ serial_tool/
 │
 ├── view/                               # [View] 사용자 인터페이스 (Passive View)
 │   ├── main_window.py                  # 메인 윈도우 셸
-│   ├── custom_qt/                      # 커스텀 위젯 (SmartListView 등)
-│   ├── dialogs/                        # 대화상자 (Preferences, About 등)
+│   ├── custom_qt/                      # 커스텀 위젯 (SmartListView, SmartNumberEdit)
+│   ├── dialogs/                        # 대화상자 (Preferences, About, FileTransfer)
 │   ├── managers/                       # View 헬퍼 (Theme, Lang, Color)
+│   ├── services/                       # View 서비스 (ColorService)
 │   ├── panels/                         # 패널 (PortPanel, MacroPanel 등)
 │   ├── sections/                       # 섹션 (LeftSection, RightSection)
 │   └── widgets/                        # 위젯 (DataLog, ManualControl 등)
 │
 ├── resources/                          # 리소스 파일
 │   ├── languages/                      # json 언어 파일
-│   ├── configs/                        # 기본 설정 파일
+│   ├── configs/                        # 기본 설정 파일 (settings.json, color_rules.json)
 │   ├── icons/                          # SVG 아이콘
 │   └── themes/                         # QSS 스타일시트
 │
@@ -234,6 +237,7 @@ serial_tool/
 │                                                                                         │
 │  ┌───────────────────────────────────────────────────────────────────────────────────┐  │
 │  │                                   MainPresenter                                   │  │
+│  │                                (with LifecycleManager)                            │  │
 │  │ ┌───────────────┐  ┌───────────────┐  ┌───────────────┐  ┌─────────────────────┐  │  │
 │  │ │ PortPresenter │  │MacroPresenter │  │ FilePresenter │  │     EventRouter     │  │  │
 │  │ └───────┬───────┘  └───────┬───────┘  └───────┬───────┘  └──────────▲──────────┘  │  │
@@ -268,7 +272,7 @@ serial_tool/
 │                  ▼                       ▼                                              │
 │        ┌──────────────────┐    ┌──────────────────┐                                     │
 │        │    DataLogger    │    │ SettingsManager  │                                     │
-│        │  (Raw File I/O)  │    │   (Config I/O)   │                                     │
+│        │  (Raw/Hex/Pcap)  │    │   (Config I/O)   │                                     │
 │        └──────────────────┘    └──────────────────┘                                     │
 └─────────────────────────────────────────────────────────────────────────────────────────┘
 ```
@@ -291,6 +295,7 @@ graph TD
 
     subgraph PRESENTER_LAYER [Presenter Layer]
         MainP[MainPresenter]
+        Lifecycle[LifecycleManager]
         PortP[PortPresenter]
         Router[EventRouter]
     end
@@ -308,6 +313,7 @@ graph TD
 
     %% 연결 관계
     PortSettings -- "signal: open_requested" --> PortP
+    MainP o--o Lifecycle
     MainP o--o PortP
     MainP o--o Router
 
@@ -327,7 +333,7 @@ graph TD
 
     %% Class Styling
     class MW,DataLog,PortSettings view;
-    class MainP,PortP,Router presenter;
+    class MainP,Lifecycle,PortP,Router presenter;
     class PortCtrl,ConnWorker,Transport model;
     class Bus,Settings core;
 ```
@@ -398,7 +404,7 @@ graph TD
 | 주석 가이드 | 주석/Docstring 작성법 | `guide/comment_guide.md` |
 | Git 가이드 | 커밋/PR/이슈 규칙 | `guide/git_guide.md` |
 | 변경 이력 | 세션별 변경 사항 | `doc/changelog.md` |
-| 세션 요약 | 2025-12-09 작업 요약 | `doc/session_summary_20251209.md` |
+| 세션 요약 | 2025-12-18 작업 요약 | `doc/session_summary_20251218.md` |
 
 ### 6.2 코딩 컨벤션
 

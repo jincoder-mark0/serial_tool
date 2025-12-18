@@ -77,10 +77,13 @@ class MainRightSection(QWidget):
         Returns:
             Dict[str, Any]: {'macro_panel': {...}} 구조의 상태 데이터.
         """
-        return {
+
+        state = {
+            "current_tab_index": self.tabs.currentIndex(), # [Fix] 현재 탭 인덱스 저장
             "macro_panel": self.macro_panel.save_state(),
-            # PacketInspector 상태가 있다면 여기에 추가
         }
+
+        return state
 
     def apply_state(self, state: Dict[str, Any]) -> None:
         """
@@ -91,3 +94,8 @@ class MainRightSection(QWidget):
         """
         if "macro_panel" in state:
             self.macro_panel.load_state(state["macro_panel"])
+
+        if "current_tab_index" in state:
+            index = state["current_tab_index"]
+            if 0 <= index < self.tabs.count():
+                self.tabs.setCurrentIndex(index)

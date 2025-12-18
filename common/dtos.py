@@ -455,7 +455,6 @@ class ManualControlState:
         dtr_chk (bool): DTR 체크
         local_echo_chk (bool): 로컬 에코 체크
         broadcast_chk (bool): 브로드캐스트 체크
-        command_history (List[str]): 명령어 히스토리
     """
     input_text: str = ""
     hex_mode: bool = False
@@ -465,7 +464,6 @@ class ManualControlState:
     dtr_chk: bool = False
     local_echo_chk: bool = False
     broadcast_chk: bool = False
-    command_history: List[str] = field(default_factory=list)
 
 @dataclass
 class ColorRule:
