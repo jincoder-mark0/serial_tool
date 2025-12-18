@@ -277,7 +277,6 @@ class ConnectionController(QObject):
             name: 종료할 연결 이름. None이면 모든 연결 종료.
         """
         if name:
-            # [Race Condition Prevention]
             # 파일 전송이 진행 중이라면 즉시 중단 요청을 보냅니다.
             # QRunnable은 wait()가 없으므로 cancel 플래그를 세팅하여 엔진이
             # 다음 청크 전송 시도 전에 스스로 루프를 탈출하도록 합니다.

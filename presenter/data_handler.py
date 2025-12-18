@@ -93,7 +93,7 @@ class DataTrafficHandler(QObject):
 
             data_bytes = bytes(data)
 
-            # [Refactor] View Interface 호출
+            # View Interface 호출
             self.view.append_rx_data(port_name, data_bytes)
 
             del self._rx_buffer[port_name]

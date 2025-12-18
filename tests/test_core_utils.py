@@ -17,7 +17,7 @@ import time
 # 프로젝트 루트 경로 설정
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.structures import RingBuffer, ThreadSafeQueue # [Refactor] import path updated
+from core.structures import RingBuffer, ThreadSafeQueue # import path updated
 
 # --- RingBuffer Tests ---
 

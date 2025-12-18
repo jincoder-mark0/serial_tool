@@ -410,7 +410,7 @@ class PortSettingsWidget(QGroupBox):
             self.connect_btn.setText(language_manager.get_text("port_btn_reconnect"))
             self.connect_btn.setChecked(False)
 
-        # [Logic] 연결 중에는 설정 변경 불가 (Lock UI)
+        # 연결 중에는 설정 변경 불가 (Lock UI)
         self.protocol_combo.setEnabled(is_disconnected)
         self.port_combo.setEnabled(is_disconnected)
         self.scan_btn.setEnabled(is_disconnected)

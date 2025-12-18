@@ -12,6 +12,7 @@
 * QSS 파일 로드 및 경로 치환 (절대 경로)
 * 테마별 SVG 아이콘 로딩
 * 폰트(가변폭/고정폭) 설정 관리 및 적용
+* 현재 테마의 Dark/Light 여부 판별
 
 ## HOW
 * QSS 텍스트 내의 리소스 경로를 런타임에 동적으로 수정
@@ -67,6 +68,18 @@ class ThemeManager:
         self._proportional_font = QFont(prop_family, prop_size)
         self._fixed_font = QFont(fixed_family, fixed_size)
         self._fixed_font.setStyleHint(QFont.Monospace)
+
+    def is_dark_theme(self) -> bool:
+        """
+        현재 테마가 어두운 배경을 사용하는지 확인합니다.
+        Dracula도 Dark 계열로 취급합니다.
+
+        Returns:
+            bool: 어두운 테마면 True, 밝은 테마면 False
+        """
+        current = self._current_theme.lower()
+        # Dark 또는 Dracula는 True 반환
+        return current in [ThemeType.DARK.value, ThemeType.DRACULA.value]
 
     def get_available_themes(self) -> list[str]:
         """
@@ -167,7 +180,7 @@ class ThemeManager:
             logger.warning("Failed to load theme file, using fallback stylesheet.")
             qss_content = self._get_fallback_stylesheet(theme_name)
 
-        # [Fix] 4. 리소스 경로 절대 경로 치환
+        # 4. 리소스 경로 절대 경로 치환
         # PyInstaller 배포 환경에서는 상대 경로가 깨질 수 있으므로 절대 경로로 변환
         if self._resource_path:
             # 윈도우 경로 역슬래시를 슬래시로 변환 (CSS url 호환성)

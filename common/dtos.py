@@ -470,17 +470,24 @@ class ManualControlState:
 @dataclass
 class ColorRule:
     """
-    단일 색상 규칙 데이터 클래스
+    단일 색상 규칙 데이터 클래스 (DTO)
+
+    테마별 색상 지원을 위해 light_color와 dark_color 필드가 추가되었습니다.
+    기존 color 필드는 하위 호환성을 위해 유지되지만, 내부적으로는 테마별 필드로 마이그레이션됩니다.
 
     Attributes:
         name (str): 규칙 이름 (예: "AT_OK")
         pattern (str): 정규식 패턴 또는 문자열
-        color (str): HTML 색상 코드 (예: "#FF0000")
+        color (str): (Deprecated) 기본 색상 코드
+        light_color (str): 라이트 테마용 색상 코드
+        dark_color (str): 다크 테마용 색상 코드
         is_regex (bool): 정규식 사용 여부
         enabled (bool): 규칙 활성화 여부
     """
     name: str
     pattern: str
-    color: str
+    color: str = "" # 하위 호환성 유지
+    light_color: str = ""
+    dark_color: str = ""
     is_regex: bool = True
     enabled: bool = True

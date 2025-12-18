@@ -10,7 +10,7 @@
 ## WHAT
 * 규칙 리스트 관리 (추가/삭제/토글)
 * 설정 파일(JSON) 로드 및 저장
-* 기본 규칙 제공
+* 기본 규칙 제공 (Light/Dark 듀얼 컬러 적용)
 
 ## HOW
 * Singleton 패턴
@@ -28,12 +28,19 @@ except ImportError:
 from core.logger import logger
 
 from common.constants import (
-    LOG_COLOR_SUCCESS,
-    LOG_COLOR_ERROR,
-    LOG_COLOR_WARN,
-    LOG_COLOR_PROMPT,
-    LOG_COLOR_INFO,
-    LOG_COLOR_TIMESTAMP,
+    LOG_COLOR_DARK_TIMESTAMP,
+    LOG_COLOR_DARK_INFO,
+    LOG_COLOR_DARK_ERROR,
+    LOG_COLOR_DARK_WARN,
+    LOG_COLOR_DARK_PROMPT,
+    LOG_COLOR_DARK_SUCCESS,
+
+    LOG_COLOR_LIGHT_TIMESTAMP,
+    LOG_COLOR_LIGHT_INFO,
+    LOG_COLOR_LIGHT_ERROR,
+    LOG_COLOR_LIGHT_WARN,
+    LOG_COLOR_LIGHT_PROMPT,
+    LOG_COLOR_LIGHT_SUCCESS,
 )
 from common.dtos import ColorRule
 from view.services.color_service import ColorService
@@ -54,19 +61,38 @@ class ColorManager:
             cls._instance = super(ColorManager, cls).__new__(cls)
         return cls._instance
 
-    # 기본 규칙 정의 (상수 활용)
+    # 기본 규칙 정의 (듀얼 컬러 적용)
+    # Light: 진한색(가독성), Dark: 밝은색(형광)
     DEFAULT_COLOR_RULES = [
-        ColorRule("AT_OK", r'\bOK\b', LOG_COLOR_SUCCESS),
-        ColorRule("AT_ERROR", r'\bERROR\b', LOG_COLOR_ERROR),
-        ColorRule("URC", r'(\+\w+:)', LOG_COLOR_WARN),
-        ColorRule("PROMPT", r'^>', LOG_COLOR_PROMPT),
+        ColorRule("AT_OK", r'\bOK\b',
+                  light_color=LOG_COLOR_LIGHT_SUCCESS,
+                  dark_color=LOG_COLOR_DARK_SUCCESS),
+        ColorRule("AT_ERROR", r'\bERROR\b',
+                  light_color=LOG_COLOR_LIGHT_ERROR,
+                  dark_color=LOG_COLOR_DARK_ERROR),
+        ColorRule("URC", r'(\+\w+:)',
+                  light_color=LOG_COLOR_LIGHT_WARN,
+                  dark_color=LOG_COLOR_DARK_WARN),
+        ColorRule("PROMPT", r'^>',
+                  light_color=LOG_COLOR_LIGHT_PROMPT,
+                  dark_color=LOG_COLOR_DARK_PROMPT),
         # 시스템 로그 규칙
-        ColorRule("SYS_INFO", r'\[INFO\]', LOG_COLOR_INFO),
-        ColorRule("SYS_ERROR", r'\[ERROR\]', LOG_COLOR_ERROR),
-        ColorRule("SYS_WARN", r'\[WARN\]', LOG_COLOR_WARN),
-        ColorRule("SYS_SUCCESS", r'\[SUCCESS\]', LOG_COLOR_SUCCESS),
+        ColorRule("SYS_INFO", r'\[INFO\]',
+                  light_color=LOG_COLOR_LIGHT_INFO,
+                  dark_color=LOG_COLOR_DARK_INFO),
+        ColorRule("SYS_ERROR", r'\[ERROR\]',
+                  light_color=LOG_COLOR_LIGHT_ERROR,
+                  dark_color=LOG_COLOR_DARK_ERROR),
+        ColorRule("SYS_WARN", r'\[WARN\]',
+                  light_color=LOG_COLOR_LIGHT_WARN,
+                  dark_color=LOG_COLOR_DARK_WARN),
+        ColorRule("SYS_SUCCESS", r'\[SUCCESS\]',
+                  light_color=LOG_COLOR_LIGHT_SUCCESS,
+                  dark_color=LOG_COLOR_DARK_SUCCESS),
         # 타임스탬프 규칙
-        ColorRule("TIMESTAMP", r'\[\d{2}:\d{2}:\d{2}\]', LOG_COLOR_TIMESTAMP),
+        ColorRule("TIMESTAMP", r'\[\d{2}:\d{2}:\d{2}\]',
+                  light_color=LOG_COLOR_LIGHT_TIMESTAMP,
+                  dark_color=LOG_COLOR_DARK_TIMESTAMP),
     ]
 
     def __init__(self, resource_path=None) -> None:
@@ -120,7 +146,7 @@ class ColorManager:
     def apply_rules(self, text: str) -> str:
         """
         텍스트에 모든 활성화된 색상 규칙을 적용합니다.
-        [Refactor] 실제 로직은 ColorService에 위임합니다.
+        실제 로직은 ColorService에 위임합니다.
 
         Args:
             text (str): 색상 규칙을 적용할 원본 텍스트.
@@ -174,7 +200,9 @@ class ColorManager:
             {
                 'name': r.name,
                 'pattern': r.pattern,
-                'color': r.color,
+                'color': r.color, # Legacy field preserved
+                'light_color': r.light_color,
+                'dark_color': r.dark_color,
                 'is_regex': r.is_regex,
                 'enabled': r.enabled
             }
@@ -209,11 +237,13 @@ class ColorManager:
 
             self.rules = [
                 ColorRule(
-                    r['name'],
-                    r['pattern'],
-                    r['color'],
-                    r.get('is_regex', True),
-                    r.get('enabled', True)
+                    name=r['name'],
+                    pattern=r['pattern'],
+                    color=r.get('color', ''), # Legacy support
+                    light_color=r.get('light_color', ''),
+                    dark_color=r.get('dark_color', ''),
+                    is_regex=r.get('is_regex', True),
+                    enabled=r.get('enabled', True)
                 )
                 for r in rules_data
             ]

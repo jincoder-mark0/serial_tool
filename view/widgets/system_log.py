@@ -24,6 +24,7 @@ from PyQt5.QtCore import pyqtSlot
 from typing import Optional, List
 import datetime
 from view.managers.language_manager import language_manager
+from view.managers.theme_manager import ThemeManager
 from view.custom_qt.smart_list_view import QSmartListView
 # Removed ColorManager import
 from common.constants import DEFAULT_LOG_MAX_LINES
@@ -61,6 +62,7 @@ class SystemLogWidget(QWidget):
 
         # Rules storage
         self._color_rules: List[ColorRule] = []
+        self._theme_manager = ThemeManager()
 
         # ---------------------------------------------------------
         # 2. UI 구성 및 시그널 연결
@@ -184,7 +186,7 @@ class SystemLogWidget(QWidget):
 
         Args:
             message (str): 표시할 메시지.
-            level (str): 로그 레벨 (INFO, ERROR, WARN, SUCCESS). 기본값은 "INFO".
+            level (str): 로그 레벨.
         """
         # 1. 메시지 포맷팅: [LEVEL] Message
         text = f"[{level}] {message}"
@@ -196,7 +198,9 @@ class SystemLogWidget(QWidget):
         # 3. 색상 규칙 적용
         # Use ColorService directly with injected rules
         if self._color_rules:
-            full_text = ColorService.apply_rules(full_text, self._color_rules)
+            # 현재 테마 상태 조회 및 전달
+            is_dark = self._theme_manager.is_dark_theme()
+            full_text = ColorService.apply_rules(full_text, self._color_rules, is_dark)
 
         # 4. 뷰에 추가
         self.sys_log_list.append(full_text)

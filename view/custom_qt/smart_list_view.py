@@ -35,6 +35,7 @@ from PyQt5.QtGui import (
 from common.constants import DEFAULT_LOG_MAX_LINES, TRIM_CHUNK_RATIO
 from common.dtos import ColorRule
 from view.services.color_service import ColorService
+from view.managers.theme_manager import ThemeManager # Import
 
 class QSmartListView(QListView):
     """
@@ -215,7 +216,7 @@ class QSmartListView(QListView):
         should_add_timestamp = self._should_add_timestamp()
 
         # Formatter 생성
-        # [Refactor] ColorService 사용
+        # ColorService 사용
         formatter = self._create_line_formatter(should_add_timestamp)
 
         self.append(text, formatter)
@@ -230,6 +231,9 @@ class QSmartListView(QListView):
         Returns:
             callable: 생성된 포맷터 함수.
         """
+        # 캡처 시점의 테마 상태 확인
+        is_dark = self._theme_manager.is_dark_theme()
+
         def formatter(line: str) -> str:
             """
             라인 포맷터 함수
@@ -246,9 +250,9 @@ class QSmartListView(QListView):
                 ts = datetime.datetime.now().strftime("[%H:%M:%S]")
                 formatted = f"{ts} {formatted}"
 
-            # [Refactor] ColorService를 사용하여 규칙 적용 (Stateless)
             if self._color_rules:
-                formatted = ColorService.apply_rules(formatted, self._color_rules)
+                # 테마 상태 전달
+                formatted = ColorService.apply_rules(formatted, self._color_rules, is_dark)
 
             return formatted
         return formatter
@@ -282,7 +286,7 @@ class QSmartListView(QListView):
     def _refresh_all_data(self) -> None:
         """
         모든 데이터를 다시 렌더링
-        HEX 모드 변경 시 호출됩니다.
+        HEX 모드 변경 또는 테마 변경 시 호출
         """
         if not self._original_data:
             return
@@ -291,6 +295,9 @@ class QSmartListView(QListView):
         was_at_bottom = self.is_at_bottom()
 
         self.log_model.clear()
+
+        # 현재 테마 상태 확인
+        is_dark = self._theme_manager.is_dark_theme()
 
         for data in self._original_data:
             if self._hex_mode:
@@ -304,7 +311,8 @@ class QSmartListView(QListView):
             # Re-apply color rules (no timestamps on refresh for now to keep simple)
             formatter = None
             if self._color_rules:
-                formatter = lambda line: ColorService.apply_rules(line, self._color_rules)
+                # 테마 상태 전달
+                formatter = lambda line: ColorService.apply_rules(line, self._color_rules, is_dark)
 
             self.append(text, formatter)
 

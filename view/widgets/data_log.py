@@ -37,7 +37,7 @@ from common.constants import (
     FILE_FILTER_LOG, FILE_FILTER_ALL
 )
 from common.enums import NewlineMode
-from common.dtos import ColorRule # [Refactor] Import DTO
+from common.dtos import ColorRule # Import DTO
 
 class DataLogWidget(QWidget):
     """
@@ -88,7 +88,7 @@ class DataLogWidget(QWidget):
         self.max_lines: int = DEFAULT_LOG_MAX_LINES
         self.tab_name: str = ""
 
-        # [Refactor] Removed self.color_manager = color_manager
+        # Removed self.color_manager = color_manager
 
         # ---------------------------------------------------------
         # 2. UI 구성 및 시그널 연결
@@ -200,7 +200,7 @@ class DataLogWidget(QWidget):
         self.data_log_list = QSmartListView()
         self.data_log_list.set_max_lines(DEFAULT_LOG_MAX_LINES)
         self.data_log_list.setReadOnly(True)
-        # [Refactor] set_color_manager 호출 제거, rules는 나중에 주입됨
+        # set_color_manager 호출 제거, rules는 나중에 주입됨
         self.data_log_list.set_hex_mode_enabled(self.hex_mode)
         self.data_log_list.set_timestamp_enabled(self.timestamp_enabled, timeout_ms=100)
         self.data_log_list.setPlaceholderText(language_manager.get_text("data_log_list_log_placeholder"))

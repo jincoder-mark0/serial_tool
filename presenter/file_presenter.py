@@ -88,7 +88,7 @@ class FilePresenter(QObject):
             - 전송 엔진 생성 (DTO 전달)
             - 스레드 풀에서 엔진 실행
         """
-        # [Fix] 임의의 활성 포트가 아닌, 다이얼로그 호출 시점의 명시적 포트 사용
+        # 임의의 활성 포트가 아닌, 다이얼로그 호출 시점의 명시적 포트 사용
         if not self.target_port:
             logger.error("File Transfer: No target port specified.")
             if self.file_transfer_dialog:

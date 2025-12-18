@@ -70,7 +70,7 @@ class MainPresenter(QObject):
         self.lifecycle_manager = AppLifecycleManager(self)
         self.lifecycle_manager.initialize_app()
 
-        # [New] 탭 변경 시 UI 상태 동기화를 위해 시그널 연결
+        # 탭 변경 시 UI 상태 동기화를 위해 시그널 연결
         self.view.left_section.port_tab_panel.currentChanged.connect(self._on_port_tab_changed)
 
     def _init_core_systems(self) -> None:
@@ -318,7 +318,7 @@ class MainPresenter(QObject):
         self.view.update_status_bar_port(port_name, False)
         self.view.show_status_message(f"Disconnected from {port_name}", 3000)
 
-        # [New] 현재 활성 탭이 닫힌 포트라면 UI 비활성화
+        # 현재 활성 탭이 닫힌 포트라면 UI 비활성화
         self._update_controls_state_for_current_tab()
 
     def on_port_error(self, event: PortErrorEvent) -> None:
@@ -472,7 +472,7 @@ class MainPresenter(QObject):
             panel (PortPanel): 추가된 포트 패널
         """
         self._connect_single_port_logging(panel)
-        # [Refactor] Inject Color Rules into new DataLogWidget
+        # Inject Color Rules into new DataLogWidget
         if hasattr(panel, 'data_log_widget'):
             panel.data_log_widget.set_color_rules(color_manager.rules)
 

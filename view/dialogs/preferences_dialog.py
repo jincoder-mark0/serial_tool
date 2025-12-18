@@ -35,7 +35,7 @@ from common.constants import (
     MAX_PACKET_SIZE,
     ConfigKeys
 )
-from common.enums import NewlineMode, ThemeType # [New]
+from common.enums import NewlineMode, ThemeType
 from common.dtos import PreferencesState
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
