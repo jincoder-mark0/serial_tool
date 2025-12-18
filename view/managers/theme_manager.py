@@ -124,7 +124,7 @@ class ThemeManager:
 
         Logic:
             - 공통 QSS와 테마별 QSS를 로드하여 병합합니다.
-            - [Fix] QSS 내부의 'url(resources/...' 상대 경로를 절대 경로로 치환합니다.
+            - QSS 내부의 'url(resources/...' 상대 경로를 절대 경로로 치환합니다.
             - 이는 PyInstaller 배포 시 리소스 경로 문제 해결을 위함입니다.
 
         Args:

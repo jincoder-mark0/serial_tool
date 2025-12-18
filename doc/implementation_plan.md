@@ -296,8 +296,8 @@
   - `DelimiterParser`: 사용자 정의 구분자(예: STX/ETX, Comma) 처리
   - `FixedLengthParser`: 고정 길이 패킷 처리
 - **ParserFactory**: 설정(`AT`, `Hex` 등)에 따라 적절한 파서 인스턴스 생성 (전략 패턴)
-- **[New] ExpectMatcher**: 정규식 기반 응답 대기 및 매칭 기능 구현
-- **[New] PortController 통합**: Raw Data 수신 시 Parser를 거쳐 Packet 객체로 변환 후 EventBus 발행
+- **ExpectMatcher**: 정규식 기반 응답 대기 및 매칭 기능 구현
+- **PortController 통합**: Raw Data 수신 시 Parser를 거쳐 Packet 객체로 변환 후 EventBus 발행
 
 #### [완료] `model/macro_runner.py`
 

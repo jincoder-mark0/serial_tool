@@ -1,7 +1,7 @@
 """
 Core 및 유틸리티 기능 정밀 테스트
 
-- DataLogger 동작 검증
+- DataLogger 동작 검증 (BIN/HEX/PCAP 포맷)
 - ExpectMatcher 패턴 매칭 검증
 - ParserType 상수 일관성 확인
 
@@ -19,8 +19,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.data_logger import DataLogger, DataLoggerManager
 from model.packet_parser import ExpectMatcher
-
-from common.enums import ParserType
+from common.enums import ParserType, LogFormat
 
 # --- DataLogger Tests ---
 
@@ -35,13 +34,13 @@ def temp_log_dir():
     if path.exists():
         shutil.rmtree(path)
 
-def test_data_logger_lifecycle(temp_log_dir):
-    """DataLogger 시작, 쓰기, 중지 라이프사이클 테스트"""
+def test_data_logger_lifecycle_bin(temp_log_dir):
+    """DataLogger BIN 포맷 저장 테스트"""
     logger = DataLogger()
     log_file = temp_log_dir / "test.bin"
 
-    # 1. Start Logging
-    assert logger.start_logging(str(log_file)) is True
+    # 1. Start Logging (Default BIN)
+    assert logger.start_logging(str(log_file), LogFormat.BIN) is True
     assert logger.is_logging is True
 
     # 2. Write Data

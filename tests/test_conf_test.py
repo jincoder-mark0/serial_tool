@@ -15,14 +15,15 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.resource_path import ResourcePath
 from view.main_window import MainWindow
+from core.settings_manager import SettingsManager
+from view.managers.theme_manager import ThemeManager
+from view.managers.language_manager import LanguageManager
+from view.managers.color_manager import ColorManager
 
 @pytest.fixture(scope="session")
 def qapp():
     """
     QApplication Session Fixture
-
-    PyQt 테스트를 위한 QApplication 인스턴스를 생성합니다.
-    세션당 하나만 생성하여 재사용합니다.
     """
     app = QApplication.instance()
     if app is None:
@@ -33,6 +34,17 @@ def qapp():
 def resource_path():
     """ResourcePath Fixture"""
     return ResourcePath()
+
+@pytest.fixture(autouse=True)
+def init_managers(resource_path):
+    """
+    모든 테스트 전에 Manager들을 초기화합니다.
+    MainPresenter나 MainWindow가 생성될 때 이 Manager들이 필요합니다.
+    """
+    SettingsManager(resource_path)
+    ThemeManager(resource_path)
+    LanguageManager(resource_path)
+    ColorManager(resource_path)
 
 @pytest.fixture
 def mock_transport():

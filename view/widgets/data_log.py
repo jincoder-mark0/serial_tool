@@ -39,7 +39,7 @@ from common.constants import (
 from common.enums import NewlineMode
 from common.dtos import ColorRule
 
-# [New] 추가된 파일 필터 상수 (로컬 상수로 정의하거나 constants.py로 이동 가능)
+# 추가된 파일 필터 상수 (로컬 상수로 정의하거나 constants.py로 이동 가능)
 # 여기서는 편의상 메서드 내에서 문자열로 조합 사용
 FILE_FILTERS = "Binary Files (*.bin);;Text Hex Dump (*.txt);;PCAP Files (*.pcap);;All Files (*)"
 

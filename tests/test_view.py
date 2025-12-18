@@ -28,6 +28,7 @@ from view.widgets.file_progress import FileProgressWidget
 from core.settings_manager import SettingsManager
 from view.custom_qt.smart_list_view import QSmartListView
 from view.managers.color_manager import color_manager
+from common.dtos import ManualCommand
 import time
 
 class ViewTestWindow(QMainWindow):
@@ -169,11 +170,9 @@ class ViewTestWindow(QMainWindow):
         layout.addWidget(self.manual_output)
 
         # 시그널 연결
-        self.manual_control.send_requested.connect(
-            lambda text, hex_mode, prefix, suffix, local_echo: self.manual_output.append(
-                f"✅ Send: '{text}' (hex={hex_mode}, prefix={prefix}, suffix={suffix}, echo={local_echo})"
-            )
-        )
+        # DTO Signal Handling
+        self.manual_control.send_requested.connect(self._on_manual_send)
+
         self.manual_control.transfer_file_selected.connect(
             lambda path: self.manual_output.append(f"📁 File selected: {path}")
         )
@@ -227,6 +226,12 @@ class ViewTestWindow(QMainWindow):
         layout.addLayout(btn_layout)
 
         return widget
+
+    def _on_manual_send(self, cmd: ManualCommand):
+        """DTO 수신 확인"""
+        self.manual_output.append(
+            f"✅ Send: '{cmd.text}' (hex={cmd.hex_mode}, broadcast={cmd.is_broadcast})"
+        )
 
     def show_manual_history(self) -> None:
         """History 목록을 출력 영역에 표시합니다."""

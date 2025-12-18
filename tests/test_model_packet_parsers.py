@@ -16,7 +16,7 @@ import pytest
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from model.packet_parser import (
-    RawParser, ATParser, DelimiterParser, FixedLengthParser
+    RawParser, ATParser, DelimiterParser, FixedLengthParser, Packet
 )
 
 def test_raw_parser():
@@ -26,6 +26,7 @@ def test_raw_parser():
     packets = parser.parse(data)
 
     assert len(packets) == 1
+    assert isinstance(packets[0], Packet)
     assert packets[0].data == b"Hello World"
 
 def test_at_parser_basic():
@@ -39,6 +40,8 @@ def test_at_parser_basic():
     assert len(packets) == 2
     assert packets[0].data == b"OK\r\n"
     assert packets[1].data == b"ERROR\r\n"
+
+    # Metadata 확인
     assert packets[0].metadata["type"] == "AT"
 
 def test_at_parser_chunked():
@@ -100,12 +103,9 @@ def test_parser_reset():
 
     # 이전 데이터는 지워져야 함
     packets = parser.parse(b"\r\n")
-    # 리셋되었으므로 앞의 "Incomplete Data"와 연결되지 않음
-    # 현재 로직상 \r\n만 들어오면 빈 라인 패킷이 생성되거나(구현에 따라),
-    # buffer가 비어있어 b"\r\n" 자체가 파싱됨.
-    # ATParser 구현: split(b'\r\n') -> line="", buffer=""
-    # line이 empty string이 아니어야 append하는 로직이라면 패킷 0개
-    # line이 empty여도 포함하면 1개. (현재 구현은 if line: 체크 함)
+    # 리셋되었으므로 앞의 "Incomplete Data"와 연결되지 않아야 함
+    # 빈 데이터만 처리되거나, 새 데이터가 없으면 빈 리스트여야 함
+    assert len(packets) == 0 or packets[0].data == b"\r\n"
 
     # 테스트를 위해 명확한 데이터 입력
     packets = parser.parse(b"New\r\n")

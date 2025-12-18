@@ -17,6 +17,7 @@ sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from model.port_scanner import PortScanWorker
 from presenter.packet_presenter import PacketPresenter
+# SettingsManager Import
 from core.settings_manager import SettingsManager
 
 def test_port_scan_worker_location():
@@ -35,7 +36,7 @@ def test_packet_presenter_di(mock_connection_controller, qapp):
     event_router_mock = MagicMock()
     settings_mock = MagicMock() # Mock SettingsManager
 
-    # DI 주입
+    # DI 주입 (SettingsManager 추가)
     presenter = PacketPresenter(view_mock, event_router_mock, settings_mock)
 
     # 주입된 인스턴스를 사용하는지 확인
@@ -45,7 +46,7 @@ def test_packet_presenter_di(mock_connection_controller, qapp):
     presenter.apply_settings()
     settings_mock.get.assert_called()
 
-def test_conftest_fixtures(qapp, resource_path, mock_transport):
+def test_conf_test_fixtures(qapp, resource_path, mock_transport):
     """conftest.py의 Fixture들이 정상 동작하는지 간단 검증"""
     assert qapp is not None
     assert resource_path.base_dir.exists()

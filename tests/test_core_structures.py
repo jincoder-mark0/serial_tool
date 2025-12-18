@@ -4,8 +4,6 @@
 - RingBuffer: 순환 버퍼 쓰기/읽기, 랩어라운드, 오버라이트 검증
 - ThreadSafeQueue: 스레드 안전 큐 동작 검증
 
-기존 'test_core_utils.py'에서 리네임되었습니다.
-
 pytest tests/test_core_structures.py -v
 """
 import sys
@@ -17,7 +15,8 @@ import time
 # 프로젝트 루트 경로 설정
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from core.structures import RingBuffer, ThreadSafeQueue # import path updated
+# [Refactor] import path updated from core.utils to core.structures
+from core.structures import RingBuffer, ThreadSafeQueue
 
 # --- RingBuffer Tests ---
 

@@ -79,7 +79,7 @@ class MainRightSection(QWidget):
         """
 
         state = {
-            "current_tab_index": self.tabs.currentIndex(), # [Fix] 현재 탭 인덱스 저장
+            "current_tab_index": self.tabs.currentIndex(), # 현재 탭 인덱스 저장
             "macro_panel": self.macro_panel.save_state(),
         }
 
