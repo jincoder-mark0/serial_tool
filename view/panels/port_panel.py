@@ -33,7 +33,7 @@ class PortPanel(QWidget):
 
     # 시그널 정의
     tab_title_changed = pyqtSignal(str)  # 탭 제목 변경 시그널
-    broadcast_allow_changed = pyqtSignal(bool)
+    tx_broadcast_allowed_changed = pyqtSignal(bool)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -63,7 +63,7 @@ class PortPanel(QWidget):
         self.port_stats_widget = PortStatsWidget()
         self.data_log_widget = DataLogWidget()
 
-        self.data_log_widget.tx_broadcast_allow_changed.connect(self.broadcast_allow_changed.emit)
+        self.data_log_widget.tx_broadcast_allowed_changed.connect(self.tx_broadcast_allowed_changed.emit)
 
         # 레이아웃 구성
         # 상단: 설정 (Top: Settings)

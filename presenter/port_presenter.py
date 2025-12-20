@@ -129,17 +129,17 @@ class PortPresenter(QObject):
             settings_widget.disconnect_requested.connect(self.handle_close_request)
 
         # Broadcast 체크박스 시그널 연결
-        if hasattr(widget, 'broadcast_allow_changed'):
+        if hasattr(widget, 'tx_broadcast_allowed_changed'):
             try:
                 # widget 파라미터를 lambda로 캡처하여 어떤 탭인지 식별
-                widget.broadcast_allow_changed.disconnect()
+                widget.tx_broadcast_allowed_changed.disconnect()
             except TypeError:
                 pass
 
             # 람다로 위젯 캡처하여 핸들러에 전달
-            widget.broadcast_allow_changed.connect(lambda state, w=widget: self.on_broadcast_changed(w, state))
+            widget.tx_broadcast_allowed_changed.connect(lambda state, w=widget: self.on_tx_broadcast_allowed_changed(w, state))
 
-    def on_broadcast_changed(self, widget: PortPanel, state: bool) -> None:
+    def on_tx_broadcast_allowed_changed(self, widget: PortPanel, state: bool) -> None:
         """
         브로드캐스트 허용 상태 변경 핸들러입니다.
 

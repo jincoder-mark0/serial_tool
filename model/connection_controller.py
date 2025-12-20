@@ -322,7 +322,7 @@ class ConnectionController(QObject):
 
         Logic:
             - 현재 broadcasting 활성화된 워커 리스트를 순회하며 데이터를 전송
-            - Worker의 broadcast_enableding() 상태 확인
+            - Worker의 broadcast_enabled() 상태 확인
 
         Args:
             data: 전송할 바이트 데이터
@@ -333,7 +333,7 @@ class ConnectionController(QObject):
 
         sent_any = False
         for name, worker in self.workers.items():
-            if worker.isRunning() and worker.broadcast_enableding():
+            if worker.isRunning() and worker.broadcast_enabled():
                 self.send_data_to_connection(name, data)
                 sent_any = True
 

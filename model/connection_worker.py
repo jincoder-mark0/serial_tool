@@ -57,7 +57,7 @@ class ConnectionWorker(QThread):
         self.connection_name = connection_name
 
         self._is_running = False
-        self.broadcast_enableding = False
+        self.broadcast_enabled = False
 
         self._mutex = QMutex()
         self._write_queue = ThreadSafeQueue() # 비동기 전송용 Queue
@@ -217,14 +217,14 @@ class ConnectionWorker(QThread):
         Args:
             state: True면 broadcasting ON, False면 broadcasting OFF
         """
-        self.broadcast_enableding = state
+        self.broadcast_enabled = state
         self.transport.set_broadcast(state)
 
-    def broadcast_enableding(self) -> bool:
+    def broadcast_enabled(self) -> bool:
         """
         현재 브로드캐스팅 수신 허용 여부 반환
 
         Returns:
             bool: 브로드캐스팅 허용 여부
         """
-        return self.broadcast_enableding
+        return self.broadcast_enabled

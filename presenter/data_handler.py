@@ -15,11 +15,13 @@ Fast Path를 통한 고속 데이터 수신 처리 및 UI 업데이트 스로틀
 ## HOW
 * QTimer를 사용한 배치 처리
 * View Interface (append_rx_data) 호출을 통한 UI 갱신
+* DTO(PortDataEvent) 기반 데이터 처리
 """
 from collections import defaultdict
 from PyQt5.QtCore import QObject, QTimer
 from core.data_logger import data_logger_manager
 from view.main_window import MainWindow
+from common.dtos import PortDataEvent
 
 class DataTrafficHandler(QObject):
     """
@@ -38,14 +40,17 @@ class DataTrafficHandler(QObject):
         self._ui_refresh_timer.timeout.connect(self._flush_rx_buffer_to_ui)
         self._ui_refresh_timer.start()
 
-    def on_fast_data_received(self, port_name: str, data: bytes) -> None:
+    def on_fast_data_received(self, event: PortDataEvent) -> None:
         """
-        고속 데이터 수신 핸들러
+        고속 데이터 수신 핸들러 (DTO 적용)
 
         Args:
-            port_name: 포트 이름
-            data: 수신 데이터
+            event (PortDataEvent): 포트 데이터 이벤트 DTO
         """
+        # [Refactor] Unpack DTO
+        port_name = event.port
+        data = event.data
+
         if not data:
             return
 
@@ -59,14 +64,17 @@ class DataTrafficHandler(QObject):
         # 3. UI 업데이트 버퍼링
         self._rx_buffer[port_name].extend(data)
 
-    def on_data_sent(self, port_name: str, data: bytes) -> None:
+    def on_data_sent(self, event: PortDataEvent) -> None:
         """
-        데이터 송신 핸들러
+        데이터 송신 핸들러 (DTO 적용)
 
         Args:
-            port_name: 포트 이름
-            data: 송신 데이터
+            event (PortDataEvent): 포트 데이터 이벤트 DTO
         """
+        # [Refactor] Unpack DTO
+        port_name = event.port
+        data = event.data
+
         if data_logger_manager.is_logging(port_name):
             data_logger_manager.write(port_name, data)
         self.tx_byte_count += len(data)

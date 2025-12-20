@@ -48,7 +48,7 @@ class DataLogWidget(QWidget):
     데이터를 표시하는 뷰어 위젯 클래스
     """
 
-    tx_broadcast_allow_changed = pyqtSignal(bool)
+    tx_broadcast_allowed_changed = pyqtSignal(bool)
 
     # 로깅 시그널 변경: 파일명 없이 의도만 전달
     logging_start_requested = pyqtSignal()
@@ -71,7 +71,7 @@ class DataLogWidget(QWidget):
         self.data_log_list = None
         self.data_log_search_prev_btn: Optional[QPushButton] = None
         self.data_log_search_next_btn: Optional[QPushButton] = None
-        self.data_log_tx_broadcast_allow_chk: Optional[QCheckBox] = None
+        self.data_log_tx_broadcast_allowed_chk: Optional[QCheckBox] = None
         self.data_log_search_input = None
         self.data_log_toggle_logging_btn: Optional[QPushButton] = None
         self.data_log_clear_log_btn: Optional[QPushButton] = None
@@ -82,7 +82,7 @@ class DataLogWidget(QWidget):
         self.data_log_newline_combo: Optional[QComboBox] = None
 
         # State Variables
-        self.tx_broadcast_allow_enabled: bool = True
+        self.tx_broadcast_allowed_enabled: bool = True
         self.hex_mode: bool = False
         self.is_paused: bool = False
         self.timestamp_enabled: bool = False
@@ -137,9 +137,9 @@ class DataLogWidget(QWidget):
 
         # 도구 섹션 (검색, 옵션, 액션)
         # TX Broadcast Checkbox
-        self.data_log_tx_broadcast_allow_chk = QCheckBox(language_manager.get_text("data_log_chk_tx_broadcast_allow"))
-        self.data_log_tx_broadcast_allow_chk.setToolTip(language_manager.get_text("data_log_chk_tx_broadcast_allow_tooltip"))
-        self.data_log_tx_broadcast_allow_chk.stateChanged.connect(self.on_data_log_tx_broadcast_allow_changed)
+        self.data_log_tx_broadcast_allowed_chk = QCheckBox(language_manager.get_text("data_log_chk_tx_broadcast_allowed"))
+        self.data_log_tx_broadcast_allowed_chk.setToolTip(language_manager.get_text("data_log_chk_tx_broadcast_allowed_tooltip"))
+        self.data_log_tx_broadcast_allowed_chk.stateChanged.connect(self.on_data_log_tx_broadcast_allowed_changed)
 
         # Search Bar
         self.data_log_search_input = QLineEdit()
@@ -214,8 +214,8 @@ class DataLogWidget(QWidget):
         # Components Init (Reuse existing initialization code)
         self.data_log_title = QLabel(language_manager.get_text("data_log_title"))
         self.data_log_title.setProperty("class", "section-title")
-        self.data_log_tx_broadcast_allow_chk = QCheckBox(language_manager.get_text("data_log_chk_tx_broadcast_allow"))
-        self.data_log_tx_broadcast_allow_chk.stateChanged.connect(self.on_data_log_tx_broadcast_allow_changed)
+        self.data_log_tx_broadcast_allowed_chk = QCheckBox(language_manager.get_text("data_log_chk_tx_broadcast_allowed"))
+        self.data_log_tx_broadcast_allowed_chk.stateChanged.connect(self.on_data_log_tx_broadcast_allowed_changed)
         self.data_log_search_input = QLineEdit()
         self.data_log_search_input.returnPressed.connect(self.on_data_log_search_next_clicked)
         self.data_log_search_input.textChanged.connect(self.on_data_log_search_text_changed)
@@ -240,7 +240,7 @@ class DataLogWidget(QWidget):
         toolbar_layout = QHBoxLayout()
         toolbar_layout.addWidget(self.data_log_title)
         toolbar_layout.addStretch()
-        toolbar_layout.addWidget(self.data_log_tx_broadcast_allow_chk)
+        toolbar_layout.addWidget(self.data_log_tx_broadcast_allowed_chk)
         toolbar_layout.addStretch()
         toolbar_layout.addWidget(self.data_log_search_input)
         toolbar_layout.addWidget(self.data_log_search_prev_btn)
@@ -269,8 +269,8 @@ class DataLogWidget(QWidget):
         self.data_log_list.setPlaceholderText(language_manager.get_text("data_log_list_log_placeholder"))
 
         # TX Broadcast Components
-        self.data_log_tx_broadcast_allow_chk.setText(language_manager.get_text("data_log_chk_tx_broadcast_allow"))
-        self.data_log_tx_broadcast_allow_chk.setToolTip(language_manager.get_text("data_log_chk_tx_broadcast_allow_tooltip"))
+        self.data_log_tx_broadcast_allowed_chk.setText(language_manager.get_text("data_log_chk_tx_broadcast_allowed"))
+        self.data_log_tx_broadcast_allowed_chk.setToolTip(language_manager.get_text("data_log_chk_tx_broadcast_allowed_tooltip"))
 
         # Search Components
         self.data_log_search_input.setPlaceholderText(language_manager.get_text("data_log_input_search_placeholder"))
@@ -439,15 +439,15 @@ class DataLogWidget(QWidget):
         return filename
 
     @pyqtSlot(int)
-    def on_data_log_tx_broadcast_allow_changed(self, state: int) -> None:
+    def on_data_log_tx_broadcast_allowed_changed(self, state: int) -> None:
         """
         TX Broadcast 토글을 처리합니다.
 
         Args:
             state (int): 체크박스 상태.
         """
-        self.tx_broadcast_allow_enabled = (state == Qt.Checked)
-        self.tx_broadcast_allow_changed.emit(self.tx_broadcast_allow_enabled)
+        self.tx_broadcast_allowed_enabled = (state == Qt.Checked)
+        self.tx_broadcast_allowed_changed.emit(self.tx_broadcast_allowed_enabled)
 
     @pyqtSlot(int)
     def on_data_log_filter_changed(self, state: int) -> None:
@@ -513,7 +513,7 @@ class DataLogWidget(QWidget):
         Returns:
             bool: TX Broadcast 토글의 상태.
         """
-        return self.tx_broadcast_allow_enabled
+        return self.tx_broadcast_allowed_enabled
 
     def get_state(self) -> dict:
         """
@@ -523,7 +523,7 @@ class DataLogWidget(QWidget):
             dict: 현재 상태.
         """
         return {
-            "tx_broadcast_allow_enabled": self.tx_broadcast_allow_enabled,
+            "tx_broadcast_allowed_enabled": self.tx_broadcast_allowed_enabled,
             "hex_mode": self.hex_mode,
             "timestamp": self.timestamp_enabled,
             "is_paused": self.is_paused,
@@ -544,7 +544,7 @@ class DataLogWidget(QWidget):
             return
 
         # 체크박스 상태 업데이트 (시그널 발생으로 내부 변수도 업데이트됨)
-        self.data_log_tx_broadcast_allow_chk.setChecked(state.get("tx_broadcast_allow_enabled", False))
+        self.data_log_tx_broadcast_allowed_chk.setChecked(state.get("tx_broadcast_allowed_enabled", False))
         self.data_log_hex_chk.setChecked(state.get("hex_mode", False))
         self.data_log_timestamp_chk.setChecked(state.get("timestamp", False))
         self.data_log_pause_chk.setChecked(state.get("is_paused", False))

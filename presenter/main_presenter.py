@@ -296,8 +296,7 @@ class MainPresenter(QObject):
         Args:
             event (PortDataEvent): 포트 데이터 이벤트
         """
-        # EventRouter가 이미 DTO로 변환하여 전달함
-        self.data_handler.on_data_sent(event.port, event.data)
+        self.data_handler.on_data_sent(event)
 
     def on_port_opened(self, port_name: str) -> None:
         """
