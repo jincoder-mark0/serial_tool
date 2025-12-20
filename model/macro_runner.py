@@ -21,7 +21,7 @@
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QWaitCondition
 from typing import List, Optional
 import time
-from common.dtos import MacroEntry, ManualCommand, MacroStepEvent
+from common.dtos import MacroEntry, ManualCommand, MacroStepEvent, PortDataEvent
 from model.packet_parser import ExpectMatcher
 from core.logger import logger
 from core.event_bus import event_bus
@@ -159,43 +159,34 @@ class MacroRunner(QThread):
             self._cond.wakeAll()
         self._mutex.unlock()
 
-    def send_single_command(self, command: str, hex_mode: bool, prefix_enabled: bool, suffix_enabled: bool) -> None:
+    def send_single_command(self, command: ManualCommand) -> None:
         """
         단일 명령 전송을 요청합니다 (Presenter에서 사용).
 
         Args:
-            command (str): Command 텍스트
-            hex_mode (bool): HEX 모드 여부
-            prefix_enabled (bool): 접두사 사용 여부
-            suffix_enabled (bool): 접미사 사용 여부
+            command (ManualCommand): 전송할 명령어 DTO
         """
-        manual_command = ManualCommand(
-            command=command,
-            hex_mode=hex_mode,
-            prefix_enabled=prefix_enabled,
-            suffix_enabled=suffix_enabled,
-            broadcast_enabled=False
-        )
-        self.send_requested.emit(manual_command)
+        # DTO를 그대로 시그널로 전달
+        self.send_requested.emit(command)
 
-    def _on_data_received(self, data_dict: dict) -> None:
+    def _on_data_received(self, event: PortDataEvent) -> None:
         """
         수신 데이터 처리 핸들러 (EventBus 콜백).
 
         Logic:
-            1. Mutex 잠금으로 스레드 안전성 확보 (Race Condition 방지)
-            2. 실행 중이 아니거나 Matcher가 없으면 무시
-            3. Matcher에 데이터 전달하여 매칭 시도
-            4. 매칭 성공 시 `_expect_found` 플래그 설정 및 대기 스레드 깨움
+            1. DTO 타입 검증
+            2. Mutex 잠금으로 스레드 안전성 확보
+            3. 실행 중이 아니거나 Matcher가 없으면 무시
+            4. Matcher에 데이터 전달하여 매칭 시도
+            5. 매칭 성공 시 `_expect_found` 플래그 설정 및 대기 스레드 깨움
 
         Args:
-            data_dict (dict): 수신 데이터 (PortDataEvent DTO 또는 dict)
+            event (PortDataEvent): 수신 데이터 DTO
         """
-        if hasattr(data_dict, 'data'): # DTO
-            data = data_dict.data
-        else: # Dict
-            data = data_dict.get('data', b'')
+        if not isinstance(event, PortDataEvent):
+            return
 
+        data = event.data
         if not data:
             return
 

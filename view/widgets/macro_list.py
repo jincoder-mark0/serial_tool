@@ -25,6 +25,7 @@ from PyQt5.QtGui import QStandardItemModel, QStandardItem
 from PyQt5.QtCore import Qt, pyqtSignal, QPoint
 from typing import Optional, List, Dict, Any
 from view.managers.language_manager import language_manager
+from common.dtos import MacroEntry
 
 class MacroListWidget(QWidget):
     """
@@ -220,24 +221,73 @@ class MacroListWidget(QWidget):
         if item.column() != 0:
             self.macro_list_changed.emit()
 
+    def get_macro_entries(self) -> List[MacroEntry]:
+        """
+        모든 행을 MacroEntry DTO 리스트로 변환하여 반환합니다.
+        (Logic Layer용)
+
+        Returns:
+            List[MacroEntry]: MacroEntry 객체 리스트
+        """
+        entries = []
+        for row in range(self.macro_table_model.rowCount()):
+            entry = self.get_entry_at(row)
+            if entry:
+                entries.append(entry)
+        return entries
+
+    def get_entry_at(self, row: int) -> Optional[MacroEntry]:
+        """
+        특정 행의 데이터를 MacroEntry DTO로 반환합니다.
+
+        Args:
+            row (int): 행 인덱스
+
+        Returns:
+            Optional[MacroEntry]: 생성된 DTO, 실패 시 None
+        """
+        if row < 0 or row >= self.macro_table_model.rowCount():
+            return None
+
+        # 데이터 안전하게 추출
+        try:
+            enabled = self.macro_table_model.item(row, 0).checkState() == Qt.Checked
+            prefix = self.macro_table_model.item(row, 1).checkState() == Qt.Checked
+            command = self.macro_table_model.item(row, 2).text()
+            suffix = self.macro_table_model.item(row, 3).checkState() == Qt.Checked
+            hex_mode = self.macro_table_model.item(row, 4).checkState() == Qt.Checked
+            delay_text = self.macro_table_model.item(row, 5).text()
+
+            # 지연 시간 안전 변환
+            delay_ms = 100
+            if delay_text.isdigit():
+                delay_ms = int(delay_text)
+
+            return MacroEntry(
+                enabled=enabled,
+                command=command,
+                hex_mode=hex_mode,
+                prefix_enabled=prefix,
+                suffix_enabled=suffix,
+                delay_ms=delay_ms
+            )
+        except Exception:
+            return None
+
     def export_macros(self) -> List[Dict[str, Any]]:
         """
-        현재 커맨드 리스트 데이터를 추출하여 반환
+        현재 커맨드 리스트 데이터를 추출하여 Dictionary 리스트로 반환
+        (Persistence / SettingsManager 용)
 
         Returns:
             List[Dict[str, Any]]: 커맨드 데이터 리스트.
         """
         commands = []
         for row in range(self.macro_table_model.rowCount()):
-            command_data = {
-                "enabled": self.macro_table_model.item(row, 0).checkState() == Qt.Checked,
-                "prefix": self.macro_table_model.item(row, 1).checkState() == Qt.Checked,
-                "command": self.macro_table_model.item(row, 2).text(),
-                "suffix": self.macro_table_model.item(row, 3).checkState() == Qt.Checked,
-                "hex_mode": self.macro_table_model.item(row, 4).checkState() == Qt.Checked,
-                "delay": self.macro_table_model.item(row, 5).text()
-            }
-            commands.append(command_data)
+            # DTO를 생성한 후 to_dict() 호출하여 일관성 유지
+            entry = self.get_entry_at(row)
+            if entry:
+                commands.append(entry.to_dict())
         return commands
 
     def import_macros(self, commands: List[Dict[str, Any]]) -> None:
@@ -249,15 +299,17 @@ class MacroListWidget(QWidget):
             commands (List[Dict[str, Any]]): 커맨드 데이터 리스트.
         """
         self.macro_table_model.removeRows(0, self.macro_table_model.rowCount())
-        for i, command in enumerate(commands):
+        for i, command_dict in enumerate(commands):
+            # DTO를 통해 안전하게 변환 (from_dict 내부에 _safe_cast 있음)
+            entry = MacroEntry.from_dict(command_dict)
             self._insert_row(
                 i,
-                command.get("command", ""),
-                command.get("prefix", True),
-                command.get("hex_mode", False),
-                command.get("suffix", True),
-                str(command.get("delay", "100")),
-                command.get("enabled", True)
+                entry.command,
+                entry.prefix_enabled,
+                entry.hex_mode,
+                entry.suffix_enabled,
+                str(entry.delay_ms),
+                entry.enabled
             )
         self.update_select_all_state()
 
@@ -453,7 +505,6 @@ class MacroListWidget(QWidget):
         for row in rows:
             self.macro_table.selectRow(row)
 
-
     def _move_row(self, source_row: int, dest_row: int) -> None:
         """
         행을 이동합니다. (데이터만 이동, 버튼은 호출자가 일괄 갱신)
@@ -499,10 +550,10 @@ class MacroListWidget(QWidget):
 
     def get_state(self) -> list:
         """
-        현재 Command 목록을 리스트로 반환합니다.
+        현재 Command 목록을 리스트로 반환합니다 (Persistence용).
 
         Returns:
-            list: Command 목록 데이터.
+            list: Command 목록 데이터 (dict list).
         """
         commands = self.export_macros()
         return commands
@@ -512,7 +563,7 @@ class MacroListWidget(QWidget):
         저장된 Command 목록을 위젯에 적용합니다.
 
         Args:
-            state (list): Command 목록 데이터.
+            state (list): Command 목록 데이터 (dict list).
         """
         if not state:
             return

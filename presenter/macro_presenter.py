@@ -26,7 +26,7 @@ except ImportError:
 
 from view.panels.macro_panel import MacroPanel
 from model.macro_runner import MacroRunner
-from common.dtos import MacroEntry, MacroScriptData, MacroRepeatOption, MacroStepEvent
+from common.dtos import MacroEntry, MacroScriptData, MacroRepeatOption, MacroStepEvent, ManualCommand
 from core.logger import logger
 
 class ScriptLoadWorker(QThread):
@@ -175,30 +175,27 @@ class MacroPresenter(QObject):
         """
         반복 실행 시작 요청 처리
 
+        Logic:
+            - UI에서 전체 MacroEntry 리스트를 가져옴 (DTO)
+            - 선택된 인덱스의 엔트리만 필터링
+            - Runner에 로드 및 시작
+
         Args:
             indices (List[int]): 실행할 매크로 인덱스 리스트
             option (MacroRepeatOption): 반복 옵션
         """
         if not indices: return
 
-        raw_list = self.panel.macro_list.export_macros()
-        entries = []
-        for i, raw in enumerate(raw_list):
+        all_entries = self.panel.macro_list.get_macro_entries()
+        selected_entries = []
+
+        for i, entry in enumerate(all_entries):
             if i in indices:
-                delay = int(raw['delay']) if raw['delay'].isdigit() else 100
-                entry = MacroEntry(
-                    enabled=raw['enabled'],
-                    command=raw['command'],
-                    hex_mode=raw['hex_mode'],
-                    prefix=raw['prefix'],
-                    suffix=raw['suffix'],
-                    delay_ms=delay
-                )
-                entries.append(entry)
+                selected_entries.append(entry)
 
-        if not entries: return
+        if not selected_entries: return
 
-        self.runner.load_macro(entries)
+        self.runner.load_macro(selected_entries)
         self.runner.start(option.max_runs, option.interval_ms, option.broadcast_enabled)
         self.panel.set_running_state(True)
 
@@ -215,12 +212,19 @@ class MacroPresenter(QObject):
         Args:
             row_index (int): 실행할 매크로 인덱스
         """
-        raw_list = self.panel.macro_list.export_macros()
-        if 0 <= row_index < len(raw_list):
-            raw = raw_list[row_index]
-            self.runner.send_single_command(
-                raw['command'], raw['hex_mode'], raw['prefix'], raw['suffix']
+        entry = self.panel.macro_list.get_entry_at(row_index)
+
+        if entry:
+            # Create ManualCommand DTO from MacroEntry
+            manual_command = ManualCommand(
+                command=entry.command,
+                hex_mode=entry.hex_mode,
+                prefix_enabled=entry.prefix_enabled,
+                suffix_enabled=entry.suffix_enabled,
+                broadcast_enabled=False # 단일 전송은 브로드캐스트 안함 (기본)
             )
+            # DTO 전달
+            self.runner.send_single_command(manual_command)
 
     def on_step_started(self, event: MacroStepEvent) -> None:
         """
