@@ -37,9 +37,15 @@ QTabBar::tab {
     margin-right: 2px;
 }
 
+QTabBar::tab:selected {
+    border-bottom-width: 2px;
+    border-bottom-style: solid;
+}
+
 QTabBar::close-button {
     subcontrol-origin: padding;
     subcontrol-position: right;
+    border-radius: 2px;
 }
 
 /* QPushButton */

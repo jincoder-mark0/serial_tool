@@ -45,11 +45,12 @@ QTabBar::tab {
 QTabBar::tab:selected {
     background-color: #2b2b2b;
     color: #ffffff;
-    border-bottom: 2px solid #4CAF50; /* Accent Color */
+    border-bottom-color: #4CAF50;
 }
 
 QTabBar::tab:hover {
     background-color: #3a3a3a;
+    color: #e0e0e0;
 }
 
 QTabBar::close-button {
@@ -58,7 +59,6 @@ QTabBar::close-button {
 
 QTabBar::close-button:hover {
     background-color: #505050;
-    border-radius: 2px;
 }
 
 /* QPushButton */
@@ -104,10 +104,11 @@ QLineEdit, QTextEdit, QPlainTextEdit, QSmartTextEdit, QSmartListView {
     border-color: #404040;
     color: #e0e0e0;
     selection-background-color: #264f78;
+    selection-color: #3a3a3a;
 }
 
 QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QSmartTextEdit:focus, QSmartListView:focus {
-    border: 1px solid #4CAF50;
+    border-color: #4CAF50;
 }
 
 QLineEdit:disabled, QTextEdit:disabled, QPlainTextEdit:disabled, QSmartTextEdit:disabled, QSmartListView:disabled {
@@ -126,6 +127,7 @@ QSmartTextEdit {
 QComboBox {
     background-color: #3a3a3a;
     border-color: #505050;
+    color: #e0e0e0;
 }
 
 QComboBox:hover {
@@ -142,7 +144,7 @@ QComboBox::down-arrow {
 
 QComboBox QAbstractItemView {
     background-color: #3a3a3a;
-    border: 1px solid #505050;
+    border-color: #505050;
     selection-background-color: #4CAF50;
     selection-color: #ffffff;
 }
@@ -171,13 +173,14 @@ QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
     background-color: #606060;
 }
 
-/* Views (Table/List) */
+/* Views */
 QTableView, QListView, QTreeWidget, QSmartListView {
     background-color: #1e1e1e;
     border-color: #404040;
     gridline-color: #303030;
     selection-background-color: #264f78;
     selection-color: #ffffff;
+    color: #e0e0e0;
 }
 
 QHeaderView::section {
@@ -223,6 +226,14 @@ QStatusBar {
 }
 
 /* QMenu */
+QMenuBar {
+    background-color: #333333;
+    color: #e0e0e0;
+}
+QMenuBar::item:selected {
+    background-color: #404040;
+}
+
 QMenu {
     background-color: #2b2b2b;
     border-color: #404040;
@@ -248,44 +259,98 @@ QToolBar QToolButton:pressed {
 }
 
 /* Custom Buttons & States */
+
+/* Accent - Save, Start */
 QPushButton[class="accent"] {
     background-color: #2E7D32;
     border-color: #4CAF50;
     color: #ffffff;
 }
-QPushButton[class="accent"]:hover { background-color: #388E3C; border-color: #66BB6A; }
-QPushButton[class="accent"]:pressed { background-color: #1B5E20; }
-QPushButton[class="accent"]:disabled { background-color: #1b3a20; border-color: #2e5030; color: #507050; }
 
+QPushButton[class="accent"]:hover {
+    background-color: #388E3C;
+    border-color: #66BB6A;
+}
+
+QPushButton[class="accent"]:pressed {
+    background-color: #1B5E20;
+}
+
+QPushButton[class="accent"]:disabled {
+    background-color: #1b3a20;
+    border-color: #2e5030;
+    color: #507050;
+}
+
+/* Danger - Stop, Delete */
 QPushButton[class="danger"] {
     background-color: #C62828;
     border-color: #F44336;
     color: #ffffff;
 }
-QPushButton[class="danger"]:hover { background-color: #D32F2F; border-color: #EF5350; }
-QPushButton[class="danger"]:pressed { background-color: #B71C1C; }
-QPushButton[class="danger"]:disabled { background-color: #4a1b1b; border-color: #602525; color: #804040; }
 
+QPushButton[class="danger"]:hover {
+    background-color: #D32F2F;
+    border-color: #EF5350;
+}
+
+QPushButton[class="danger"]:pressed {
+    background-color: #B71C1C;
+}
+
+QPushButton[class="danger"]:disabled {
+    background-color: #4a1b1b;
+    border-color: #602525;
+    color: #804040;
+}
+
+/* Warning - Pause */
 QPushButton[class="warning"] {
     background-color: #FFC107;
     border-color: #FFD740;
     color: #2b2b2b;
 }
-QPushButton[class="warning"]:hover { background-color: #FFD740; border-color: #FFEA00; }
-QPushButton[class="warning"]:pressed { background-color: #FF6F00; }
-QPushButton[class="warning"]:disabled { background-color: #4a3b00; border-color: #605000; color: #806000; }
+
+QPushButton[class="warning"]:hover {
+    background-color: #FFD740;
+    border-color: #FFEA00;
+}
+
+QPushButton[class="warning"]:pressed {
+    background-color: #FF6F00;
+}
+
+QPushButton[class="warning"]:disabled {
+    background-color: #4a3b00;
+    border-color: #605000;
+    color: #806000;
+}
 
 /* Port States */
 QPushButton[state="connected"] {
-    background-color: #2E7D32; border-color: #4CAF50; color: #ffffff;
+    background-color: #2E7D32;
+    border-color: #4CAF50;
+    color: #ffffff;
 }
-QPushButton[state="connected"]:hover { background-color: #388E3C; border-color: #66BB6A; }
+
+QPushButton[state="connected"]:hover {
+    background-color: #388E3C;
+    border-color: #66BB6A;
+}
 
 QPushButton[state="disconnected"] {
-    background-color: #3a3a3a; border-color: #505050; color: #e0e0e0;
+    background-color: #3a3a3a;
+    border-color: #505050;
+    color: #e0e0e0;
 }
 
 QPushButton[state="error"] {
-    background-color: #C62828; border-color: #F44336; color: #ffffff;
+    background-color: #C62828;
+    border-color: #F44336;
+    color: #ffffff;
 }
-QPushButton[state="error"]:hover { background-color: #D32F2F; border-color: #EF5350; }
+
+QPushButton[state="error"]:hover {
+    background-color: #D32F2F;
+    border-color: #EF5350;
+ }
