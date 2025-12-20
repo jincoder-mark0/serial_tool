@@ -1,3 +1,21 @@
+"""
+환경 설정 대화상자 모듈
+
+애플리케이션의 전반적인 설정을 탭 형태로 관리합니다.
+
+## WHY
+* 다양한 설정을 카테고리별로 그룹화하여 사용성 향상
+* MVP 패턴에 따라 View는 설정값의 수집 및 표시만 담당
+
+## WHAT
+* 일반, 시리얼, 명령, 패킷, 로깅 등 5개 탭 구성
+* 각 설정 항목에 대한 UI 컨트롤(콤보박스, 체크박스 등) 제공
+* 설정 변경 시그널 발행 (PreferencesState DTO)
+
+## HOW
+* QTabWidget을 사용하여 섹션 분리
+* DTO(PreferencesState)를 통해 초기 상태 로드 및 변경 사항 반환
+"""
 from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
     QLabel, QComboBox, QSpinBox, QPushButton,
@@ -5,10 +23,11 @@ from PyQt5.QtWidgets import (
     QButtonGroup, QListWidget, QCheckBox, QLineEdit
 )
 from PyQt5.QtCore import pyqtSignal, Qt
-from typing import Dict, Any, Optional
+from typing import Optional, Any
 import os
-from view.managers.lang_manager import lang_manager
-from constants import (
+from view.managers.language_manager import language_manager
+from view.managers.theme_manager import theme_manager
+from common.constants import (
     VALID_BAUDRATES,
     DEFAULT_LOG_MAX_LINES,
     MIN_SCAN_INTERVAL_MS,
@@ -16,22 +35,29 @@ from constants import (
     MAX_PACKET_SIZE,
     ConfigKeys
 )
+from common.enums import NewlineMode, ThemeType
+from common.dtos import PreferencesState
 
 class PreferencesDialog(QDialog):
     """
     설정 관리 대화상자
-    MVP 패턴 준수 (설정 직접 수정 안 함)
+    MVP 패턴 준수: View는 데이터를 보여주고 사용자 입력을 수집하여 반환만 함.
+    SettingsManager에 직접 접근하지 않음.
     """
 
-    settings_changed = pyqtSignal(dict)
+    # 변경된 설정을 DTO로 전달
+    settings_changed = pyqtSignal(object) # PreferencesState
 
-    def __init__(self, parent: Optional[QWidget] = None, current_settings: Dict[str, Any] = None) -> None:
+    def __init__(self, parent: Optional[QWidget] = None, state: PreferencesState = None) -> None:
         super().__init__(parent)
-        self.setWindowTitle(lang_manager.get_text("pref_title"))
+        self.setWindowTitle(language_manager.get_text("pref_title"))
         self.resize(500, 400)
-        self.current_settings = current_settings or {}
+
+        # DTO가 없으면 기본값 생성
+        self.state = state if state else PreferencesState()
+
         self.init_ui()
-        self.load_settings()
+        self.set_state_to_ui()
 
     def init_ui(self) -> None:
         """UI 컴포넌트를 초기화"""
@@ -39,11 +65,11 @@ class PreferencesDialog(QDialog):
 
         # 탭 위젯 생성
         self.tabs = QTabWidget()
-        self.tabs.addTab(self.create_general_tab(), lang_manager.get_text("pref_tab_general"))
-        self.tabs.addTab(self.create_serial_tab(), lang_manager.get_text("pref_tab_serial"))
-        self.tabs.addTab(self.create_cmd_tab(), lang_manager.get_text("pref_tab_command"))
-        self.tabs.addTab(self.create_packet_tab(), lang_manager.get_text("pref_tab_packet"))
-        self.tabs.addTab(self.create_logging_tab(), lang_manager.get_text("pref_tab_logging"))
+        self.tabs.addTab(self.create_general_tab(), language_manager.get_text("pref_tab_general"))
+        self.tabs.addTab(self.create_serial_tab(), language_manager.get_text("pref_tab_serial"))
+        self.tabs.addTab(self.create_command_tab(), language_manager.get_text("pref_tab_command"))
+        self.tabs.addTab(self.create_packet_tab(), language_manager.get_text("pref_tab_packet"))
+        self.tabs.addTab(self.create_logging_tab(), language_manager.get_text("pref_tab_logging"))
 
         layout.addWidget(self.tabs)
 
@@ -51,13 +77,13 @@ class PreferencesDialog(QDialog):
         btn_layout = QHBoxLayout()
         btn_layout.addStretch()
 
-        self.ok_btn = QPushButton(lang_manager.get_text("pref_btn_ok"))
+        self.ok_btn = QPushButton(language_manager.get_text("pref_btn_ok"))
         self.ok_btn.clicked.connect(self.accept)
 
-        self.cancel_btn = QPushButton(lang_manager.get_text("pref_btn_cancel"))
+        self.cancel_btn = QPushButton(language_manager.get_text("pref_btn_cancel"))
         self.cancel_btn.clicked.connect(self.reject)
 
-        self.apply_btn = QPushButton(lang_manager.get_text("pref_btn_apply"))
+        self.apply_btn = QPushButton(language_manager.get_text("pref_btn_apply"))
         self.apply_btn.clicked.connect(self.apply_settings)
 
         btn_layout.addWidget(self.ok_btn)
@@ -73,23 +99,37 @@ class PreferencesDialog(QDialog):
         layout = QVBoxLayout()
 
         # UI Appearance 그룹
-        ui_group = QGroupBox(lang_manager.get_text("pref_grp_ui"))
+        ui_group = QGroupBox(language_manager.get_text("pref_grp_ui"))
         ui_layout = QFormLayout()
 
+        # 테마 목록 동적 로드
         self.theme_combo = QComboBox()
-        self.theme_combo.addItems(["Dark", "Light", "System"])
+        themes = theme_manager.get_available_themes()
+        if not themes:
+            themes = [ThemeType.DARK.value.capitalize(), ThemeType.LIGHT.value.capitalize()]
+        self.theme_combo.addItems(themes)
 
+        # 언어 목록 동적 로드
         self.language_combo = QComboBox()
-        self.language_combo.addItem("English", "en")
-        self.language_combo.addItem("Korean", "ko")
+        languages = language_manager.get_available_languages()
+
+        # 정렬하여 추가 (영어 우선 등 필요한 경우 로직 추가 가능)
+        # 여기서는 단순히 추가
+        for code, name in languages.items():
+            self.language_combo.addItem(name, code)
+
+        # Fallback if empty
+        if self.language_combo.count() == 0:
+            self.language_combo.addItem("English", "en")
+            self.language_combo.addItem("Korean", "ko")
 
         self.proportional_font_size_spin = QSpinBox()
         self.proportional_font_size_spin.setRange(8, 24)
         self.proportional_font_size_spin.setValue(10)
 
-        ui_layout.addRow(lang_manager.get_text("pref_lbl_theme"), self.theme_combo)
-        ui_layout.addRow(lang_manager.get_text("pref_lbl_language"), self.language_combo)
-        ui_layout.addRow(lang_manager.get_text("pref_lbl_font_size"), self.proportional_font_size_spin)
+        ui_layout.addRow(language_manager.get_text("pref_lbl_theme"), self.theme_combo)
+        ui_layout.addRow(language_manager.get_text("pref_lbl_language"), self.language_combo)
+        ui_layout.addRow(language_manager.get_text("pref_lbl_font_size"), self.proportional_font_size_spin)
         ui_group.setLayout(ui_layout)
 
         layout.addWidget(ui_group)
@@ -103,7 +143,7 @@ class PreferencesDialog(QDialog):
         layout = QVBoxLayout()
 
         # Defaults 그룹
-        default_group = QGroupBox(lang_manager.get_text("pref_grp_default"))
+        default_group = QGroupBox(language_manager.get_text("pref_grp_default"))
         default_layout = QFormLayout()
 
         self.port_baudrate_combo = QComboBox()
@@ -111,20 +151,21 @@ class PreferencesDialog(QDialog):
         self.port_baudrate_combo.setEditable(True)
 
         self.port_newline_combo = QComboBox()
-        self.port_newline_combo.addItems(["\r", "\n", "\r\n"])
+
+        self.port_newline_combo.addItems([mode.value for mode in NewlineMode])
         self.port_newline_combo.setEditable(True)
 
-        self.port_localecho_chk = QCheckBox(lang_manager.get_text("pref_chk_localecho"))
+        self.port_local_echo_chk = QCheckBox(language_manager.get_text("pref_chk_local_echo"))
 
-        self.port_scan_interval_spin = QSpinBox()
-        self.port_scan_interval_spin.setRange(MIN_SCAN_INTERVAL_MS, MAX_SCAN_INTERVAL_MS)
-        self.port_scan_interval_spin.setSingleStep(1000)
-        self.port_scan_interval_spin.setSuffix(" ms")
+        self.port_scan_interval_ms_spin = QSpinBox()
+        self.port_scan_interval_ms_spin.setRange(MIN_SCAN_INTERVAL_MS, MAX_SCAN_INTERVAL_MS)
+        self.port_scan_interval_ms_spin.setSingleStep(1000)
+        self.port_scan_interval_ms_spin.setSuffix(" ms")
 
-        default_layout.addRow(lang_manager.get_text("pref_lbl_baudrate"), self.port_baudrate_combo)
-        default_layout.addRow(lang_manager.get_text("pref_lbl_newline"), self.port_newline_combo)
-        default_layout.addRow(lang_manager.get_text("pref_lbl_localecho"), self.port_localecho_chk)
-        default_layout.addRow(lang_manager.get_text("pref_lbl_scan"), self.port_scan_interval_spin)
+        default_layout.addRow(language_manager.get_text("pref_lbl_baudrate"), self.port_baudrate_combo)
+        default_layout.addRow(language_manager.get_text("pref_lbl_newline"), self.port_newline_combo)
+        default_layout.addRow(language_manager.get_text("pref_lbl_local_echo"), self.port_local_echo_chk)
+        default_layout.addRow(language_manager.get_text("pref_lbl_scan"), self.port_scan_interval_ms_spin)
         default_group.setLayout(default_layout)
 
         layout.addWidget(default_group)
@@ -132,13 +173,13 @@ class PreferencesDialog(QDialog):
         widget.setLayout(layout)
         return widget
 
-    def create_cmd_tab(self) -> QWidget:
+    def create_command_tab(self) -> QWidget:
         """Command 설정 탭을 생성합니다."""
         widget = QWidget()
         layout = QVBoxLayout()
 
         # Prefix/Suffix 그룹
-        format_group = QGroupBox(lang_manager.get_text("pref_grp_cmd_format"))
+        format_group = QGroupBox(language_manager.get_text("pref_grp_command_format"))
         format_layout = QFormLayout()
 
         self.prefix_combo = QComboBox()
@@ -149,8 +190,8 @@ class PreferencesDialog(QDialog):
         self.suffix_combo.setEditable(True)
         self.suffix_combo.addItems(["", "\\r", "\\n", "\\r\\n"])
 
-        format_layout.addRow(lang_manager.get_text("pref_lbl_prefix"), self.prefix_combo)
-        format_layout.addRow(lang_manager.get_text("pref_lbl_suffix"), self.suffix_combo)
+        format_layout.addRow(language_manager.get_text("pref_lbl_prefix"), self.prefix_combo)
+        format_layout.addRow(language_manager.get_text("pref_lbl_suffix"), self.suffix_combo)
         format_group.setLayout(format_layout)
 
         layout.addWidget(format_group)
@@ -164,13 +205,13 @@ class PreferencesDialog(QDialog):
         layout = QVBoxLayout()
 
         # File Logging 그룹
-        file_group = QGroupBox(lang_manager.get_text("pref_grp_logging"))
+        file_group = QGroupBox(language_manager.get_text("pref_grp_logging"))
         file_layout = QFormLayout()
 
         path_layout = QHBoxLayout()
         self.log_path_edit = QLabel("Default ResourcePath")
         self.log_path_edit.setFrameStyle(QLabel.Sunken | QLabel.Panel)
-        self.browse_btn = QPushButton(lang_manager.get_text("pref_btn_browse"))
+        self.browse_btn = QPushButton(language_manager.get_text("pref_btn_browse"))
         self.browse_btn.clicked.connect(self.browse_log_path)
 
         path_layout.addWidget(self.log_path_edit)
@@ -181,8 +222,8 @@ class PreferencesDialog(QDialog):
         self.max_lines_spin.setSingleStep(100)
         self.max_lines_spin.setValue(DEFAULT_LOG_MAX_LINES)
 
-        file_layout.addRow(lang_manager.get_text("pref_lbl_log_path"), path_layout)
-        file_layout.addRow(lang_manager.get_text("pref_lbl_max_lines"), self.max_lines_spin)
+        file_layout.addRow(language_manager.get_text("pref_lbl_log_path"), path_layout)
+        file_layout.addRow(language_manager.get_text("pref_lbl_max_lines"), self.max_lines_spin)
         file_group.setLayout(file_layout)
 
         layout.addWidget(file_group)
@@ -196,15 +237,15 @@ class PreferencesDialog(QDialog):
         layout = QVBoxLayout()
 
         # Parser Type 그룹
-        parser_type_group = QGroupBox(lang_manager.get_text("pref_grp_parser_type"))
+        parser_type_group = QGroupBox(language_manager.get_text("pref_grp_parser_type"))
         parser_type_layout = QVBoxLayout()
 
         self.parser_type_button_group = QButtonGroup(self)
-        self.parser_type_auto = QRadioButton(lang_manager.get_text("pref_parser_type_auto"))
-        self.parser_type_at = QRadioButton(lang_manager.get_text("pref_parser_type_at"))
-        self.parser_type_delimiter = QRadioButton(lang_manager.get_text("pref_parser_type_delimiter"))
-        self.parser_type_fixed = QRadioButton(lang_manager.get_text("pref_parser_type_fixed"))
-        self.parser_type_raw = QRadioButton(lang_manager.get_text("pref_parser_type_raw"))
+        self.parser_type_auto = QRadioButton(language_manager.get_text("pref_parser_type_auto"))
+        self.parser_type_at = QRadioButton(language_manager.get_text("pref_parser_type_at"))
+        self.parser_type_delimiter = QRadioButton(language_manager.get_text("pref_parser_type_delimiter"))
+        self.parser_type_fixed = QRadioButton(language_manager.get_text("pref_parser_type_fixed"))
+        self.parser_type_raw = QRadioButton(language_manager.get_text("pref_parser_type_raw"))
 
         self.parser_type_button_group.addButton(self.parser_type_auto, 0)
         self.parser_type_button_group.addButton(self.parser_type_at, 1)
@@ -221,18 +262,18 @@ class PreferencesDialog(QDialog):
         parser_type_group.setLayout(parser_type_layout)
 
         # Delimiter 설정 그룹
-        delimiter_group = QGroupBox(lang_manager.get_text("pref_grp_delimiter"))
+        delimiter_group = QGroupBox(language_manager.get_text("pref_grp_delimiter"))
         delimiter_layout = QVBoxLayout()
 
         self.delimiter_list = QListWidget()
-        # 기본값은 load_settings에서 처리하므로 여기서는 비워둡니다.
+        # 기본값은 set_state_to_ui에서 처리하므로 여기서는 비워둡니다.
         # self.delimiter_list.addItems(["\\r\\n", "0xFF", "0x7E"])
 
         delimiter_btn_layout = QHBoxLayout()
         self.delimiter_input = QLineEdit()
         self.delimiter_input.setPlaceholderText("0x00 or \\r\\n")
-        self.add_delimiter_btn = QPushButton(lang_manager.get_text("pref_btn_add_delimiter"))
-        self.del_delimiter_btn = QPushButton(lang_manager.get_text("pref_btn_del_delimiter"))
+        self.add_delimiter_btn = QPushButton(language_manager.get_text("pref_btn_add_delimiter"))
+        self.del_delimiter_btn = QPushButton(language_manager.get_text("pref_btn_del_delimiter"))
         self.add_delimiter_btn.clicked.connect(self._on_add_delimiter)
         self.del_delimiter_btn.clicked.connect(self._on_del_delimiter)
 
@@ -245,24 +286,24 @@ class PreferencesDialog(QDialog):
         delimiter_group.setLayout(delimiter_layout)
 
         # Fixed Length 설정 그룹
-        fixed_length_group = QGroupBox(lang_manager.get_text("pref_grp_fixed_length"))
+        fixed_length_group = QGroupBox(language_manager.get_text("pref_grp_fixed_length"))
         fixed_length_layout = QFormLayout()
 
         self.packet_length_spin = QSpinBox()
         self.packet_length_spin.setRange(1, MAX_PACKET_SIZE)
         self.packet_length_spin.setValue(64)
 
-        fixed_length_layout.addRow(lang_manager.get_text("pref_lbl_packet_length"), self.packet_length_spin)
+        fixed_length_layout.addRow(language_manager.get_text("pref_lbl_packet_length"), self.packet_length_spin)
         fixed_length_group.setLayout(fixed_length_layout)
 
         # AT Color Rules 그룹
-        at_color_group = QGroupBox(lang_manager.get_text("pref_grp_at_colors"))
+        at_color_group = QGroupBox(language_manager.get_text("pref_grp_at_colors"))
         at_color_layout = QVBoxLayout()
 
-        self.at_color_ok_chk = QCheckBox(lang_manager.get_text("pref_chk_at_ok"))
-        self.at_color_error_chk = QCheckBox(lang_manager.get_text("pref_chk_at_error"))
-        self.at_color_urc_chk = QCheckBox(lang_manager.get_text("pref_chk_at_urc"))
-        self.at_color_prompt_chk = QCheckBox(lang_manager.get_text("pref_chk_at_prompt"))
+        self.at_color_ok_chk = QCheckBox(language_manager.get_text("pref_chk_at_ok"))
+        self.at_color_error_chk = QCheckBox(language_manager.get_text("pref_chk_at_error"))
+        self.at_color_urc_chk = QCheckBox(language_manager.get_text("pref_chk_at_urc"))
+        self.at_color_prompt_chk = QCheckBox(language_manager.get_text("pref_chk_at_prompt"))
 
         at_color_layout.addWidget(self.at_color_ok_chk)
         at_color_layout.addWidget(self.at_color_error_chk)
@@ -271,23 +312,23 @@ class PreferencesDialog(QDialog):
         at_color_group.setLayout(at_color_layout)
 
         # Inspector Options 그룹
-        inspector_group = QGroupBox(lang_manager.get_text("pref_grp_inspector_options"))
-        inspector_layout = QFormLayout()
+        packet_group = QGroupBox(language_manager.get_text("pref_grp_packet_options"))
+        packet_layout = QFormLayout()
 
         self.buffer_size_spin = QSpinBox()
         self.buffer_size_spin.setRange(10, 1000)
         self.buffer_size_spin.setValue(100)
 
-        self.realtime_tracking_chk = QCheckBox(lang_manager.get_text("pref_chk_realtime_tracking"))
+        self.realtime_tracking_chk = QCheckBox(language_manager.get_text("pref_chk_realtime_tracking"))
         self.realtime_tracking_chk.setChecked(True)
 
-        self.auto_scroll_chk = QCheckBox(lang_manager.get_text("pref_chk_auto_scroll"))
+        self.auto_scroll_chk = QCheckBox(language_manager.get_text("pref_chk_auto_scroll"))
         self.auto_scroll_chk.setChecked(True)
 
-        inspector_layout.addRow(lang_manager.get_text("pref_lbl_buffer_size"), self.buffer_size_spin)
-        inspector_layout.addRow("", self.realtime_tracking_chk)
-        inspector_layout.addRow("", self.auto_scroll_chk)
-        inspector_group.setLayout(inspector_layout)
+        packet_layout.addRow(language_manager.get_text("pref_lbl_buffer_size"), self.buffer_size_spin)
+        packet_layout.addRow("", self.realtime_tracking_chk)
+        packet_layout.addRow("", self.auto_scroll_chk)
+        packet_group.setLayout(packet_layout)
 
         # 레이아웃 배치
         # 좌우 2열로 배치하여 공간 활용
@@ -300,7 +341,7 @@ class PreferencesDialog(QDialog):
 
         right_v_layout.addWidget(fixed_length_group)
         right_v_layout.addWidget(at_color_group)
-        right_v_layout.addWidget(inspector_group)
+        right_v_layout.addWidget(packet_group)
         right_v_layout.addStretch()
 
         h_layout.addLayout(left_v_layout)
@@ -324,7 +365,7 @@ class PreferencesDialog(QDialog):
 
     def browse_log_path(self) -> None:
         """로그 저장 경로 선택 다이얼로그를 엽니다."""
-        directory = QFileDialog.getExistingDirectory(self, lang_manager.get_text("pref_dialog_title_select_dir"))
+        directory = QFileDialog.getExistingDirectory(self, language_manager.get_text("pref_dialog_title_select_dir"))
         if directory:
             self.log_path_edit.setText(directory)
 
@@ -350,84 +391,96 @@ class PreferencesDialog(QDialog):
 
         return value
 
-    def load_settings(self) -> None:
-        """현재 설정을 UI에 반영합니다."""
+    def set_state_to_ui(self) -> None:
+        """
+        DTO 상태를 UI에 반영합니다.
+        """
         # General
-        theme = self._get_setting(ConfigKeys.THEME, "Dark").capitalize()
-        self.theme_combo.setCurrentText(theme)
+        # 대소문자 무시하고 매칭 (Dark vs dark)
+        index = self.theme_combo.findText(self.state.theme, Qt.MatchFixedString)
+        if index != -1:
+            self.theme_combo.setCurrentIndex(index)
+        else:
+             # 테마가 없을 경우 기본값 0번
+             self.theme_combo.setCurrentIndex(0)
 
-        lang_code = self._get_setting(ConfigKeys.LANGUAGE, "en")
-        index = self.language_combo.findData(lang_code)
+        index = self.language_combo.findData(self.state.language)
         if index != -1:
             self.language_combo.setCurrentIndex(index)
 
-        self.proportional_font_size_spin.setValue(self._get_setting(ConfigKeys.PROP_FONT_SIZE, 10))
-        self.max_lines_spin.setValue(self._get_setting(ConfigKeys.RX_MAX_LINES, DEFAULT_LOG_MAX_LINES))
+        self.proportional_font_size_spin.setValue(self.state.font_size)
+        self.max_lines_spin.setValue(self.state.max_log_lines)
 
         # Serial
-        self.port_baudrate_combo.setCurrentText(str(self._get_setting(ConfigKeys.PORT_BAUDRATE, 115200)))
-        self.port_newline_combo.setCurrentText(str(self._get_setting(ConfigKeys.PORT_NEWLINE, "\n")))
-        self.port_localecho_chk.setChecked(self._get_setting(ConfigKeys.PORT_LOCALECHO, False))
-        self.port_scan_interval_spin.setValue(self._get_setting(ConfigKeys.PORT_SCAN_INTERVAL, 5000))
+        self.port_baudrate_combo.setCurrentText(str(self.state.baudrate))
+        self.port_newline_combo.setCurrentText(self.state.newline)
+        self.port_local_echo_chk.setChecked(self.state.local_echo_enabled)
+        self.port_scan_interval_ms_spin.setValue(self.state.scan_interval_ms)
 
         # Command
-        self.prefix_combo.setCurrentText(self._get_setting(ConfigKeys.CMD_PREFIX, ""))
-        self.suffix_combo.setCurrentText(self._get_setting(ConfigKeys.CMD_SUFFIX, ""))
+        self.prefix_combo.setCurrentText(self.state.command_prefix)
+        self.suffix_combo.setCurrentText(self.state.command_suffix)
+
+        # Logging
+        self.log_path_edit.setText(self.state.log_dir or os.getcwd())
 
         # Packet
-        parser_type = self._get_setting(ConfigKeys.PACKET_PARSER_TYPE, 0)
-        btn = self.parser_type_button_group.button(parser_type)
+        btn = self.parser_type_button_group.button(self.state.parser_type)
         if btn:
             btn.setChecked(True)
 
-        delimiters = self._get_setting(ConfigKeys.PACKET_DELIMITERS, ["\\r\\n"])
         self.delimiter_list.clear()
-        self.delimiter_list.addItems(delimiters)
+        self.delimiter_list.addItems(self.state.delimiters)
 
-        self.packet_length_spin.setValue(self._get_setting(ConfigKeys.PACKET_LENGTH, 64))
+        self.packet_length_spin.setValue(self.state.packet_length)
 
-        self.at_color_ok_chk.setChecked(self._get_setting(ConfigKeys.AT_COLOR_OK, True))
-        self.at_color_error_chk.setChecked(self._get_setting(ConfigKeys.AT_COLOR_ERROR, True))
-        self.at_color_urc_chk.setChecked(self._get_setting(ConfigKeys.AT_COLOR_URC, True))
-        self.at_color_prompt_chk.setChecked(self._get_setting(ConfigKeys.AT_COLOR_PROMPT, True))
+        self.at_color_ok_chk.setChecked(self.state.at_color_ok)
+        self.at_color_error_chk.setChecked(self.state.at_color_error)
+        self.at_color_urc_chk.setChecked(self.state.at_color_urc)
+        self.at_color_prompt_chk.setChecked(self.state.at_color_prompt)
 
-        self.buffer_size_spin.setValue(self._get_setting(ConfigKeys.INSPECTOR_BUFFER_SIZE, 100))
-        self.realtime_tracking_chk.setChecked(self._get_setting(ConfigKeys.INSPECTOR_REALTIME, True))
-        self.auto_scroll_chk.setChecked(self._get_setting(ConfigKeys.INSPECTOR_AUTOSCROLL, True))
-
-        # Logging
-        self.log_path_edit.setText(self._get_setting(ConfigKeys.LOG_PATH, os.getcwd()))
+        self.buffer_size_spin.setValue(self.state.packet_buffer_size)
+        self.realtime_tracking_chk.setChecked(self.state.packet_realtime)
+        self.auto_scroll_chk.setChecked(self.state.packet_autoscroll)
 
     def apply_settings(self) -> None:
-        """변경된 설정을 수집하여 시그널을 발생시킵니다."""
+        """변경된 설정을 DTO로 수집하여 시그널을 발생시킵니다."""
         delimiters = [self.delimiter_list.item(i).text() for i in range(self.delimiter_list.count())]
 
-        new_settings = {
-            "theme": self.theme_combo.currentText(),
-            "language": self.language_combo.currentData(),
-            "proportional_font_size": self.proportional_font_size_spin.value(),
-            "port_baudrate": self.port_baudrate_combo.currentText(),
-            "port_newline": self.port_newline_combo.currentText(),
-            "port_localecho": self.port_localecho_chk.checkState() == Qt.Checked,
-            "port_scan_interval": self.port_scan_interval_spin.value(),
-            "cmd_prefix": self.prefix_combo.currentText(),
-            "cmd_suffix": self.suffix_combo.currentText(),
-            "log_path": self.log_path_edit.text(),
-            "max_log_lines": self.max_lines_spin.value(),
+        newline_val = self.port_newline_combo.currentText()
+
+        try:
+            baud_val = int(self.port_baudrate_combo.currentText())
+        except ValueError:
+            baud_val = 115200
+
+        new_state = PreferencesState(
+            theme=self.theme_combo.currentText(),
+            language=self.language_combo.currentData(),
+            font_size=self.proportional_font_size_spin.value(),
+            max_log_lines=self.max_lines_spin.value(),
+            baudrate=baud_val,
+            newline=newline_val,
+            local_echo_enabled=self.port_local_echo_chk.checkState() == Qt.Checked,
+            scan_interval_ms=self.port_scan_interval_ms_spin.value(),
+            command_prefix=self.prefix_combo.currentText(),
+            command_suffix=self.suffix_combo.currentText(),
+            log_dir=self.log_path_edit.text(),
 
             # Packet Settings
-            "parser_type": self.parser_type_button_group.checkedId(),
-            "delimiters": delimiters,
-            "packet_length": self.packet_length_spin.value(),
-            "at_color_ok": self.at_color_ok_chk.checkState() == Qt.Checked,
-            "at_color_error": self.at_color_error_chk.checkState() == Qt.Checked,
-            "at_color_urc": self.at_color_urc_chk.checkState() == Qt.Checked,
-            "at_color_prompt": self.at_color_prompt_chk.checkState() == Qt.Checked,
-            "inspector_buffer_size": self.buffer_size_spin.value(),
-            "inspector_realtime": self.realtime_tracking_chk.checkState() == Qt.Checked,
-            "inspector_autoscroll": self.auto_scroll_chk.checkState() == Qt.Checked
-        }
-        self.settings_changed.emit(new_settings)
+            parser_type=self.parser_type_button_group.checkedId(),
+            delimiters=delimiters,
+            packet_length=self.packet_length_spin.value(),
+            at_color_ok=self.at_color_ok_chk.checkState() == Qt.Checked,
+            at_color_error=self.at_color_error_chk.checkState() == Qt.Checked,
+            at_color_urc=self.at_color_urc_chk.checkState() == Qt.Checked,
+            at_color_prompt=self.at_color_prompt_chk.checkState() == Qt.Checked,
+            packet_buffer_size=self.buffer_size_spin.value(),
+            packet_realtime=self.realtime_tracking_chk.checkState() == Qt.Checked,
+            packet_autoscroll=self.auto_scroll_chk.checkState() == Qt.Checked
+        )
+
+        self.settings_changed.emit(new_state)
 
     def accept(self) -> None:
         """OK 버튼 클릭 시 설정을 적용하고 닫습니다."""

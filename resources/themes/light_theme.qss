@@ -1,4 +1,40 @@
-/* Light Theme Colors */
+/* ==================================================================================
+   SerialTool Light Theme
+   ==================================================================================
+   [Color Palette Reference]
+
+   1. Backgrounds
+      - BG Main:            #ffffff (Window, Input Base)
+      - BG Panel/Alt:       #f5f5f5 (Widget, Tab Selected)
+      - BG Header/Bar:      #e0e0e0 (Header, Button Normal)
+      - BG Disabled:        #f0f0f0
+
+   2. Foregrounds (Text)
+      - Text Main:          #333333
+      - Text Dim/Hint:      #505050
+      - Text Disabled:      #a0a0a0
+      - Text Inverted:      #000000
+
+   3. Borders & Separators
+      - Border Main:        #c0c0c0
+      - Border Light:       #d0d0d0
+      - Border Focus:       #2196F3
+
+   4. Selections
+      - Selection BG:       #a0c8f0
+      - Selection Text:     #000000
+
+   5. Accents & States
+      - Primary (Blue):     #2196F3 (Focus, Active Tab, Links)
+      - Success (Green):    #4CAF50 (Connect, Start)
+      - Danger  (Red):      #F44336 (Error, Stop, Delete)
+      - Warning (Orange):   #FFC107 (Pause, Warning)
+
+   6. Component Specific
+      - Hover Overlay:      Darken by ~10% (e.g., #d0d0d0 for buttons)
+      - Pressed Overlay:    Darken by ~20% (e.g., #c0c0c0 for buttons)
+      - SmartEdit LineNum:  #f0f0f0 (BG), #808080 (Text), #e8e8e8 (Current)
+   ================================================================================== */
 
 /* Global Settings */
 QWidget {
@@ -6,6 +42,12 @@ QWidget {
     color: #333333;
     selection-background-color: #a0c8f0;
     selection-color: #000000;
+}
+
+QToolTip {
+    background-color: #ffffff;
+    color: #333333;
+    border-color: #c0c0c0;
 }
 
 /* MainWindow */
@@ -30,18 +72,18 @@ QTabWidget::pane {
 QTabBar::tab {
     background-color: #e0e0e0;
     color: #505050;
-    border: 1px solid #d0d0d0;
-    border-bottom: none;
+    border-color: #d0d0d0;
 }
 
 QTabBar::tab:selected {
     background-color: #f5f5f5;
     color: #000000;
-    border-bottom: 2px solid #2196F3;
+    border-bottom-color: #2196F3;
 }
 
 QTabBar::tab:hover {
-    background-color: #f0f0f0;
+    background-color: #d0d0d0;
+    color: #333333;
 }
 
 QTabBar::close-button {
@@ -49,7 +91,7 @@ QTabBar::close-button {
 }
 
 QTabBar::close-button:hover {
-    background-color: #d0d0d0;
+    background-color: #c0c0c0;
 }
 
 /* QPushButton */
@@ -66,7 +108,13 @@ QPushButton:hover {
 
 QPushButton:pressed {
     background-color: #c0c0c0;
+    color: #000000;
+}
+
+QPushButton:checked {
+    background-color: #a0c8f0;
     border-color: #2196F3;
+    color: #000000;
 }
 
 QPushButton:disabled {
@@ -75,38 +123,52 @@ QPushButton:disabled {
     border-color: #e0e0e0;
 }
 
+/* Icons */
 QPushButton#add_row_btn { qproperty-icon: url(resources/icons/light/add_light.svg); }
-QPushButton#del_row_btn { qproperty-icon: url(resources/icons/light/delete_light.svg); }
+QPushButton#remove_row_btn { qproperty-icon: url(resources/icons/light/delete_light.svg); }
 QPushButton#up_row_btn { qproperty-icon: url(resources/icons/light/up_light.svg); }
 QPushButton#down_row_btn { qproperty-icon: url(resources/icons/light/down_light.svg); }
-QPushButton#rx_search_prev_btn { qproperty-icon: url(resources/icons/light/find_prev_light.svg); }
-QPushButton#rx_search_next_btn { qproperty-icon: url(resources/icons/light/find_next_light.svg); }
+QPushButton#data_log_search_prev_btn { qproperty-icon: url(resources/icons/light/find_prev_light.svg); }
+QPushButton#data_log_search_next_btn { qproperty-icon: url(resources/icons/light/find_next_light.svg); }
 
-/* QLineEdit, QTextEdit */
-QLineEdit, QTextEdit, QPlainTextEdit {
+/* Inputs */
+QLineEdit, QTextEdit, QPlainTextEdit, QSmartTextEdit, QSmartListView {
     background-color: #ffffff;
     border-color: #c0c0c0;
     color: #333333;
-    selection-background-color: #cce8ff;
+    selection-background-color: #a0c8f0;
+    selection-color: #000000;
 }
 
-QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus {
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QSmartTextEdit:focus, QSmartListView:focus {
     border-color: #2196F3;
 }
 
-QLineEdit:!active, QTextEdit:!active, QPlainTextEdit:!active {
-    background-color: #ffffff;
-    color: #333333;
+QLineEdit:disabled, QTextEdit:disabled, QPlainTextEdit:disabled, QSmartTextEdit:disabled, QSmartListView:disabled {
+    background-color: #f0f0f0;
+    color: #a0a0a0;
+}
+
+/* QSmartTextEdit Properties */
+QSmartTextEdit {
+    qproperty-lineNumberBackgroundColor: #f0f0f0;
+    qproperty-lineNumberColor: #808080;
+    qproperty-currentLineColor: #e8e8e8;
 }
 
 /* QComboBox */
 QComboBox {
     background-color: #ffffff;
     border-color: #c0c0c0;
+    color: #333333;
 }
 
 QComboBox:hover {
     background-color: #f0f0f0;
+}
+
+QComboBox:on {
+    border-color: #2196F3;
 }
 
 QComboBox::down-arrow {
@@ -115,43 +177,43 @@ QComboBox::down-arrow {
 
 QComboBox QAbstractItemView {
     background-color: #ffffff;
-    border: 1px solid #c0c0c0;
-    selection-background-color: #e0f0ff;
+    border-color: #c0c0c0;
+    selection-background-color: #a0c8f0;
     selection-color: #000000;
+}
+
+/* QProgressBar */
+QProgressBar {
+    background-color: #ffffff;
+    border-color: #c0c0c0;
+    color: #000000;
+}
+
+QProgressBar::chunk {
+    background-color: #2196F3;
 }
 
 /* QScrollBar */
-QScrollBar:vertical {
+QScrollBar:vertical, QScrollBar:horizontal {
     background-color: #f0f0f0;
 }
 
-QScrollBar::handle:vertical {
+QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
     background-color: #c0c0c0;
 }
 
-QScrollBar::handle:vertical:hover {
+QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
     background-color: #a0a0a0;
 }
 
-QScrollBar:horizontal {
-    background-color: #f0f0f0;
-}
-
-QScrollBar::handle:horizontal {
-    background-color: #c0c0c0;
-}
-
-QScrollBar::handle:horizontal:hover {
-    background-color: #a0a0a0;
-}
-
-/* QTableView */
-QTableView {
+/* Views */
+QTableView, QListView, QTreeWidget, QSmartListView {
     background-color: #ffffff;
     border-color: #c0c0c0;
     gridline-color: #e0e0e0;
-    selection-background-color: #e0f0ff;
+    selection-background-color: #a0c8f0;
     selection-color: #000000;
+    color: #333333;
 }
 
 QHeaderView::section {
@@ -161,23 +223,9 @@ QHeaderView::section {
     border-bottom-color: #d0d0d0;
 }
 
-QTableView QTableCornerButton::section {
+QTableCornerButton::section {
     background-color: #f0f0f0;
-}
-
-/* QListView */
-QListView, QSmartListView {
-    background-color: #ffffff;
-    border-color: #c0c0c0;
-    selection-background-color: #e0f0ff;
-    selection-color: #000000;
-}
-
-/* QSmartTextEdit Custom Properties */
-QSmartTextEdit {
-    qproperty-lineNumberBackgroundColor: #f0f0f0;
-    qproperty-lineNumberColor: #808080;
-    qproperty-currentLineColor: #e8e8e8;
+    border-color: #d0d0d0;
 }
 
 /* QCheckBox */
@@ -200,15 +248,8 @@ QGroupBox {
     border-color: #c0c0c0;
 }
 
-QGroupBox::title,
-QLabel[class="section-title"] {
+QGroupBox::title, QLabel[class="section-title"] {
     color: #2196F3;
-}
-
-/* QGroupBox */
-QGroupBox,
-#SmartListView {
-    border-color: #c0c0c0;
 }
 
 /* QStatusBar */
@@ -219,13 +260,21 @@ QStatusBar {
 }
 
 /* QMenu */
+QMenuBar {
+    background-color: #f0f0f0;
+    color: #333333;
+}
+QMenuBar::item:selected {
+    background-color: #c0c0c0;
+}
+
 QMenu {
     background-color: #ffffff;
     border-color: #c0c0c0;
 }
 
 QMenu::item:selected {
-    background-color: #e0f0ff;
+    background-color: #a0c8f0;
     color: #000000;
 }
 
@@ -243,7 +292,11 @@ QToolBar QToolButton:pressed {
     background-color: #d0d0d0;
 }
 
-/* Custom Classes */
+/* ==================================================================================
+   Custom Buttons & States (Accent, Danger, Warning, Connected)
+   ================================================================================== */
+
+/* Accent - Save, Start */
 QPushButton[class="accent"] {
     background-color: #4CAF50;
     border-color: #388E3C;
@@ -265,6 +318,7 @@ QPushButton[class="accent"]:disabled {
     color: #E8F5E9;
 }
 
+/* Danger - Stop, Delete */
 QPushButton[class="danger"] {
     background-color: #F44336;
     border-color: #D32F2F;
@@ -286,15 +340,16 @@ QPushButton[class="danger"]:disabled {
     color: #FFEBEE;
 }
 
+/* Warning - Pause */
 QPushButton[class="warning"] {
     background-color: #FFC107;
     border-color: #FFD740;
-    color: #ffffff;
+    color: #333333;
 }
 
 QPushButton[class="warning"]:hover {
     background-color: #FFD740;
-    border-color: #FFD740;
+    border-color: #FFEA00;
 }
 
 QPushButton[class="warning"]:pressed {
@@ -307,7 +362,7 @@ QPushButton[class="warning"]:disabled {
     color: #FFF8E1;
 }
 
-/* Port Connection State Styles */
+/* Port States */
 QPushButton[state="connected"] {
     background-color: #4CAF50;
     border-color: #388E3C;
@@ -335,4 +390,3 @@ QPushButton[state="error"]:hover {
     background-color: #EF5350;
     border-color: #C62828;
 }
-

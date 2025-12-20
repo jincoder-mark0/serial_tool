@@ -1,31 +1,30 @@
 """
 매크로 패널 모듈
 
-MacroListWidget과 MacroCtrlWidget을 조합하여
-커맨드 리스트 관리 및 실행 기능을 제공하는 패널 클래스입니다.
+매크로 리스트(List)와 제어(Control) 위젯을 통합하여 관리합니다.
 
 ## WHY
-* 매크로 리스트 관리와 실행 제어 UI를 하나의 패널로 통합
-* View 계층으로서 사용자 입력을 시그널로 변환하여 Presenter에 전달
-* MVP 패턴 준수를 위해 비즈니스 로직(파일 I/O 등) 제거
+* 매크로 관련 기능을 하나의 패널로 그룹화
+* 하위 위젯 간의 레이아웃 관리 및 시그널 중계
+* Presenter에 단일화된 뷰 인터페이스 제공
 
 ## WHAT
-* 매크로 리스트 및 제어 위젯 레이아웃 구성
-* 사용자 액션(저장/로드/실행)에 대한 시그널 정의
-* Presenter로부터 요청받은 상태 업데이트 및 메시지 표시
+* MacroListWidget과 MacroControlWidget 배치
+* 파일 저장/로드 및 실행 제어 시그널 정의
+* 상태 저장/복원 인터페이스
 
 ## HOW
-* QVBoxLayout으로 상/하위 위젯 배치
-* PyQt 시그널을 통해 Presenter와 통신
-* save_state/load_state로 데이터 직렬화 지원
+* QVBoxLayout 사용
+* 하위 위젯의 이벤트를 상위로 전달(Bubbling)하거나 직접 처리
 """
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QFileDialog, QMessageBox
 from PyQt5.QtCore import pyqtSignal
 from typing import Optional, Dict, Any
 
 from view.widgets.macro_list import MacroListWidget
-from view.widgets.macro_ctrl import MacroCtrlWidget
-from view.managers.lang_manager import lang_manager
+from view.widgets.macro_control import MacroControlWidget
+from view.managers.language_manager import language_manager
+from common.dtos import MacroScriptData, MacroRepeatOption, MacroExecutionRequest
 
 class MacroPanel(QWidget):
     """
@@ -36,13 +35,13 @@ class MacroPanel(QWidget):
     """
 
     # 매크로 실행 제어 시그널
-    repeat_start_requested = pyqtSignal(list)  # indices
+    repeat_start_requested = pyqtSignal(object)
     repeat_stop_requested = pyqtSignal()
     state_changed = pyqtSignal()  # 데이터 변경 알림
 
-    # 파일 저장/로드 요청 시그널 (경로 및 데이터 전달)
-    script_save_requested = pyqtSignal(str, dict) # filepath, data
-    script_load_requested = pyqtSignal(str)       # filepath
+    # 파일 저장/로드 요청 시그널 (DTO 사용)
+    script_save_requested = pyqtSignal(object) # MacroScriptData
+    script_load_requested = pyqtSignal(str)    # file_path
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -52,7 +51,7 @@ class MacroPanel(QWidget):
             parent (Optional[QWidget]): 부모 위젯.
         """
         super().__init__(parent)
-        self.marco_ctrl = None
+        self.macro_control = None
         self.macro_list = None
         self._loading = False
         self.init_ui()
@@ -64,21 +63,21 @@ class MacroPanel(QWidget):
         layout.setSpacing(5)
 
         self.macro_list = MacroListWidget()
-        self.marco_ctrl = MacroCtrlWidget()
+        self.macro_control = MacroControlWidget()
 
         # 제어 위젯 시그널 연결
-        self.marco_ctrl.macro_repeat_start_requested.connect(self.on_repeat_start_requested)
-        self.marco_ctrl.macro_repeat_stop_requested.connect(self.on_repeat_stop_requested)
+        self.macro_control.macro_repeat_start_requested.connect(self.on_repeat_start_requested)
+        self.macro_control.macro_repeat_stop_requested.connect(self.on_repeat_stop_requested)
 
         # 저장/로드 버튼 클릭 시 파일 다이얼로그 호출 핸들러 연결
-        self.marco_ctrl.script_save_requested.connect(self.on_save_clicked)
-        self.marco_ctrl.script_load_requested.connect(self.on_load_clicked)
+        self.macro_control.script_save_requested.connect(self.on_save_clicked)
+        self.macro_control.script_load_requested.connect(self.on_load_clicked)
 
         # 데이터 변경 알림 연결
         self.macro_list.macro_list_changed.connect(self.state_changed.emit)
 
         layout.addWidget(self.macro_list)
-        layout.addWidget(self.marco_ctrl)
+        layout.addWidget(self.macro_control)
 
         self.setLayout(layout)
 
@@ -88,20 +87,22 @@ class MacroPanel(QWidget):
 
         Logic:
             1. 파일 저장 다이얼로그 표시
-            2. 사용자가 경로 선택 시 현재 상태(save_state) 수집
-            3. Presenter에 저장 요청 시그널(경로, 데이터) 전달
+            2. 사용자가 경로 선택 시 현재 상태(get_state) 수집
+            3. DTO 생성 후 Presenter에 전달
         """
         filter_str = "JSON Files (*.json);;All Files (*)"
         path, _ = QFileDialog.getSaveFileName(
             self,
-            lang_manager.get_text("macro_list_dialog_title_save"),
+            language_manager.get_text("macro_panel_dialog_title_save"),
             "",
             filter_str
         )
 
         if path:
-            data = self.save_state()
-            self.script_save_requested.emit(path, data)
+            data = self.get_state()
+            # DTO 생성
+            script_data = MacroScriptData(file_path=path, data=data)
+            self.script_save_requested.emit(script_data)
 
     def on_load_clicked(self) -> None:
         """
@@ -114,7 +115,7 @@ class MacroPanel(QWidget):
         filter_str = "JSON Files (*.json);;All Files (*)"
         path, _ = QFileDialog.getOpenFileName(
             self,
-            lang_manager.get_text("macro_list_dialog_title_open"),
+            language_manager.get_text("macro_panel_dialog_title_open"),
             "",
             filter_str
         )
@@ -142,7 +143,7 @@ class MacroPanel(QWidget):
         """
         QMessageBox.information(self, title, message)
 
-    def load_state(self, state: Dict[str, Any]) -> None:
+    def apply_state(self, state: Dict[str, Any]) -> None:
         """
         외부에서 전달받은 상태 딕셔너리를 UI에 적용합니다.
 
@@ -154,16 +155,16 @@ class MacroPanel(QWidget):
             # 커맨드 리스트 로드
             commands = state.get("commands", [])
             if commands:
-                self.macro_list.load_state(commands)
+                self.macro_list.apply_state(commands)
 
             # 컨트롤 설정 로드
             control_state = state.get("control_state", {})
             if control_state:
-                self.marco_ctrl.load_state(control_state)
+                self.macro_control.apply_state(control_state)
         finally:
             self._loading = False
 
-    def save_state(self) -> Dict[str, Any]:
+    def get_state(self) -> Dict[str, Any]:
         """
         현재 패널의 상태를 딕셔너리로 반환합니다.
 
@@ -171,24 +172,23 @@ class MacroPanel(QWidget):
             Dict[str, Any]: 현재 패널 상태 데이터.
         """
         return {
-            "commands": self.macro_list.save_state(),
-            "control_state": self.marco_ctrl.save_state()
+            "commands": self.macro_list.get_state(),
+            "control_state": self.macro_control.get_state()
         }
 
-    def on_repeat_start_requested(self, delay: int, max_runs: int) -> None:
+    def on_repeat_start_requested(self, option: MacroRepeatOption) -> None:
         """
-        Repeat Start 버튼 클릭 핸들러
+        Repeat Start 버튼 클릭 핸들러 (Widget -> Panel)
 
         Args:
-            delay (int): 지연 시간 (ms)
-            max_runs (int): 최대 실행 횟수
+            option (MacroRepeatOption): 매크로 반복 옵션 DTO
         """
         indices = self.macro_list.get_selected_indices()
         if indices:
-            # Note: delay와 max_runs 파라미터는 현재 시그널에 포함되지 않음
-            # Presenter에서 MacroCtrlWidget의 상태를 직접 읽어서 사용해야 함
-            self.repeat_start_requested.emit(indices)
-            self.marco_ctrl.set_running_state(True, is_auto=True)
+            # 선택된 인덱스와 옵션 DTO를 함께 전달
+            request = MacroExecutionRequest(indices=indices, option=option)
+            self.repeat_start_requested.emit(request)
+            self.macro_control.set_running_state(True, is_repeat=True)
 
     def on_repeat_stop_requested(self) -> None:
         """
@@ -203,6 +203,6 @@ class MacroPanel(QWidget):
         Args:
             running (bool): 실행 중 여부
         """
-        # Note: 현재는 단순히 running 상태만 전달
+        # 현재는 단순히 running 상태만 전달
         # 향후 is_repeat 파라미터를 추가하여 Repeat/Pause 버튼 상태를 구분할 수 있음
-        self.marco_ctrl.set_running_state(running)
+        self.macro_control.set_running_state(running)

@@ -1,256 +1,376 @@
 """
 포트 프레젠터 모듈
 
-포트 설정 및 제어를 위한 Presenter입니다.
+포트 설정 뷰(PortSettingsWidget)와 연결 컨트롤러(ConnectionController) 간의 중재자 역할을 수행합니다.
 
 ## WHY
-* 포트 연결/해제 UI 이벤트 처리
-* 포트 상태 변경을 View에 반영
-* 다중 포트 탭 관리
-* 단축키 기능 제공
+* 포트 연결/해제 UI 이벤트 처리 및 상태 반영 로직의 분리
+* 다중 포트 탭 관리 및 설정 동기화의 복잡성 관리
+* 포트 스캔 비동기화 처리를 통한 UI 프리징 방지
 
 ## WHAT
-* PortSettingsWidget(View)와 PortController(Model) 연결
-* 포트 스캔 및 목록 업데이트
-* 연결/해제 토글 처리
-* 포트 상태별 UI 업데이트
-* 에러 처리 및 사용자 알림
+* PortSettingsWidget(View)와 ConnectionController(Model) 연결
+* 포트 스캔 (PortScanWorker) 관리 및 결과 UI 반영
+* 연결/해제 요청 처리, 에러 핸들링, 브로드캐스트 설정 관리
 
 ## HOW
-* MainLeftSection의 포트 탭 관리
-* PortController Signal을 View 업데이트로 변환
-* 현재 활성 탭 추적 및 설정 적용
-* QMessageBox로 에러 알림
-* 시스템 로그에 이벤트 기록
+* Model의 PortScanWorker를 사용하여 비동기 스캔 수행
+* ConnectionController 메서드 호출 및 EventBus/Signal 구독
+* DTO(PortConfig, PortInfo)를 사용하여 데이터 교환
 """
 from PyQt5.QtCore import QObject
 from PyQt5.QtWidgets import QMessageBox
-import serial.tools.list_ports
+from typing import Optional, List, Tuple
 
 from view.sections.main_left_section import MainLeftSection
-from model.port_controller import PortController
+from view.panels.port_panel import PortPanel
+from model.connection_controller import ConnectionController
+from model.port_scanner import PortScanWorker
 from core.settings_manager import SettingsManager
 from core.logger import logger
-from constants import ConfigKeys
+from common.constants import ConfigKeys
+from common.dtos import PortConfig, PortInfo, PortErrorEvent, PortConnectionEvent
 
 class PortPresenter(QObject):
     """
-    포트 설정 및 제어 Presenter
+    포트 설정 및 제어 프레젠터
 
-    PortSettingsWidget(View)와 PortController(Model)를 연결합니다.
+    PortSettingsWidget(View)와 ConnectionController(Model)를 연결하고,
+    포트 스캔, 연결, 해제 등의 로직을 제어합니다.
     """
-    def __init__(self, left_panel: MainLeftSection, port_controller: PortController) -> None:
+
+    def __init__(self, left_section: MainLeftSection, connection_controller: ConnectionController) -> None:
         """
         PortPresenter 초기화
 
+        Logic:
+            - 멤버 변수 초기화
+            - 초기 포트 스캔 수행
+            - 기존 탭 및 새 탭에 대한 시그널 연결
+            - Model(ConnectionController) 시그널 연결
+
         Args:
-            left_panel: 좌측 패널 (포트 탭 및 설정 포함)
-            port_controller: 포트 제어기 Model
+            left_section (MainLeftSection): 좌측 패널 (포트 탭 및 설정 포함)
+            connection_controller (ConnectionController): 포트 제어기 Model
         """
         super().__init__()
-        self.left_panel = left_panel
-        self.port_controller = port_controller
+        self.left_section = left_section
+        self.connection_controller = connection_controller
 
-        # 현재 활성 포트 패널 가져오기
-        self.current_port_panel = None
+        # 스캔 워커 (비동기 실행을 위해 멤버로 유지)
+        self._scan_worker: Optional[PortScanWorker] = None
+
+        # 현재 활성 포트 패널 참조
+        self.current_port_panel: Optional[PortPanel] = None
         self.update_current_port_panel()
 
-        # 설정에서 max_lines 읽어서 적용
+        # 로그 라인 수 설정 적용 (초기화 시)
         settings = SettingsManager()
         max_lines = settings.get(ConfigKeys.RX_MAX_LINES, 2000)
-        if self.current_port_panel and hasattr(self.current_port_panel, 'received_area_widget'):
-            self.current_port_panel.received_area_widget.set_max_lines(max_lines)
+        if self.current_port_panel and hasattr(self.current_port_panel, 'data_log_widget'):
+            self.current_port_panel.data_log_widget.set_max_lines(max_lines)
 
-        # 초기 포트 스캔
+        # 초기 포트 스캔 (앱 시작 시점)
         self.scan_ports()
 
         # 기존 탭들에 대한 시그널 연결 (초기화 시점에 이미 존재하는 탭들)
-        for i in range(self.left_panel.port_tabs.count()):
-            widget = self.left_panel.port_tabs.widget(i)
+        for i in range(self.left_section.port_tab_panel.count()):
+            widget = self.left_section.port_tab_panel.widget(i)
             self._connect_tab_signals(widget)
 
         # 새 탭 추가 시그널 연결
-        self.left_panel.port_tabs.tab_added.connect(self._on_tab_added)
+        self.left_section.port_tab_panel.port_tab_added.connect(self._on_port_tab_added)
 
         # 탭 변경 시 현재 패널 업데이트
-        self.left_panel.port_tabs.currentChanged.connect(self.update_current_port_panel)
+        self.left_section.port_tab_panel.currentChanged.connect(self.update_current_port_panel)
 
         # Model Signal 연결
-        self.port_controller.port_opened.connect(self.on_port_opened)
-        self.port_controller.port_closed.connect(self.on_port_closed)
-        self.port_controller.error_occurred.connect(self.on_error)
+        self.connection_controller.connection_opened.connect(self.on_connection_opened)
+        self.connection_controller.connection_closed.connect(self.on_connection_closed)
+        self.connection_controller.error_occurred.connect(self.on_error)
 
-    def _connect_tab_signals(self, widget) -> None:
+    def get_active_port_name(self) -> Optional[str]:
+        """
+        현재 활성화된 탭의 포트 이름을 반환합니다.
+
+        Returns:
+            Optional[str]: 포트 이름. 활성 탭이 없거나 포트가 선택되지 않았으면 None.
+        """
+        if self.current_port_panel and hasattr(self.current_port_panel, 'get_port_name'):
+            return self.current_port_panel.get_port_name()
+        return None
+
+    def _connect_tab_signals(self, widget: PortPanel) -> None:
         """
         개별 포트 패널의 시그널을 Presenter 슬롯에 연결합니다.
 
+        Logic:
+            - 중복 연결 방지를 위해 기존 연결 해제 시도 (disconnect)
+            - 설정 위젯의 스캔, 연결, 해제 시그널 연결
+            - 브로드캐스트 변경 시그널 연결 (람다를 사용하여 위젯 컨텍스트 캡처)
+
         Args:
-            widget: PortPanel 인스턴스
+            widget (PortPanel): 시그널을 연결할 PortPanel 인스턴스
         """
         if hasattr(widget, 'port_settings_widget'):
             settings_widget = widget.port_settings_widget
 
-            # 중복 연결 방지를 위해 disconnect 시도 (실패해도 무방)
+            # 중복 연결 방지를 위해 disconnect 시도 (실패 시 무시)
             try:
                 settings_widget.port_scan_requested.disconnect(self.scan_ports)
-                settings_widget.port_open_requested.disconnect(self.handle_open_request)
-                settings_widget.port_close_requested.disconnect(self.handle_close_request)
+                settings_widget.connect_requested.disconnect(self.handle_open_request)
+                settings_widget.disconnect_requested.disconnect(self.handle_close_request)
             except TypeError:
                 pass
 
             # 시그널 연결
             settings_widget.port_scan_requested.connect(self.scan_ports)
-            settings_widget.port_open_requested.connect(self.handle_open_request)
-            settings_widget.port_close_requested.connect(self.handle_close_request)
+            settings_widget.connect_requested.connect(self.handle_open_request)
+            settings_widget.disconnect_requested.connect(self.handle_close_request)
 
-    def _on_tab_added(self, widget) -> None:
-        """새 탭이 추가되었을 때 호출되는 슬롯"""
-        self._connect_tab_signals(widget)
-        # 새 탭의 포트 리스트 갱신
-        if hasattr(widget, 'port_settings_widget'):
-            ports = [port.device for port in serial.tools.list_ports.comports()]
-            widget.port_settings_widget.set_port_list(ports)
+        # Broadcast 체크박스 시그널 연결
+        if hasattr(widget, 'tx_broadcast_allowed_changed'):
+            try:
+                # widget 파라미터를 lambda로 캡처하여 어떤 탭인지 식별
+                widget.tx_broadcast_allowed_changed.disconnect()
+            except TypeError:
+                pass
 
-    def update_current_port_panel(self) -> None:
-        """현재 활성 포트 패널 참조 업데이트"""
-        index = self.left_panel.port_tabs.currentIndex()
-        if index >= 0:
-            widget = self.left_panel.port_tabs.widget(index)
-            if hasattr(widget, 'port_settings_widget'):
-                self.current_port_panel = widget
+            # 람다로 위젯 캡처하여 핸들러에 전달
+            widget.tx_broadcast_allowed_changed.connect(lambda state, w=widget: self.on_tx_broadcast_allowed_changed(w, state))
 
-    def scan_ports(self) -> None:
-        """사용 가능한 시리얼 포트 스캔 및 UI 업데이트"""
-        ports = [port.device for port in serial.tools.list_ports.comports()]
-
-        # 현재 활성 패널뿐만 아니라 모든 패널의 리스트를 업데이트하는 것이 좋음
-        # 사용자가 탭을 전환하지 않고도 최신 리스트를 볼 수 있도록 함
-        for i in range(self.left_panel.port_tabs.count()):
-            widget = self.left_panel.port_tabs.widget(i)
-            if hasattr(widget, 'port_settings_widget'):
-                widget.port_settings_widget.set_port_list(ports)
-
-    def handle_open_request(self, config: dict) -> None:
+    def on_tx_broadcast_allowed_changed(self, widget: PortPanel, state: bool) -> None:
         """
-        포트 열기 요청 처리 (View Signal Slot)
+        브로드캐스트 허용 상태 변경 핸들러입니다.
+
+        Logic:
+            - 위젯에서 포트 이름을 획득
+            - 컨트롤러를 통해 해당 포트의 브로드캐스트 상태 업데이트
 
         Args:
-            config: 포트 설정 딕셔너리
+            widget (PortPanel): 시그널을 보낸 PortPanel
+            state (bool): 체크 여부 (True=허용, False=거부)
         """
-        self.port_controller.open_port(config)
+        if hasattr(widget, 'get_port_name'):
+            port_name = widget.get_port_name()
+            if port_name:
+                self.connection_controller.set_port_broadcast_state(port_name, state)
+
+    def _on_port_tab_added(self, widget: PortPanel) -> None:
+        """
+        새 탭이 추가되었을 때 호출되는 슬롯입니다.
+
+        Logic:
+            - 새 탭의 시그널 연결
+            - 전체 탭의 포트 목록 최신화 (일관성 유지)
+
+        Args:
+            widget (PortPanel): 추가된 PortPanel
+        """
+        self._connect_tab_signals(widget)
+        # 탭 추가 시에도 포트 리스트 최신화 (새 탭에 빈 목록이 뜨지 않도록)
+        self.scan_ports()
+
+    def update_current_port_panel(self) -> None:
+        """
+        현재 활성 포트 패널 참조를 업데이트합니다.
+
+        Logic:
+            - View(PortTabPanel)에서 현재 인덱스의 위젯을 가져옴
+            - current_port_panel 멤버 변수 갱신
+        """
+        index = self.left_section.port_tab_panel.currentIndex()
+        if index >= 0:
+            widget = self.left_section.port_tab_panel.widget(index)
+            if isinstance(widget, PortPanel):
+                self.current_port_panel = widget
+            else:
+                self.current_port_panel = None
+
+    def scan_ports(self) -> None:
+        """
+        사용 가능한 시리얼 포트 비동기 스캔을 요청합니다.
+
+        Logic:
+            1. 이전 스캔이 진행 중이면 중단하지 않고 로그 출력 후 리턴
+            2. PortScanWorker 스레드 생성 및 시그널 연결
+            3. Worker 시작
+
+        Note:
+            Windows 등에서 포트 스캔은 I/O 블로킹을 유발할 수 있으므로 반드시 비동기로 수행해야 합니다.
+        """
+        if self._scan_worker and self._scan_worker.isRunning():
+            logger.debug("Port scan already in progress.")
+            return
+
+        logger.debug("Starting async port scan...")
+        self._scan_worker = PortScanWorker()
+        self._scan_worker.ports_found.connect(self._on_scan_finished)
+        self._scan_worker.start()
+
+    def _on_scan_finished(self, port_list: List[PortInfo]) -> None:
+        """
+        포트 스캔 완료 핸들러 (UI 업데이트).
+
+        Logic:
+            - 모든 포트 패널(탭)을 순회하며 콤보박스 목록 갱신
+            - DTO(PortInfo) 리스트를 View에 전달
+
+        Args:
+            port_list (List[PortInfo]): 검색된 포트 정보 DTO 리스트
+        """
+        # 로그용: device 이름만 추출
+        port_names = [p.device for p in port_list]
+        logger.debug(f"Scan finished. Found ports: {port_names}")
+
+        # 모든 포트 패널의 리스트를 업데이트
+        count = self.left_section.port_tab_panel.count()
+        for i in range(count):
+            widget = self.left_section.port_tab_panel.widget(i)
+            # PortPanel인지 확인 (플러스 탭 제외)
+            if hasattr(widget, 'port_settings_widget'):
+                widget.port_settings_widget.set_port_list(port_list)
+
+        # 워커 참조 해제
+        self._scan_worker = None
+
+    def handle_open_request(self, config: PortConfig) -> None:
+        """
+        포트 열기 요청 처리 (View Signal Slot).
+
+        Args:
+            config (PortConfig): 포트 설정 DTO
+        """
+        self.connection_controller.open_connection(config)
 
     def handle_close_request(self) -> None:
         """
-        포트 닫기 요청 처리 (View Signal Slot)
-        요청을 보낸 위젯을 찾아 해당 포트를 닫습니다.
+        포트 닫기 요청 처리 (View Signal Slot).
+
+        Logic:
+            - 요청을 보낸 위젯(sender)을 식별
+            - 해당 위젯의 현재 설정에서 포트 이름을 추출
+            - Controller에 닫기 요청
         """
         sender = self.sender()
-        # sender(PortSettingsWidget)의 부모(PortPanel)를 통해 포트 이름 확인
-        # 또는 현재 활성 탭 기준 (하지만 sender가 명확하면 더 좋음)
-
-        # 여기서는 간단히 현재 활성 탭의 설정을 닫는다고 가정하거나,
-        # sender를 통해 포트 이름을 찾을 수 있다면 그것을 사용.
-        # PortSettingsWidget은 config를 가지고 있지만, 닫을 때는 이름만 있으면 됨.
-        # sender.get_current_config() 호출 가능.
 
         if sender and hasattr(sender, 'get_current_config'):
             config = sender.get_current_config()
-            port_name = config.get('port')
+            port_name = config.port
             if port_name:
-                self.port_controller.close_port(port_name)
+                self.connection_controller.close_connection(port_name)
 
-    def on_port_opened(self, port_name: str) -> None:
+    def on_connection_opened(self, event: PortConnectionEvent) -> None:
         """
-        포트 열림 이벤트 처리
+        포트 열림 이벤트 처리.
 
         Logic:
-            - 해당 포트를 사용하는 탭 찾기
-            - UI 연결 상태 업데이트
-            - 탭 제목 업데이트
-            - 시스템 로그 기록
+            - 해당 포트 이름을 사용하는 탭을 검색
+            - UI 연결 상태(버튼 스타일 등)를 'Connected'로 업데이트
+            - 탭 제목에 포트 이름 반영
+            - 시스템 로그에 성공 메시지 기록
 
         Args:
-            port_name: 열린 포트 이름
+            event (PortConnectionEvent): 열린 포트 이름
         """
+        port_name = event.port
+
         # 모든 탭을 순회하며 해당 포트를 사용하는 패널 찾기
-        for i in range(self.left_panel.port_tabs.count()):
-            widget = self.left_panel.port_tabs.widget(i)
+        for i in range(self.left_section.port_tab_panel.count()):
+            widget = self.left_section.port_tab_panel.widget(i)
             if hasattr(widget, 'get_port_name') and widget.get_port_name() == port_name:
                 if hasattr(widget, 'port_settings_widget'):
                     widget.port_settings_widget.set_connected(True)
+
                 # 탭 제목 업데이트
-                self.left_panel.update_tab_title(i, port_name)
+                self.left_section.port_tab_panel.setTabText(i, widget.get_tab_title())
                 break
 
         # 시스템 로그 기록
-        if hasattr(self.left_panel, 'system_log_widget'):
-            self.left_panel.system_log_widget.log(f"[{port_name}] Port opened", "SUCCESS")
+        if hasattr(self.left_section, 'system_log_widget'):
+            self.left_section.system_log_widget.append_log(f"[{port_name}] Port opened", "SUCCESS")
 
-    def on_port_closed(self, port_name: str) -> None:
+    def on_connection_closed(self, event: PortConnectionEvent) -> None:
         """
-        포트 닫힘 이벤트 처리
+        포트 닫힘 이벤트 처리.
 
         Logic:
-            - 해당 포트를 사용하는 탭 찾기
-            - UI 연결 해제 상태 업데이트
+            - 해당 포트 이름을 사용하는 탭 검색
+            - UI 연결 상태를 'Disconnected'로 업데이트
             - 탭 제목 초기화
             - 시스템 로그 기록
 
         Args:
-            port_name: 닫힌 포트 이름
+            event (PortConnectionEvent): 닫힌 포트 이름
         """
-        for i in range(self.left_panel.port_tabs.count()):
-            widget = self.left_panel.port_tabs.widget(i)
+        port_name = event.port
+
+        for i in range(self.left_section.port_tab_panel.count()):
+            widget = self.left_section.port_tab_panel.widget(i)
             if hasattr(widget, 'get_port_name') and widget.get_port_name() == port_name:
                 if hasattr(widget, 'port_settings_widget'):
                     widget.port_settings_widget.set_connected(False)
-                # 탭 제목 초기화
-                self.left_panel.update_tab_title(i, "-")
+
+                # 탭 제목 업데이트 (연결 해제 상태 반영)
+                self.left_section.port_tab_panel.setTabText(i, widget.get_tab_title())
                 break
 
         # 시스템 로그 기록
-        if hasattr(self.left_panel, 'system_log_widget'):
-            self.left_panel.system_log_widget.log(f"[{port_name}] Port closed", "INFO")
+        if hasattr(self.left_section, 'system_log_widget'):
+            self.left_section.system_log_widget.append_log(f"[{port_name}] Port closed", "INFO")
 
-    def on_error(self, port_name: str, message: str) -> None:
+    def on_error(self, event: PortErrorEvent) -> None:
         """
-        에러 이벤트 처리
+        에러 이벤트 처리.
+
+        Logic:
+            - 에러 로그(Logger) 기록
+            - 사용자에게 팝업(MessageBox)으로 알림
+            - 시스템 로그 위젯에 에러 기록
 
         Args:
-            port_name: 에러 발생 포트
-            message: 에러 메시지
+            event (PortErrorEvent): 포트 에러 이벤트 DTO (port, message)
         """
+        port_name = event.port
+        message = event.message
+
         logger.error(f"Port Error ({port_name}): {message}")
-        QMessageBox.critical(self.left_panel, "Error", f"Port Error ({port_name}): {message}")
 
-        # 시스템 로그 기록
-        if hasattr(self.left_panel, 'system_log_widget'):
-            self.left_panel.system_log_widget.log(f"[{port_name}] Error: {message}", "ERROR")
+        # View 계층을 통해 에러 메시지 표시 (View가 없는 경우 대비)
+        if self.left_section:
+            QMessageBox.critical(self.left_section, "Error", f"Port Error ({port_name}): {message}")
 
-        # 에러 발생 시 해당 포트 UI 동기화 (필요 시)
-        # on_port_closed가 호출되지 않는 에러 상황(예: 열기 실패)에 대비해 UI 상태 리셋 가능
+            # 시스템 로그 기록
+            if hasattr(self.left_section, 'system_log_widget'):
+                self.left_section.system_log_widget.append_log(f"[{port_name}] Error: {message}", "ERROR")
 
     def connect_current_port(self) -> None:
-        """현재 포트 연결 (단축키용)"""
+        """
+        현재 활성화된 탭의 포트 연결을 시도합니다. (단축키 F2 등에서 호출)
+        """
         self.update_current_port_panel()
         if self.current_port_panel:
             config = self.current_port_panel.port_settings_widget.get_current_config()
-            port_name = config.get('port')
-            if port_name and not self.port_controller.is_port_open(port_name):
-                self.port_controller.open_port(config)
+            port_name = config.port
+            if port_name and not self.connection_controller.is_connection_open(port_name):
+                self.connection_controller.open_connection(config)
             elif not port_name:
                 logger.warning("No port selected")
 
     def disconnect_current_port(self) -> None:
-        """현재 포트 연결 해제 (단축키용)"""
+        """
+        현재 활성화된 탭의 포트 연결을 해제합니다. (단축키 F3 등에서 호출)
+        """
         self.update_current_port_panel()
         if self.current_port_panel:
             port_name = self.current_port_panel.get_port_name()
-            if port_name and self.port_controller.is_port_open(port_name):
-                self.port_controller.close_port(port_name)
+            if port_name and self.connection_controller.is_connection_open(port_name):
+                self.connection_controller.close_connection(port_name)
 
     def clear_log_current_port(self) -> None:
-        """현재 포트의 로그 지우기 (단축키용)"""
+        """
+        현재 활성화된 탭의 데이터 로그를 지웁니다. (단축키 F5 등에서 호출)
+        """
         self.update_current_port_panel()
-        if self.current_port_panel and hasattr(self.current_port_panel, 'received_area_widget'):
-            self.current_port_panel.received_area_widget.on_clear_rx_log_clicked()
+        if self.current_port_panel and hasattr(self.current_port_panel, 'data_log_widget'):
+            self.current_port_panel.data_log_widget.on_clear_data_log_clicked()

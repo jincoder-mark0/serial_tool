@@ -19,20 +19,15 @@ from view.main_window import MainWindow
 from presenter.main_presenter import MainPresenter
 from presenter.packet_presenter import PacketPresenter
 from presenter.manual_control_presenter import ManualControlPresenter
-from resource_path import ResourcePath
 from core.data_logger import data_logger_manager
 
 @pytest.fixture
-def main_presenter(qtbot):
-    """MainPresenter Fixture"""
-    # 리소스 경로 초기화
-    resource_path = ResourcePath()
-
-    # View & Presenter 생성
-    window = MainWindow(resource_path)
-    qtbot.addWidget(window)
-    presenter = MainPresenter(window)
-
+def main_presenter(qtbot, main_window):
+    """
+    MainPresenter Fixture
+    conftest.py의 main_window 픽스처를 재사용합니다.
+    """
+    presenter = MainPresenter(main_window)
     return presenter
 
 def test_presenter_initialization(main_presenter):
@@ -54,8 +49,11 @@ def test_presenter_initialization(main_presenter):
     assert main_presenter.event_router is not None
 
     # 4. Models
-    assert main_presenter.port_controller is not None
+    assert main_presenter.connection_controller is not None
     assert main_presenter.macro_runner is not None
+
+    # 5. Lifecycle Manager
+    assert main_presenter.lifecycle_manager is not None
 
 def test_event_router_connection(main_presenter):
     """EventRouter와 MainPresenter 핸들러 연결 확인"""

@@ -4,6 +4,207 @@
 
 ---
 
+### UX 고도화 및 고급 기능 구현 (2025-12-18)
+
+#### 기능 추가 (Feat)
+
+- **스마트 헥사 덤프 (Smart Hex Dump Export)**
+  - **다중 포맷 지원**: 로그 저장 시 `.bin` (Raw Binary) 외에 `.txt` (Hex Dump), `.pcap` (Wireshark 호환) 포맷을 지원합니다.
+  - **자동 감지**: 파일 저장 다이얼로그에서 선택한 확장자에 따라 자동으로 저장 포맷을 결정합니다.
+  - **PCAP 지원**: Global Header와 Packet Header를 포함한 표준 PCAP 포맷 저장을 구현하여 외부 분석 도구와의 호환성을 확보했습니다.
+
+- **UI 상태 동기화 (UI State Synchronization)**
+  - **포트 연동 제어**: 현재 활성화된 탭의 포트 연결 상태(Open/Close)에 따라 `ManualControl` 및 `MacroControl` 패널의 활성화 여부를 실시간으로 동기화합니다.
+  - **설정 잠금**: 포트가 연결된 상태에서는 `PortSettingsWidget`의 설정 콤보박스들이 비활성화되어, 통신 중 설정 변경을 방지합니다.
+
+- **테마 기반 색상 매핑 (Hybrid Color Mapping)**
+  - **듀얼 컬러 지원**: `ColorRule`에 `light_color`와 `dark_color` 필드를 추가하여 테마별 최적의 색상을 지정할 수 있습니다.
+  - **자동 보정 (HLS Fallback)**: 색상이 지정되지 않은 경우, HLS 알고리즘을 사용하여 배경색 대비 가독성이 좋은 명도로 색상을 자동 보정합니다.
+
+#### 리팩토링 (Refactoring)
+
+- **생명주기 관리 분리 (Lifecycle Management)**
+  - **AppLifecycleManager**: `MainPresenter`의 비대한 초기화 로직(`_init_...`)을 별도의 매니저 클래스로 분리하여 코드 응집도를 높이고 유지보수성을 개선했습니다.
+- **설정 마이그레이션 (Settings Migration)**
+  - **버전 관리**: `SettingsManager`에 설정 파일 버전 확인 및 마이그레이션(`_migrate_settings`) 로직을 추가하여, 앱 업데이트 시 사용자 설정이 초기화되는 문제를 방지했습니다.
+- **View-Model 완전 분리**
+  - View 계층(`DataLogWidget`, `SystemLogWidget` 등)에서 `ColorManager` 등 Model 성격의 싱글톤 의존성을 완전히 제거하고, Presenter를 통해 데이터를 주입받도록 수정했습니다.
+- **코드 정리 (Clean Code)**
+  - `SmartNumberEdit` 위젯에 남아있던 디버깅용 `print` 문과 테스트 코드를 제거하고 `logger`로 대체했습니다.
+
+#### 수정 사항 (Fixed)
+
+- **런타임 오류 수정**: `MainPresenter`에서 누락된 `color_manager` import를 수정하여 `NameError`를 해결했습니다.
+- **정규식 성능 최적화**: `ColorService`에 정규식 컴파일 캐싱(`_regex_cache`)을 도입하여 반복적인 컴파일 오버헤드를 제거했습니다.
+
+---
+
+### 아키텍처 및 안정성 강화 (2025-12-17)
+
+#### 리팩토링 (Refactoring)
+
+- **아키텍처 클린업 & 구조 개선 (Architecture Cleanup)**
+  - **Service 계층 도입 (Phase 2)**: `ColorService`를 신설하여 색상 매칭 로직을 분리하고, `ColorManager`는 상태 관리와 영속성(Persistence)에만 집중하도록 리팩토링했습니다.
+  - **DTO 중앙화 (Phase 2)**: `ColorRule` 데이터 구조를 `common/dtos.py`로 이동하여 순환 참조를 방지하고 데이터 정의를 일원화했습니다.
+  - **Transport 계층 재구조화 (Step 3)**: `core`와 `model`에 혼재되어 있던 통신 드라이버 로직을 `core/transport` 패키지로 통합 이동하여 의존성 방향(Model -> Core)을 바로잡았습니다.
+  - **Pure DTO 전환 (Step 2)**: `EventRouter` 및 Presenter 계층에서 레거시 `dict` 지원을 제거하고 DTO 사용을 강제했습니다.
+  - **결합도 완화 (Step 2)**: `DataHandler`가 View 내부를 탐색하지 않고 인터페이스(`append_rx_data`)를 통해 데이터를 전달하도록 개선했습니다.
+  - **기반 구조 정비 (Step 1)**: `core/utils.py`를 `core/structures.py`로, `common/schemas.py`를 `core/settings_schema.py`로 이동했습니다.
+  - **테스트 환경 개선**: `conftest.py`를 도입하여 공용 Fixture를 중앙화했습니다.
+
+#### 기능 개선 (Feat)
+
+- **자료구조 API 확장**
+  - `RingBuffer`에 `available()` 메서드를 추가하여 버퍼 상태 확인의 가독성을 높였습니다.
+- **포트 스캔 최적화**
+  - **비동기 스캔**: `PortScanWorker`를 `Model` 계층으로 이동시키고 비동기로 동작하게 하여 UI 프리징을 제거했습니다.
+  - **Lazy Loading**: `ClickableComboBox` 구현으로 클릭 시점 스캔을 지원합니다.
+  - **정렬 개선**: `Natural Sorting`을 적용하여 포트 목록 가독성을 높였습니다.
+- **매크로 로딩 최적화**
+  - **비동기 로드**: `ScriptLoadWorker`를 도입하여 대용량 JSON 로딩 시 반응성을 확보했습니다.
+
+#### 수정 사항 (Fixed)
+
+- **시리얼 통신 안정성**
+  - **UI 프리징 방지**: `SerialTransport`에 `write_timeout=0` 설정을 추가했습니다.
+  - **데이터 유실 방지**: `write` 예외 무시 로직을 제거하고 에러를 상위로 전파했습니다.
+  - **성능 최적화**: `BATCH_SIZE_THRESHOLD`를 8KB로 상향 조정했습니다.
+- **배포 및 데이터 안전성**
+  - **아이콘 경로**: PyInstaller 배포를 위해 QSS 로딩 시 절대 경로 치환 로직을 추가했습니다.
+  - **설정 복구 알림**: 설정 파일 초기화 시 사용자 경고 알림을 추가했습니다.
+
+---
+
+### 아키텍처 고도화 및 확장성 강화 (2025-12-15)
+
+#### 리팩토링 (Refactoring)
+
+- **Strict MVP 아키텍처 적용**
+  - **DTO 도입**: `PreferencesState`, `MainWindowState`, `ManualControlState` DTO를 도입하여 View와 Presenter 간의 데이터 교환을 정형화했습니다.
+  - **View 로직 제거**: `PreferencesDialog`의 설정 파싱 로직과 `MainWindow`의 상태 복원(`restore_state`) 로직을 Presenter로 이관했습니다.
+  - **상태 관리 이관**: `ManualControlWidget`의 명령어 히스토리 관리와 `DataLogWidget`의 파일 다이얼로그 호출 로직을 각 Presenter로 이동시켜 View를 순수한 UI 컴포넌트로 전환했습니다.
+  - **스키마 분리**: `core/settings_manager.py`에 있던 `CORE_SETTINGS_SCHEMA`를 `common/schemas.py`로 이동하여 데이터 정의와 로직을 분리했습니다.
+
+#### 기능 추가 (Feat)
+
+- **리소스 동적 로딩 및 확장성 강화**
+  - **언어/테마 자동 감지**: `LanguageManager`와 `ThemeManager`가 폴더를 스캔하여 추가된 JSON/QSS 파일을 자동으로 인식하도록 개선했습니다.
+  - **설정 변경 이벤트**: `EventBus`에 `SETTINGS_CHANGED` 토픽을 추가하여, 설정 변경 시 `MainPresenter`를 거치지 않고 각 컴포넌트가 독립적으로 반응하도록 개선했습니다.
+  - **언어 메타데이터**: 언어 파일(`*.json`)에 `_meta_lang_name` 키를 추가하여 UI 표시 이름을 파일 내에서 정의하도록 했습니다.
+
+#### 수정 사항 (Fixed)
+
+- **안정성 강화**
+  - **매크로 브로드캐스트**: `MainPresenter`에서 매크로 전송 시 `is_broadcast` 플래그를 누락하던 버그를 수정했습니다.
+  - **파일 전송 타겟**: 파일 전송 다이얼로그 호출 시 현재 활성 포트 컨텍스트를 명시적으로 전달하여, 멀티탭 환경에서 엉뚱한 포트로 전송되는 문제를 방지했습니다.
+  - **종료 시 예외**: `MainWindowState` DTO를 iterable로 잘못 사용하여 발생하던 `TypeError`를 수정했습니다.
+  - **UI 스타일**: `common.qss`에 `QSmartTextEdit`의 기본 속성(Fallback)을 명시하여 테마 로드 실패 시에도 UI 가독성을 보장하도록 개선했습니다.
+
+---
+
+### 시스템 안정성 및 성능 최적화 (2025-12-14)
+
+#### 성능 개선 (Performance)
+
+- **고속 데이터 수신 최적화 (Fast Path)**
+  - `ConnectionController`에서 `MainPresenter`로 이어지는 데이터 수신 경로에서 `EventBus`를 우회하는 **Fast Path**를 구현했습니다.
+  - **UI Throttling**: 수신된 데이터를 즉시 렌더링하지 않고 버퍼링한 후, 30ms 간격(`QTimer`)으로 일괄 업데이트하여 메인 스레드 부하를 최소화했습니다.
+  - 이를 통해 2MB/s 이상의 고속 통신 시에도 UI 프리징 없는 부드러운 화면 갱신을 보장합니다.
+
+#### 수정 사항 (Fixed)
+
+- **파일 전송/포트 종료 경합 조건(Race Condition) 해결**
+  - 파일 전송 중 포트를 강제로 닫을 때 발생할 수 있는 충돌을 방지하기 위해 `ConnectionController`에 활성 전송 레지스트리를 추가했습니다.
+  - 포트 종료 시 진행 중인 전송이 있다면 즉시 `cancel()`을 호출하고 안전하게 정리되도록 로직을 강화했습니다.
+- **설정 파일 무결성 검증 강화**
+  - `SettingsManager` 로드 시 `jsonschema`를 사용하여 필수 필드와 데이터 구조를 검증하는 로직을 추가했습니다.
+  - `common/dtos.py`의 `from_dict` 메서드에 `_safe_cast` 헬퍼를 적용하여, 설정 파일이 손상되거나 값이 누락되어도 기본값으로 복구되어 크래시가 발생하지 않도록 개선했습니다.
+
+---
+
+### 매크로 기능 확장 (2025-12-14)
+
+#### 기능 추가 (Feat)
+
+- **매크로 브로드캐스트 지원**
+  - `MacroControlWidget`에 'Broadcast' 체크박스를 추가했습니다.
+  - 매크로 실행 시 활성화된 모든 포트로 명령어를 전송할 수 있는 기능을 구현했습니다.
+  - `MacroRepeatOption` DTO에 `is_broadcast` 필드를 추가하여 UI 상태를 Model로 전달하도록 구조를 확장했습니다.
+  - `MacroRunner`에서 `ManualCommand` 생성 시 브로드캐스트 플래그를 적용하여, 연결된 모든 장비에 일괄 명령을 전송(Fire-and-forget)하도록 로직을 구현했습니다.
+
+---
+
+### 아키텍처 정밀화 및 안정성 강화 (2025-12-14)
+
+#### 수정 사항 (Fixed)
+
+- **설정 동기화 버그 수정**
+  - `PreferencesDialog`에서 변경한 'Local Echo' 설정이 `ManualControlWidget` 체크박스에 즉시 반영되지 않는 문제 해결
+  - `ManualControlWidget` 및 `Panel`에 `set_local_echo_state` 메서드 추가하여 외부 제어 허용
+  - `ManualControlPresenter`에 `update_local_echo_setting` 추가 및 `MainPresenter`와 연동
+
+- **PortSettingsWidget 런타임 오류 수정**
+  - `on_connect_clicked` 메서드에서 `PortConfig` DTO 객체에 딕셔너리 메서드인 `.update()`를 호출하여 발생하던 `AttributeError`를 수정했습니다.
+  - `get_current_config` 메서드 내부에서 객체 생성 시 데이터를 완벽하게 조립하여 반환하도록 로직을 개선했습니다.
+
+#### 추가 사항 (Added)
+
+- **EventBus 기능 강화**
+  - **와일드카드 구독 지원**: `fnmatch`를 도입하여 `port.*`와 같은 패턴으로 이벤트를 구독할 수 있는 기능을 추가했습니다.
+  - **디버깅 모드**: `set_debug_mode(True)` 호출 시 모든 발행 이벤트를 로그로 출력하는 기능을 추가했습니다.
+- **EventTopics 상수 도입**
+  - `common/constants.py`에 `EventTopics` 클래스를 신설했습니다.
+  - `PORT_OPENED`, `MACRO_STARTED`, `FILE_PROGRESS` 등 시스템 전반의 이벤트 토픽을 한곳에서 관리합니다.
+
+#### 리팩토링 (Refactoring)
+
+- **데이터 전송 객체(DTO) 도입**
+  - `common/dtos.py` 신설: `ManualCommand`, `PortConfig`, `FontConfig` 데이터 클래스 정의
+  - 딕셔너리(`dict`) 대신 명시적인 DTO를 사용하여 컴포넌트 간 데이터 전달 (View ↔ Presenter ↔ Model)
+  - `ManualControlWidget`, `PortSettingsWidget` 등 주요 위젯에 적용하여 타입 안전성(Type Safety) 확보 및 오타 방지
+
+- **MVP 아키텍처 위반 수정 (MVP)**
+  - **MainWindow**: `SettingsManager`(Model) 직접 생성 및 의존성 제거
+  - **MainPresenter**: 설정 로드 책임 이관 및 `View.restore_state()` 메서드를 통해 초기 상태 주입
+  - **Main Entry**: `main.py`에서 모든 Manager(`Settings`, `Theme`, `Lang`, `Color`)를 사전 초기화하여 전역 상태 보장
+  - View는 수동적(Passive) 뷰로 전환하고, 데이터 처리는 Presenter가 전담하도록 구조 개선
+
+- **전면적인 DTO(Data Transfer Object) 적용**
+  - **매크로**: `MacroScriptData` (파일 저장/로드), `MacroRepeatOption` (반복 설정), `MacroStepEvent` (실행 단계) DTO를 도입하여 `dict` 사용을 제거했습니다.
+  - **에러 핸들링**: `ErrorContext` DTO를 도입하여 에러 타입, 메시지, 트레이스백 정보를 구조화했습니다.
+  - **파일 전송**: `FileProgressEvent` DTO를 도입하여 EventBus를 통한 진행률 전달 시 타입 안전성을 확보했습니다.
+- **매직 스트링(Magic String) 제거**
+  - `ConnectionController`, `MacroRunner`, `FileTransferEngine`, `EventRouter` 등 핵심 모듈에서 문자열 리터럴로 사용되던 이벤트 토픽을 `EventTopics` 상수로 전면 교체했습니다.
+  - 이를 통해 오타로 인한 버그 발생 가능성을 원천 차단하고 IDE의 자동 완성 지원을 강화했습니다.
+
+#### 기능 추가 (Feat)
+
+- **초기 기능 구현 통합**
+  - 수동 제어(Manual Control) 및 매크로(Macro) 기능을 위한 UI, Presenter, Model, Test 코드 통합 구현
+  - MVP 아키텍처 기반의 핵심 시리얼 통신 도구 기능 완성
+
+---
+
+### 명명 규칙 표준화 및 디커플링 (2025-12-13)
+
+#### 리팩토링 (Refactoring)
+
+- **DataLogViewer 리네이밍**
+  - `RxLogWidget`을 **`DataLogViewer`**로 클래스명 변경
+  - 송신(TX) 데이터와 수신(RX) 데이터를 모두 표시하는 역할에 맞게 이름 현실화
+  - Model 계층의 `DataLogger`와 이름의 톤앤매너 일치
+
+- **ConnectionController 활성 연결 명시화**
+  - `set_active_connection(name)` 메서드 추가로 명시적인 제어권 확보
+  - `current_connection_name` 속성이 모호함 없이 현재 활성 탭의 연결을 반환하도록 로직 개선
+
+- **CommandProcessor 디커플링 (Decoupling)**
+  - `process_cmd` 메서드 내부의 `SettingsManager` 직접 참조(Hidden Dependency) 제거
+  - Prefix/Suffix 설정을 외부(Presenter)에서 주입받도록 변경하여 순수 함수(Pure Function)에 가깝게 전환
+  - 테스트 용이성 및 아키텍처 투명성 향상
+
+---
+
 ### 아키텍처 안정화 및 핵심 기능 고도화 (2025-12-12)
 
 #### 추가 사항 (Added)
@@ -21,9 +222,11 @@
 
 - **명명 규칙 및 구조 개선 (Renaming & Refactoring)**
   - **Data Logger**: `LogRecorder`를 `DataLogger`로 명칭 변경 (시스템 로그와 데이터 로깅의 역할 분리 명확화)
+  - **Data Log View**: `RxLogWidget`를 `DataLogViewWidget`로 명칭 변경 (송수신 데이터를 포괄하는 `DataLog`가 더 정확함)
   - **Event System**: `PortController`의 중복된 이벤트 발행 구조를 제거하고 Signal-EventBus 자동 브리지 구현
   - **Macro Engine**: `QTimer` 기반 루프를 `QThread` + `QWaitCondition` 기반으로 전면 교체 (Windows 타이머 정밀도 문제 해결)
   - **Font Settings**: 폰트 설정 저장 로직을 View(`MainWindow`)에서 Presenter(`MainPresenter`)로 이관하고, 동적 키 생성(`f-string`) 대신 `ConfigKeys` 매핑 딕셔너리를 사용하여 MVP 원칙 준수 및 안전성 강화
+  - **Sys Log View**: `SystemLogWidget`를 `SysLogViewWidget`로 명칭 변경 (통일성)
 
 - **코드 품질 및 테스트 안정성 (Quality & Stability)**
   - **Documentation**: `model/macro_runner.py` 등 핵심 모듈에 Google Style Docstring 가이드(WHY/WHAT/HOW, Logic)를 엄격히 적용하여 가독성 향상
@@ -44,12 +247,12 @@
 
 ---
 
-### Presenter 계층 구조화 및 Strict MVP 리팩토링 (2025-12-12)
+### Presenter 계층 구조화 및 MVP 리팩토링 (2025-12-12)
 
 #### 추가 사항 (Added)
 
 - **신규 Presenter 도입**
-  - **`ManualControlPresenter`**: 수동 명령어 전송, Prefix/Suffix 처리, Hex 변환 로직을 전담
+  - **`ManualCtrlPresenter`**: 수동 명령어 전송, Prefix/Suffix 처리, Hex 변환 로직을 전담
   - **`PacketPresenter`**: 패킷 데이터의 포맷팅(Timestamp, Hex/ASCII 변환) 및 설정 적용 로직 전담
   - **`FilePresenter`**: 파일 전송 진행률, 속도(Speed), 잔여 시간(ETA) 계산 로직 전담
 
@@ -61,10 +264,10 @@
 
 - **MainPresenter 대규모 리팩토링**
   - View 내부 계층(`view.left_section.manual_ctrl...`)에 대한 직접 접근 코드를 전면 제거
-  - `ManualControl`, `Packet`, `File` 관련 로직을 각 전담 Presenter로 이관하여 코드 비대화 해소
+  - `ManualCtrl`, `Packet`, `File` 관련 로직을 각 전담 Presenter로 이관하여 코드 비대화 해소
   - `EventRouter`와 `MainWindow`의 공개 인터페이스만을 사용하여 로직 조율
 
-- **Strict MVP 원칙 적용**
+- **MVP 원칙 적용**
   - **PortPresenter**: `connect_btn` 등 위젯 직접 제어를 제거하고 시그널 구독 및 상태 변경 요청 방식으로 전환
   - **FileTransferDialog**: 내부의 계산 로직을 모두 제거하고, Presenter가 전달하는 데이터만 표시하는 수동적인 뷰로 전환
   - **Local Echo**: `MainPresenter` 내 하드코딩된 로직을 제거하고, View 인터페이스(Callback)를 통해 유연하게 처리
@@ -419,7 +622,7 @@
   - `QSmartListView` 및 `QSmartTextEdit`에 다크/라이트 테마 완벽 지원
   - `QSmartTextEdit`에 `Q_PROPERTY`를 추가하여 QSS에서 라인 번호 색상 제어 가능
   - `common.qss`에 `QSmartListView` 기본 스타일 추가
-- **Strict MVP 아키텍처 적용**
+- **MVP 아키텍처 적용**
   - View 계층(`MacroPanel`, `MainLeftSection` 등)에서 `SettingsManager` 의존성을 완전히 제거했습니다.
   - View는 이제 스스로 파일을 저장하지 않고, `save_state() -> dict`와 `load_state(dict)` 메서드를 통해 상태 데이터만 주고받습니다.
   - 데이터의 영구 저장 및 복원 책임이 `MainWindow`(향후 `MainPresenter`)로 이관되어, UI와 비즈니스 로직(설정 관리)의 결합도가 낮아졌습니다.
@@ -1087,7 +1290,7 @@
 
 #### 추가 사항 (Added)
 
-- Layered MVP 아키텍처 확립
+- MVP 아키텍처 확립
 - 모듈식 폴더 구조 생성:
   - `view/panels/`: LeftPanel, RightPanel, PortPanel, MacroListPanel
   - `view/widgets/`: PortSettings, CommandList, CommandControl, ManualControl

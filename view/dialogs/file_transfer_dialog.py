@@ -1,23 +1,21 @@
 """
-파일 전송 다이얼로그 모듈
+파일 전송 대화상자 모듈
 
-사용자로부터 파일을 선택받고 전송 진행 상황을 표시합니다.
+파일 선택부터 전송 완료까지의 과정을 시각화하고 제어합니다.
 
 ## WHY
-* 파일 전송 과정을 시각화하여 사용자 경험 향상
-* 전송 시작 및 취소에 대한 사용자 제어 제공
-* Strict MVP 패턴의 View 역할 수행
+* 파일 전송은 긴 시간이 소요될 수 있으므로 전용 UI 필요
+* 전송 진행률, 속도, 남은 시간 등 상세 정보 제공
+* 사용자에게 취소 권한 부여
 
 ## WHAT
-* 파일 선택 및 경로 표시
-* 진행률(ProgressBar), 속도, ETA 표시
-* Presenter로 사용자 이벤트(전송, 취소) 전달
-* Presenter로부터 받은 데이터로 UI 갱신
+* 파일 선택 UI 및 전송/취소 버튼
+* FileProgressWidget을 포함하여 진행 상황 표시
+* Presenter와 통신하기 위한 시그널 정의
 
 ## HOW
-* QDialog 상속
-* PyQt Signal을 통한 이벤트 버블링
-* 수동적인 뷰(Passive View)로서 로직 없이 UI 업데이트만 수행
+* Passive View 패턴 적용 (로직은 FilePresenter에 위임)
+* Modal 다이얼로그로 동작
 """
 from PyQt5.QtWidgets import (
     QWidget, QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
@@ -25,8 +23,9 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Optional
-from view.managers.lang_manager import lang_manager
+from view.managers.language_manager import language_manager
 from view.widgets.file_progress import FileProgressWidget
+from common.dtos import FileProgressState
 
 class FileTransferDialog(QDialog):
     """
@@ -49,21 +48,21 @@ class FileTransferDialog(QDialog):
             parent (Optional[QWidget]): 부모 위젯
         """
         super().__init__(parent)
-        self.setWindowTitle(lang_manager.get_text("manual_ctrl_grp_file"))
+        self.setWindowTitle(language_manager.get_text("manual_control_grp_file"))
         self.setFixedSize(450, 250)
         self.setModal(True)
 
         # UI Components
-        self.file_path_lbl = None
-        self.select_file_btn = None
-        self.send_btn = None
-        self.close_btn = None
+        self.file_path_lbl: Optional[QLabel] = None
+        self.select_file_btn: Optional[QPushButton] = None
+        self.send_btn: Optional[QPushButton] = None
+        self.close_btn: Optional[QPushButton] = None
         self.progress_widget = None
 
         self.init_ui()
 
         # 언어 변경 시 UI 업데이트 연결
-        lang_manager.language_changed.connect(self.retranslate_ui)
+        language_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃 초기화"""
@@ -74,27 +73,27 @@ class FileTransferDialog(QDialog):
         # ---------------------------------------------------------
         # 1. 파일 선택 영역
         # ---------------------------------------------------------
-        file_grp = QGroupBox(lang_manager.get_text("manual_ctrl_grp_file"))
+        file_grp = QGroupBox(language_manager.get_text("manual_control_grp_file"))
         file_layout = QVBoxLayout()
 
         path_layout = QHBoxLayout()
-        self.file_path_lbl = QLabel(lang_manager.get_text("manual_ctrl_lbl_file_path_no_file"))
+        self.file_path_lbl = QLabel(language_manager.get_text("manual_control_lbl_file_path_no_file"))
         self.file_path_lbl.setStyleSheet(
             "color: gray; border: 1px solid #555; padding: 5px; border-radius: 4px; background-color: #2b2b2b;"
         )
         self.file_path_lbl.setWordWrap(True)
 
-        self.select_file_btn = QPushButton(lang_manager.get_text("manual_ctrl_btn_select_file"))
+        self.select_file_btn = QPushButton(language_manager.get_text("manual_control_btn_select_file"))
         self.select_file_btn.setFixedWidth(100)
         self.select_file_btn.clicked.connect(self.on_select_file_clicked)
 
         path_layout.addWidget(self.file_path_lbl, 1)
         path_layout.addWidget(self.select_file_btn)
 
-        self.send_btn = QPushButton(lang_manager.get_text("manual_ctrl_btn_send_file"))
-        self.send_btn.setProperty("class", "accent")  # 강조 스타일
+        self.send_btn = QPushButton(language_manager.get_text("manual_control_btn_send_file"))
+        self.send_btn.setProperty("class", "accent")
         self.send_btn.clicked.connect(self.on_send_clicked)
-        self.send_btn.setEnabled(False) # 파일 선택 전까지 비활성화
+        self.send_btn.setEnabled(False)
 
         file_layout.addLayout(path_layout)
         file_layout.addWidget(self.send_btn)
@@ -112,7 +111,7 @@ class FileTransferDialog(QDialog):
         # ---------------------------------------------------------
         bottom_layout = QHBoxLayout()
         bottom_layout.addStretch()
-        self.close_btn = QPushButton(lang_manager.get_text("about_btn_close"))
+        self.close_btn = QPushButton(language_manager.get_text("manual_control_btn_close"))
         self.close_btn.clicked.connect(self.reject)
         bottom_layout.addWidget(self.close_btn)
 
@@ -124,21 +123,21 @@ class FileTransferDialog(QDialog):
 
     def retranslate_ui(self) -> None:
         """다국어 텍스트 업데이트"""
-        self.setWindowTitle(lang_manager.get_text("manual_ctrl_grp_file"))
-        self.select_file_btn.setText(lang_manager.get_text("manual_ctrl_btn_select_file"))
-        self.send_btn.setText(lang_manager.get_text("manual_ctrl_btn_send_file"))
-        self.close_btn.setText(lang_manager.get_text("about_btn_close"))
+        self.setWindowTitle(language_manager.get_text("manual_control_grp_file"))
+        self.select_file_btn.setText(language_manager.get_text("manual_control_btn_select_file"))
+        self.send_btn.setText(language_manager.get_text("manual_control_btn_send_file"))
+        self.close_btn.setText(language_manager.get_text("manual_control_btn_close"))
 
         # 기본 텍스트일 경우만 번역
         current_path = self.file_path_lbl.text()
-        if lang_manager.text_matches_key(current_path, "manual_ctrl_lbl_file_path_no_file"):
-            self.file_path_lbl.setText(lang_manager.get_text("manual_ctrl_lbl_file_path_no_file"))
+        if language_manager.text_matches_key(current_path, "manual_control_lbl_file_path_no_file"):
+            self.file_path_lbl.setText(language_manager.get_text("manual_control_lbl_file_path_no_file"))
 
     def on_select_file_clicked(self) -> None:
         """파일 선택 버튼 핸들러"""
         path, _ = QFileDialog.getOpenFileName(
             self,
-            lang_manager.get_text("manual_ctrl_dialog_select_file")
+            language_manager.get_text("manual_control_dialog_select_file")
         )
         if path:
             self.file_path_lbl.setText(path)
@@ -150,7 +149,7 @@ class FileTransferDialog(QDialog):
         """전송 버튼 핸들러"""
         path = self.file_path_lbl.text()
         # 파일 경로 유효성 체크는 Presenter나 Dialog 로직에서 수행하되, 여기서는 UI 상태만 확인
-        if path and path != lang_manager.get_text("manual_ctrl_lbl_file_path_no_file"):
+        if path and path != language_manager.get_text("manual_control_lbl_file_path_no_file"):
             self.set_ui_busy_state(True)
             self.send_requested.emit(path)
 
@@ -163,19 +162,16 @@ class FileTransferDialog(QDialog):
         """
         self.select_file_btn.setEnabled(not busy)
         self.send_btn.setEnabled(not busy)
-        self.close_btn.setEnabled(not busy) # 전송 중에는 닫기 방지 (취소 버튼 유도)
+        self.close_btn.setEnabled(not busy)
 
-    def update_progress(self, sent: int, total: int, speed: float, eta: float) -> None:
+    def update_progress(self, state: FileProgressState) -> None:
         """
         진행률 업데이트 (Presenter가 호출)
 
         Args:
-            sent (int): 전송된 바이트
-            total (int): 전체 바이트
-            speed (float): 전송 속도 (bytes/s)
-            eta (float): 남은 시간 (초)
+            state (FileProgressState): 파일 전송 상태 DTO
         """
-        self.progress_widget.update_progress(sent, total, speed, eta)
+        self.progress_widget.update_progress(state)
 
     def set_complete(self, success: bool, message: str = "") -> None:
         """
@@ -191,6 +187,6 @@ class FileTransferDialog(QDialog):
     def closeEvent(self, event) -> None:
         """다이얼로그 닫기 이벤트 핸들러"""
         # 전송 중 닫기 시도 시 취소 요청 발생
-        if not self.send_btn.isEnabled(): # 전송 중임
+        if not self.send_btn.isEnabled():
             self.cancel_requested.emit()
         super().closeEvent(event)

@@ -1,7 +1,7 @@
 """
 Core 및 유틸리티 기능 정밀 테스트
 
-- DataLogger (구 LogRecorder) 동작 검증
+- DataLogger 동작 검증 (BIN/HEX/PCAP 포맷)
 - ExpectMatcher 패턴 매칭 검증
 - ParserType 상수 일관성 확인
 
@@ -18,7 +18,8 @@ import time
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
 from core.data_logger import DataLogger, DataLoggerManager
-from model.packet_parser import ExpectMatcher, ParserType
+from model.packet_parser import ExpectMatcher
+from common.enums import ParserType, LogFormat
 
 # --- DataLogger Tests ---
 
@@ -33,13 +34,13 @@ def temp_log_dir():
     if path.exists():
         shutil.rmtree(path)
 
-def test_data_logger_lifecycle(temp_log_dir):
-    """DataLogger 시작, 쓰기, 중지 라이프사이클 테스트"""
+def test_data_logger_lifecycle_bin(temp_log_dir):
+    """DataLogger BIN 포맷 저장 테스트"""
     logger = DataLogger()
     log_file = temp_log_dir / "test.bin"
 
-    # 1. Start Logging
-    assert logger.start_logging(str(log_file)) is True
+    # 1. Start Logging (Default BIN)
+    assert logger.start_logging(str(log_file), LogFormat.BIN) is True
     assert logger.is_logging is True
 
     # 2. Write Data
@@ -85,7 +86,7 @@ def test_data_logger_manager(temp_log_dir):
 
 def test_expect_matcher_literal():
     """문자열 리터럴 매칭 테스트"""
-    matcher = ExpectMatcher("OK", is_regex=False)
+    matcher = ExpectMatcher("OK", regex_enabled=False)
 
     assert matcher.match(b"User Input") is False
     assert matcher.match(b"Command") is False
@@ -98,7 +99,7 @@ def test_expect_matcher_literal():
 def test_expect_matcher_regex():
     """정규식 매칭 테스트"""
     # 숫자 3자리를 기다리는 정규식
-    matcher = ExpectMatcher(r"\d{3}", is_regex=True)
+    matcher = ExpectMatcher(r"\d{3}", regex_enabled=True)
 
     assert matcher.match(b"abc") is False
     assert matcher.match(b"12") is False

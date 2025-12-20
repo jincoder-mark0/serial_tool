@@ -1,25 +1,41 @@
 """
 스마트 리스트 뷰 위젯 모듈
 
-QListView를 기반으로 대량의 로그 데이터를 효율적으로 표시하고 관리하는
-커스텀 위젯을 정의 검색, 하이라이트, 플레이스홀더, 전체 텍스트 추출 기능을 지원
+QListView를 기반으로 대량의 로그 데이터를 효율적으로 표시하고 관리하는 커스텀 위젯입니다.
+
+## WHY
+* 대량 데이터(로그)의 고성능 렌더링 필요
+* 검색, 필터링, 하이라이트 등 고급 기능 통합
+
+## WHAT
+* QAbstractListModel 기반 데이터 관리
+* 검색 탐색(Next/Prev) 및 필터링
+* HEX/ASCII 모드 및 타임스탬프 지원
+* ColorRule 주입을 통한 색상 적용
+
+## HOW
+* QSortFilterProxyModel로 필터링 구현
+* QStyledItemDelegate로 커스텀 렌더링
+* ColorService를 활용한 텍스트 포맷팅
 """
 import re
 from typing import List, Any, Optional
 from collections import deque
+import datetime
 
 from PyQt5.QtWidgets import QListView, QAbstractItemView, QStyle, QStyledItemDelegate
 from PyQt5.QtCore import (
     Qt, QAbstractListModel, QModelIndex, QVariant, QSize, QRegExp, pyqtSlot,
-    QSortFilterProxyModel, QTimer
+    QSortFilterProxyModel, QTimer, QDateTime
 )
 from PyQt5.QtGui import (
-    QColor, QTextDocument, QAbstractTextDocumentLayout, QTextCharFormat, QPainter
+    QColor, QTextDocument, QAbstractTextDocumentLayout, QTextCharFormat, QPainter, QPalette
 )
-from PyQt5.QtCore import QDateTime
 
-from constants import DEFAULT_LOG_MAX_LINES, TRIM_CHUNK_RATIO
-import datetime
+from common.constants import DEFAULT_LOG_MAX_LINES, TRIM_CHUNK_RATIO
+from common.dtos import ColorRule
+from view.services.color_service import ColorService
+from view.managers.theme_manager import theme_manager
 
 class QSmartListView(QListView):
     """
@@ -73,7 +89,10 @@ class QSmartListView(QListView):
         self._hex_mode = False
         self._timestamp_enabled = False
         self._timestamp_timeout_ms = 100
-        self._color_manager = None
+
+        # ColorManager 의존성 제거 -> ColorRule 리스트 사용
+        self._color_rules: List[ColorRule] = []
+
         self._last_data_time = None
 
         # HEX 모드 전환을 위한 원본 bytes 데이터 저장 (원형 버퍼로 메모리 최적화)
@@ -87,6 +106,17 @@ class QSmartListView(QListView):
         self._filter_debounce_timer.timeout.connect(self._execute_filter_update)
 
         self.setObjectName("SmartListView")
+
+    def set_color_rules(self, rules: List[ColorRule]) -> None:
+        """
+        색상 규칙 설정 (Dependency Injection)
+
+        Args:
+            rules: 적용할 ColorRule 리스트
+        """
+        self._color_rules = rules
+        # 규칙이 변경되면 기존 데이터 다시 렌더링
+        self._refresh_all_data()
 
     def set_newline_char(self, char: str) -> None:
         """
@@ -106,7 +136,7 @@ class QSmartListView(QListView):
             enabled: HEX 모드 활성화 여부
         """
         if self._hex_mode == enabled:
-            return  # 변경 없음
+            return
 
         self._hex_mode = enabled
 
@@ -123,15 +153,6 @@ class QSmartListView(QListView):
         """
         self._timestamp_enabled = enabled
         self._timestamp_timeout_ms = timeout_ms
-
-    def set_color_manager(self, manager) -> None:
-        """
-        색상 규칙 매니저 설정
-
-        Args:
-            manager: ColorManager 인스턴스
-        """
-        self._color_manager = manager
 
     def setPlaceholderText(self, text: str) -> None:
         """
@@ -175,16 +196,159 @@ class QSmartListView(QListView):
             if self.is_at_bottom():
                 self.scrollToBottom()
 
-    def append_batch(self, lines: List[str]) -> None:
+    def append_bytes(self, data: bytes) -> None:
         """
-        여러 줄의 로그를 한 번에 추가
+        바이트 데이터를 추가
 
         Args:
-            lines (List[str]): 추가할 로그 리스트.
+            data (bytes): 추가할 바이트 데이터.
         """
-        self.log_model.add_logs(lines)
-        if self.is_at_bottom():
+        self._original_data.append(data)
+
+        if self._hex_mode:
+            text = " ".join([f"{b:02X}" for b in data]) + " "
+        else:
+            try:
+                text = data.decode('utf-8', errors='replace')
+            except Exception:
+                text = str(data)
+
+        should_add_timestamp = self._should_add_timestamp()
+
+        # Formatter 생성
+        # ColorService 사용
+        formatter = self._create_line_formatter(should_add_timestamp)
+
+        self.append(text, formatter)
+
+    def _create_line_formatter(self, add_timestamp: bool):
+        """
+        라인 포맷터 함수를 생성
+
+        Args:
+            add_timestamp (bool): 타임스탬프 추가 여부.
+
+        Returns:
+            callable: 생성된 포맷터 함수.
+        """
+        # 캡처 시점의 테마 상태 확인
+        is_dark = theme_manager.is_dark_theme()
+
+        def formatter(line: str) -> str:
+            """
+            라인 포맷터 함수
+
+            Args:
+                line (str): 포맷팅할 라인.
+
+            Returns:
+                str: 포맷팅된 라인.
+            """
+            formatted = line
+
+            if add_timestamp:
+                ts = datetime.datetime.now().strftime("[%H:%M:%S]")
+                formatted = f"{ts} {formatted}"
+
+            if self._color_rules:
+                # 테마 상태 전달
+                formatted = ColorService.apply_rules(formatted, self._color_rules, is_dark)
+
+            return formatted
+        return formatter
+
+    def _should_add_timestamp(self) -> bool:
+        """
+        타임스탬프를 추가할지 결정
+
+        Returns:
+            bool: 타임스탬프 추가 여부.
+        """
+        if not self._timestamp_enabled:
+            return False
+
+        now = QDateTime.currentMSecsSinceEpoch()
+        if self._newline_char:
+            return True
+
+        if self._last_data_time is None:
+            self._last_data_time = now
+            return True
+
+        time_diff = now - self._last_data_time
+        if time_diff >= self._timestamp_timeout_ms:
+            self._last_data_time = now
+            return True
+
+        self._last_data_time = now
+        return False
+
+    def _refresh_all_data(self) -> None:
+        """
+        모든 데이터를 다시 렌더링
+        HEX 모드 변경 또는 테마 변경 시 호출
+        """
+        if not self._original_data:
+            return
+
+        scroll_pos = self.verticalScrollBar().value()
+        was_at_bottom = self.is_at_bottom()
+
+        self.log_model.clear()
+
+        # 현재 테마 상태 확인
+        is_dark = theme_manager.is_dark_theme()
+
+        for data in self._original_data:
+            if self._hex_mode:
+                text = " ".join([f"{b:02X}" for b in data]) + " "
+            else:
+                try:
+                    text = data.decode('utf-8', errors='replace')
+                except Exception:
+                    text = str(data)
+
+            # Re-apply color rules (no timestamps on refresh for now to keep simple)
+            formatter = None
+            if self._color_rules:
+                # 테마 상태 전달
+                formatter = lambda line: ColorService.apply_rules(line, self._color_rules, is_dark)
+
+            self.append(text, formatter)
+
+        if was_at_bottom:
             self.scrollToBottom()
+        else:
+            self.verticalScrollBar().setValue(scroll_pos)
+
+    def set_max_lines(self, max_lines: int) -> None:
+        """
+        최대 로그 라인 수를 설정
+
+        Args:
+            max_lines (int): 최대 라인 수.
+        """
+        self.log_model.set_max_lines(max_lines)
+        # deque는 maxlen 변경이 불가하므로 새 deque 생성 (기존 데이터 유지)
+        self._original_data = deque(self._original_data, maxlen=max_lines)
+
+    def is_at_bottom(self) -> bool:
+        """
+        스크롤바가 맨 아래에 있는지 확인
+
+        Returns:
+            bool: 맨 아래에 있으면 True.
+        """
+        sb = self.verticalScrollBar()
+        # 오차 범위를 두어 판별
+        return sb.value() >= (sb.maximum() - 10)
+
+    def clear(self) -> None:
+        """
+        로그 모델과 원본 데이터를 초기화
+        """
+        self.log_model.clear()
+        self._original_data.clear()
 
     @pyqtSlot(str)
     def set_search_pattern(self, text: str) -> None:
@@ -239,33 +403,6 @@ class QSmartListView(QListView):
             self.proxy_model.setFilterRegExp(self._current_pattern)
         else:
             self.proxy_model.setFilterRegExp("") # 필터 해제
-
-    def set_max_lines(self, max_lines: int) -> None:
-        """
-        최대 로그 라인 수를 설정
-
-        Args:
-            max_lines (int): 최대 라인 수.
-        """
-        self.log_model.set_max_lines(max_lines)
-        # deque는 maxlen 변경이 불가하므로 새 deque 생성 (기존 데이터 유지)
-        self._original_data = deque(self._original_data, maxlen=max_lines)
-
-    def is_at_bottom(self) -> bool:
-        """
-        스크롤바가 맨 아래에 있는지 확인
-
-        Returns:
-            bool: 맨 아래에 있으면 True.
-        """
-        sb = self.verticalScrollBar()
-        # 오차 범위를 두어 판별
-        return sb.value() >= (sb.maximum() - 10)
-
-    def clear(self) -> None:
-        """모든 로그 데이터를 지웁니다 (모델 + 원본 데이터)."""
-        self.log_model.clear()
-        self._original_data.clear()
 
     def find_next(self, text: str) -> bool:
         """
@@ -349,7 +486,7 @@ class QSmartListView(QListView):
         return "\n".join(lines)
 
     @staticmethod
-    def _create_pattern(self, text: str) -> QRegExp:
+    def _create_pattern(text: str) -> QRegExp:
         """
         검색 문자열을 QRegExp 객체로 변환
 
@@ -491,7 +628,12 @@ class QSmartListView(QListView):
         self.append(text, formatter)
 
     def _should_add_timestamp(self) -> bool:
-        """타임스탬프를 추가할지 판단"""
+        """
+        타임스탬프를 추가할지 판단
+
+        Returns:
+            bool: 타임스탬프 추가 여부
+        """
         if not self._timestamp_enabled:
             return False
 
@@ -516,8 +658,25 @@ class QSmartListView(QListView):
         return False
 
     def _create_line_formatter(self, add_timestamp: bool):
-        """라인 포맷터 함수를 생성"""
+        """
+        라인 포맷터 함수를 생성
+
+        Args:
+            add_timestamp (bool): 타임스탬프 추가 여부
+
+        Returns:
+            callable: 생성된 포맷터 함수
+        """
         def formatter(line: str) -> str:
+            """
+            라인 포맷터 함수
+
+            Args:
+                line (str): 포맷팅할 라인
+
+            Returns:
+                str: 포맷팅된 라인
+            """
             formatted = line
 
             # 타임스탬프 추가
@@ -653,7 +812,9 @@ class LogModel(QAbstractListModel):
                 self.endRemoveRows()
 
     def clear(self) -> None:
-        """모든 데이터를 삭제"""
+        """
+        모든 데이터를 삭제
+        """
         self.beginResetModel()
         self._data.clear()
         self.endResetModel()
@@ -690,6 +851,7 @@ class LogDelegate(QStyledItemDelegate):
     """
     로그 아이템의 렌더링을 담당하는 델리게이트 클래스입니다.
 
+    paint 시점에 QPalette에서 현재 텍스트 색상을 가져와 HTML에 강제로 적용
     HTML 텍스트 렌더링 및 검색어 하이라이트 기능을 수행
     """
     def __init__(self, parent=None):
@@ -728,29 +890,46 @@ class LogDelegate(QStyledItemDelegate):
         """
         painter.save()
 
-        # 선택된 항목 배경 그리기
+        # 1. 배경 그리기
+        # 선택된 항목의 배경색 처리 (기본 스타일 준수)
         if option.state & QStyle.State_Selected:
             painter.fillRect(option.rect, option.palette.highlight())
 
-        # 데이터 설정
-        text = index.data(Qt.DisplayRole)
-        self.doc.setDefaultFont(option.font)
-        self.doc.setHtml(text)
+        # 2. 텍스트 색상 결정 (테마 및 선택 상태 반영)
+        # 선택된 상태라면 HighlightedText 색상, 아니면 일반 Text 색상 사용
+        if option.state & QStyle.State_Selected:
+            text_color = option.palette.highlightedText().color().name()
+        else:
+            text_color = option.palette.text().color().name()
 
-        # [핵심] 정규식 객체를 사용하여 검색 및 하이라이트
+        # 3. 데이터 설정 및 HTML 래핑
+        # QTextDocument는 기본적으로 검은색을 사용하므로,
+        # 현재 테마의 색상을 적용한 <div> 태그로 감싸서 색상을 강제합니다.
+        raw_text = index.data(Qt.DisplayRole)
+
+        # 문서 기본 폰트 설정
+        self.doc.setDefaultFont(option.font)
+
+        # 색상이 적용된 HTML 생성
+        # 이미 HTML 태그(span style=...)가 있는 부분은 그 색상이 우선 적용되고,
+        # 그렇지 않은 일반 텍스트는 여기서 지정한 text_color를 따르게 됩니다.
+        styled_html = f'<div style="color: {text_color};">{raw_text}</div>'
+        self.doc.setHtml(styled_html)
+
+        # 4. 검색 하이라이트 적용
         if self.search_pattern and not self.search_pattern.isEmpty():
             cursor = self.doc.find(self.search_pattern)
             while not cursor.isNull():
                 cursor.mergeCharFormat(self.highlight_format)
                 cursor = self.doc.find(self.search_pattern, cursor)
 
-        # 그리기 위치 조정
+        # 5. 그리기
         painter.translate(option.rect.left(), option.rect.top())
-
-        # 클리핑 설정 (셀 영역 밖으로 나가지 않도록)
         ctx = QAbstractTextDocumentLayout.PaintContext()
-        # 선택된 텍스트의 글자색 처리 (QTextDocument는 기본적으로 HTML 색상 우선)
-        # 필요하다면 ctx.palette를 조작할 수 있음
+
+        # 선택된 경우 텍스트 색상 강제 조정 (QPalette 활용)
+        if option.state & QStyle.State_Selected:
+            ctx.palette.setColor(QPalette.Text, option.palette.highlightedText().color())
 
         self.doc.documentLayout().draw(painter, ctx)
         painter.restore()

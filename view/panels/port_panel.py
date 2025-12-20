@@ -1,20 +1,39 @@
+"""
+포트 패널 모듈
+
+개별 포트 탭의 메인 컨테이너로서, 설정/상태/로그 위젯을 포함합니다.
+
+## WHY
+* 포트 단위의 독립적인 UI 컴포넌트 구성 (탭 내부 콘텐츠)
+* 하위 위젯들의 레이아웃 및 상호작용 관리
+* 다중 포트 지원을 위한 인스턴스화 가능한 구조
+
+## WHAT
+* PortSettings, PortStats, DataLog 위젯 배치
+* 탭 제목 관리(커스텀 이름) 및 연결 상태 표시
+* 데이터 로그 추가 인터페이스
+
+## HOW
+* QVBoxLayout 사용
+* 하위 위젯의 시그널을 집계하여 Presenter로 전달하거나 내부 처리
+"""
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtCore import pyqtSignal
 from typing import Optional
 
 from view.widgets.port_settings import PortSettingsWidget
-from view.widgets.rx_log import RxLogWidget
-# from view.widgets.system_log import SystemLogWidget
+from view.widgets.data_log import DataLogWidget
 from view.widgets.port_stats import PortStatsWidget
 
 class PortPanel(QWidget):
     """
     개별 시리얼 포트 탭의 메인 위젯 클래스입니다.
-    포트 설정(PortSettings), 수신 로그(ReceivedArea), 상태 로그(StatusArea) 영역을 포함합니다.
+    포트 설정(PortSettings), 통신 로그(DataLogWidget), 상태 로그(PortStats) 영역을 포함합니다.
     """
 
     # 시그널 정의
     tab_title_changed = pyqtSignal(str)  # 탭 제목 변경 시그널
+    tx_broadcast_allowed_changed = pyqtSignal(bool)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -24,8 +43,7 @@ class PortPanel(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
-        # self.system_log_widget = None
-        self.received_area_widget = None
+        self.data_log_widget = None
         self.port_stats_widget = None
         self.port_settings_widget = None
         self.custom_name = "Port"  # 커스텀 이름 (기본값)
@@ -43,8 +61,9 @@ class PortPanel(QWidget):
         # 컴포넌트 생성
         self.port_settings_widget = PortSettingsWidget()
         self.port_stats_widget = PortStatsWidget()
-        self.received_area_widget = RxLogWidget()
-        # self.system_log_widget = SystemLogWidget() # Global로 이동
+        self.data_log_widget = DataLogWidget()
+
+        self.data_log_widget.tx_broadcast_allowed_changed.connect(self.tx_broadcast_allowed_changed.emit)
 
         # 레이아웃 구성
         # 상단: 설정 (Top: Settings)
@@ -54,10 +73,7 @@ class PortPanel(QWidget):
         layout.addWidget(self.port_stats_widget)
 
         # 중간: 로그 (Middle: Log)
-        layout.addWidget(self.received_area_widget, 1) # Stretch 1
-
-        # 하단: 상태 로그 영역 (Bottom: Status Log Area)
-        # layout.addWidget(self.system_log_widget) # Global로 이동
+        layout.addWidget(self.data_log_widget, 1) # Stretch 1
 
         self.setLayout(layout)
 
@@ -96,9 +112,17 @@ class PortPanel(QWidget):
         """
         현재 선택된 포트 이름을 반환합니다.
 
+        Logic:
+            - 콤보박스의 텍스트(예: "COM1 (Serial Port)") 대신
+            - 내부 데이터(예: "COM1")를 우선적으로 반환하여 설명 문자열을 제외합니다.
+
         Returns:
             str: 포트 이름.
         """
+        # [Fix] Use itemData (clean port name) instead of currentText (display text with description)
+        port_data = self.port_settings_widget.port_combo.currentData()
+        if port_data:
+            return str(port_data)
         return self.port_settings_widget.port_combo.currentText()
 
     def get_tab_title(self) -> str:
@@ -117,25 +141,25 @@ class PortPanel(QWidget):
     def update_tab_title(self) -> None:
         """탭 제목 변경 시그널을 발생시킵니다."""
         title = self.get_tab_title()
-        self.received_area_widget.set_tab_name(title)
+        self.data_log_widget.set_tab_name(title)
         self.tab_title_changed.emit(title)
 
-    def save_state(self) -> dict:
+    def get_state(self) -> dict:
         """
-        패널 상태를 저장합니다.
+        패널 상태 반환
 
         Returns:
             dict: 패널 상태 데이터.
         """
         return {
             "custom_name": self.custom_name,
-            "port_settings_widget": self.port_settings_widget.save_state(),
-            "received_area_widget": self.received_area_widget.save_state()
+            "port_settings_widget": self.port_settings_widget.get_state(),
+            "data_log_widget": self.data_log_widget.get_state() # DataLogWidget은 내부적으로 get_state 유지
         }
 
-    def load_state(self, state: dict) -> None:
+    def apply_state(self, state: dict) -> None:
         """
-        패널 상태를 복원합니다.
+        패널 상태 적용
 
         Args:
             state (dict): 패널 상태 데이터.
@@ -143,7 +167,6 @@ class PortPanel(QWidget):
         if not state:
             return
         self.custom_name = state.get("custom_name", "Port")
-        self.port_settings_widget.load_state(state.get("port_settings_widget", {}))
-        self.received_area_widget.load_state(state.get("received_area_widget", {}))
+        self.port_settings_widget.apply_state(state.get("port_settings_widget", {}))
+        self.data_log_widget.apply_state(state.get("data_log_widget", {})) # DataLogWidget은 내부적으로 apply_state 유지
         self.update_tab_title()
-

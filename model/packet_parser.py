@@ -1,30 +1,21 @@
 """
 패킷 파서 모듈
 
-수신 데이터를 다양한 방식으로 파싱하는 파서들을 제공합니다.
+수신 데이터를 다양한 방식으로 파싱하는 파서들과 Expect 매처를 제공합니다.
 
 ## WHY
-* 프로토콜별 데이터 파싱 지원
-* 버퍼 오버플로우 방지
-* 패킷 단위 처리로 데이터 무결성 보장
-* 확장 가능한 파서 아키텍처
-* 매크로의 Expect 기능 지원 (패턴 매칭)
+* 프로토콜별 데이터 파싱 지원 (AT, Hex, Delimiter 등)
+* 버퍼 오버플로우 방지 및 데이터 무결성 보장
+* 매크로의 Expect 기능 지원
 
 ## WHAT
-* IPacketParser 인터페이스 정의
-* RawParser (바이너리 그대로 전달)
-* ATParser (AT Command, \\r\\n 구분)
-* DelimiterParser (사용자 정의 구분자)
-* FixedLengthParser (고정 길이 패킷)
-* ExpectMatcher (정규식 기반 응답 대기)
-* ParserFactory (파서 생성 팩토리)
+* PacketParser 추상 클래스 및 구현체 (Raw, AT, Delimiter, FixedLength)
+* ExpectMatcher: 정규식 기반 응답 대기 매처
+* ParserFactory: 파서 생성 팩토리
 
 ## HOW
-* ABC로 인터페이스 정의
-* 내부 버퍼로 불완전한 패킷 보관
-* 버퍼 크기 제한으로 메모리 보호
-* Packet dataclass로 타임스탬프 및 메타데이터 포함
-* Factory 패턴으로 파서 생성
+* 전략 패턴을 사용하여 파서 알고리즘 캡슐화
+* 내부 버퍼 관리로 불완전한 패킷 처리
 """
 from abc import ABC, abstractmethod
 from typing import List, Optional
@@ -32,12 +23,7 @@ from dataclasses import dataclass
 import time
 import re
 
-class ParserType:
-    """파서 타입 상수"""
-    RAW = "Raw"
-    AT = "AT"
-    DELIMITER = "Delimiter"
-    FIXED_LENGTH = "FixedLength"
+from common.enums import ParserType
 
 @dataclass
 class Packet:
@@ -53,8 +39,12 @@ class Packet:
     timestamp: float
     metadata: Optional[dict] = None
 
-class IPacketParser(ABC):
-    """패킷 파서 인터페이스"""
+class PacketParser(ABC):
+    """
+    패킷 파서 추상 기본 클래스 (Interface)
+
+    모든 파서는 이 클래스를 상속받아 구현해야 합니다.
+    """
 
     @abstractmethod
     def parse(self, buffer: bytes) -> List[Packet]:
@@ -74,7 +64,7 @@ class IPacketParser(ABC):
         """파서 상태 초기화 (내부 버퍼 클리어)"""
         pass
 
-class RawParser(IPacketParser):
+class RawParser(PacketParser):
     """바이너리 데이터를 그대로 전달하는 파서"""
 
     def parse(self, buffer: bytes) -> List[Packet]:
@@ -87,7 +77,7 @@ class RawParser(IPacketParser):
     def reset(self) -> None:
         pass
 
-class ATParser(IPacketParser):
+class ATParser(PacketParser):
     """
     AT Command 파서
 
@@ -133,7 +123,7 @@ class ATParser(IPacketParser):
     def reset(self) -> None:
         self._buffer = b""
 
-class DelimiterParser(IPacketParser):
+class DelimiterParser(PacketParser):
     """사용자 정의 구분자 기반 파서"""
 
     def __init__(self, delimiter: bytes = b'\n', max_buffer_size: int = 4096):
@@ -167,7 +157,7 @@ class DelimiterParser(IPacketParser):
     def reset(self) -> None:
         self._buffer = b""
 
-class FixedLengthParser(IPacketParser):
+class FixedLengthParser(PacketParser):
     """고정 길이 패킷 파서"""
 
     def __init__(self, length: int, max_buffer_size: int = 4096):
@@ -206,7 +196,7 @@ class ParserFactory:
     """파서 생성 팩토리"""
 
     @staticmethod
-    def create_parser(parser_type: str, **kwargs) -> IPacketParser:
+    def create_parser(parser_type: str, **kwargs) -> PacketParser:
         """
         파서 타입에 따라 적절한 파서 인스턴스 생성
 
@@ -215,7 +205,7 @@ class ParserFactory:
             **kwargs: 파서별 추가 인자
 
         Returns:
-            IPacketParser: 생성된 파서 인스턴스
+            PacketParser: 생성된 파서 인스턴스
         """
         if parser_type == ParserType.AT:
             return ATParser()
@@ -234,29 +224,29 @@ class ExpectMatcher:
 
     매크로 Expect 기능에서 특정 응답을 기다릴 때 사용합니다.
     """
-    def __init__(self, pattern: str, is_regex: bool = False, max_buffer_size: int = 1024 * 1024):
+    def __init__(self, pattern: str, regex_enabled: bool = False, max_buffer_size: int = 1024 * 1024):
         """
         ExpectMatcher 초기화
 
         Args:
             pattern: 매칭할 패턴 (문자열 또는 정규식)
-            is_regex: 정규식 사용 여부
+            regex_enabled: 정규식 사용 여부
             max_buffer_size: 최대 버퍼 크기 (기본 1MB)
         """
         self.pattern = pattern
-        self.is_regex = is_regex
+        self.regex_enabled = regex_enabled
         self.max_buffer_size = max_buffer_size
         self._buffer = b""
         self._regex = None
         self._target_bytes = b""
 
-        if is_regex:
+        if regex_enabled:
             try:
                 # bytes로 매칭하기 위해 pattern을 bytes로 인코딩
                 self._regex = re.compile(pattern.encode('utf-8'))
             except re.error:
                 # 유효하지 않은 정규식인 경우 리터럴 매칭으로 fallback
-                self.is_regex = False
+                self.regex_enabled = False
                 self._target_bytes = pattern.encode('utf-8')
         else:
             self._target_bytes = pattern.encode('utf-8')
@@ -282,7 +272,7 @@ class ExpectMatcher:
         if len(self._buffer) > self.max_buffer_size:
             self._buffer = self._buffer[-self.max_buffer_size:]
 
-        if self.is_regex and self._regex:
+        if self.regex_enabled and self._regex:
             # search는 부분 매칭도 허용
             if self._regex.search(self._buffer):
                 return True

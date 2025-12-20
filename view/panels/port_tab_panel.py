@@ -1,10 +1,30 @@
+"""
+포트 탭 패널 모듈
+
+여러 개의 PortPanel을 탭 형태로 관리하는 컨테이너입니다.
+
+## WHY
+* 멀티 포트 환경에서 효율적인 공간 활용
+* 탭 추가/삭제 및 동적 관리 기능 캡슐화
+* '플러스(+)' 탭을 통한 직관적인 추가 UX 제공
+
+## WHAT
+* QTabWidget 상속 및 커스텀 동작 구현
+* 탭 추가, 닫기, 이름 변경 기능
+* 특정 포트 탭으로의 데이터 라우팅 지원
+
+## HOW
+* EventFilter를 통한 탭바 더블클릭 감지
+* 플러스 탭 로직(항상 마지막에 위치, 클릭 시 새 탭 생성) 구현
+"""
 from PyQt5.QtWidgets import QTabWidget, QWidget, QTabBar, QInputDialog
 from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIcon
 from typing import Optional
-from view.managers.lang_manager import lang_manager
-from view.managers.theme_manager import ThemeManager
+from view.managers.language_manager import language_manager
+from view.managers.theme_manager import theme_manager
 from view.panels.port_panel import PortPanel
+from common.dtos import LogDataBatch
 
 class PortTabPanel(QTabWidget):
     """
@@ -13,14 +33,20 @@ class PortTabPanel(QTabWidget):
     """
 
     # 시그널 정의
-    tab_added = pyqtSignal(object)  # 새 탭이 추가되었을 때 (패널 전달)
+    port_tab_added = pyqtSignal(object)  # 새 탭이 추가되었을 때 (패널 전달)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
+        """
+        PortTabPanel을 초기화합니다.
+
+        Args:
+            parent (Optional[QWidget]): 부모 위젯
+        """
         super().__init__(parent)
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self.close_port_tab)
         self.currentChanged.connect(self.on_tab_changed)
-        self.setToolTip(lang_manager.get_text("left_tooltip_port_tab"))
+        self.setToolTip(language_manager.get_text("left_tooltip_port_tab"))
 
         # 탭바에서 더블클릭 이벤트 처리 위해 이벤트 필터 설치
         self.tabBar().installEventFilter(self)
@@ -29,13 +55,22 @@ class PortTabPanel(QTabWidget):
         self.create_add_tab_btn()
 
         # 언어 변경 연결
-        lang_manager.language_changed.connect(self.retranslate_ui)
+        language_manager.language_changed.connect(self.retranslate_ui)
 
     def retranslate_ui(self) -> None:
-        self.setToolTip(lang_manager.get_text("left_tooltip_port_tab"))
+        """
+        UI를 언어에 맞게 재번역합니다.
+        """
+        self.setToolTip(language_manager.get_text("left_tooltip_port_tab"))
 
     def eventFilter(self, obj, event):
-        """탭바 더블클릭 이벤트를 감지합니다."""
+        """
+        탭바 더블클릭 이벤트를 감지합니다.
+
+        Args:
+            obj: 이벤트 발생 객체
+            event: 이벤트 객체
+        """
         if obj == self.tabBar() and event.type() == event.MouseButtonDblClick:
             # 더블클릭된 탭 인덱스 찾기
             index = self.tabBar().tabAt(event.pos())
@@ -45,7 +80,12 @@ class PortTabPanel(QTabWidget):
         return super().eventFilter(obj, event)
 
     def edit_tab_name(self, index: int) -> None:
-        """탭 이름을 수정합니다."""
+        """
+        탭 이름을 수정합니다.
+
+        Args:
+            index (int): 수정할 탭의 인덱스
+        """
 
         widget = self.widget(index)
         if not isinstance(widget, PortPanel):
@@ -63,7 +103,14 @@ class PortTabPanel(QTabWidget):
             widget.set_custom_name(new_name)
 
     def create_add_tab_btn(self) -> None:
-        """탭 추가를 위한 '+' 탭을 생성합니다."""
+        """
+        탭 추가를 위한 '+' 탭을 생성합니다.
+
+        Logic:
+            - 빈 위젯 추가
+            - 플러스 탭 아이콘 업데이트
+            - 마지막 탭(+)은 닫기 버튼 제거
+        """
         # 빈 위젯 추가
         self.addTab(QWidget(), "")
 
@@ -75,13 +122,19 @@ class PortTabPanel(QTabWidget):
         self.tabBar().setTabButton(index, QTabBar.LeftSide, None)
 
     def update_plus_tab_icon(self) -> None:
-        """플러스 탭의 아이콘을 테마에 맞춰 업데이트합니다."""
+        """
+        플러스 탭의 아이콘을 테마에 맞춰 업데이트합니다.
+
+        Logic:
+            - 마지막 탭이 플러스 탭인지 확인
+            - 테마 관리자에서 아이콘 가져오기
+            - 아이콘 설정
+        """
         count = self.count()
         if count == 0:
             return
 
         index = count - 1
-        theme_manager = ThemeManager()
         icon = theme_manager.get_icon("add")
 
         if icon.isNull():
@@ -92,7 +145,12 @@ class PortTabPanel(QTabWidget):
              self.setTabText(index, "")
 
     def close_port_tab(self, index: int) -> None:
-        """탭 닫기 요청 처리"""
+        """
+        탭 닫기 요청 처리
+
+        Args:
+            index (int): 닫을 탭의 인덱스
+        """
         # 마지막 탭(+)은 닫을 수 없음
         if index == self.count() - 1:
             return
@@ -118,7 +176,12 @@ class PortTabPanel(QTabWidget):
             self.blockSignals(False)
 
     def on_tab_changed(self, index: int) -> None:
-        """탭 변경 시 처리"""
+        """
+        탭 변경 시 처리
+
+        Args:
+            index (int): 변경된 탭의 인덱스
+        """
         if index == -1: return
 
         # 마지막 탭(+)을 클릭하면 새 탭 추가
@@ -126,7 +189,12 @@ class PortTabPanel(QTabWidget):
             self.add_new_port_tab()
 
     def add_new_port_tab(self) -> "PortPanel":
-        """새로운 포트 탭을 추가하고 패널을 반환합니다."""
+        """
+        새로운 포트 탭을 추가하고 패널을 반환합니다.
+
+        Returns:
+            PortPanel: 추가된 포트 패널
+        """
         # 시그널 차단 (탭 조작 중 불필요한 이벤트 방지)
         self.blockSignals(True)
         try:
@@ -157,11 +225,42 @@ class PortTabPanel(QTabWidget):
         # 시그널 차단 해제 후 변경 알림 (필요 시)
         # self.currentChanged.emit(self.currentIndex())
 
-        self.tab_added.emit(panel)
+        self.port_tab_added.emit(panel)
         return panel
 
+    def append_rx_data(self, batch: LogDataBatch) -> None:
+        """
+        지정된 포트 이름을 가진 탭을 찾아 데이터를 추가합니다.
+
+        Logic:
+            - 모든 탭을 순회
+            - PortPanel인지 확인하고 get_port_name() 비교
+            - 일치하면 data_log_widget에 데이터 추가
+
+        Args:
+            batch (LogDataBatch): 로그 뷰어 업데이트용 데이터 배치
+        """
+        count = self.count()
+        for i in range(count):
+            # 마지막 탭(+) 제외
+            if i == count - 1:
+                continue
+
+            widget = self.widget(i)
+            if isinstance(widget, PortPanel):
+                if widget.get_port_name() == batch.port:
+                    if hasattr(widget, 'data_log_widget'):
+                        widget.data_log_widget.append_data(batch.data)
+                    return # 찾았으면 종료
+
     def _on_panel_title_changed(self, panel: "PortPanel", title: str) -> None:
-        """패널의 탭 제목이 변경되었을 때 호출됩니다."""
+        """
+        패널의 탭 제목이 변경되었을 때 호출됩니다.
+
+        Args:
+            panel (PortPanel): 변경된 패널
+            title (str): 새로운 탭 제목
+        """
         index = self.indexOf(panel)
         if index >= 0:
             self.setTabText(index, title)

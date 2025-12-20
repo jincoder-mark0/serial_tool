@@ -1,6 +1,22 @@
+"""
+정보 대화상자 모듈
+
+애플리케이션의 버전, 저작권, 설명 정보를 표시합니다.
+
+## WHY
+* 사용자에게 소프트웨어 정보를 제공하는 표준 인터페이스 필요
+
+## WHAT
+* 앱 이름, 버전, 설명, 저작권 정보 표시
+* 닫기 버튼 제공
+
+## HOW
+* QDialog 상속 및 QVBoxLayout 구성
+* LanguageManager를 통한 다국어 텍스트 적용
+"""
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
 from PyQt5.QtCore import Qt
-from view.managers.lang_manager import lang_manager
+from view.managers.language_manager import language_manager
 
 class AboutDialog(QDialog):
     """
@@ -9,7 +25,7 @@ class AboutDialog(QDialog):
 
     def __init__(self, parent=None):
         super().__init__(parent)
-        self.setWindowTitle(lang_manager.get_text("about_title"))
+        self.setWindowTitle(language_manager.get_text("about_title"))
         self.setFixedSize(400, 300)
         self.init_ui()
 
@@ -19,25 +35,25 @@ class AboutDialog(QDialog):
         layout.setSpacing(20)
 
         # 앱 이름 및 버전
-        title_label = QLabel(lang_manager.get_text("about_lbl_app_name"))
+        title_label = QLabel(language_manager.get_text("about_lbl_app_name"))
         title_label.setStyleSheet("font-size: 24px; font-weight: bold;")
         title_label.setAlignment(Qt.AlignCenter)
 
-        version_label = QLabel(lang_manager.get_text("about_lbl_version"))
+        version_label = QLabel(language_manager.get_text("about_lbl_version"))
         version_label.setStyleSheet("font-size: 14px; color: #888;")
         version_label.setAlignment(Qt.AlignCenter)
 
         # 설명
-        desc_label = QLabel(lang_manager.get_text("about_lbl_description"))
+        desc_label = QLabel(language_manager.get_text("about_lbl_description"))
         desc_label.setAlignment(Qt.AlignCenter)
 
         # 저작권
-        copyright_label = QLabel(lang_manager.get_text("about_lbl_copyright"))
+        copyright_label = QLabel(language_manager.get_text("about_lbl_copyright"))
         copyright_label.setStyleSheet("font-size: 12px; color: #666;")
         copyright_label.setAlignment(Qt.AlignCenter)
 
         # 닫기 버튼
-        close_btn = QPushButton(lang_manager.get_text("about_btn_close"))
+        close_btn = QPushButton(language_manager.get_text("about_btn_close"))
         close_btn.setFixedWidth(100)
         close_btn.clicked.connect(self.accept)
 

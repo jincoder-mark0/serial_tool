@@ -1,7 +1,7 @@
 """
 Model 계층 핵심 로직 테스트
 
-Model 계층의 주요 컴포넌트(PortController, MacroRunner, FileTransferEngine)의
+Model 계층의 주요 컴포넌트(ConnectionController, MacroRunner, FileTransferService)의
 비즈니스 로직과 상호작용을 검증합니다.
 
 ## WHY
@@ -10,14 +10,13 @@ Model 계층의 주요 컴포넌트(PortController, MacroRunner, FileTransferEng
 * 데이터 흐름 및 상태 관리 로직의 정확성 보장
 
 ## WHAT
-* PortController: Signal 발생 시 EventBus로의 자동 전파(Bridge) 검증
+* ConnectionController: Signal 발생 시 EventBus로의 자동 전파(Bridge) 검증
 * MacroRunner: QThread 기반 실행 흐름, Expect 대기 로직, 데이터 수신 연동 검증
-* FileTransferEngine: Backpressure(역압) 제어 로직 검증
+* FileTransferService: Backpressure(역압) 제어 로직 검증
 
 ## HOW
 * pytest-qt의 `qtbot`을 사용하여 비동기 시그널 대기 및 검증
 * `Mock` 객체를 사용하여 의존성 분리 및 격리 테스트 수행
-* 명시적인 대기 시간(`qtbot.wait`)을 통해 스레드 초기화 시간 확보
 
 pytest tests/test_model.py -v
 """
@@ -26,58 +25,59 @@ import os
 import pytest
 from PyQt5.QtCore import QObject
 
-# 프로젝트 루트 경로 설정
 sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
 
-from model.port_controller import PortController
+from model.connection_controller import ConnectionController
 from model.macro_runner import MacroRunner
-from model.macro_entry import MacroEntry
-from model.file_transfer import FileTransferEngine
+from common.dtos import MacroEntry, PortDataEvent
+from model.file_transfer_service import FileTransferService
 from core.event_bus import event_bus
+from common.constants import EventTopics
 
-# --- PortController Tests ---
+# --- ConnectionController Tests ---
 
-def test_port_controller_eventbus_bridge(qtbot):
+def test_connection_controller_eventbus_bridge(qtbot):
     """
-    PortController의 시그널이 EventBus로 잘 전파되는지 테스트
+    ConnectionController의 시그널이 EventBus로 잘 전파되는지 테스트
 
     Logic:
-        1. PortController 생성 및 EventBus 구독 설정
+        1. ConnectionController 생성 및 EventBus 구독 설정
         2. `port_opened` 시그널 발생 시 EventBus 수신 확인
-        3. `data_received` 시그널 발생 시 데이터 내용 및 포트 정보 확인
+        3. `data_received` 시그널 발생 시 EventBus 수신 확인 (DTO 확인)
     """
-    controller = PortController()
+    controller = ConnectionController()
     received_events = []
 
     # EventBus 구독을 위한 헬퍼
     def on_event(data):
         received_events.append(data)
 
-    event_bus.subscribe("port.opened", on_event)
-    event_bus.subscribe("port.data_received", on_event)
+    event_bus.subscribe(EventTopics.PORT_OPENED, on_event)
+    event_bus.subscribe(EventTopics.PORT_DATA_RECEIVED, on_event)
 
     # 1. Port Open Signal Emit 검증
     with qtbot.waitSignal(controller.port_opened, timeout=1000):
-        controller.port_opened.emit("COM1")
+        controller.connection_opened.emit("COM1")
 
-    # 이벤트 처리 대기 (비동기 큐 처리)
+    # 이벤트 처리 대기
     qtbot.wait(50)
     assert "COM1" in received_events
 
     # 2. Data Received Signal Emit 검증
     test_data = b"Hello"
+    # Controller의 시그널은 (port_name, data) 서명임
     with qtbot.waitSignal(controller.data_received, timeout=1000):
         controller.data_received.emit("COM1", test_data)
 
     qtbot.wait(50)
 
-    # 수신된 이벤트 중 딕셔너리 데이터 찾기
+    # 수신된 이벤트 중 DTO 데이터 찾기
     data_event = next(
-        (e for e in received_events if isinstance(e, dict) and e.get('data') == test_data),
+        (e for e in received_events if isinstance(e, PortDataEvent) and e.data == test_data),
         None
     )
     assert data_event is not None
-    assert data_event['port'] == "COM1"
+    assert data_event.port == "COM1"
 
 # --- MacroRunner Tests ---
 
@@ -100,8 +100,7 @@ def test_macro_runner_basic_flow(qtbot):
     ]
     runner.load_macro(entries)
 
-    # [중요] 시그널 대기를 먼저 걸고 start() 호출
-    # 타임아웃을 5초로 넉넉하게 설정하여 스레드 초기화 지연 대응
+    # 시그널 대기를 먼저 걸고 start() 호출
     with qtbot.waitSignal(runner.macro_finished, timeout=5000) as blocker:
         runner.start()
 
@@ -122,35 +121,37 @@ def test_macro_runner_expect(qtbot):
     """
     runner = MacroRunner()
 
-    # Expect가 있는 엔트리 설정 (Timeout 5초로 설정하여 테스트 중 타임아웃 방지)
+    # Expect가 있는 엔트리 설정
     entries = [
         MacroEntry(command="AT", expect="OK", timeout_ms=5000, delay_ms=10)
     ]
     runner.load_macro(entries)
 
-    # 1. 실행 시작 (Non-blocking)
+    # 1. 실행 시작
     runner.start()
 
-    # 2. 스레드가 시작되고 _wait_for_expect 상태로 진입할 시간을 충분히 줌 (200ms)
+    # 2. 스레드 시작 대기
     qtbot.wait(200)
 
-    # 3. 데이터 발행 및 시그널 대기 (가장 중요한 부분)
-    # waitSignal 블록 안에서 이벤트를 발생시켜야 신호를 확실히 잡음
+    # 3. 데이터 발행 (EventBus를 통해 PortDataEvent DTO 전달)
     print("Publishing 'OK' data...")
+    dto = PortDataEvent(port="COM1", data=b"OK\r\n")
+
     with qtbot.waitSignal(runner.step_completed, timeout=5000) as blocker:
-        event_bus.publish("port.data_received", {'port': 'COM1', 'data': b'OK\r\n'})
+        event_bus.publish(EventTopics.PORT_DATA_RECEIVED, dto)
 
     assert blocker.signal_triggered
-    # 시그널 인자 확인: (index, success) -> True여야 함
-    assert blocker.args[1] is True
+    # 4. 시그널 인자 확인: MacroStepEvent 객체
+    step_event = blocker.args[0]
+    assert step_event.success is True
 
     # 5. 종료 및 정리
     runner.stop()
     runner.wait()
 
-# --- FileTransferEngine Tests ---
+# --- FileTransferService Tests ---
 
-class MockPortController(QObject):
+class MockConnectionController(QObject):
     """FileTransfer 테스트용 Mock Controller"""
     def __init__(self):
         super().__init__()
@@ -158,16 +159,15 @@ class MockPortController(QObject):
         self.sent_data = []
         self.is_open = True
 
+    def register_file_transfer(self, port, service): pass
+    def unregister_file_transfer(self, port): pass
+
     def get_write_queue_size(self, port_name):
         return self.queue_size
 
-    def send_data_to_port(self, port_name, data):
+    def send_data_to_connection(self, port_name, data):
         self.sent_data.append(data)
         return True
-
-    @staticmethod
-    def get_port_config(self, port_name):
-        return {}
 
 def test_file_transfer_backpressure(tmp_path):
     """
@@ -176,25 +176,24 @@ def test_file_transfer_backpressure(tmp_path):
     Logic:
         1. 임시 파일 생성
         2. Mock Controller의 큐 사이즈를 임계값 이상으로 설정
-        3. FileTransferEngine 초기화 시 Backpressure 설정값 확인
+        3. FileTransferService 초기화 시 Backpressure 설정값 확인
     """
-    # 1. 임시 파일 생성 (10KB)
+    # 1. 임시 파일 생성
     test_file = tmp_path / "large_test.bin"
     with open(test_file, "wb") as f:
-        f.write(b"A" * 10240)
+        f.write(b"A" * 1024)
 
-    mock_ctrl = MockPortController()
-    engine = FileTransferEngine(mock_ctrl, "COM1", str(test_file), baudrate=9600)
+    mock_control = MockConnectionController()
+    # DTO Mocking
+    from common.dtos import PortConfig
+    config = PortConfig(port="COM1", baudrate=9600)
 
-    # 청크 사이즈 강제 축소 (테스트 용이성)
-    engine.chunk_size = 100
+    file_transfer_service = FileTransferService(mock_control, str(test_file), config)
 
-    # 2. Backpressure 시뮬레이션
-    mock_ctrl.queue_size = 100 # Threshold is usually 50
-
-    # 엔진 속성 확인 (로직 존재 여부 검증)
-    assert engine.queue_threshold == 50
-    assert engine.flow_control == "None"
+    # 청크 사이즈 확인
+    assert file_transfer_service.chunk_size > 0
+    # Backpressure 임계값 확인
+    assert file_transfer_service.queue_threshold == 50
 
 if __name__ == "__main__":
     pytest.main([__file__])

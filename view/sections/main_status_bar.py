@@ -1,6 +1,24 @@
+"""
+메인 상태바 모듈
+
+애플리케이션 하단에 상태 정보 및 통계를 표시합니다.
+
+## WHY
+* 시스템 상태, 통신 속도, 에러 등을 실시간으로 피드백
+* 사용자에게 현재 상황을 직관적으로 전달
+
+## WHAT
+* 포트 상태, RX/TX 속도, 버퍼 점유율, 시간 표시
+* 영구 위젯(Permanent Widget) 관리
+
+## HOW
+* QStatusBar 상속
+* Presenter로부터 업데이트 요청을 받아 라벨 텍스트 갱신
+"""
 from PyQt5.QtWidgets import QStatusBar, QLabel, QProgressBar
 from PyQt5.QtCore import Qt
-from view.managers.lang_manager import lang_manager
+from view.managers.language_manager import language_manager
+from common.dtos import PortStatistics
 
 class MainStatusBar(QStatusBar):
     """
@@ -12,7 +30,7 @@ class MainStatusBar(QStatusBar):
 
     def init_ui(self) -> None:
         """상태바 초기화"""
-        self.showMessage(lang_manager.get_text("main_status_msg_ready"))
+        self.showMessage(language_manager.get_text("main_status_msg_ready"))
         self.init_widget()
 
     def init_widget(self):
@@ -77,9 +95,25 @@ class MainStatusBar(QStatusBar):
         """
         self.showMessage(message, timeout)
 
+    def update_statistics(self, stats: PortStatistics) -> None:
+        """
+        통계 정보 업데이트
+        """
+        # RX Speed
+        rx_speed = stats.rx_bytes / 1024
+        self.rx_count_lbl.setText(f"RX: {rx_speed:.1f} KB/s")
+
+        # TX Speed
+        tx_speed = stats.tx_bytes / 1024
+        self.tx_count_lbl.setText(f"TX: {tx_speed:.1f} KB/s")
+
+        # BPS (Optional, if included in DTO)
+        if hasattr(stats, 'bps'):
+             self.bps_lbl.setText(f"BPS: {stats.bps}")
+
     def retranslate_ui(self) -> None:
         """언어 변경 시 상태바 텍스트를 업데이트합니다."""
         # (임시 메시지가 떠있는 경우는 그대로 둠)
         current_msg = self.currentMessage()
-        if not current_msg or lang_manager.text_matches_key(current_msg, "main_status_msg_ready"):
-            self.showMessage(lang_manager.get_text("main_status_msg_ready"))
+        if not current_msg or language_manager.text_matches_key(current_msg, "main_status_msg_ready"):
+            self.showMessage(language_manager.get_text("main_status_msg_ready"))

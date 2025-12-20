@@ -1,0 +1,198 @@
+"""
+애플리케이션 전역 상수 정의 모듈
+
+애플리케이션 전체에서 사용되는 상수와 기본 설정값을 정의합니다.
+
+## WHY
+* 하드코딩된 값을 한곳에서 관리하여 유지보수성 향상
+* 설정값 변경 시 단일 지점 수정으로 전체 반영
+* 타입 힌트로 타입 안전성 보장
+
+## WHAT
+* 시리얼 통신 파라미터 (Baudrate, Timeout, Chunk Size)
+* 버퍼 및 성능 설정 (RingBuffer, Queue, Batch)
+* UI 제한값 및 기본값 (Log Lines, Scan Interval)
+* 타이밍 상수 (Worker Sleep, UI Refresh)
+* 로그 색상 정의 및 ConfigKeys, EventTopics
+
+## HOW
+* 대문자 Snake Case로 상수 명명
+* 타입 힌트로 타입 명시
+* 논리적 그룹으로 섹션 구분
+"""
+from typing import List
+
+# ==========================================
+# Event Bus Topics (이벤트 토픽 상수)
+# ==========================================
+class EventTopics:
+    """EventBus에서 사용하는 토픽 상수 클래스입니다."""
+
+    # Port Events
+    PORT_OPENED = "port.opened"
+    PORT_CLOSED = "port.closed"
+    PORT_ERROR = "port.error"
+    PORT_DATA_RECEIVED = "port.data_received"
+    PORT_DATA_SENT = "port.data_sent"
+    PORT_PACKET_RECEIVED = "port.packet_received"
+
+    # Macro Events
+    MACRO_STARTED = "macro.started"
+    MACRO_FINISHED = "macro.finished"
+    MACRO_ERROR = "macro.error"
+
+    # File Transfer Events
+    FILE_PROGRESS = "file.progress"
+    FILE_COMPLETED = "file.completed"
+    FILE_ERROR = "file.error"
+
+    # System Events
+    SETTINGS_CHANGED = "system.settings_changed"
+
+
+# ==========================================
+# Configuration Keys (설정 키 상수)
+# ==========================================
+class ConfigKeys:
+    """
+    settings.json의 키 경로를 관리하는 상수 클래스입니다.
+    CORE_SETTINGS_SCHEMA 구조와 일치해야 합니다.
+    """
+
+    THEME = "settings.theme"
+    LANGUAGE = "settings.language"
+
+    # Fonts (ThemeManager uses these)
+    PROP_FONT_FAMILY = "settings.proportional_font_family"
+    PROP_FONT_SIZE = "settings.proportional_font_size"
+    FIXED_FONT_FAMILY = "settings.fixed_font_family"
+    FIXED_FONT_SIZE = "settings.fixed_font_size"
+
+    # Port Defaults
+    PORT_BAUDRATE = "settings.port_baudrate"
+    PORT_NEWLINE = "settings.port_newline"
+    PORT_LOCAL_ECHO = "settings.port_local_echo"
+    PORT_SCAN_INTERVAL = "settings.port_scan_interval_ms"
+
+    # UI (화면 표시 관련)
+    RX_MAX_LINES = "settings.max_log_lines"
+
+    # Command (Command 형식)
+    COMMAND_PREFIX = "settings.command_prefix"
+    COMMAND_SUFFIX = "settings.command_suffix"
+
+    # UI State (윈도우 상태 저장)
+    WINDOW_WIDTH = "ui.window_width"
+    WINDOW_HEIGHT = "ui.window_height"
+    WINDOW_X = "ui.window_x"
+    WINDOW_Y = "ui.window_y"
+    SPLITTER_STATE = "ui.splitter_state"
+    RIGHT_PANEL_VISIBLE = "ui.right_section_visible"
+    SAVED_RIGHT_WIDTH = "ui.saved_right_section_width"
+
+    # Packet Inspector
+    PACKET_PARSER_TYPE = "packet.parser_type"
+    PACKET_DELIMITERS = "packet.delimiters"
+    PACKET_LENGTH = "packet.packet_length"
+    AT_COLOR_OK = "packet.at_color_ok"
+    AT_COLOR_ERROR = "packet.at_color_error"
+    AT_COLOR_URC = "packet.at_color_urc"
+    AT_COLOR_PROMPT = "packet.at_color_prompt"
+
+    # Inspector Options
+    PACKET_BUFFER_SIZE = "packet.buffer_size"
+    PACKET_REALTIME = "packet.realtime"
+    PACKET_AUTOSCROLL = "packet.autoscroll"
+
+    # Logging
+    LOG_PATH = "logging.path"
+
+    # Persistence (State Saving)
+    MANUAL_CONTROL_STATE = "manual_control"
+    PORTS_TABS_STATE = "ports.tabs"
+    MACRO_COMMANDS = "macro_list.commands"
+    MACRO_CONTROL_STATE = "macro_list.control_state"
+
+
+# ==========================================
+# Serial Communication Constants
+# ==========================================
+
+# 지원하는 Baudrate 목록
+VALID_BAUDRATES: List[int] = [
+    50, 75, 110, 134, 150, 200, 300, 600, 1200, 1800, 2400, 4800,
+    9600, 14400, 19200, 38400, 57600, 115200, 128000, 230400, 256000,
+    460800, 921600, 1000000, 1500000, 2000000, 3000000, 4000000
+]
+
+# 기본 통신 설정
+DEFAULT_BAUDRATE: int = 115200
+DEFAULT_PORT_TIMEOUT: float = 0.0  # Non-blocking I/O
+DEFAULT_READ_CHUNK_SIZE: int = 4096  # 한 번에 읽을 바이트 수
+
+# ==========================================
+# Buffer & Performance Constants
+# ==========================================
+
+# RingBuffer 기본 크기 (512KB)
+RING_BUFFER_SIZE: int = 512 * 1024
+
+# TX Queue 최대 청크 개수
+TX_QUEUE_SIZE: int = 128
+
+# UI 업데이트 Batch 설정 (SerialWorker → UI)
+BATCH_SIZE_THRESHOLD: int = 8192  # 이 크기가 넘으면 즉시 전송 (bytes)
+BATCH_TIMEOUT_MS: int = 50        # 이 시간이 지나면 크기가 작아도 전송 (ms)
+
+# ==========================================
+# Performance & Timings
+# ==========================================
+WORKER_IDLE_WAIT_MS: int = 1      # 데이터 없을 때 대기 시간 (CPU 방어)
+WORKER_BUSY_WAIT_US: int = 100    # 데이터 처리 중 짧은 대기 시간
+UI_REFRESH_INTERVAL_MS: int = 30  # 로그 뷰 갱신 주기 (약 33 FPS)
+
+# ==========================================
+# UI Limits & Defaults
+# ==========================================
+DEFAULT_LOG_MAX_LINES: int = 2000
+TRIM_CHUNK_RATIO: float = 0.2  # 20%
+MAX_PACKET_SIZE: int = 4096
+MIN_SCAN_INTERVAL_MS: int = 1000
+MAX_SCAN_INTERVAL_MS: int = 60000
+DEFAULT_MACRO_DELAY_MS: int = 1000
+MAX_COMMAND_HISTORY_SIZE: int = 50    # 수동 명령 History 최대 크기
+
+# ==========================================
+# Colors (For Text Logs)
+# ==========================================
+LOG_COLOR_DARK_TIMESTAMP: str = "#9E9E9E"
+LOG_COLOR_DARK_INFO: str = "2196F3"
+LOG_COLOR_DARK_ERROR: str = "#F44336"
+LOG_COLOR_DARK_WARN: str = "#D4A017"
+LOG_COLOR_DARK_PROMPT: str = '#00BCD4'
+LOG_COLOR_DARK_SUCCESS: str = "#4CAF50"
+
+LOG_COLOR_LIGHT_TIMESTAMP: str = "#808080"
+LOG_COLOR_LIGHT_INFO: str = "0000FF"
+LOG_COLOR_LIGHT_ERROR: str = "#CC0000"
+LOG_COLOR_LIGHT_WARN: str = "#D4A017"
+LOG_COLOR_LIGHT_PROMPT: str = '#008B8B'
+LOG_COLOR_LIGHT_SUCCESS: str = "#008000"
+
+# ==========================================
+# System & File Constants
+# ==========================================
+PLATFORM_WINDOWS = "Windows"
+PLATFORM_LINUX = "Linux"
+PLATFORM_MACOS = "Darwin"
+
+FILE_FILTER_JSON = "JSON Files (*.json);;All Files (*)"
+FILE_FILTER_LOG = "Binary Files (*.bin);;All Files (*)"
+FILE_FILTER_ALL = "All Files (*)"
+
+# Default Fonts
+FONT_FAMILY_SEGOE = "Segoe UI"
+FONT_FAMILY_CONSOLAS = "Consolas"
+FONT_FAMILY_UBUNTU = "Ubuntu"
+FONT_FAMILY_MONOSPACE = "Monospace"
+FONT_FAMILY_MENLO = "Menlo"

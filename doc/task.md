@@ -34,7 +34,7 @@
   - [x] `ReceivedArea` (로그 뷰)
   - [x] `ManualControlWidget` (수동 제어)
   - [x] `MacroListWidget` (커맨드 리스트)
-  - [x] `MacroCtrlWidget` (커맨드 제어)
+  - [x] `MacroControlWidget` (커맨드 제어)
   - [x] `PacketInspectorWidget` (패킷 인스펙터)
   - [x] `FileProgressWidget` (파일 전송 진행)
   - [x] `QSmartListView` 구현 (`view/custom_widgets/smart_list_view.py`)
@@ -63,7 +63,7 @@
   - [x] `ManualControlWidget`에 적용
   - [x] `ReceivedArea`에 적용
   - [x] `MacroListWidget`에 적용
-  - [x] `MacroCtrlWidget`에 적용
+  - [x] `MacroControlWidget`에 적용
   - [x] `FileProgressWidget`에 적용
   - [x] `PacketInspectorWidget`에 적용
   - [x] `MainWindow`에 적용 (메뉴, 독 타이틀)
@@ -97,7 +97,7 @@
 - [x] **송신(TX) 기능 보완**
   - [x] Local Echo 구현 (송신 데이터를 RX 창에 표시)
   - [x] Command Prefix/Suffix 설정 및 적용
-  - [x] ManualCtrl UI 정리 (중복 버튼 제거)
+  - [x] ManualControl UI 정리 (중복 버튼 제거)
 - [x] **수신(RX) 기능 보완**
   - [x] Newline 처리 옵션 (Raw, LF, CR, CRLF) 콤보박스 추가 및 로직 구현
   - [x] 로그 저장 기능 개선 (토글 방식, 파일명 포맷팅)
@@ -112,7 +112,7 @@
 - [x] **사용성 개선**
   - [x] 전역 단축키 시스템 구현 (F2: Connect, F3: Disconnect, F5: Clear)
   - [x] MacroList 컨텍스트 메뉴 추가
-  - [x] ManualCtrl 히스토리 기능 추가
+  - [x] ManualControl 히스토리 기능 추가
 
 ## Phase 3: Core 유틸리티 (보완 필요)
 

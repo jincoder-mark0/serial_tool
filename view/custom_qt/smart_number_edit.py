@@ -4,32 +4,25 @@
 커서 위치 기반 숫자 증감 및 Alt 코드 입력을 지원하는 텍스트 에디터입니다.
 
 ## WHY
-* 매크로 편집 시 숫자 값 빠른 조정 필요
-* Alt 코드로 제어 문자 입력 지원
-* 제어 문자 시각화로 디버깅 편의성 향상
-* 자릿수 단위 증감으로 정밀한 조정
+* 매크로 편집 시 값을 빠르고 정밀하게 조정할 필요성
+* 제어 문자(Non-printable char) 입력 및 시각화 지원
 
 ## WHAT
 * QPlainTextEdit 기반 커스텀 위젯
-* Ctrl+Up/Down으로 숫자 증감
-* 커서 위치 자릿수 단위 증감
-* Alt+Numpad로 제어 문자 입력
-* 제어 문자 배경색 하이라이트
-* 10진수 패턴 매칭
+* 방향키(Up/Down)를 이용한 커서 위치별 숫자 증감
+* Alt + Numpad 조합을 통한 아스키/제어 문자 입력
+* 제어 문자 배경색 하이라이팅
 
 ## HOW
-* 정규식으로 숫자 패턴 탐지
-* EventFilter로 Alt 키 입력 처리
-* QTextCursor로 커서 위치 기반 편집
-* ExtraSelection으로 제어 문자 하이라이트
-* 자릿수 계산으로 증감 단위 결정
+* EventFilter를 통한 키 입력 가로채기
+* 정규식을 이용한 숫자 및 제어 문자 탐지
+* ExtraSelection을 활용한 텍스트 하이라이팅
 """
-import sys
 import re
-from PyQt5.QtWidgets import QApplication, QPlainTextEdit, QWidget, QVBoxLayout, QTextEdit
+from PyQt5.QtWidgets import QPlainTextEdit, QTextEdit
 from PyQt5.QtCore import Qt, QEvent
 from PyQt5.QtGui import QKeyEvent, QTextCursor, QTextCharFormat, QColor
-
+from core.logger import logger
 
 class SmartNumberEdit(QPlainTextEdit):
     """
@@ -73,7 +66,6 @@ class SmartNumberEdit(QPlainTextEdit):
                 if key == Qt.Key_Alt:
                     self._alt_pressed = True
                     self._alt_input_buffer = ""
-                    print("[Debug] Alt pressed")
                     return False
 
                 # Alt + Numpad 숫자 입력
@@ -81,12 +73,10 @@ class SmartNumberEdit(QPlainTextEdit):
                 if self._alt_pressed and is_numpad_digit:
                     number = key - Qt.Key_0
                     self._alt_input_buffer += str(number)
-                    print(f"[Debug] Alt+Numpad pressed: {number}, buffer: '{self._alt_input_buffer}'")
                     return True  # 이벤트 소비 → 중복 방지
 
                 # Alt 상태에서 다른 키 입력 시 버퍼 초기화
                 if self._alt_pressed and key != Qt.Key_Alt:
-                    print(f"[Debug] Alt pressed but non-Numpad key: {key}, buffer cleared")
                     self._alt_input_buffer = ""
                     return True  # 이벤트 소비
 
@@ -94,7 +84,6 @@ class SmartNumberEdit(QPlainTextEdit):
                 key_event = event
                 if key_event.key() == Qt.Key_Alt and self._alt_pressed:
                     self._alt_pressed = False
-                    print(f"[Debug] Alt released, buffer: '{self._alt_input_buffer}'")
                     if self._alt_input_buffer:
                         try:
                             code = int(self._alt_input_buffer)
@@ -103,9 +92,8 @@ class SmartNumberEdit(QPlainTextEdit):
                                 self._alt_handling_in_progress = True
                                 self._insert_char(control_char)
                                 self._alt_handling_in_progress = False
-                                print(f"[Alt Code Inserted] Code: {code}, Char: '{control_char}'")
-                        except ValueError as e:
-                            print(f"[Error] Invalid Alt buffer: {self._alt_input_buffer}, {e}")
+                        except ValueError:
+                            pass
                         finally:
                             self._alt_input_buffer = ""
                     return True  # 이벤트 소비
@@ -123,22 +111,16 @@ class SmartNumberEdit(QPlainTextEdit):
         """
         if self._alt_pressed or self._alt_handling_in_progress:
             # Alt 입력 중이면 일반 KeyPress 무시
-            print(f"[Debug] KeyPress ignored due to Alt: {event.key()}, buffer: '{self._alt_input_buffer}'")
             return
-
-        # 디버깅 로그
-        print(f"[KeyPress Received] Key: {event.key()} ({hex(event.key())}), Text: '{event.text()}', Modifiers: {event.modifiers()}")
 
         mods = event.modifiers()
         key = event.key()
 
         if mods == Qt.ControlModifier:
             if key == Qt.Key_Up:
-                print("[Debug] Ctrl+Up detected, increment number")
                 self.increment_number(1)
                 return
             elif key == Qt.Key_Down:
-                print("[Debug] Ctrl+Down detected, decrement number")
                 self.increment_number(-1)
                 return
 
@@ -207,8 +189,6 @@ class SmartNumberEdit(QPlainTextEdit):
         line_start = cursor.block().position()
         rel_pos = pos - line_start
 
-        print(f"[Debug] increment_number called, cursor pos: {pos}, line_text: '{line_text}'")
-
         matches = list(self.NUMBER_PATTERN.finditer(line_text))
         target = None
         for m in matches:
@@ -217,26 +197,24 @@ class SmartNumberEdit(QPlainTextEdit):
                 target = m
                 break
         if not target:
-            print("[Debug] No number found at cursor")
             return
 
         original_str = target.group()
-        start_idx, end_idx = target.span()
+        start_index, end_index = target.span()
         force_plus = original_str.startswith("+")
         digits_str = original_str[1:] if original_str.startswith(('+', '-')) else original_str
 
         if original_str.startswith(('+', '-')):
-            cursor_idx_in_digits = rel_pos - start_idx - 1
+            cursor_index_in_digits = rel_pos - start_index - 1
         else:
-            cursor_idx_in_digits = rel_pos - start_idx
+            cursor_index_in_digits = rel_pos - start_index
 
-        cursor_idx_left_digit = max(min(cursor_idx_in_digits - 1, len(digits_str) - 1), 0)
-        factor = 10 ** (len(digits_str) - 1 - cursor_idx_left_digit)
+        cursor_index_left_digit = max(min(cursor_index_in_digits - 1, len(digits_str) - 1), 0)
+        factor = 10 ** (len(digits_str) - 1 - cursor_index_left_digit)
 
         try:
             val = int(original_str)
         except ValueError:
-            print(f"[Error] Cannot convert '{original_str}' to int")
             return
 
         val += step * factor
@@ -244,10 +222,8 @@ class SmartNumberEdit(QPlainTextEdit):
         if force_plus and val >= 0:
             new_str = f"+{val}"
 
-        print(f"[Debug] Number change: {original_str} -> {new_str}, factor: {factor}, step: {step}")
-
-        cursor.setPosition(start_idx + line_start)
-        cursor.setPosition(end_idx + line_start, cursor.KeepAnchor)
+        cursor.setPosition(start_index + line_start)
+        cursor.setPosition(end_index + line_start, cursor.KeepAnchor)
         cursor.insertText(new_str)
 
         len_diff = len(new_str) - len(original_str)
@@ -256,33 +232,3 @@ class SmartNumberEdit(QPlainTextEdit):
         cursor.setPosition(new_cursor_pos)
         self.setTextCursor(cursor)
         self.ensureCursorVisible()
-
-
-# ---------------- MainWindow ----------------
-class MainWindow(QWidget):
-    """테스트용 메인 윈도우"""
-    def __init__(self):
-        super().__init__()
-        self.setWindowTitle("자리수 기반 숫자 증감 에디터 (Alt 코드 디버깅)")
-        self.setGeometry(100, 100, 700, 450)
-        layout = QVBoxLayout()
-        self.editor = SmartNumberEdit()
-
-        self.editor.setPlainText(
-            "Alt 코드 테스트:\n"
-            "Alt + 0,1 입력: \n"
-            "Alt + 0,4,9 입력: \n"
-            "Ctrl+↑/↓로 숫자 증감 테스트: +12345\n"
-            "제어 문자 테스트: \x01안녕18|3하세요\n"
-        )
-
-        layout.addWidget(self.editor)
-        self.setLayout(layout)
-
-
-# ---------------- 실행 ----------------
-if __name__ == "__main__":
-    app = QApplication(sys.argv)
-    w = MainWindow()
-    w.show()
-    sys.exit(app.exec_())

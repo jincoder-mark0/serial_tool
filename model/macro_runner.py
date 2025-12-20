@@ -1,31 +1,31 @@
 """
 매크로 실행 엔진 모듈
 
-사용자가 정의한 명령어 시퀀스를 별도 스레드에서 순차적으로 실행하는 엔진입니다.
+사용자가 정의한 Command 시퀀스를 별도 스레드에서 순차적으로 실행하는 엔진입니다.
 
 ## WHY
-* UI 스레드(Main Thread)의 블로킹 없이 장시간 매크로를 실행해야 함
-* 윈도우 환경에서 `time.sleep`의 오차를 최소화하고 1ms 단위의 정밀 제어 필요
-* 실행 중 즉각적인 일시정지(Pause) 및 중단(Stop) 지원 필요
+* UI 스레드 블로킹 없는 장시간 매크로 실행
+* 1ms 단위의 정밀한 타이밍 제어 필요
+* 실행 중 즉각적인 일시정지(Pause) 및 중단(Stop) 지원
 
 ## WHAT
-* `QThread` 기반의 독립 실행 환경 제공
-* 매크로 항목(`MacroEntry`) 리스트 순차 실행 및 루프 제어
-* `Expect` 기능(특정 응답 대기) 및 타임아웃 처리
-* 실행 상태(시작, 진행, 완료, 에러) 이벤트 발행
+* QThread 기반의 독립 실행 환경 제공
+* 매크로 항목(MacroEntry) 순차 실행 및 루프 제어
+* Expect 기능(특정 응답 대기) 및 타임아웃 처리
+* Broadcast 실행 모드 지원
 
 ## HOW
-* `QThread`를 상속받아 `run()` 메서드 내에서 실행 루프 구현
-* `QWaitCondition`과 `QMutex`를 사용하여 정밀한 대기 및 스레드 동기화 구현
-* `EventBus`를 통해 수신 데이터를 구독하여 `Expect` 패턴 매칭 수행
+* QThread, QWaitCondition, QMutex를 사용한 정밀 제어
+* EventBus를 통해 수신 데이터를 구독하여 Expect 패턴 매칭
 """
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QWaitCondition
 from typing import List, Optional
 import time
-from model.macro_entry import MacroEntry
+from common.dtos import MacroEntry, ManualCommand, MacroStepEvent, PortDataEvent
 from model.packet_parser import ExpectMatcher
 from core.logger import logger
 from core.event_bus import event_bus
+from common.constants import EventTopics
 
 class MacroRunner(QThread):
     """
@@ -35,14 +35,15 @@ class MacroRunner(QThread):
     정밀한 타이밍 제어를 보장합니다.
     """
 
-    # UI 업데이트를 위한 시그널
-    step_started = pyqtSignal(int, MacroEntry)  # index, entry
-    step_completed = pyqtSignal(int, bool)      # index, success
+    # UI 업데이트를 위한 시그널 (DTO 사용)
+    step_started = pyqtSignal(object)   # MacroStepEvent
+    step_completed = pyqtSignal(object) # MacroStepEvent
+
     macro_finished = pyqtSignal()
     error_occurred = pyqtSignal(str)
 
-    # 실제 전송 요청 시그널 (UI 스레드의 PortController로 전달)
-    send_requested = pyqtSignal(str, bool, bool, bool) # text, hex, prefix, suffix
+    # 실제 전송 요청 시그널
+    send_requested = pyqtSignal(object)
 
     def __init__(self):
         """MacroRunner 초기화 및 상태 변수 설정"""
@@ -56,6 +57,7 @@ class MacroRunner(QThread):
         # 실행 제어 플래그
         self._is_running = False
         self._is_paused = False
+        self.broadcast_enabled = False
 
         # 반복 설정
         self._loop_count = 0
@@ -68,7 +70,7 @@ class MacroRunner(QThread):
 
         self.event_bus = event_bus
         # 데이터 수신 이벤트 구독 (Expect 매칭용)
-        self.event_bus.subscribe("port.data_received", self._on_data_received)
+        self.event_bus.subscribe(EventTopics.PORT_DATA_RECEIVED, self._on_data_received)
 
     def load_macro(self, entries: List[MacroEntry]) -> None:
         """
@@ -79,7 +81,7 @@ class MacroRunner(QThread):
         """
         self._entries = entries
 
-    def start(self, loop_count: int = 1, interval_ms: int = 0) -> None:
+    def start(self, loop_count: int = 1, interval_ms: int = 0, broadcast_enabled: bool = False) -> None:
         """
         매크로 실행을 시작합니다.
 
@@ -92,6 +94,7 @@ class MacroRunner(QThread):
         Args:
             loop_count (int): 반복 횟수 (0=무한). 기본값 1.
             interval_ms (int): 루프 간 대기 시간 (ms). 기본값 0.
+            broadcast_enabled (bool): 브로드캐스트 모드 여부.
         """
         if not self._entries:
             self.error_occurred.emit("No macro entries loaded.")
@@ -102,9 +105,10 @@ class MacroRunner(QThread):
         self._is_paused = False
         self._loop_count = loop_count
         self._loop_interval_ms = interval_ms
+        self.broadcast_enabled = broadcast_enabled # 상태 저장
         self._mutex.unlock()
 
-        self.event_bus.publish("macro.started")
+        self.event_bus.publish(EventTopics.MACRO_STARTED)
 
         # QThread의 start 호출
         super().start()
@@ -122,18 +126,20 @@ class MacroRunner(QThread):
         self._mutex.lock()
         self._is_running = False
         self._is_paused = False
-        self._cond.wakeAll()        # 일반 지연 대기 해제
-        self._expect_cond.wakeAll() # Expect 대기 해제
+        self._cond.wakeAll()
+        self._expect_cond.wakeAll()
         self._mutex.unlock()
 
         # 스레드 종료 대기 (블로킹)
         self.wait()
 
         self.macro_finished.emit()
-        self.event_bus.publish("macro.finished")
+        self.event_bus.publish(EventTopics.MACRO_FINISHED)
 
     def pause(self) -> None:
-        """실행을 일시 정지합니다."""
+        """
+        실행을 일시 정지합니다.
+        """
         self._mutex.lock()
         if self._is_running:
             self._is_paused = True
@@ -153,32 +159,34 @@ class MacroRunner(QThread):
             self._cond.wakeAll()
         self._mutex.unlock()
 
-    def request_single_send(self, command: str, is_hex: bool, prefix: bool, suffix: bool) -> None:
+    def send_single_command(self, command: ManualCommand) -> None:
         """
         단일 명령 전송을 요청합니다 (Presenter에서 사용).
 
         Args:
-            command (str): 명령어 텍스트
-            is_hex (bool): HEX 모드 여부
-            prefix (bool): 접두사 사용 여부
-            suffix (bool): 접미사 사용 여부
+            command (ManualCommand): 전송할 명령어 DTO
         """
-        self.send_requested.emit(command, is_hex, prefix, suffix)
+        # DTO를 그대로 시그널로 전달
+        self.send_requested.emit(command)
 
-    def _on_data_received(self, data_dict: dict) -> None:
+    def _on_data_received(self, event: PortDataEvent) -> None:
         """
         수신 데이터 처리 핸들러 (EventBus 콜백).
 
         Logic:
-            1. Mutex 잠금으로 스레드 안전성 확보 (Race Condition 방지)
-            2. 실행 중이 아니거나 Matcher가 없으면 무시
-            3. Matcher에 데이터 전달하여 매칭 시도
-            4. 매칭 성공 시 `_expect_found` 플래그 설정 및 대기 스레드 깨움
+            1. DTO 타입 검증
+            2. Mutex 잠금으로 스레드 안전성 확보
+            3. 실행 중이 아니거나 Matcher가 없으면 무시
+            4. Matcher에 데이터 전달하여 매칭 시도
+            5. 매칭 성공 시 `_expect_found` 플래그 설정 및 대기 스레드 깨움
 
         Args:
-            data_dict (dict): {'port': str, 'data': bytes} 구조의 데이터
+            event (PortDataEvent): 수신 데이터 DTO
         """
-        data = data_dict.get('data', b'')
+        if not isinstance(event, PortDataEvent):
+            return
+
+        data = event.data
         if not data:
             return
 
@@ -188,7 +196,7 @@ class MacroRunner(QThread):
             if self._is_running and self._expect_matcher:
                 if self._expect_matcher.match(data):
                     self._expect_found = True
-                    self._expect_cond.wakeAll() # _wait_for_expect 깨움
+                    self._expect_cond.wakeAll()
         finally:
             self._mutex.unlock()
 
@@ -225,31 +233,46 @@ class MacroRunner(QThread):
                 if not entry.enabled:
                     continue
 
-                self.step_started.emit(i, entry)
+                # DTO 이벤트 발생
+                self.step_started.emit(MacroStepEvent(index=i, entry=entry, type="started"))
+
                 step_success = True
                 error_msg = ""
 
                 try:
+                    # DTO 생성 및 전송
+                    manual_command = ManualCommand(
+                        command=entry.command,
+                        hex_mode=entry.hex_mode,
+                        prefix_enabled=entry.prefix_enabled,
+                        suffix_enabled=entry.suffix_enabled,
+                        broadcast_enabled=self.broadcast_enabled # 설정된 브로드캐스트 모드 적용
+                    )
                     # 2-1. 명령 전송 요청 (Signal)
-                    self.send_requested.emit(entry.command, entry.is_hex, entry.prefix, entry.suffix)
+                    self.send_requested.emit(manual_command)
 
                     # 2-2. Expect 처리 (응답 대기)
                     if entry.expect:
-                        step_success = self._wait_for_expect(entry.expect, entry.timeout_ms)
-                        if not step_success:
-                            error_msg = f"Expect timeout: pattern '{entry.expect}' not found."
+                        # [안전 장치] 브로드캐스트 모드에서는 동기화 문제로 인해 Expect를 무시하고 경고 로그 출력
+                        if self.broadcast_enabled:
+                            logger.warning(f"Macro: Expect pattern '{entry.expect}' ignored in broadcast mode.")
+                            step_success = True # 무조건 성공 처리하고 Delay로 넘어감
+                        else:
+                            step_success = self._wait_for_expect(entry.expect, entry.timeout_ms)
+                            if not step_success:
+                                error_msg = f"Expect timeout: pattern '{entry.expect}' not found."
 
                     # 2-3. 결과 처리 및 지연
                     if step_success:
-                        self.step_completed.emit(i, True)
+                        self.step_completed.emit(MacroStepEvent(index=i, success=True, type="completed"))
                         # 최소 10ms 지연 보장
                         delay = entry.delay_ms if entry.delay_ms > 0 else 10
                         self._interruptible_sleep(delay)
                     else:
                         # 실패 시 중단 처리
-                        self.step_completed.emit(i, False)
+                        self.step_completed.emit(MacroStepEvent(index=i, success=False, type="completed"))
                         self.error_occurred.emit(error_msg)
-                        self.event_bus.publish("macro.error", error_msg)
+                        self.event_bus.publish(EventTopics.MACRO_ERROR, error_msg)
 
                         # 실행 플래그 해제
                         self._mutex.lock()
@@ -333,7 +356,7 @@ class MacroRunner(QThread):
         self._mutex.lock()
 
         # Matcher 설정
-        self._expect_matcher = ExpectMatcher(pattern, is_regex=True)
+        self._expect_matcher = ExpectMatcher(pattern, regex_enabled=True)
         self._expect_found = False
 
         start_time = time.monotonic()

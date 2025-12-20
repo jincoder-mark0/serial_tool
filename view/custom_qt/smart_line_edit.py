@@ -1,3 +1,21 @@
+"""
+스마트 라인 에디터 모듈
+
+HEX 입력 모드와 자동 포맷팅을 지원하는 커스텀 라인 에디터입니다.
+
+## WHY
+* 시리얼 통신에서 빈번한 HEX 데이터 입력의 편의성 제공
+* 잘못된 문자 입력을 사전에 방지하여 데이터 무결성 확보
+
+## WHAT
+* QLineEdit 기반 커스텀 위젯
+* HEX 모드 토글 기능 (0-9, A-F 만 입력 허용)
+* 소문자 입력 시 자동 대문자 변환
+
+## HOW
+* QRegExpValidator를 사용한 입력 제한
+* keyPressEvent 오버라이딩을 통한 실시간 문자 변환
+"""
 from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtGui import QRegExpValidator
 from PyQt5.QtCore import QRegExp

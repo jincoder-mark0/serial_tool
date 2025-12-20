@@ -4,7 +4,7 @@
 
 ## 목표 (Goal)
 
-`Implementation_Specification.md`에 정의된 **SerialTool v1.0**을 **Python 3.10+** 및 **PyQt5**를 사용하여 구현합니다. **Layered MVP (Model-View-Presenter)** 아키텍처와 **Worker Thread** 모델을 적용하여 **고성능**, **안정성**, **확장성**을 확보하는 것이 목표입니다.
+`Implementation_Specification.md`에 정의된 **SerialTool v1.0**을 **Python 3.10+** 및 **PyQt5**를 사용하여 구현합니다. **MVP (Model-View-Presenter)** 아키텍처와 **Worker Thread** 모델을 적용하여 **고성능**, **안정성**, **확장성**을 확보하는 것이 목표입니다.
 
 ### 핵심 목표
 
@@ -45,93 +45,132 @@
 프로젝트 루트 하위에 계층별 모듈을 구성합니다:
 
 ```
-serial_tool2/
-├── config.py                # 중앙 경로 관리 (AppConfig) [완료]
-├── core/                    # 핵심 유틸리티 및 인프라
-│   ├── interfaces.py       # ITransport 인터페이스
-│   ├── event_bus.py        # EventBus (Pub/Sub)
-│   ├── utils.py            # RingBuffer, ThreadSafeQueue
-│   ├── logger.py           # 로깅 시스템 [완료]
-│   ├── settings_manager.py # 설정 관리 [완료]
-│   └── port_state.py       # PortState Enum [완료]
-├── model/                   # 비즈니스 로직 및 Worker
-│   ├── transports.py       # SerialTransport 등 통신 구현체
-│   ├── connection_worker.py # 범용 통신 Worker
-│   ├── port_controller.py  # 포트 라이프사이클 관리
-│   ├── serial_manager.py   # 멀티포트 레지스트리
-│   ├── packet_parser.py    # 패킷 파싱 (AT/Delimiter/Fixed/Hex)
-│   ├── macro_runner.py     # Macro List 실행 엔진
-│   └── file_transfer.py    # 파일 전송 엔진
-├── view/                    # UI 계층
-│   ├── main_window.py      # 메인 윈도우 [완료]
-│   ├── managers/           # View 매니저 [완료]
-│   │   ├── theme_manager.py    # 테마 관리 [완료]
-│   │   ├── lang_manager.py     # 언어 관리 [완료]
-│   │   └── color_manager.py    # 로그 색상 규칙 [완료]
-│   ├── sections/           # 섹션 (화면 분할) [완료]
-│   │   ├── __init__.py          # Package init [완료]
-│   │   ├── main_left_section.py  # 좌측 섹션 [완료]
-│   │   ├── main_right_section.py # 우측 섹션 [완료]
-│   │   ├── main_menu_bar.py      # 메인 메뉴바 [완료]
-│   │   ├── main_status_bar.py    # 메인 상태바 [완료]
-│   │   └── main_tool_bar.py      # 메인 툴바 [완료]
-│   ├── panels/             # 패널 (기능 그룹) [완료]
-│   │   ├── port_panel.py   # 포트 패널 [완료]
-│   │   ├── port_tab_panel.py # 포트 탭 패널 [완료]
-│   │   ├── macro_panel.py  # 매크로 패널 [완료]
-│   │   ├── manual_ctrl_panel.py # 수동 제어 패널 [완료]
-│   │   ├── packet_inspector_panel.py # 패킷 인스펙터 패널 [완료]
-│   │   └── tx_panel.py     # 전송 패널 [완료]
-│   ├── widgets/            # 위젯 (UI 요소) [완료]
-│   │   ├── __init__.py          # Package init [완료]
-│   │   ├── port_settings.py       # 포트 설정 [완료]
-│   │   ├── received_area.py       # 로그 뷰 [완료]
-│   │   ├── manual_ctrl.py         # 수동 제어 [완료]
-│   │   ├── macro_list.py          # 매크로 리스트 [완료]
-│   │   ├── macro_ctrl.py          # 매크로 제어 [완료]
-│   │   ├── packet_inspector.py    # 패킷 인스펙터 [완료]
-│   │   ├── system_log.py         # 상태 표시 영역 [완료]
-│   │   ├── port_stats.py          # 포트 통계 [완료]
-│   │   └── file_progress.py       # 파일 전송 진행 [완료]
-│   ├── custom_widgets/     # PyQt5 커스텀 위젯 [완료]
-│   │   ├── smart_list_view.py # 고성능 로그 뷰어 [완료]
-│   │   ├── smart_number_edit.py   # HEX 입력 필드 [완료]
-│   │   └── smart_plain_text_edit.py # 스마트 텍스트 에디터 [완료]
-│   └── dialogs/            # 대화상자 [완료]
-│       ├── __init__.py          # Package init [완료]
-│       ├── about_dialog.py        # 정보 대화상자 [완료]
-│       ├── font_settings_dialog.py# 폰트 설정 [완료]
-│       └── preferences_dialog.py  # 환경 설정 [완료]
-├── presenter/               # Presenter 계층
-│   ├── main_presenter.py   # 중앙 제어
-│   ├── port_presenter.py   # 포트 제어
-│   ├── macro_presenter.py  # 매크로 제어
-│   ├── file_presenter.py   # 파일 전송 제어
-│   └── event_router.py     # 이벤트 라우팅
-├── plugins/                 # 확장 플러그인
-│   └── example_plugin/     # 샘플 플러그인
-├── resources/               # 리소스 파일 [완료]
-│   ├── themes/             # QSS 테마 [완료]
-│   │   ├── common.qss
-│   │   ├── dark_theme.qss
-│   │   └── light_theme.qss
-│   └── icons/              # SVG 아이콘 [완료]
-├── config/                  # 설정 파일
-│   ├── default_settings.json
-│   └── color_rules.json
-├── tests/                   # 테스트
-│   ├── test_view.py        # View 독립 테스트 [완료]
-│   ├── test_core.py
-│   ├── test_model.py
-│   └── test_integration.py
-├── doc/                     # 문서
-│   ├── Implementation_Specification.md [완료]
-│   ├── CHANGELOG.md        [완료]
-│   ├── implementation_plan.md
-│   ├── task.md
-│   └── session_summary_*.md
-├── main.py                  # 진입점 [완료]
-├── version.py              # 버전 정보 [완료]
+├── main.py                             # 애플리케이션 진입점
+├── requirements.txt                    # 의존성 목록
+│
+├── common/                             # 공통 정의 (의존성 최하위)
+│   ├── constants.py                    #
+│   ├── dtos.py                         #
+│   ├── enums.py                        #
+│   └── version.py                      #
+│
+├── core/                               # 핵심 유틸리티
+│   ├── command_processor.py            # 명령어 처리
+│   ├── data_logger.py                  # 데이터 로깅
+│   ├── error_handler.py                # 에러 핸들러
+│   ├── event_bus.py                    # 이벤트 버스
+│   ├── device_transport.py             #
+│   ├── logger.py                       # 로깅 시스템 (Singleton)
+│   ├── port_state.py                   # 포트 상태 관리
+│   ├── resource_path.py                # 경로 관리
+│   ├── settings_manager.py             # 설정 관리 (Singleton)
+│   └── utils.py                        # 유틸리티 함수
+│
+├── model/                              # 비즈니스 로직
+│   ├── connection_controller.py        #
+│   ├── connection_manager.py           #
+│   ├── connection_worker.py            # 연결 워커
+│   ├── file_transfer.py                # 파일 전송
+│   ├── macro_runner.py                 # 매크로 실행
+│   ├── packet_parser.py                # 패킷 파싱
+│   └── serial_transport.py             # 전송 관리
+│
+├── presenter/                          # MVP Presenter 계층
+│   ├── event_router.py                 # 이벤트 라우터
+│   ├── file_presenter.py               # 파일 프레젠터
+│   ├── macro_presenter.py              # 매크로 프레젠터
+│   ├── main_presenter.py               # 메인 프레젠터
+│   ├── manual_control_presenter.py     # 수동 제어 프레젠터
+│   ├── packet_presenter.py             # 패킷 프레젠터
+│   └── port_presenter.py               # 포트 프레젠터
+│
+├── view/                               # UI 계층
+│   ├── main_window.py                  # 메인 윈도우
+│   │
+│   ├── managers/                       # 관리자 계층
+│   │   ├── color_manager.py            # 로그 색상 규칙
+│   │   ├── language_manager.py         # 다국어 관리
+│   │   └── theme_manager.py            # 테마 관리
+│   │
+│   ├── custom_qt/                      # PyQt5 커스텀 위젯
+│   │   ├── smart_number_edit.py        # 스마트 숫자 편집 위젯
+│   │   ├── smart_list_view.py          # 스마트 리스트 뷰 위젯
+│   │   └── smart_plain_text_edit.py    # 스마트 plain 텍스트 편집 위젯
+│   │
+│   ├── sections/                       # 섹션 (대 분할)
+│   │   ├── main_left_section.py        # 메인 왼쪽 섹션
+│   │   ├── main_menu_bar.py            # 메인 메뉴 바
+│   │   ├── main_right_section.py       # 메인 오른쪽 섹션
+│   │   ├── main_status_bar.py          # 메인 상태 바
+│   │   └── main_tool_bar.py            # 메인 도구 바
+│   │
+│   ├── panels/                         # 패널 (중 단위)
+│   │   ├── macro_panel.py              # 매크로 패널
+│   │   ├── manual_control_panel.py     # 수동 제어 패널
+│   │   ├── packet_inspector_panel.py   # 패킷 인스펙터 패널
+│   │   ├── port_panel.py               # 포트 패널
+│   │   └── port_tab_panel.py           # 포트 탭 패널
+│   │
+│   ├── widgets/                        # 위젯 (소 단위)
+│   │   ├── data_log.py                 # 수신 로그 위젯
+│   │   ├── file_progress.py            # 파일 진행률 위젯
+│   │   ├── macro_control.py            #
+│   │   ├── macro_list.py               # 매크로 리스트 위젯
+│   │   ├── manual_control.py           # 수동 제어 위젯
+│   │   ├── packet_inspector.py         # 패킷 인스펙터 위젯
+│   │   ├── port_settings.py            # 포트 설정 위젯
+│   │   ├── port_stats.py               # 포트 통계 위젯
+│   │   └── system_log.py               # 시스템 로그 위젯
+│   │
+│   └── dialogs/                        # 대화상자
+│       ├── about_dialog.py             # 정보 대화상자
+│       ├── file_transfer_dialog.py     # 파일 전송 대화상자
+│       ├── font_settings_dialog.py     # 폰트 설정 대화상자
+│       └── preferences_dialog.py       # 설정 대화상자
+│
+├── resources/                          # 리소스 파일
+│   ├── languages/                      # 다국어 리소스
+│   │   ├── ko.json                     # 한국어
+│   │   └── en.json                     # 영어
+│   │
+│   ├── configs/                        # 설정 파일
+│   │   ├── settings.json               # 앱 설정 (논리 그룹: serial, command, logging, ui)
+│   │   └── color_rules.json            # 로그 색상 규칙
+│   │
+│   ├── icons/                          # SVG 아이콘
+│   │   ├── light/                      # 라이트 테마용
+│   │   └── dark/                       # 다크 테마용
+│   │
+│   └── themes/                         # QSS 스타일시트
+│       ├── common.qss                  # 공통 스타일시트
+│       ├── dark_theme.qss              # 다크 테마 스타일시트
+│       └── light_theme.qss             # 라이트 테마 스타일시트
+│
+├── doc/                                # 프로젝트 문서
+│   ├── changelog.md                    # 변경 이력
+│   └── session_summary_YYYYMMDD.md     # 작업 세션 요약
+│
+├── .agent/                             # 개발 가이드
+│   └── rules/                          # 규칙
+│       ├── code_style_guide.md         # 코드 스타일 가이드
+│       ├── comment_guide.md            # 주석 가이드
+│       ├── git_guide.md                # git 가이드
+│       └── naming_convention.md        # 명명 규칙 (언어 키, 변수명 등)
+│
+├── tools/                              # 유틸리티 도구
+│   ├── check_language_keys.py          # 언어 키 검사 도구
+│   └── manage_language_keys.py         # 언어 키 관리 도구
+│
+└── tests/                              # 테스트 코드
+    ├── test_core_refinement.py         # Core Refinement 테스트
+    ├── test_core_utiles.py             # Core Utils 테스트
+    ├── test_model_packet_parsers.py    # Model Packet Parsers 테스트
+    ├── test_model.py                   # Model 테스트
+    ├── test_presenter_init.py          # Presenter Init 테스트
+    ├── test_presenter_manual_contol.py # Presenter Manual Ctrl 테스트
+    ├── test_presenter_packet.py        # Presenter Packet 테스트
+    ├── test_view_translations.py       # View Translations 테스트
+    └── test_view.py                    # View 테스트
 ```
 
 #### [진행 필요] `core/utils.py`
@@ -257,8 +296,8 @@ serial_tool2/
   - `DelimiterParser`: 사용자 정의 구분자(예: STX/ETX, Comma) 처리
   - `FixedLengthParser`: 고정 길이 패킷 처리
 - **ParserFactory**: 설정(`AT`, `Hex` 등)에 따라 적절한 파서 인스턴스 생성 (전략 패턴)
-- **[New] ExpectMatcher**: 정규식 기반 응답 대기 및 매칭 기능 구현
-- **[New] PortController 통합**: Raw Data 수신 시 Parser를 거쳐 Packet 객체로 변환 후 EventBus 발행
+- **ExpectMatcher**: 정규식 기반 응답 대기 및 매칭 기능 구현
+- **PortController 통합**: Raw Data 수신 시 Parser를 거쳐 Packet 객체로 변환 후 EventBus 발행
 
 #### [완료] `model/macro_runner.py`
 
@@ -381,7 +420,7 @@ serial_tool2/
 **EventRouter (View-Model Decoupling)**
 
 - **Role**: View 이벤트를 Domain 메서드로 라우팅, Domain 시그널을 View 업데이트로 변환
-- **Benefit**: View와 Model 간의 직접 의존성 제거 (Strict Layered MVP 준수)
+- **Benefit**: View와 Model 간의 직접 의존성 제거 (MVP 준수)
 
 ---
 
@@ -519,7 +558,7 @@ serial_tool2/
       @abstractmethod
       def register(self, app_context: AppContext) -> None:
           pass
-  
+
       @abstractmethod
       def unregister(self) -> None:
           pass
