@@ -20,6 +20,7 @@ import serial.tools.list_ports
 from PyQt5.QtCore import QThread, pyqtSignal
 from typing import List, Tuple
 from core.logger import logger
+from common.dtos import PortInfo
 
 class PortScanWorker(QThread):
     """
@@ -43,18 +44,24 @@ class PortScanWorker(QThread):
         try:
             # 1. 포트 정보 수집
             raw_ports = serial.tools.list_ports.comports()
-            port_list: List[Tuple[str, str]] = []
 
+            # (device, description) 튜플 리스트로 먼저 정렬
+            temp_list = []
             for port in raw_ports:
-                port_list.append((port.device, port.description))
+                temp_list.append((port.device, port.description))
 
-            # 2. Natural Sort (자연 정렬) 키 함수
-            # 예: ['COM', '1'] vs ['COM', '10'] -> 숫자 비교 가능
+            # 2. Natural Sort
             def natural_sort_key(item):
                 return [int(text) if text.isdigit() else text.lower()
                         for text in re.split('([0-9]+)', item[0])]
 
-            port_list.sort(key=natural_sort_key)
+            temp_list.sort(key=natural_sort_key)
+
+            # 3. DTO 변환
+            port_list: List[PortInfo] = [
+                PortInfo(device=item[0], description=item[1])
+                for item in temp_list
+            ]
 
             # 결과 전달
             self.ports_found.emit(port_list)

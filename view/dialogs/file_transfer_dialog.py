@@ -171,7 +171,7 @@ class FileTransferDialog(QDialog):
         Args:
             state (FileProgressState): 파일 전송 상태 DTO
         """
-        self.progress_widget.update_progress(state.sent_bytes, state.total_bytes, state.speed, state.eta)
+        self.progress_widget.update_progress(state)
 
     def set_complete(self, success: bool, message: str = "") -> None:
         """

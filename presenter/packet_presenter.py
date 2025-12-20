@@ -22,7 +22,7 @@ from view.panels.packet_panel import PacketPanel
 from presenter.event_router import EventRouter
 from core.settings_manager import SettingsManager
 from common.constants import ConfigKeys
-from common.dtos import PacketEvent, PreferencesState
+from common.dtos import PacketEvent, PreferencesState, PacketViewData
 
 class PacketPresenter(QObject):
     """
@@ -123,8 +123,16 @@ class PacketPresenter(QObject):
         except Exception:
             data_ascii = str(data_bytes)
 
-        # View 업데이트
-        self.view.append_packet(time_str, packet_type, data_hex, data_ascii)
+        # Create DTO
+        view_data = PacketViewData(
+            time_str=time_str,
+            packet_type=packet_type,
+            data_hex=data_hex,
+            data_ascii=data_ascii
+        )
+
+        # View 업데이트 (DTO 전달)
+        self.view.append_packet(view_data)
 
     def on_clear_requested(self) -> None:
         """

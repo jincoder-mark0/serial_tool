@@ -18,6 +18,7 @@
 from PyQt5.QtWidgets import QStatusBar, QLabel, QProgressBar
 from PyQt5.QtCore import Qt
 from view.managers.language_manager import language_manager
+from common.dtos import PortStatistics
 
 class MainStatusBar(QStatusBar):
     """
@@ -93,6 +94,22 @@ class MainStatusBar(QStatusBar):
             timeout (int): 메시지 표시 시간 (ms). 0이면 계속 표시.
         """
         self.showMessage(message, timeout)
+
+    def update_statistics(self, stats: PortStatistics) -> None:
+        """
+        통계 정보 업데이트
+        """
+        # RX Speed
+        rx_speed = stats.rx_bytes / 1024
+        self.rx_count_lbl.setText(f"RX: {rx_speed:.1f} KB/s")
+
+        # TX Speed
+        tx_speed = stats.tx_bytes / 1024
+        self.tx_count_lbl.setText(f"TX: {tx_speed:.1f} KB/s")
+
+        # BPS (Optional, if included in DTO)
+        if hasattr(stats, 'bps'):
+             self.bps_lbl.setText(f"BPS: {stats.bps}")
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 상태바 텍스트를 업데이트합니다."""

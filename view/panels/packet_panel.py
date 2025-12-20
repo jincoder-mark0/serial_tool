@@ -20,6 +20,7 @@ from PyQt5.QtCore import pyqtSignal
 from typing import Optional
 from view.managers.language_manager import language_manager
 from view.widgets.packet import PacketWidget
+from common.dtos import PacketViewData
 
 class PacketPanel(QWidget):
     """
@@ -75,18 +76,15 @@ class PacketPanel(QWidget):
         """언어 변경 시 UI 텍스트 업데이트"""
         self.clear_btn.setText(language_manager.get_text("packet_panel_btn_clear"))
 
-    def append_packet(self, time_str: str, packet_type: str, data_hex: str, data_ascii: str) -> None:
+    def append_packet(self, data: PacketViewData) -> None:
         """
         패킷 데이터를 뷰에 추가
 
         Args:
-            time_str (str): 시간 문자열
-            packet_type (str): 패킷 타입
-            data_hex (str): Hex 데이터
-            data_ascii (str): ASCII 데이터
+            data (PacketViewData): 표시할 패킷 데이터 객체
         """
         if self.packet_widget:
-            self.packet_widget.add_packet(time_str, packet_type, data_hex, data_ascii)
+            self.packet_widget.add_packet(data)
 
     def set_packet_options(self, buffer_size: int, auto_scroll: bool) -> None:
         """

@@ -248,10 +248,9 @@ class MainWindow(QMainWindow):
         """
         self.left_section.system_log_widget.append_log(message, level)
 
-    def update_status_bar_stats(self, rx_bytes: int, tx_bytes: int) -> None:
+    def update_status_bar_stats(self, stats: PortStatistics) -> None:
         """상태바 통계 업데이트"""
-        self.global_status_bar.update_rx_speed(rx_bytes)
-        self.global_status_bar.update_tx_speed(tx_bytes)
+        self.global_status_bar.update_statistics(stats)
 
     def update_status_bar_time(self, time_str: str) -> None:
         """상태바 시간 업데이트"""

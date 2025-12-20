@@ -41,8 +41,10 @@ from core.logger import logger
 from common.constants import ConfigKeys, EventTopics
 from common.enums import LogFormat
 from common.dtos import (
-    ManualCommand, PortDataEvent, PortErrorEvent, PacketEvent, FontConfig,
-    MainWindowState, PreferencesState, ManualControlState
+    ManualCommand, ManualControlState,
+    PortDataEvent, PortErrorEvent, PortStatistics,
+    MainWindowState, PreferencesState, FontConfig,
+    PacketEvent
 )
 from view.dialogs.file_transfer_dialog import FileTransferDialog
 from view.panels.port_panel import PortPanel # Needed for type checking if used, or duck typing
@@ -438,7 +440,15 @@ class MainPresenter(QObject):
         """
         상태 표시줄 업데이트
         """
-        self.view.update_status_bar_stats(self.data_handler.rx_byte_count, self.data_handler.tx_byte_count)
+        stats = PortStatistics(
+            rx_bytes=self.data_handler.rx_byte_count,
+            tx_bytes=self.data_handler.tx_byte_count,
+            bps=0 # BPS calculation logic can be added here or in DataHandler
+        )
+
+        self.view.update_status_bar_stats(stats)
+
+        # Reset counts for next interval (rate calculation)
         self.data_handler.reset_counts()
         self.view.update_status_bar_time(QDateTime.currentDateTime().toString("HH:mm:ss"))
 

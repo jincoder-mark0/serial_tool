@@ -21,6 +21,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel, QTreeWidget, QTreeWidg
 from PyQt5.QtCore import Qt
 from typing import Optional
 from view.managers.language_manager import language_manager
+from common.dtos import PacketViewData
 
 class PacketWidget(QWidget):
     """
@@ -70,7 +71,7 @@ class PacketWidget(QWidget):
             language_manager.get_text("packet_col_value")
         ])
 
-    def add_packet(self, time_str: str, packet_type: str, data_hex: str, data_ascii: str) -> None:
+    def add_packet(self, data: PacketViewData) -> None:
         """
         패킷 데이터를 트리에 추가합니다.
 
@@ -81,24 +82,21 @@ class PacketWidget(QWidget):
             - 자동 스크롤 처리
 
         Args:
-            time_str (str): 포맷팅된 시간 문자열
-            packet_type (str): 패킷 타입 (AT, Raw 등)
-            data_hex (str): Hex 포맷 데이터
-            data_ascii (str): ASCII 포맷 데이터
+            data (PacketViewData): 표시할 패킷 데이터 객체
         """
         # 루트 아이템 (요약 정보)
         root = QTreeWidgetItem(self.tree)
-        root.setText(0, f"[{time_str}] {packet_type}")
-        root.setText(1, data_ascii)
+        root.setText(0, f"[{data.time_str}] {data.packet_type}")
+        root.setText(1, data.data_ascii)
 
         # 상세 정보 (자식 아이템)
         child_hex = QTreeWidgetItem(root)
         child_hex.setText(0, "HEX")
-        child_hex.setText(1, data_hex)
+        child_hex.setText(1, data.data_hex)
 
         child_ascii = QTreeWidgetItem(root)
         child_ascii.setText(0, "ASCII")
-        child_ascii.setText(1, data_ascii)
+        child_ascii.setText(1, data.data_ascii)
 
         # 버퍼 관리
         if self.tree.topLevelItemCount() > self.buffer_size:

@@ -18,6 +18,7 @@ from PyQt5.QtWidgets import QWidget, QVBoxLayout, QHBoxLayout, QProgressBar, QLa
 from PyQt5.QtCore import pyqtSignal
 from typing import Optional
 from view.managers.language_manager import language_manager
+from common.dtos import FileProgressState
 
 class FileProgressWidget(QWidget):
     """
@@ -96,21 +97,19 @@ class FileProgressWidget(QWidget):
         if language_manager.text_matches_key(self.eta_lbl.text(), "file_prog_lbl_eta_placeholder"):
             self.eta_lbl.setText(language_manager.get_text("file_prog_lbl_eta_placeholder"))
 
-    def update_progress(self, sent_bytes: int, total_bytes: int, speed_bps: float, eta_seconds: float) -> None:
+    def update_progress(self, state: FileProgressState) -> None:
         """
         진행률 및 상태를 업데이트합니다.
 
         Args:
-            sent_bytes (int): 전송된 바이트 수
-            total_bytes (int): 전체 바이트 수
-            speed_bps (float): 전송 속도 (bytes/sec)
-            eta_seconds (float): 남은 시간 (초)
+            state (FileProgressState): 파일 전송 상태 DTO
         """
-        if total_bytes > 0:
-            percent = int((sent_bytes / total_bytes) * 100)
+        if state.total_bytes > 0:
+            percent = int((state.sent_bytes / state.total_bytes) * 100)
             self.progress_bar.setValue(percent)
 
         # 속도 포맷팅 (KB/s, MB/s)
+        speed_bps = state.speed
         if speed_bps < 1024:
             speed_str = f"{speed_bps:.1f} B/s"
         elif speed_bps < 1024 * 1024:
@@ -121,12 +120,13 @@ class FileProgressWidget(QWidget):
         self.speed_lbl.setText(speed_str)
 
         # ETA 포맷팅 (MM:SS)
+        eta_seconds = state.eta_seconds
         eta_min = int(eta_seconds // 60)
         eta_sec = int(eta_seconds % 60)
         self.eta_lbl.setText(f"ETA: {eta_min:02d}:{eta_sec:02d}")
 
         # 상태 메시지 업데이트
-        status_msg = language_manager.get_text("file_prog_lbl_status_sending").format(sent_bytes, total_bytes)
+        status_msg = language_manager.get_text("file_prog_lbl_status_sending").format(state.sent_bytes, state.total_bytes)
         self.status_lbl.setText(status_msg)
         self.cancel_btn.setEnabled(True)
 

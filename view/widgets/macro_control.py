@@ -32,7 +32,7 @@ class MacroControlWidget(QWidget):
     """
 
     # 시그널 정의
-    macro_repeat_start_requested = pyqtSignal(object) # MacroRepeatOption DTO
+    macro_repeat_start_requested = pyqtSignal(object)
     macro_repeat_stop_requested = pyqtSignal()
     macro_repeat_pause_requested = pyqtSignal()
 

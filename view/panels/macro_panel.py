@@ -35,7 +35,7 @@ class MacroPanel(QWidget):
     """
 
     # 매크로 실행 제어 시그널
-    repeat_start_requested = pyqtSignal(list, object)  # indices, MacroRepeatOption DTO
+    repeat_start_requested = pyqtSignal(list, object)
     repeat_stop_requested = pyqtSignal()
     state_changed = pyqtSignal()  # 데이터 변경 알림
 

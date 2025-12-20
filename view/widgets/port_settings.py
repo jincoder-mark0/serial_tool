@@ -28,7 +28,7 @@ from PyQt5.QtGui import QIntValidator
 from view.managers.language_manager import language_manager
 from typing import Optional, List, Dict, Tuple
 from common.enums import PortState, SerialParity, SerialStopBits, SerialFlowControl
-from common.dtos import PortConfig
+from common.dtos import PortConfig, PortInfo
 from common.constants import VALID_BAUDRATES, DEFAULT_BAUDRATE
 from core.logger import logger
 
@@ -348,7 +348,7 @@ class PortSettingsWidget(QGroupBox):
 
         return config
 
-    def set_port_list(self, ports: List[Tuple[str, str]]) -> None:
+    def set_port_list(self, ports: List[PortInfo]) -> None:
         """
         포트 목록 업데이트
 
@@ -361,7 +361,7 @@ class PortSettingsWidget(QGroupBox):
             - 갱신 후 currentTextChanged 시그널 강제 발생 (탭 제목 동기화용)
 
         Args:
-            ports (List[Tuple[str, str]]): (포트이름, 설명) 튜플 리스트
+            ports (List[PortInfo]): 포트 정보 리스트
         """
         # 1. 현재 선택된 포트(또는 저장된 포트) 기억
         current_port_data = self.port_combo.currentData()
@@ -374,9 +374,9 @@ class PortSettingsWidget(QGroupBox):
         self.port_combo.clear()
 
         # 2. 스캔된 포트 추가
-        for port_name, description in ports:
-            display_text = f"{port_name} ({description})" if description else port_name
-            self.port_combo.addItem(display_text, port_name)
+        for info in ports:
+            display_text = f"{info.device} ({info.description})" if info.description else info.device
+            self.port_combo.addItem(display_text, info.device)
 
         # 3. 이전 선택 복구 시도
         index = self.port_combo.findData(current_port_data)

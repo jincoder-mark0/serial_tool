@@ -232,6 +232,44 @@ class MacroEntry:
         )
 
 @dataclass
+class PortInfo:
+    """
+    검색된 포트 정보 DTO
+
+    Attributes:
+        device (str): 포트 이름
+        description (str): 포트 설명
+    """
+    device: str
+    description: str
+
+@dataclass
+class PortStatistics:
+    """
+    포트 통신 통계 DTO
+    """
+    rx_bytes: int = 0
+    tx_bytes: int = 0
+    error_count: int = 0
+    bps: int = 0
+
+@dataclass
+class PacketViewData:
+    """
+    패킷 뷰 표시용 데이터 DTO
+
+    Attributes:
+        time_str (str): 시간 문자열
+        packet_type (str): 패킷 타입
+        data_hex (str): 헥스 데이터
+        data_ascii (str): 아스키 데이터
+    """
+    time_str: str
+    packet_type: str
+    data_hex: str
+    data_ascii: str
+
+@dataclass
 class FileProgressState:
     """
     파일 전송 진행 상태 DTO
