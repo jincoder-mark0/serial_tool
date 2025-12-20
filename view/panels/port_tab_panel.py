@@ -22,7 +22,7 @@ from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIcon
 from typing import Optional
 from view.managers.language_manager import language_manager
-from view.managers.theme_manager import ThemeManager
+from view.managers.theme_manager import theme_manager
 from view.panels.port_panel import PortPanel
 
 class PortTabPanel(QTabWidget):
@@ -134,7 +134,6 @@ class PortTabPanel(QTabWidget):
             return
 
         index = count - 1
-        theme_manager = ThemeManager()
         icon = theme_manager.get_icon("add")
 
         if icon.isNull():

@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import QMenuBar, QAction, QActionGroup
 from PyQt5.QtCore import pyqtSignal
 
 from view.managers.language_manager import language_manager
-from view.managers.theme_manager import ThemeManager
+from view.managers.theme_manager import theme_manager
 
 class MainMenuBar(QMenuBar):
     """
@@ -103,7 +103,6 @@ class MainMenuBar(QMenuBar):
         self.theme_action_group.setExclusive(True)
 
         # ThemeManager에서 사용 가능한 테마 목록 스캔
-        theme_manager = ThemeManager()
         available_themes = theme_manager.get_available_themes()
 
         for theme_name in available_themes:
@@ -112,7 +111,7 @@ class MainMenuBar(QMenuBar):
             # 예: main_menu_theme_dark -> Dark (번역)
             #     Dracula -> Dracula (그대로)
 
-            # 1. 번역 시도
+            # 번역 시도
             lang_key = f"main_menu_theme_{theme_name.lower()}"
             display_name = language_manager.get_text(lang_key)
             if display_name == lang_key: # 번역 키가 없으면
@@ -140,7 +139,7 @@ class MainMenuBar(QMenuBar):
         language_menu = view_menu.addMenu(language_manager.get_text("main_menu_lang"))
 
         # LanguageManager에서 사용 가능한 언어 목록 스캔
-        available_langs = language_manager.get_available_languages() # {'en': 'English', 'ko': '한국어'}
+        available_langs = language_manager.get_available_languages()
 
         for code, name in available_langs.items():
             action = QAction(name, self)
@@ -198,4 +197,3 @@ class MainMenuBar(QMenuBar):
         """언어 변경 시 메뉴 텍스트를 업데이트합니다."""
         # 메뉴 전체 재생성 (동적 항목 번역 반영)
         self.init_menu()
-

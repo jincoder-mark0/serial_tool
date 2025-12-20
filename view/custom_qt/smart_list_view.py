@@ -35,7 +35,7 @@ from PyQt5.QtGui import (
 from common.constants import DEFAULT_LOG_MAX_LINES, TRIM_CHUNK_RATIO
 from common.dtos import ColorRule
 from view.services.color_service import ColorService
-from view.managers.theme_manager import ThemeManager
+from view.managers.theme_manager import theme_manager
 
 class QSmartListView(QListView):
     """
@@ -92,7 +92,6 @@ class QSmartListView(QListView):
 
         # ColorManager 의존성 제거 -> ColorRule 리스트 사용
         self._color_rules: List[ColorRule] = []
-        self._theme_manager = ThemeManager()
 
         self._last_data_time = None
 
@@ -233,7 +232,7 @@ class QSmartListView(QListView):
             callable: 생성된 포맷터 함수.
         """
         # 캡처 시점의 테마 상태 확인
-        is_dark = self._theme_manager.is_dark_theme()
+        is_dark = theme_manager.is_dark_theme()
 
         def formatter(line: str) -> str:
             """
@@ -298,7 +297,7 @@ class QSmartListView(QListView):
         self.log_model.clear()
 
         # 현재 테마 상태 확인
-        is_dark = self._theme_manager.is_dark_theme()
+        is_dark = theme_manager.is_dark_theme()
 
         for data in self._original_data:
             if self._hex_mode:

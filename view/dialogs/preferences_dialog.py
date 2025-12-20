@@ -26,7 +26,7 @@ from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Optional, Any
 import os
 from view.managers.language_manager import language_manager
-from view.managers.theme_manager import ThemeManager
+from view.managers.theme_manager import theme_manager
 from common.constants import (
     VALID_BAUDRATES,
     DEFAULT_LOG_MAX_LINES,
@@ -37,15 +37,6 @@ from common.constants import (
 )
 from common.enums import NewlineMode, ThemeType
 from common.dtos import PreferencesState
-from PyQt5.QtWidgets import (
-    QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
-    QLabel, QComboBox, QSpinBox, QPushButton,
-    QFileDialog, QGroupBox, QFormLayout, QRadioButton,
-    QButtonGroup, QListWidget, QCheckBox, QLineEdit
-)
-from PyQt5.QtCore import pyqtSignal, Qt
-from typing import Optional, Any
-import os
 
 class PreferencesDialog(QDialog):
     """
@@ -113,7 +104,6 @@ class PreferencesDialog(QDialog):
 
         # 테마 목록 동적 로드
         self.theme_combo = QComboBox()
-        theme_manager = ThemeManager()
         themes = theme_manager.get_available_themes()
         if not themes:
             themes = [ThemeType.DARK.value.capitalize(), ThemeType.LIGHT.value.capitalize()]
@@ -424,7 +414,7 @@ class PreferencesDialog(QDialog):
         # Serial
         self.port_baudrate_combo.setCurrentText(str(self.state.baudrate))
         self.port_newline_combo.setCurrentText(self.state.newline)
-        self.port_local_echo_chk.setChecked(self.state.local_echo)
+        self.port_local_echo_chk.setChecked(self.state.local_echo_enabled)
         self.port_scan_interval_ms_spin.setValue(self.state.scan_interval_ms)
 
         # Command
@@ -432,7 +422,7 @@ class PreferencesDialog(QDialog):
         self.suffix_combo.setCurrentText(self.state.command_suffix)
 
         # Logging
-        self.log_path_edit.setText(self.state.log_path or os.getcwd())
+        self.log_path_edit.setText(self.state.log_dir or os.getcwd())
 
         # Packet
         btn = self.parser_type_button_group.button(self.state.parser_type)
@@ -471,11 +461,11 @@ class PreferencesDialog(QDialog):
             max_log_lines=self.max_lines_spin.value(),
             baudrate=baud_val,
             newline=newline_val,
-            local_echo=self.port_local_echo_chk.checkState() == Qt.Checked,
+            local_echo_enabled=self.port_local_echo_chk.checkState() == Qt.Checked,
             scan_interval_ms=self.port_scan_interval_ms_spin.value(),
             command_prefix=self.prefix_combo.currentText(),
             command_suffix=self.suffix_combo.currentText(),
-            log_path=self.log_path_edit.text(),
+            log_dir=self.log_path_edit.text(),
 
             # Packet Settings
             parser_type=self.parser_type_button_group.checkedId(),

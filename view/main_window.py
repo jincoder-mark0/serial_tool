@@ -29,7 +29,7 @@ from view.sections import (
 from view.dialogs import (
     FontSettingsDialog, AboutDialog, PreferencesDialog, FileTransferDialog
 )
-from view.managers.theme_manager import ThemeManager
+from view.managers.theme_manager import theme_manager
 from view.managers.language_manager import language_manager
 from common.constants import ConfigKeys
 from common.dtos import FontConfig, ManualCommand, MainWindowState, PreferencesState
@@ -72,7 +72,8 @@ class MainWindow(QMainWindow):
         super().__init__()
 
         # ThemeManager는 View Helper로서 사용 (싱글톤)
-        self.theme_manager = ThemeManager()
+        # Use global instance directly
+        self.theme_manager = theme_manager
 
         self.setWindowTitle(f"{language_manager.get_text('main_title')} v1.0")
         self.resize(1400, 900)
@@ -379,6 +380,7 @@ class MainWindow(QMainWindow):
             - Presenter에 저장 요청 (font_settings_changed 시그널 emit)
             - UI 업데이트
         """
+        # Pass singleton instance
         dialog = FontSettingsDialog(self.theme_manager, self)
         if dialog.exec_():
             # 폰트 설정 가져오기
