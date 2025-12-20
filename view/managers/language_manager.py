@@ -33,6 +33,7 @@ import os
 from typing import Dict, Optional
 from PyQt5.QtCore import QObject, pyqtSignal
 from core.logger import logger
+from core.resource_path import ResourcePath
 
 class LanguageManager(QObject):
     """
@@ -52,52 +53,54 @@ class LanguageManager(QObject):
             cls._instance._initialized = False
         return cls._instance
 
-    def __init__(self, resource_path=None):
+    def __init__(self, resource_path: Optional[ResourcePath] = None):
         """
         LanguageManager 초기화
 
         Args:
-            resource_path: ResourcePath 인스턴스. None이면 기본 경로 사용
+            resource_path: ResourcePath 인스턴스. None이면 내부에서 새로 생성.
         """
-        # ResourcePath가 전달되면 항상 업데이트하고 리로드
-        if resource_path is not None:
-            LanguageManager._resource_path = resource_path
-            self.load_languages()
-
+        # 이미 초기화된 경우 (Singleton Check)
         if self._initialized:
+            # 이미 초기화되었더라도, 새로운 resource_path가 들어오면 업데이트 및 리로드
+            if resource_path is not None:
+                LanguageManager._resource_path = resource_path
+                self.load_languages()
             return
 
+        # QObject 초기화 (가장 먼저 호출해야 함)
         super().__init__()
-        self._initialized = True
 
+        # ResourcePath 설정
+        if resource_path is None:
+            resource_path = ResourcePath()
+
+        LanguageManager._resource_path = resource_path
+
+        # 변수 초기화
         self.current_language = 'en'
         self.resources: Dict[str, Dict[str, str]] = {}
 
-        # ResourcePath가 없는 경우(최초 import 시), Fallback 경로로 로드 시도
-        if resource_path is None:
-            self.load_languages()
+        # 로직 실행 (QObject 초기화 이후이므로 안전함)
+        self.load_languages()
+
+        # 초기화 완료 플래그 설정
+        self._initialized = True
 
     def load_languages(self) -> None:
         """
         언어 파일(*.json) 로드
 
         Logic:
-            - ResourcePath 또는 Fallback 경로 결정
+            - ResourcePath를 통해 언어 디렉토리 경로 획득
             - 언어 디렉토리의 모든 JSON 파일 스캔
             - 파일명을 언어 코드로 사용 (예: en.json → 'en')
             - JSON 파싱 및 Dictionary에 저장
             - 에러 발생 시 로깅 후 계속 진행
         """
-        if LanguageManager._resource_path is not None:
-            # ResourcePath가 제공되었으면 사용
-            language_dir = LanguageManager._resource_path.languages_dir
-        else:
-            # Fallback: 상대 경로 계산
-            # view/managers/language_manager.py → project_root
-            base_dir = os.path.dirname(os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-            language_dir = os.path.join(base_dir, 'resources', 'languages')
+        language_dir = self._resource_path.languages_dir
 
-        if not os.path.exists(language_dir):
+        if not language_dir.exists():
             logger.error(f"Language directory not found: {language_dir}")
             return
 
@@ -105,7 +108,7 @@ class LanguageManager(QObject):
         for filename in os.listdir(language_dir):
             if filename.endswith('.json') and not filename.startswith('template'):
                 language_code = os.path.splitext(filename)[0]
-                file_path = os.path.join(language_dir, filename)
+                file_path = language_dir / filename
                 try:
                     with open(file_path, 'r', encoding='utf-8') as f:
                         self.resources[language_code] = json.load(f)
@@ -191,5 +194,4 @@ class LanguageManager(QObject):
                 return True
         return False
 
-# 전역 인스턴스
 language_manager = LanguageManager()

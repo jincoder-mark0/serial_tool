@@ -1,7 +1,8 @@
 """
 테마 관리자 모듈
 
-애플리케이션의 시각적 테마(QSS)와 폰트, 아이콘을 관리합니다.
+애플리케이션의 테마(Dark/Light)를 관리하고 QSS 스타일시트를 로드하여 적용합니다.
+싱글톤 패턴을 사용하여 전역에서 접근 가능한 인스턴스를 제공합니다.
 
 ## WHY
 * 다크/라이트 모드 지원 및 일관된 디자인 언어 유지
@@ -21,6 +22,7 @@
 * SettingsManager를 통해 사용자 폰트 설정을 읽어와 동적으로 스타일시트에 병합
 """
 import os
+from typing import Optional
 import platform
 from pathlib import Path
 from PyQt5.QtWidgets import QApplication
@@ -63,15 +65,19 @@ class ThemeManager:
             cls._instance = super(ThemeManager, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self, resource_path: ResourcePath = None):
+    def __init__(self, resource_path: Optional[ResourcePath] = None):
         """
         ThemeManager 초기화
 
         Args:
-            resource_path: ResourcePath 인스턴스. None이면 기존 경로 유지.
+            resource_path: ResourcePath 인스턴스. None이면 내부에서 새로 생성.
         """
-        if resource_path:
-            ThemeManager._resource_path = resource_path
+        # ResourcePath 설정 (주입받거나 새로 생성)
+        if resource_path is None:
+             # [Refactor] Use ResourcePath logic instead of hardcoding
+            resource_path = ResourcePath()
+
+        ThemeManager._resource_path = resource_path
 
         if self._initialized:
             return
@@ -118,17 +124,11 @@ class ThemeManager:
             - 파일명에서 '_theme.qss' 제거 후 대문자 변환하여 반환
 
         Returns:
-            list[str]: 테마 이름 리스트 (예: ['Dark', 'Light', 'Dracula'])
+            list[str]: 테마 이름 리스트
         """
         themes = []
 
-        # ResourcePath 확인
-        if self._resource_path:
-            themes_dir = self._resource_path.themes_dir
-        else:
-            # Fallback
-            base_dir = Path(__file__).parent.parent.parent
-            themes_dir = base_dir / 'resources' / 'themes'
+        themes_dir = self._resource_path.themes_dir
 
         if not themes_dir.exists():
             return ["Dark", "Light"]
@@ -176,18 +176,7 @@ class ThemeManager:
         """
         filename = f"{theme_name.lower()}_theme.qss"
 
-        if self._resource_path:
-            # get_theme_path가 없거나 파일명 규칙이 다를 수 있으므로 직접 구성
-            # ResourcePath 클래스 구조에 따라 다를 수 있음. 여기서는 themes_dir 사용.
-            return self._resource_path.themes_dir / filename
-
-        # Fallback
-        if hasattr(os, '_MEIPASS'):
-            base_path = Path(os._MEIPASS)
-        else:
-            base_path = Path(__file__).parent.parent.parent
-
-        return base_path / 'resources' / 'themes' / filename
+        return self._resource_path.get_theme_path(filename) or (self._resource_path.themes_dir / filename)
 
     def _generate_font_stylesheet(self) -> str:
         """
@@ -232,12 +221,7 @@ class ThemeManager:
             str: 결합되고 경로가 수정된 QSS 문자열.
         """
         theme_path = self._get_theme_file_path(theme_name)
-
-        # 공통 QSS 경로
-        if self._resource_path:
-            common_path = self._resource_path.themes_dir / 'common.qss'
-        else:
-            common_path = theme_path.parent / 'common.qss'
+        common_path = self._resource_path.get_theme_path('common') or (self._resource_path.themes_dir / 'common.qss')
 
         qss_content = ""
 
@@ -262,9 +246,9 @@ class ThemeManager:
             logger.warning(f"Theme file not found: {theme_path}")
 
         # 3. 리소스 경로 절대 경로 치환
-        if self._resource_path:
-            base_res_path = str(self._resource_path.base_dir).replace('\\', '/')
-            qss_content = qss_content.replace('url(resources/', f'url({base_res_path}/resources/')
+        # PyInstaller 배포 환경에서는 상대 경로가 깨질 수 있으므로 절대 경로로 변환
+        base_res_path = str(self._resource_path.base_dir).replace('\\', '/')
+        qss_content = qss_content.replace('url(resources/', f'url({base_res_path}/resources/')
 
         return qss_content
 
@@ -316,15 +300,11 @@ class ThemeManager:
         else:
             target_theme = ThemeType.LIGHT.value
 
-        if self._resource_path:
-            icon_path = self._resource_path.get_icon_path(name, target_theme)
-            if not icon_path.exists():
-                # 폴백
-                icon_path = self._resource_path.get_icon_path(name)
-        else:
-            # Fallback for no resource path
-            base_dir = Path(__file__).parent.parent.parent
-            icon_path = base_dir / 'resources' / 'icons' / target_theme / f"{name}_{target_theme}.svg"
+        icon_path = self._resource_path.get_icon_path(name, target_theme)
+
+        if not icon_path.exists():
+            # 폴백: 테마 접미사 없이 시도
+            icon_path = self._resource_path.get_icon_path(name)
 
         if icon_path.exists():
             return QIcon(str(icon_path))
@@ -367,6 +347,15 @@ class ThemeManager:
         """
         return QFont(self._proportional_font)
 
+    def get_fixed_font(self) -> QFont:
+        """
+        현재 고정폭 폰트를 반환합니다.
+
+        Returns:
+            QFont: 현재 설정된 고정폭 폰트 객체 (복사본).
+        """
+        return QFont(self._fixed_font)
+
     def get_proportional_font_info(self) -> tuple[str, int]:
         """
         가변폭 폰트의 정보(패밀리, 크기)를 반환합니다.
@@ -375,15 +364,6 @@ class ThemeManager:
             tuple[str, int]: (폰트 패밀리, 폰트 크기) 튜플.
         """
         return self._proportional_font.family(), self._proportional_font.pointSize()
-
-    def get_fixed_font(self) -> QFont:
-        """
-        현재 고정폭 폰트를 반환합니다.
-
-        Returns:
-            QFont: 현재 설정된 고정폭 폰트 객체 (복사본).
-        """
-        return QFont(self._fixed_font)  # 복사본 반환
 
     def get_fixed_font_info(self) -> tuple[str, int]:
         """
@@ -437,19 +417,6 @@ class ThemeManager:
             fixed_family=fixed_family,
             fixed_size=fixed_size
         )
-
-    @staticmethod
-    def set_font(app: QApplication, font_family: str, font_size: int = 10):
-        """
-        애플리케이션 전체 폰트를 설정합니다 (레거시 메서드).
-
-        Args:
-            app (QApplication): 애플리케이션 인스턴스.
-            font_family (str): 폰트 패밀리 이름.
-            font_size (int): 폰트 크기. 기본값은 10.
-        """
-        font = QFont(font_family, font_size)
-        app.setFont(font)
 
 # 전역 인스턴스
 theme_manager = ThemeManager()

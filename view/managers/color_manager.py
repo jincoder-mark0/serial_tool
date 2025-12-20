@@ -17,7 +17,7 @@
 * 실제 로직은 ColorService에 위임
 """
 import os
-from typing import List
+from typing import List, Optional
 from pathlib import Path
 
 try:
@@ -26,21 +26,13 @@ except ImportError:
     import json
 
 from core.logger import logger
+from core.resource_path import ResourcePath
 
 from common.constants import (
-    LOG_COLOR_DARK_TIMESTAMP,
-    LOG_COLOR_DARK_INFO,
-    LOG_COLOR_DARK_ERROR,
-    LOG_COLOR_DARK_WARN,
-    LOG_COLOR_DARK_PROMPT,
-    LOG_COLOR_DARK_SUCCESS,
-
-    LOG_COLOR_LIGHT_TIMESTAMP,
-    LOG_COLOR_LIGHT_INFO,
-    LOG_COLOR_LIGHT_ERROR,
-    LOG_COLOR_LIGHT_WARN,
-    LOG_COLOR_LIGHT_PROMPT,
-    LOG_COLOR_LIGHT_SUCCESS,
+    LOG_COLOR_DARK_TIMESTAMP, LOG_COLOR_DARK_INFO, LOG_COLOR_DARK_ERROR,
+    LOG_COLOR_DARK_WARN, LOG_COLOR_DARK_PROMPT, LOG_COLOR_DARK_SUCCESS,
+    LOG_COLOR_LIGHT_TIMESTAMP, LOG_COLOR_LIGHT_INFO, LOG_COLOR_LIGHT_ERROR,
+    LOG_COLOR_LIGHT_WARN, LOG_COLOR_LIGHT_PROMPT, LOG_COLOR_LIGHT_SUCCESS,
 )
 from common.dtos import ColorRule
 from view.services.color_service import ColorService
@@ -95,26 +87,27 @@ class ColorManager:
                   dark_color=LOG_COLOR_DARK_TIMESTAMP),
     ]
 
-    def __init__(self, resource_path=None) -> None:
+    def __init__(self, resource_path: Optional[ResourcePath] = None) -> None:
         """
         ColorManager를 초기화합니다.
 
         Args:
-            resource_path: ResourcePath 인스턴스. 경로 설정을 위해 사용됩니다.
+            resource_path: ResourcePath 인스턴스.
         """
-        # ResourcePath 설정 (항상 업데이트 허용)
-        if resource_path is not None:
-            ColorManager._resource_path = resource_path
-            # 경로 업데이트 시 설정 다시 로드
-            self.config_path = self._get_config_path()
-            if self.config_path.exists():
-                self.load_rules(str(self.config_path))
+        if resource_path is None:
+            resource_path = ResourcePath()
+
+        ColorManager._resource_path = resource_path
+
+        # 경로 갱신 시 재로드
+        self.config_path = self._get_config_path()
+        if self.config_path.exists():
+            self.load_rules(str(self.config_path))
 
         if self._initialized:
             return
 
         self.rules: List[ColorRule] = []
-        self.config_path = self._get_config_path()
 
         # 설정 파일 로드 시도, 실패 시 기본 규칙 사용
         if self.config_path.exists():
@@ -200,7 +193,7 @@ class ColorManager:
             {
                 'name': r.name,
                 'pattern': r.pattern,
-                'color': r.color, # Legacy field preserved
+                'color': r.color,
                 'light_color': r.light_color,
                 'dark_color': r.dark_color,
                 'regex_enabled': r.regex_enabled,
@@ -239,7 +232,7 @@ class ColorManager:
                 ColorRule(
                     name=r['name'],
                     pattern=r['pattern'],
-                    color=r.get('color', ''), # Legacy support
+                    color=r.get('color', ''),
                     light_color=r.get('light_color', ''),
                     dark_color=r.get('dark_color', ''),
                     regex_enabled=r.get('regex_enabled', True),
@@ -253,26 +246,14 @@ class ColorManager:
             self.rules = self.DEFAULT_COLOR_RULES.copy()
 
     @staticmethod
-    def _get_config_path() -> 'ResourcePath':
+    def _get_config_path() -> Path:
         """
         색상 규칙 설정 파일의 경로를 반환합니다.
 
         Returns:
-            Path: config/color_rules.json 파일의 ResourcePath 객체.
+            Path: resources/configs/color_rules.json 파일의 ResourcePath 객체.
         """
-        if ColorManager._resource_path is not None:
-            return ColorManager._resource_path.config_dir / 'color_rules.json'
-
-        # Fallback: 개발 환경 상대 경로
-        # view/managers/ -> view/ -> root
-        if hasattr(os, '_MEIPASS'):
-            # PyInstaller 번들 환경
-            base_path = Path(os._MEIPASS)
-        else:
-            # 개발 모드 환경
-            base_path = Path(__file__).parent.parent.parent
-
-        return base_path / 'resources' / 'configs' / 'color_rules.json'
+        return ColorManager._resource_path.config_dir / 'color_rules.json'
 
     @staticmethod
     def _apply_single_rule(text: str, rule: ColorRule) -> str:

@@ -27,12 +27,14 @@ except ImportError:
 import jsonschema
 from jsonschema import validate, ValidationError
 from pathlib import Path
-from typing import Dict, Any
+from typing import Dict, Any, Optional
+import os
+
 from common.constants import DEFAULT_BAUDRATE, DEFAULT_LOG_MAX_LINES
 from core.settings_schema import CORE_SETTINGS_SCHEMA
 from core.logger import logger
-import os
 from common.defaults import create_fallback_settings
+from core.resource_path import ResourcePath
 
 class SettingsManager:
     """
@@ -52,19 +54,20 @@ class SettingsManager:
             cls._instance = super(SettingsManager, cls).__new__(cls)
         return cls._instance
 
-    def __init__(self, resource_path=None):
+    def __init__(self, resource_path: Optional[ResourcePath] = None):
         """
         SettingsManager를 초기화하고 설정을 로드합니다.
 
         Args:
-            resource_path: ResourcePath 인스턴스. None이면 기본 경로 사용 (하위 호환성)
+            resource_path: ResourcePath 인스턴스. None이면 내부에서 생성.
         """
+        if resource_path is None:
+            resource_path = ResourcePath()
+
+        SettingsManager._resource_path = resource_path
+
         if self._initialized:
             return
-
-        # ResourcePath 저장 (첫 초기화 시에만)
-        if resource_path is not None:
-            SettingsManager._resource_path = resource_path
 
         self.settings: Dict[str, Any] = {}
         # 프로퍼티를 통해 경로 접근
@@ -86,21 +89,9 @@ class SettingsManager:
         기본 설정 파일의 경로를 반환합니다.
 
         Returns:
-            Path: config/settings.json 파일의 ResourcePath 객체.
+            Path: resources/configs/settings.json 파일의 ResourcePath 객체.
         """
-        if SettingsManager._resource_path is not None:
-            # AppConfig가 제공되었으면 그것을 사용
-            return SettingsManager._resource_path.settings_file
-        else:
-            # 하위 호환성: AppConfig가 없으면 기존 방식 사용
-            if hasattr(os, '_MEIPASS'):
-                # PyInstaller 번들 환경
-                base_path = Path(os._MEIPASS)
-            else:
-                # 개발 모드 환경 (core/ -> project_root/)
-                base_path = Path(__file__).parent.parent
-
-            return base_path / 'resources' / 'configs' / 'settings.json'
+        return SettingsManager._resource_path.settings_file
 
     def _get_user_settings_path(self) -> Path:
         """
@@ -203,14 +194,45 @@ class SettingsManager:
 
         logger.info(f"Migrating settings from version {current_ver} to {self.CURRENT_VERSION}")
 
-        # 예시: 0.9 -> 1.0 마이그레이션 로직
-        # if current_ver == "0.9":
-        #     # 변경된 키 매핑이나 구조 변경 처리
-        #     if "old_key" in migrated:
-        #         migrated["new_key"] = migrated.pop("old_key")
-        #     current_ver = "1.0"
+        # 1. Serial Migration
+        if "serial" in migrated:
+            serial = migrated["serial"]
+            if "flowctrl" in serial:
+                val = serial.pop("flowctrl")
+                if "flow_control" not in serial:
+                    serial["flow_control"] = val
+                    logger.info(f"Migrated setting: flowctrl -> flow_control ({val})")
 
-        # 최종 버전 업데이트
+            if "scan_interval" in serial:
+                val = serial.pop("scan_interval")
+                if "scan_interval_ms" not in serial:
+                    serial["scan_interval_ms"] = val
+                    logger.info(f"Migrated setting: scan_interval -> scan_interval_ms ({val})")
+
+        # 2. UI Migration
+        if "ui" in migrated:
+            ui = migrated["ui"]
+            if "rx_max_lines" in ui:
+                val = ui.pop("rx_max_lines")
+                if "max_log_lines" not in ui:
+                    ui["max_log_lines"] = val
+                    logger.info(f"Migrated setting: rx_max_lines -> max_log_lines ({val})")
+
+            if "saved_right_section_width" in ui:
+                val = ui.pop("saved_right_section_width")
+                if "right_section_width" not in ui:
+                    ui["right_section_width"] = val
+                    logger.info(f"Migrated setting: saved_right_section_width -> right_section_width ({val})")
+
+        # 3. Logging Migration
+        if "logging" in migrated:
+            log = migrated["logging"]
+            if "log_path" in log:
+                val = log.pop("log_path")
+                if "log_dir" not in log:
+                    log["log_dir"] = val
+                    logger.info(f"Migrated setting: log_path -> log_dir ({val})")
+
         migrated["version"] = self.CURRENT_VERSION
         return migrated
 
