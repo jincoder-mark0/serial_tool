@@ -1,8 +1,40 @@
-/* Light Theme Colors */
-/* Background: #ffffff, #f5f5f5, #e0e0e0 */
-/* Foreground: #333333, #505050 */
-/* Accent: #4CAF50 (Green), #2196F3 (Blue) */
-/* Border: #c0c0c0, #d0d0d0 */
+/* ==================================================================================
+   SerialTool Light Theme
+   ==================================================================================
+   [Color Palette Reference]
+
+   1. Backgrounds
+      - BG Main:            #ffffff (Window, Input Base)
+      - BG Panel/Alt:       #f5f5f5 (Widget, Tab Selected)
+      - BG Header/Bar:      #e0e0e0 (Header, Button Normal)
+      - BG Disabled:        #f0f0f0
+
+   2. Foregrounds (Text)
+      - Text Main:          #333333
+      - Text Dim/Hint:      #505050
+      - Text Disabled:      #a0a0a0
+      - Text Inverted:      #000000
+
+   3. Borders & Separators
+      - Border Main:        #c0c0c0
+      - Border Light:       #d0d0d0
+      - Border Focus:       #2196F3
+
+   4. Selections
+      - Selection BG:       #a0c8f0
+      - Selection Text:     #000000
+
+   5. Accents & States
+      - Primary (Blue):     #2196F3 (Focus, Active Tab, Links)
+      - Success (Green):    #4CAF50 (Connect, Start)
+      - Danger  (Red):      #F44336 (Error, Stop, Delete)
+      - Warning (Orange):   #FFC107 (Pause, Warning)
+
+   6. Component Specific
+      - Hover Overlay:      Darken by ~10% (e.g., #d0d0d0 for buttons)
+      - Pressed Overlay:    Darken by ~20% (e.g., #c0c0c0 for buttons)
+      - SmartEdit LineNum:  #f0f0f0 (BG), #808080 (Text), #e8e8e8 (Current)
+   ================================================================================== */
 
 /* Global Settings */
 QWidget {
@@ -50,7 +82,7 @@ QTabBar::tab:selected {
 }
 
 QTabBar::tab:hover {
-    background-color: #e0e0e0;
+    background-color: #d0d0d0;
     color: #333333;
 }
 
@@ -59,7 +91,7 @@ QTabBar::close-button {
 }
 
 QTabBar::close-button:hover {
-    background-color: #d0d0d0;
+    background-color: #c0c0c0;
 }
 
 /* QPushButton */
@@ -104,7 +136,7 @@ QLineEdit, QTextEdit, QPlainTextEdit, QSmartTextEdit, QSmartListView {
     background-color: #ffffff;
     border-color: #c0c0c0;
     color: #333333;
-    selection-background-color: #cce8ff;
+    selection-background-color: #a0c8f0;
     selection-color: #000000;
 }
 
@@ -146,7 +178,7 @@ QComboBox::down-arrow {
 QComboBox QAbstractItemView {
     background-color: #ffffff;
     border-color: #c0c0c0;
-    selection-background-color: #e0f0ff;
+    selection-background-color: #a0c8f0;
     selection-color: #000000;
 }
 
@@ -179,7 +211,7 @@ QTableView, QListView, QTreeWidget, QSmartListView {
     background-color: #ffffff;
     border-color: #c0c0c0;
     gridline-color: #e0e0e0;
-    selection-background-color: #e0f0ff;
+    selection-background-color: #a0c8f0;
     selection-color: #000000;
     color: #333333;
 }
@@ -193,6 +225,7 @@ QHeaderView::section {
 
 QTableCornerButton::section {
     background-color: #f0f0f0;
+    border-color: #d0d0d0;
 }
 
 /* QCheckBox */
@@ -241,7 +274,7 @@ QMenu {
 }
 
 QMenu::item:selected {
-    background-color: #e0f0ff;
+    background-color: #a0c8f0;
     color: #000000;
 }
 
@@ -259,7 +292,9 @@ QToolBar QToolButton:pressed {
     background-color: #d0d0d0;
 }
 
-/* Custom Buttons & States */
+/* ==================================================================================
+   Custom Buttons & States (Accent, Danger, Warning, Connected)
+   ================================================================================== */
 
 /* Accent - Save, Start */
 QPushButton[class="accent"] {
@@ -334,12 +369,12 @@ QPushButton[state="connected"] {
     color: #ffffff;
 }
 
-    QPushButton[state="connected"]:hover {
+QPushButton[state="connected"]:hover {
     background-color: #66BB6A;
     border-color: #2E7D32;
 }
 
-    QPushButton[state="disconnected"] {
+QPushButton[state="disconnected"] {
     background-color: #e0e0e0;
     border-color: #c0c0c0;
     color: #333333;
@@ -351,7 +386,7 @@ QPushButton[state="error"] {
     color: #ffffff;
 }
 
-    QPushButton[state="error"]:hover {
+QPushButton[state="error"]:hover {
     background-color: #EF5350;
     border-color: #C62828;
 }

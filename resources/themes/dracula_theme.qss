@@ -1,7 +1,44 @@
-/* Dracula Theme Colors */
-/* Background: #282a36, Current Line: #44475a, Foreground: #f8f8f2 */
-/* Comment: #6272a4, Cyan: #8be9fd, Green: #50fa7b, Orange: #ffb86c */
-/* Pink: #ff79c6, Purple: #bd93f9, Red: #ff5555, Yellow: #f1fa8c */
+/* ==================================================================================
+   SerialTool Dracula Theme
+   ==================================================================================
+   [Color Palette Reference - Based on Official Dracula Spec]
+
+   1. Backgrounds
+      - Background:         #282a36 (Main Window, Inputs)
+      - Current Line:       #44475a (Selection BG, Separators, Button BG)
+      - Button Hover:       #6272a4
+      - Button Disabled:    #21222c
+
+   2. Foregrounds (Text)
+      - Foreground:         #f8f8f2 (Main Text)
+      - Comment:            #6272a4 (Borders, Hints)
+
+   3. Accents
+      - Cyan:               #8be9fd
+      - Green:              #50fa7b
+      - Orange:             #ffb86c
+      - Pink:               #ff79c6
+      - Purple:             #bd93f9
+      - Red:                #ff5555
+      - Yellow:             #f1fa8c
+
+   4. Selections
+      - Selection BG:       #44475a
+      - Selection Text:     #f8f8f2
+
+   5. Functional Mappings
+      - Focus Border:       #bd93f9 (Purple)
+      - Active Tab Border:  #bd93f9 (Purple)
+      - Section Title:      #ff79c6 (Pink)
+      - Success/Connected:  #50fa7b (Green)
+      - Danger/Error:       #ff5555 (Red)
+      - Warning/Pause:      #ffb86c (Orange)
+
+   6. Component Specific
+      - SmartEdit LineNum:  #21222c (BG), #6272a4 (Text), #44475a (Current)
+      - ScrollBar BG:       #282a36
+      - ScrollBar Handle:   #6272a4
+   ================================================================================== */
 
 /* Global Settings */
 QWidget {
@@ -192,6 +229,7 @@ QHeaderView::section {
 
 QTableCornerButton::section {
     background-color: #44475a;
+    border-color: #44475a;
 }
 
 /* QCheckBox */
@@ -258,7 +296,9 @@ QToolBar QToolButton:pressed {
     background-color: #6272a4;
 }
 
-/* Custom Buttons & States */
+/* ==================================================================================
+   Custom Buttons & States (Accent, Danger, Warning, Connected)
+   ================================================================================== */
 
 /* Accent - Save, Start */
 QPushButton[class="accent"] {

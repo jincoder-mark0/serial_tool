@@ -1,7 +1,41 @@
-/* Dark Theme Colors */
-/* Background: #2b2b2b, Foreground: #e0e0e0 */
-/* Accent: #4CAF50 (Green), #2196F3 (Blue) */
-/* Border: #404040, #505050 */
+/* ==================================================================================
+   SerialTool Dark Theme
+   ==================================================================================
+   [Color Palette Reference]
+
+   1. Backgrounds
+      - BG Main:            #1e1e1e (Window Base, Inputs)
+      - BG Panel/Alt:       #2b2b2b (Widget, Tab Selected)
+      - BG Header/Bar:      #333333 (Header, Button Normal, StatusBar)
+      - BG Disabled:        #252525
+
+   2. Foregrounds (Text)
+      - Text Main:          #e0e0e0
+      - Text Dim/Hint:      #b0b0b0
+      - Text Disabled:      #606060
+      - Text Inverted:      #ffffff
+
+   3. Borders & Separators
+      - Border Main:        #404040
+      - Border Light:       #505050
+      - Border Focus:       #4CAF50 (Green Accent for Focus)
+
+   4. Selections
+      - Selection BG:       #264f78 (VS Code Blue)
+      - Selection Text:     #ffffff
+
+   5. Accents & States
+      - Primary (Green):    #4CAF50 (Focus, Title, Active Tab Bottom)
+      - Secondary (Blue):   #2196F3 (Checked State)
+      - Danger (Red):       #F44336 (Error, Stop, Delete)
+      - Warning (Yellow):   #FFC107 (Pause)
+
+   6. Component Specific
+      - Button Hover:       #454545
+      - Button Pressed:     #2a2a2a
+      - ScrollBar Handle:   #505050
+      - SmartEdit LineNum:  #2b2b2b (BG), #808080 (Text), #2d2d2d (Current)
+   ================================================================================== */
 
 /* Global Settings */
 QWidget {
@@ -104,7 +138,7 @@ QLineEdit, QTextEdit, QPlainTextEdit, QSmartTextEdit, QSmartListView {
     border-color: #404040;
     color: #e0e0e0;
     selection-background-color: #264f78;
-    selection-color: #3a3a3a;
+    selection-color: #ffffff;
 }
 
 QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QSmartTextEdit:focus, QSmartListView:focus {
@@ -192,6 +226,7 @@ QHeaderView::section {
 
 QTableCornerButton::section {
     background-color: #333333;
+    border-color: #404040;
 }
 
 /* QCheckBox */
@@ -258,7 +293,9 @@ QToolBar QToolButton:pressed {
     background-color: #2a2a2a;
 }
 
-/* Custom Buttons & States */
+/* ==================================================================================
+   Custom Buttons & States (Accent, Danger, Warning, Connected)
+   ================================================================================== */
 
 /* Accent - Save, Start */
 QPushButton[class="accent"] {
@@ -353,4 +390,4 @@ QPushButton[state="error"] {
 QPushButton[state="error"]:hover {
     background-color: #D32F2F;
     border-color: #EF5350;
- }
+}

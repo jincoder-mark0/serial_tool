@@ -100,7 +100,7 @@ class SettingsManager:
                 # 개발 모드 환경 (core/ -> project_root/)
                 base_path = Path(__file__).parent.parent
 
-            return base_path / 'config' / 'settings.json'
+            return base_path / 'resources' / 'configs' / 'settings.json'
 
     def _get_user_settings_path(self) -> Path:
         """
