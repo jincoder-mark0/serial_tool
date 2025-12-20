@@ -25,7 +25,7 @@ from view.panels.port_panel import PortPanel
 from view.panels.manual_control_panel import ManualControlPanel
 from view.panels.port_tab_panel import PortTabPanel
 from view.widgets.system_log import SystemLogWidget
-from common.dtos import ManualCommand
+from common.dtos import ManualCommand, LogDataBatch
 
 class MainLeftSection(QWidget):
     """
@@ -152,15 +152,14 @@ class MainLeftSection(QWidget):
             if hasattr(current_widget, 'data_log_widget'):
                 current_widget.data_log_widget.append_data(data)
 
-    def append_rx_data(self, port_name: str, data: bytes) -> None:
+    def append_rx_data(self, batch: LogDataBatch) -> None:
         """
         특정 포트에 데이터 추가 (중계)
 
         Args:
-            port_name (str): 대상 포트 이름
-            data (bytes): 추가할 데이터
+            batch (LogDataBatch): 로그 뷰어 업데이트용 데이터 배치
         """
-        self.port_tab_panel.append_rx_data(port_name, data)
+        self.port_tab_panel.append_rx_data(batch)
 
     def _on_port_tab_added(self, panel: PortPanel) -> None:
         """

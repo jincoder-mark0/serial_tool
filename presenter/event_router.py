@@ -17,7 +17,10 @@ EventBus와 Presenter/View 사이의 이벤트를 라우팅합니다.
 """
 from PyQt5.QtCore import QObject, pyqtSignal
 from core.event_bus import event_bus
-from common.dtos import PortDataEvent, PortErrorEvent, PacketEvent, FileProgressEvent, PreferencesState
+from common.dtos import (
+    PortDataEvent, PortErrorEvent, PacketEvent,
+    FileProgressEvent, PreferencesState, PortConnectionEvent
+)
 from common.constants import EventTopics
 
 class EventRouter(QObject):
@@ -31,8 +34,8 @@ class EventRouter(QObject):
     # ---------------------------------------------------------
     # 1. Port Events
     # ---------------------------------------------------------
-    port_opened = pyqtSignal(str)
-    port_closed = pyqtSignal(str)
+    port_opened = pyqtSignal(object)
+    port_closed = pyqtSignal(object)
     port_error = pyqtSignal(object)
     data_received = pyqtSignal(object)
     data_sent = pyqtSignal(object)
@@ -97,13 +100,13 @@ class EventRouter(QObject):
     # ---------------------------------------------------------
     # Event Handlers (Port)
     # ---------------------------------------------------------
-    def _on_port_opened(self, port_name: str):
+    def _on_port_opened(self, event: PortConnectionEvent):
         """포트 열림 이벤트 처리"""
-        self.port_opened.emit(port_name)
+        self.port_opened.emit(event)
 
-    def _on_port_closed(self, port_name: str):
+    def _on_port_closed(self, event: PortConnectionEvent):
         """포트 닫힘 이벤트 처리"""
-        self.port_closed.emit(port_name)
+        self.port_closed.emit(event)
 
     def _on_port_error(self, event: PortErrorEvent):
         """포트 에러 이벤트 처리"""

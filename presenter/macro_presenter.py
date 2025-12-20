@@ -218,18 +218,14 @@ class MacroPresenter(QObject):
         Args:
             row_index (int): 실행할 매크로 인덱스
         """
-        entry = self.panel.macro_list.get_entry_at(row_index)
-
         if entry:
-            # Create ManualCommand DTO from MacroEntry
             manual_command = ManualCommand(
                 command=entry.command,
                 hex_mode=entry.hex_mode,
                 prefix_enabled=entry.prefix_enabled,
                 suffix_enabled=entry.suffix_enabled,
-                broadcast_enabled=False # 단일 전송은 브로드캐스트 안함 (기본)
+                broadcast_enabled=False
             )
-            # DTO 전달
             self.runner.send_single_command(manual_command)
 
     def on_step_started(self, event: MacroStepEvent) -> None:

@@ -34,7 +34,7 @@ class MacroListWidget(QWidget):
     """
 
     # 시그널 정의
-    send_row_requested = pyqtSignal(int) # row_index
+    send_row_requested = pyqtSignal(int, object)
     macro_list_changed = pyqtSignal()  # 데이터 변경 시그널
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
@@ -435,12 +435,22 @@ class MacroListWidget(QWidget):
         btn.setEnabled(self._send_enabled)
 
         # 버튼 클릭 시 행 인덱스를 Lambda로 캡처하여 시그널에 직접 연결
-        btn.clicked.connect(lambda _, row_index=row: self.send_row_requested.emit(row_index))
-
+        btn.clicked.connect(lambda _, row_index=row: self._on_send_clicked(row_index))
         layout.addWidget(btn)
 
         index = self.macro_table_model.index(row, 6)
         self.macro_table.setIndexWidget(index, widget)
+
+    def _on_send_clicked(self, row: int):
+        """
+        해당 행의 데이터를 가져와 전송 요청 시그널을 발생시킵니다.
+
+        Args:
+            row (int): 행 인덱스
+        """
+        entry = self.get_entry_at(row)
+        if entry:
+            self.send_row_requested.emit(row, entry)
 
     def set_send_enabled(self, enabled: bool) -> None:
         """

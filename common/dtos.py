@@ -254,6 +254,14 @@ class PortStatistics:
     bps: int = 0
 
 @dataclass
+class PortConnectionEvent:
+    """
+    포트 연결 상태 변경 이벤트 DTO
+    """
+    port: str
+    state: str  # 'opened' or 'closed'
+
+@dataclass
 class PacketViewData:
     """
     패킷 뷰 표시용 데이터 DTO
@@ -543,3 +551,11 @@ class ColorRule:
     dark_color: str = ""
     regex_enabled: bool = True
     enabled: bool = True
+
+@dataclass
+class LogDataBatch:
+    """
+    로그 뷰어 업데이트용 데이터 배치 DTO
+    """
+    port: str
+    data: bytes

@@ -21,7 +21,7 @@ from collections import defaultdict
 from PyQt5.QtCore import QObject, QTimer
 from core.data_logger import data_logger_manager
 from view.main_window import MainWindow
-from common.dtos import PortDataEvent
+from common.dtos import PortDataEvent, LogDataBatch
 
 class DataTrafficHandler(QObject):
     """
@@ -102,7 +102,8 @@ class DataTrafficHandler(QObject):
             data_bytes = bytes(data)
 
             # View Interface 호출
-            self.view.append_rx_data(port_name, data_bytes)
+            batch = LogDataBatch(port=port_name, data=data_bytes)
+            self.view.append_rx_data(batch)
 
             del self._rx_buffer[port_name]
 

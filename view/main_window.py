@@ -32,7 +32,10 @@ from view.dialogs import (
 from view.managers.theme_manager import theme_manager
 from view.managers.language_manager import language_manager
 from common.constants import ConfigKeys
-from common.dtos import FontConfig, ManualCommand, MainWindowState, PreferencesState, PortStatistics
+from common.dtos import (
+    FontConfig, ManualCommand, MainWindowState,
+    PreferencesState, PortStatistics, LogDataBatch
+)
 
 class MainWindow(QMainWindow):
     """
@@ -290,7 +293,7 @@ class MainWindow(QMainWindow):
         """
         self.left_section.append_data_to_current_port(data)
 
-    def append_rx_data(self, port_name: str, data: bytes) -> None:
+    def append_rx_data(self, batch: LogDataBatch) -> None:
         """
         수신된 데이터를 해당 포트의 로그 뷰어에 추가합니다.
 
@@ -298,10 +301,9 @@ class MainWindow(QMainWindow):
             - LeftSection으로 데이터 전달 (포트 탭 관리 책임)
 
         Args:
-            port_name (str): 포트 이름
-            data (bytes): 수신 데이터
+            batch (LogDataBatch): 로그 뷰어 업데이트용 데이터 배치
         """
-        self.left_section.append_rx_data(port_name, data)
+        self.left_section.append_rx_data(batch)
 
     # --------------------------------------------------------
     # 내부 로직 (Internal Logic)

@@ -25,8 +25,10 @@ from model.connection_worker import ConnectionWorker
 from core.transport.serial_transport import SerialTransport
 from model.packet_parser import ParserFactory, PacketParser
 from common.enums import ParserType
-from common.dtos import PortConfig, PortDataEvent, PortErrorEvent, PacketEvent
-from common.constants import DEFAULT_BAUDRATE, EventTopics
+from common.dtos import (
+    PortConfig, PortDataEvent, PortErrorEvent,
+    PacketEvent, PortConnectionEvent # [New]
+)from common.constants import DEFAULT_BAUDRATE, EventTopics
 from core.event_bus import event_bus
 from core.logger import logger
 
@@ -41,8 +43,8 @@ class ConnectionController(QObject):
     특정 탭의 활성 상태를 저장하지 않으며, 메서드 호출 시 대상 포트를 인자로 받습니다.
     """
     # 시그널 정의
-    connection_opened = pyqtSignal(str)
-    connection_closed = pyqtSignal(str)
+    connection_opened = pyqtSignal(object)
+    connection_closed = pyqtSignal(object)
 
     error_occurred = pyqtSignal(object)
     data_received = pyqtSignal(object)
@@ -78,8 +80,8 @@ class ConnectionController(QObject):
 
     def _connect_signals_to_eventbus(self) -> None:
         """Signal -> EventBus (DTO 발행)"""
-        self.connection_opened.connect(lambda n: self.event_bus.publish(EventTopics.PORT_OPENED, n))
-        self.connection_closed.connect(lambda n: self.event_bus.publish(EventTopics.PORT_CLOSED, n))
+        self.connection_opened.connect(lambda e: self.event_bus.publish(EventTopics.PORT_OPENED, e))
+        self.connection_closed.connect(lambda e: self.event_bus.publish(EventTopics.PORT_CLOSED, e))
 
         self.error_occurred.connect(lambda e: self.event_bus.publish(EventTopics.PORT_ERROR, e))
         self.data_received.connect(lambda e: self.event_bus.publish(EventTopics.PORT_DATA_RECEIVED, e))
@@ -209,8 +211,12 @@ class ConnectionController(QObject):
         self.connection_configs[name] = config
 
         # Worker signals -> Controller signals (Wrap in DTO)
-        worker.connection_opened.connect(lambda n=name: self.connection_opened.emit(n))
-        worker.connection_closed.connect(self.on_worker_closed)
+        worker.connection_opened.connect(
+            lambda n=name: self.connection_opened.emit(PortConnectionEvent(port=n, state="opened"))
+        )
+        worker.connection_closed.connect(
+            lambda n=name: self.connection_closed.emit(PortConnectionEvent(port=n, state="closed"))
+        )
 
         # Wrap worker signals in DTOs
         worker.error_occurred.connect(lambda msg, n=name: self._emit_error(n, msg))
@@ -266,7 +272,7 @@ class ConnectionController(QObject):
         if name in self.connection_configs:
             del self.connection_configs[name]
 
-        self.connection_closed.emit(name)
+        self.connection_closed.emit(PortConnectionEvent(port=name, state="closed"))
 
     def close_connection(self, name: Optional[str] = None) -> None:
         """

@@ -29,7 +29,7 @@ from model.port_scanner import PortScanWorker
 from core.settings_manager import SettingsManager
 from core.logger import logger
 from common.constants import ConfigKeys
-from common.dtos import PortConfig, PortInfo, PortErrorEvent
+from common.dtos import PortConfig, PortInfo, PortErrorEvent, PortConnectionEvent
 
 class PortPresenter(QObject):
     """
@@ -260,7 +260,7 @@ class PortPresenter(QObject):
             if port_name:
                 self.connection_controller.close_connection(port_name)
 
-    def on_connection_opened(self, port_name: str) -> None:
+    def on_connection_opened(self, event: PortConnectionEvent) -> None:
         """
         포트 열림 이벤트 처리.
 
@@ -271,8 +271,10 @@ class PortPresenter(QObject):
             - 시스템 로그에 성공 메시지 기록
 
         Args:
-            port_name (str): 열린 포트 이름
+            event (PortConnectionEvent): 열린 포트 이름
         """
+        port_name = event.port
+
         # 모든 탭을 순회하며 해당 포트를 사용하는 패널 찾기
         for i in range(self.left_section.port_tab_panel.count()):
             widget = self.left_section.port_tab_panel.widget(i)
@@ -288,7 +290,7 @@ class PortPresenter(QObject):
         if hasattr(self.left_section, 'system_log_widget'):
             self.left_section.system_log_widget.append_log(f"[{port_name}] Port opened", "SUCCESS")
 
-    def on_connection_closed(self, port_name: str) -> None:
+    def on_connection_closed(self, event: PortConnectionEvent) -> None:
         """
         포트 닫힘 이벤트 처리.
 
@@ -299,8 +301,10 @@ class PortPresenter(QObject):
             - 시스템 로그 기록
 
         Args:
-            port_name (str): 닫힌 포트 이름
+            event (PortConnectionEvent): 닫힌 포트 이름
         """
+        port_name = event.port
+
         for i in range(self.left_section.port_tab_panel.count()):
             widget = self.left_section.port_tab_panel.widget(i)
             if hasattr(widget, 'get_port_name') and widget.get_port_name() == port_name:
@@ -327,15 +331,18 @@ class PortPresenter(QObject):
         Args:
             event (PortErrorEvent): 포트 에러 이벤트 DTO (port, message)
         """
-        logger.error(f"Port Error ({event.port}): {event.message}")
+        port_name = event.port
+        message = event.message
+
+        logger.error(f"Port Error ({port_name}): {message}")
 
         # View 계층을 통해 에러 메시지 표시 (View가 없는 경우 대비)
         if self.left_section:
-            QMessageBox.critical(self.left_section, "Error", f"Port Error ({event.port}): {event.message}")
+            QMessageBox.critical(self.left_section, "Error", f"Port Error ({port_name}): {message}")
 
             # 시스템 로그 기록
             if hasattr(self.left_section, 'system_log_widget'):
-                self.left_section.system_log_widget.append_log(f"[{event.port}] Error: {event.message}", "ERROR")
+                self.left_section.system_log_widget.append_log(f"[{port_name}] Error: {message}", "ERROR")
 
     def connect_current_port(self) -> None:
         """

@@ -24,6 +24,7 @@ from typing import Optional
 from view.managers.language_manager import language_manager
 from view.managers.theme_manager import theme_manager
 from view.panels.port_panel import PortPanel
+from common.dtos import LogDataBatch
 
 class PortTabPanel(QTabWidget):
     """
@@ -227,7 +228,7 @@ class PortTabPanel(QTabWidget):
         self.port_tab_added.emit(panel)
         return panel
 
-    def append_rx_data(self, port_name: str, data: bytes) -> None:
+    def append_rx_data(self, batch: LogDataBatch) -> None:
         """
         지정된 포트 이름을 가진 탭을 찾아 데이터를 추가합니다.
 
@@ -237,8 +238,7 @@ class PortTabPanel(QTabWidget):
             - 일치하면 data_log_widget에 데이터 추가
 
         Args:
-            port_name (str): 포트 이름
-            data (bytes): 수신 데이터
+            batch (LogDataBatch): 로그 뷰어 업데이트용 데이터 배치
         """
         count = self.count()
         for i in range(count):
@@ -248,9 +248,9 @@ class PortTabPanel(QTabWidget):
 
             widget = self.widget(i)
             if isinstance(widget, PortPanel):
-                if widget.get_port_name() == port_name:
+                if widget.get_port_name() == batch.port:
                     if hasattr(widget, 'data_log_widget'):
-                        widget.data_log_widget.append_data(data)
+                        widget.data_log_widget.append_data(batch.data)
                     return # 찾았으면 종료
 
     def _on_panel_title_changed(self, panel: "PortPanel", title: str) -> None:
