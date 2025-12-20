@@ -32,7 +32,7 @@ from view.dialogs import (
 from view.managers.theme_manager import theme_manager
 from view.managers.language_manager import language_manager
 from common.constants import ConfigKeys
-from common.dtos import FontConfig, ManualCommand, MainWindowState, PreferencesState
+from common.dtos import FontConfig, ManualCommand, MainWindowState, PreferencesState, PortStatistics
 
 class MainWindow(QMainWindow):
     """

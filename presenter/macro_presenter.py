@@ -26,7 +26,10 @@ except ImportError:
 
 from view.panels.macro_panel import MacroPanel
 from model.macro_runner import MacroRunner
-from common.dtos import MacroEntry, MacroScriptData, MacroRepeatOption, MacroStepEvent, ManualCommand
+from common.dtos import (
+    MacroEntry, MacroScriptData, MacroRepeatOption,
+    MacroStepEvent, ManualCommand, MacroExecutionRequest
+)
 from core.logger import logger
 
 class ScriptLoadWorker(QThread):
@@ -194,6 +197,9 @@ class MacroPresenter(QObject):
                 selected_entries.append(entry)
 
         if not selected_entries: return
+
+        # 옵션 추출
+        option = request.option
 
         self.runner.load_macro(selected_entries)
         self.runner.start(option.max_runs, option.interval_ms, option.broadcast_enabled)

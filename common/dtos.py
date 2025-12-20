@@ -400,6 +400,18 @@ class MacroRepeatOption:
     broadcast_enabled: bool = False
 
 @dataclass
+class MacroExecutionRequest:
+    """
+    매크로 실행 요청 DTO
+
+    Attributes:
+        indices (List[int]): 실행할 매크로 행 인덱스 리스트
+        option (MacroRepeatOption): 반복/지연 설정
+    """
+    indices: List[int]
+    option: MacroRepeatOption
+
+@dataclass
 class MacroStepEvent:
     """
     매크로 실행 단계 이벤트 DTO

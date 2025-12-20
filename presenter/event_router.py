@@ -48,7 +48,7 @@ class EventRouter(QObject):
     # ---------------------------------------------------------
     # 3. File Transfer Events
     # ---------------------------------------------------------
-    file_transfer_progress = pyqtSignal(int, int)
+    file_transfer_progress = pyqtSignal(object)
     file_transfer_completed = pyqtSignal(bool)
     file_transfer_error = pyqtSignal(str)
 
@@ -138,7 +138,7 @@ class EventRouter(QObject):
         Args:
             event: FileProgressEvent DTO
         """
-        self.file_transfer_progress.emit(event.current, event.total)
+        self.file_transfer_progress.emit(event)
 
     def _on_file_completed(self, success: bool):
         """파일 전송 완료 이벤트 처리"""

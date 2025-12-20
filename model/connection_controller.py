@@ -43,10 +43,11 @@ class ConnectionController(QObject):
     # 시그널 정의
     connection_opened = pyqtSignal(str)
     connection_closed = pyqtSignal(str)
-    error_occurred = pyqtSignal(str, str)
-    data_received = pyqtSignal(str, bytes)
-    data_sent = pyqtSignal(str, bytes)
-    packet_received = pyqtSignal(str, object)
+
+    error_occurred = pyqtSignal(object)
+    data_received = pyqtSignal(object)
+    data_sent = pyqtSignal(object)
+    packet_received = pyqtSignal(object)
 
     def __init__(self) -> None:
         """
@@ -80,21 +81,10 @@ class ConnectionController(QObject):
         self.connection_opened.connect(lambda n: self.event_bus.publish(EventTopics.PORT_OPENED, n))
         self.connection_closed.connect(lambda n: self.event_bus.publish(EventTopics.PORT_CLOSED, n))
 
-        self.error_occurred.connect(
-            lambda n, m: self.event_bus.publish(EventTopics.PORT_ERROR, PortErrorEvent(port=n, message=m))
-        )
-
-        self.data_received.connect(
-            lambda n, d: self.event_bus.publish(EventTopics.PORT_DATA_RECEIVED, PortDataEvent(port=n, data=d))
-        )
-
-        self.data_sent.connect(
-            lambda n, d: self.event_bus.publish(EventTopics.PORT_DATA_SENT, PortDataEvent(port=n, data=d))
-        )
-
-        self.packet_received.connect(
-            lambda n, pkt: self.event_bus.publish(EventTopics.PORT_PACKET_RECEIVED, PacketEvent(port=n, packet=pkt))
-        )
+        self.error_occurred.connect(lambda e: self.event_bus.publish(EventTopics.PORT_ERROR, e))
+        self.data_received.connect(lambda e: self.event_bus.publish(EventTopics.PORT_DATA_RECEIVED, e))
+        self.data_sent.connect(lambda e: self.event_bus.publish(EventTopics.PORT_DATA_SENT, e))
+        self.packet_received.connect(lambda e: self.event_bus.publish(EventTopics.PORT_PACKET_RECEIVED, e))
 
     # -------------------------------------------------------------------------
     # File Transfer Lifecycle Management (Race Condition Prevention)
@@ -200,12 +190,12 @@ class ConnectionController(QObject):
         """
         name = config.port
         if not name:
-            self.error_occurred.emit("", "Connection name(port) is required.")
+            self._emit_error("", "Connection name(port) is required.")
             return False
 
         # 중복 열기 방지
         if self.is_connection_open(name):
-            self.error_occurred.emit(name, "Connection is already open.")
+            self._emit_error(name, "Connection is already open.")
             return False
 
         # DTO를 직접 SerialTransport에 전달
@@ -218,16 +208,28 @@ class ConnectionController(QObject):
         self.parsers[name] = ParserFactory.create_parser(ParserType.RAW)
         self.connection_configs[name] = config
 
-        # 시그널 매핑
+        # Worker signals -> Controller signals (Wrap in DTO)
         worker.connection_opened.connect(lambda n=name: self.connection_opened.emit(n))
         worker.connection_closed.connect(self.on_worker_closed)
-        worker.error_occurred.connect(lambda msg, n=name: self.error_occurred.emit(n, msg))
+
+        # Wrap worker signals in DTOs
+        worker.error_occurred.connect(lambda msg, n=name: self._emit_error(n, msg))
         worker.data_received.connect(lambda data, n=name: self._handle_data_received(n, data))
 
         self.workers[name] = worker
         worker.start()
 
         return True
+
+    def _emit_error(self, port: str, message: str) -> None:
+        """
+        Helper to emit PortErrorEvent
+
+        Args:
+            port: 포트 이름
+            message: 에러 메시지
+        """
+        self.error_occurred.emit(PortErrorEvent(port=port, message=message))
 
     def _handle_data_received(self, name: str, data: bytes) -> None:
         """
@@ -241,13 +243,14 @@ class ConnectionController(QObject):
             name: 데이터를 수신한 연결 이름
             data: 수신된 바이트 데이터
         """
-        self.data_received.emit(name, data)
+        self.data_received.emit(PortDataEvent(port=name, data=data))
 
         parser = self.parsers.get(name)
         if parser:
             packets = parser.parse(data)
             for packet in packets:
-                self.packet_received.emit(name, packet)
+                # Emit DTO
+                self.packet_received.emit(PacketEvent(port=name, packet=packet))
 
     def on_worker_closed(self, name: str) -> None:
         """
@@ -376,7 +379,8 @@ class ConnectionController(QObject):
         worker = self.workers.get(name)
         if worker and worker.isRunning():
             worker.send_data(data)
-            self.data_sent.emit(name, data)
+            # Emit DTO
+            self.data_sent.emit(PortDataEvent(port=name, data=data))
             return True
         return False
 

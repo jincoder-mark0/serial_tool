@@ -24,7 +24,7 @@ from typing import Optional, Dict, Any
 from view.widgets.macro_list import MacroListWidget
 from view.widgets.macro_control import MacroControlWidget
 from view.managers.language_manager import language_manager
-from common.dtos import MacroScriptData, MacroRepeatOption
+from common.dtos import MacroScriptData, MacroRepeatOption, MacroExecutionRequest
 
 class MacroPanel(QWidget):
     """
@@ -35,7 +35,7 @@ class MacroPanel(QWidget):
     """
 
     # 매크로 실행 제어 시그널
-    repeat_start_requested = pyqtSignal(list, object)
+    repeat_start_requested = pyqtSignal(object)
     repeat_stop_requested = pyqtSignal()
     state_changed = pyqtSignal()  # 데이터 변경 알림
 
@@ -186,7 +186,8 @@ class MacroPanel(QWidget):
         indices = self.macro_list.get_selected_indices()
         if indices:
             # 선택된 인덱스와 옵션 DTO를 함께 전달
-            self.repeat_start_requested.emit(indices, option)
+            request = MacroExecutionRequest(indices=indices, option=option)
+            self.repeat_start_requested.emit(request)
             self.macro_control.set_running_state(True, is_repeat=True)
 
     def on_repeat_stop_requested(self) -> None:
