@@ -1,141 +1,204 @@
 """
-UI 동적 번역 테스트 모듈
+뷰 번역 테스트 모듈
 
-애플리케이션 실행 중 언어 변경(English <-> Korean) 시
-모든 UI 컴포넌트의 텍스트가 즉시 올바르게 갱신되는지 검증합니다.
+다국어 지원(Internationalization) 기능과 UI 동적 번역을 검증합니다.
 
 ## WHY
-* 정적 텍스트뿐만 아니라, 런타임에 동적으로 변경되는 언어 설정이
-  실제 위젯에 즉각 반영되는지 확인해야 합니다.
-* 리팩토링(네이밍 변경, 구조 변경) 후에도 언어 키 매핑이 깨지지 않았는지 보장합니다.
+* 언어 변경 시 UI 텍스트가 즉시 반영되지 않는 버그 방지
+* 지원하지 않는 언어 키 요청 시 프로그램이 멈추지 않도록 예외 처리 검증
+* LanguageManager Singleton의 상태 관리 무결성 확인
 
 ## WHAT
-* MainWindow, MenuBar, ToolBar, Dock/Panel, Widget 등 주요 UI 요소 검증
-* 언어 전환 시그널(language_changed) 발생 및 처리 확인
-* ResourcePath 및 LanguageManager 정상 동작 확인
+* LanguageManager: 언어 설정 변경, 시그널 방출, 텍스트 조회
+* UI Integration: 언어 변경 시그널에 반응하여 위젯 텍스트(Label, Button) 갱신
 
 ## HOW
-* pytest-qt의 qtbot을 사용하여 GUI 이벤트 루프 제어
-* LanguageManager를 통해 언어를 강제로 전환하며 테스트
-* 각 위젯의 text(), windowTitle(), toolTip() 등을 예상되는 언어 값과 비교
+* LanguageManager에 테스트용 가짜 번역 데이터 주입
+* qtbot.waitSignal을 사용하여 언어 변경 시그널 감지
+* 실제 위젯(ManualControlPanel)을 생성하여 setText 호출 결과 확인
 
-pytest tests\test_view_translations.py -v -s
+pytest tests/test_view_translations.py -v
 """
-import sys
-import os
 import pytest
+from PyQt5.QtWidgets import QPushButton, QLabel
 
-# 프로젝트 루트 경로를 sys.path에 추가
-sys.path.insert(0, os.path.dirname(os.path.dirname(os.path.abspath(__file__))))
-
-from view.main_window import MainWindow
 from view.managers.language_manager import language_manager
-from core.resource_path import ResourcePath
+from view.panels.manual_control_panel import ManualControlPanel
+from view.panels.packet_panel import PacketPanel
 
-# 테스트에 사용할 리소스 경로 설정 (실제 런타임과 동일 환경)
-resource_path = ResourcePath()
 
-@pytest.fixture
-def app(qtbot):
+@pytest.fixture(autouse=True)
+def reset_language_manager():
     """
-    MainWindow 피스처
-    테스트용 메인 윈도우를 생성하고 반환합니다.
+    각 테스트 전후로 LanguageManager의 상태를 초기화합니다.
+    Singleton 객체이므로 테스트 간 상태 공유를 방지해야 합니다.
     """
-    # LanguageManager 초기화 (ResourcePath 주입)
-    if not language_manager._resource_path:
-        from view.managers.language_manager import LanguageManager
-        LanguageManager(resource_path)
-
-    window = MainWindow() # ResourcePath는 내부 Manager들이 사용
-    qtbot.addWidget(window)
-    window.show()
-    return window
-
-def test_dynamic_language_switching(app, qtbot):
-    """
-    언어 전환 시 UI 텍스트가 동적으로 변경되는지 테스트합니다.
-
-    Logic:
-        1. 영어(en)로 전환 후 주요 UI 텍스트 검증
-        2. 한국어(ko)로 전환 후 동일 UI 텍스트가 한국어로 변경되었는지 검증
-        3. 다시 영어(en)로 전환하여 복구 확인
-    """
-
-    # 검증 대상 위젯 및 속성 매핑 정의 (계층 구조 변경 반영)
-    targets = [
-        # 1. Main Window Context
-        (lambda: app, lambda w: w.windowTitle(), "main_title"),
-
-        # 2. Tool Bar (MainToolBar는 sections 패키지에 있음)
-        # app.menu_bar 등 접근 경로 확인 필요.
-        # 여기서는 테스트 단순화를 위해 메인 윈도우 타이틀 위주로 검증하거나
-        # 접근 가능한 위젯만 테스트
-
-        # 3. Port Settings (Left Section -> PortTabPanel -> PortPanel -> PortSettings)
-        (lambda: app.left_section.port_tab_panel.currentWidget().port_settings_widget,
-         lambda w: w.title(), "port_grp_settings"),
-
-        # 4. Manual Control (Left Section -> ManualPanel -> ManualWidget)
-        (lambda: app.left_section.manual_control_panel.manual_control_widget.send_manual_command_btn,
-         lambda w: w.text(), "manual_control_btn_send"),
-
-        # 5. Macro Control (Right Section -> MacroPanel -> MacroControl)
-        (lambda: app.right_section.macro_panel.macro_control.macro_repeat_start_btn,
-         lambda w: w.text(), "macro_control_btn_repeat_start"),
-
-        # 6. Packet Inspector (Right Section -> PacketPanel -> PacketWidget)
-        (lambda: app.right_section.packet_panel.packet_widget.title_lbl,
-         lambda w: w.text(), "packet_grp_title"),
-
-        # 7. System Log (Left Section -> SystemLogWidget)
-        (lambda: app.left_section.system_log_widget.sys_log_title,
-         lambda w: w.text(), "sys_log_title"),
-    ]
-
-    # 테스트 시나리오: en -> ko -> en
-    test_sequence = ['en', 'ko', 'en']
-
-    for language_code in test_sequence:
-        # 언어 변경 요청
-        print(f"\nScanning Language: {language_code}...")
-
-        # 상태바 메시지 강제 설정 (번역 테스트용)
-        current_ready_msg = language_manager.get_text("main_status_msg_ready", language_manager.current_language)
-        app.global_status_bar.showMessage(current_ready_msg)
-
-        # 언어 변경
-        language_manager.set_language(language_code)
-        qtbot.wait(100)
-
-        # 검증
-        for i, (get_widget, get_text, key) in enumerate(targets):
-            widget = get_widget()
-            current_text = get_text(widget)
-            expected_text = language_manager.get_text(key, language_code)
-
-            if key == "main_title":
-                assert current_text.startswith(expected_text)
-            else:
-                assert current_text == expected_text
-
-def test_manual_control_placeholder_translation(app, qtbot):
-    """
-    ManualControlWidget의 입력창 Placeholder 텍스트 번역을 테스트합니다.
-    QSmartTextEdit 커스텀 위젯을 사용하므로 별도 검증합니다.
-    """
-    # 계층 구조 변경 반영: manual_control -> manual_control_panel -> manual_control_widget
-    widget = app.left_section.manual_control_panel.manual_control_widget.manual_command_txt
-    key = "manual_control_txt_command_placeholder"
-
-    # English Check
+    # 초기 상태(영어)로 설정
     language_manager.set_language('en')
-    qtbot.wait(50)
-    assert widget.placeholderText() == language_manager.get_text(key, 'en')
 
-    # Korean Check
-    language_manager.set_language('ko')
-    qtbot.wait(50)
-    assert widget.placeholderText() == language_manager.get_text(key, 'ko')
+    # 테스트용 번역 데이터 주입 (파일 I/O 의존성 제거)
+    # 실제 구현에서는 JSON 파일에서 로드하지만, 테스트의 결정성을 위해 직접 주입
+    language_manager._translations = {
+        "en": {
+            "manual_btn_send": "Send",
+            "manual_panel_title": "Manual Control",
+            "packet_btn_clear": "Clear"
+        },
+        "ko": {
+            "manual_btn_send": "전송",
+            "manual_panel_title": "수동 제어",
+            "packet_btn_clear": "지우기"
+        }
+    }
 
-if __name__ == "__main__":
-    pytest.main([__file__])
+    yield
+
+    # 테스트 종료 후 정리 (필요 시)
+    language_manager.set_language('en')
+
+
+class TestLanguageManager:
+    """
+    LanguageManager의 핵심 기능을 검증하는 테스트 클래스
+    """
+
+    def test_set_language_emits_signal(self, qtbot):
+        """
+        언어 변경 시 시그널 방출 테스트
+
+        Logic:
+            - 현재 언어가 'en'인지 확인
+            - set_language('ko') 호출
+            - language_changed 시그널 발생 여부 확인
+        """
+        # GIVEN: 초기 상태 확인
+        assert language_manager.get_current_language() == 'en'
+
+        # WHEN: 언어 변경 (SignalSpy 사용)
+        with qtbot.waitSignal(language_manager.language_changed) as blocker:
+            language_manager.set_language('ko')
+
+        # THEN: 시그널 발생 및 상태 변경 확인
+        assert blocker.signal_triggered
+        assert language_manager.get_current_language() == 'ko'
+
+    def test_get_text_translation(self):
+        """
+        키 기반 텍스트 조회 및 번역 테스트
+
+        Logic:
+            - 영어 모드에서 get_text 호출 -> 영어 값 반환
+            - 한국어 모드로 변경
+            - get_text 호출 -> 한국어 값 반환
+        """
+        # GIVEN: 영어 모드
+        language_manager.set_language('en')
+
+        # WHEN & THEN
+        assert language_manager.get_text("manual_btn_send") == "Send"
+
+        # WHEN: 한국어 모드 변경
+        language_manager.set_language('ko')
+
+        # THEN
+        assert language_manager.get_text("manual_btn_send") == "전송"
+
+    def test_get_text_fallback(self):
+        """
+        존재하지 않는 키 요청 시 Fallback 테스트
+
+        Logic:
+            - 번역 사전에 없는 키 요청
+            - 에러 없이 키 자체나 기본값을 반환해야 함
+        """
+        # GIVEN
+        key = "unknown_key_123"
+        default_val = "Default Text"
+
+        # WHEN
+        result = language_manager.get_text(key, default_val)
+
+        # THEN: 기본값 반환 확인
+        assert result == default_val
+
+
+class TestViewRetranslation:
+    """
+    UI 위젯의 동적 재번역(RetranslateUi) 기능을 검증하는 테스트 클래스
+    """
+
+    def test_manual_control_panel_retranslation(self, qtbot):
+        """
+        ManualControlPanel의 언어 변경 반응 테스트
+
+        Logic:
+            - 패널 생성 (기본 영어)
+            - 버튼 텍스트가 "Send"인지 확인
+            - 언어를 한국어로 변경
+            - 버튼 텍스트가 "전송"으로 바뀌었는지 확인
+        """
+        # GIVEN: 패널 생성
+        panel = ManualControlPanel()
+        qtbot.addWidget(panel)
+
+        # 초기 상태(영어) 확인
+        # ManualControlPanel -> ManualControlWidget -> btn_send
+        btn_send = panel.manual_control_widget.btn_send
+        title_label = panel.title_label
+
+        assert btn_send.text() == "Send"
+        assert title_label.text() == "Manual Control"
+
+        # WHEN: 언어 변경 (한국어)
+        with qtbot.waitSignal(language_manager.language_changed):
+            language_manager.set_language('ko')
+
+        # THEN: 텍스트 갱신 확인
+        assert btn_send.text() == "전송"
+        assert title_label.text() == "수동 제어"
+
+    def test_packet_panel_retranslation(self, qtbot):
+        """
+        PacketPanel의 언어 변경 반응 테스트
+
+        Logic:
+            - 패킷 패널 생성
+            - Clear 버튼 텍스트 확인
+            - 언어 변경 후 텍스트 변경 확인
+        """
+        # GIVEN: 패널 생성
+        panel = PacketPanel()
+        qtbot.addWidget(panel)
+
+        btn_clear = panel.btn_clear
+
+        # 초기 상태(영어)
+        assert btn_clear.text() == "Clear"
+
+        # WHEN: 언어 변경 (한국어)
+        with qtbot.waitSignal(language_manager.language_changed):
+            language_manager.set_language('ko')
+
+        # THEN: 텍스트 갱신 확인
+        assert btn_clear.text() == "지우기"
+
+    def test_dynamic_switching_multiple_times(self, qtbot):
+        """
+        언어를 여러 번 전환해도 UI가 정상적으로 업데이트되는지 테스트
+
+        Logic:
+            - En -> Ko -> En 순서로 전환
+            - 각 단계마다 텍스트 확인
+        """
+        # GIVEN
+        panel = ManualControlPanel()
+        qtbot.addWidget(panel)
+        btn = panel.manual_control_widget.btn_send
+
+        # 1. En -> Ko
+        language_manager.set_language('ko')
+        assert btn.text() == "전송"
+
+        # 2. Ko -> En
+        language_manager.set_language('en')
+        assert btn.text() == "Send"

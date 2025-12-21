@@ -23,6 +23,7 @@
 * ResourcePath를 통한 동적 경로 설정
 """
 import logging
+import sys
 import os
 from logging.handlers import RotatingFileHandler
 from datetime import datetime
@@ -40,6 +41,7 @@ class Logger:
         """싱글톤 인스턴스 생성"""
         if cls._instance is None:
             cls._instance = super(Logger, cls).__new__(cls)
+            cls._instance._initialized = False
         return cls._instance
 
     def __init__(self):
@@ -55,22 +57,37 @@ class Logger:
         if self._initialized:
             return
 
+        # 1. 로거 생성
         self.logger = logging.getLogger("SerialTool")
         self.logger.setLevel(logging.DEBUG)
 
+        # 부모 로거로의 전파 방지
+        self.logger.propagate = False
+
+        # 기존 핸들러가 있다면 모두 제거 (재시작 시 중복 방지)
+        if self.logger.hasHandlers():
+            self.logger.handlers.clear()
+
+        # 포맷터 정의
+        # 파일용: 상세 정보 포함
+        file_formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'
+        )
+        # 콘솔용: 깔끔하게 시간과 메시지만
+        console_formatter = logging.Formatter(
+            '[%(asctime)s] [%(levelname)s] %(message)s',
+            datefmt='%H:%M:%S'
+        )
+
         # Console Handler (개발 중 실시간 확인용)
-        console_handler = logging.StreamHandler()
-        console_handler.setLevel(logging.INFO)
-
-        # Formatter (통일된 로그 형식)
-        formatter = logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')
-        console_handler.setFormatter(formatter)
-
+        console_handler = logging.StreamHandler(sys.stdout)
+        console_handler.setLevel(logging.DEBUG)  # 개발 중에는 DEBUG
+        console_handler.setFormatter(console_formatter)
         self.logger.addHandler(console_handler)
 
         # Default file handler setup (Fallback)
         # configure() 메서드를 통해 ResourcePath 경로로 재설정 가능
-        self._setup_file_handler("logs")
+        self._setup_file_handler("logs", file_formatter)
 
         self._initialized = True
 
@@ -84,7 +101,7 @@ class Logger:
         if resource_path and hasattr(resource_path, 'logs_dir'):
             self._setup_file_handler(str(resource_path.logs_dir))
 
-    def _setup_file_handler(self, log_dir_path):
+    def _setup_file_handler(self, log_dir_path: str, file_formatter: logging.Formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')):
         """
         파일 핸들러를 설정합니다
 
@@ -95,6 +112,7 @@ class Logger:
 
         Args:
             log_dir_path: 로그 파일을 저장할 디렉토리 경로
+            file_formatter: 파일 핸들러용 포맷터
         """
         # 로그 디렉토리 생성
         if not os.path.exists(log_dir_path):
@@ -107,7 +125,7 @@ class Logger:
         # maxBytes: 10MB, backupCount: 5개 백업 파일 유지
         file_handler = RotatingFileHandler(log_file, maxBytes=10*1024*1024, backupCount=5)
         file_handler.setLevel(logging.DEBUG)
-        file_handler.setFormatter(logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'))
+        file_handler.setFormatter(file_formatter)
 
         for handler in self.logger.handlers[:]:
             if isinstance(handler, RotatingFileHandler):

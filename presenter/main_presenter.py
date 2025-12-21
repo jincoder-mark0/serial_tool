@@ -13,17 +13,20 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 * 하위 Presenter 생성 및 연결
 * 설정 로드/저장 및 초기화 로직 (LifecycleManager 위임)
 * Fast Path 데이터 수신 처리 및 UI Throttling
-* 애플리케이션 종료 처리
+* 애플리케이션 종료 처리 및 상태 저장
 
 ## HOW
 * EventRouter 및 Signal/Slot 기반 통신
-* DTO를 활용한 데이터 교환
+* DTO를 활용한 데이터 교환 (Type Safety)
 * SettingsManager 주입 및 관리
 """
+import os
 from PyQt5.QtCore import QObject, QTimer, QDateTime
+
 from view.main_window import MainWindow
 from model.connection_controller import ConnectionController
 from model.macro_runner import MacroRunner
+
 from .port_presenter import PortPresenter
 from .macro_presenter import MacroPresenter
 from .file_presenter import FilePresenter
@@ -32,22 +35,29 @@ from .manual_control_presenter import ManualControlPresenter
 from .event_router import EventRouter
 from .data_handler import DataTrafficHandler
 from .lifecycle_manager import AppLifecycleManager
+
 from core.command_processor import CommandProcessor
 from core.settings_manager import SettingsManager
 from core.data_logger import data_logger_manager
 from view.managers.language_manager import language_manager
-from view.managers.color_manager import color_manager
+
 from core.logger import logger
 from common.constants import ConfigKeys, EventTopics
 from common.enums import LogFormat
 from common.dtos import (
-    ManualCommand, ManualControlState,
-    PortDataEvent, PortErrorEvent, PortStatistics,
-    MainWindowState, PreferencesState, FontConfig,
-    PacketEvent
+    ManualCommand,
+    PortDataEvent,
+    PortErrorEvent,
+    PortStatistics,
+    PreferencesState,
+    FontConfig,
+    PortConnectionEvent,
+    MacroErrorEvent,
+    FileErrorEvent,
+    FileCompletionEvent,
+    SystemLogEvent
 )
-from view.dialogs.file_transfer_dialog import FileTransferDialog
-from view.panels.port_panel import PortPanel # Needed for type checking if used, or duck typing
+
 
 class MainPresenter(QObject):
     """
@@ -63,11 +73,15 @@ class MainPresenter(QObject):
 
         Logic:
             - LifecycleManager를 통한 초기화 시퀀스 실행
+            - 탭 변경 시그널 연결 (UI 상태 동기화)
+
+        Args:
+            view (MainWindow): 메인 윈도우 뷰 인스턴스.
         """
         super().__init__()
         self.view = view
         self.settings_manager = SettingsManager()
-        self.status_timer = None
+        self.status_timer: Optional[QTimer] = None
 
         # LifecycleManager를 통해 초기화 위임
         self.lifecycle_manager = AppLifecycleManager(self)
@@ -77,14 +91,18 @@ class MainPresenter(QObject):
         self.view.left_section.port_tab_panel.currentChanged.connect(self._on_port_tab_changed)
 
     def _init_core_systems(self) -> None:
-        """Model 및 Core 시스템 초기화 (LifecycleManager에서 호출)"""
+        """
+        Model 및 Core 시스템 초기화 (LifecycleManager에서 호출).
+        """
         self.connection_controller = ConnectionController()
         self.macro_runner = MacroRunner()
         self.event_router = EventRouter()
         self.data_handler = DataTrafficHandler(self.view)
 
     def _init_sub_presenters(self) -> None:
-        """하위 Presenter 인스턴스 생성 (LifecycleManager에서 호출)"""
+        """
+        하위 Presenter 인스턴스 생성 (LifecycleManager에서 호출).
+        """
         # Port Control
         self.port_presenter = PortPresenter(self.view.port_view, self.connection_controller)
 
@@ -111,9 +129,14 @@ class MainPresenter(QObject):
 
     def _connect_signals(self) -> None:
         """
-        EventRouter, Model, View 간의 시그널 연결
+        EventRouter, Model, View 간의 시그널 연결.
+
+        Logic:
+            - EventRouter를 통해 비동기 이벤트를 수신하여 핸들러 연결
+            - View의 사용자 입력 이벤트를 핸들러 연결
+            - Model의 직접적인 시그널 연결
         """
-        # EventRouter 연결
+        # EventRouter 연결 (Model -> UI Thread)
         self.event_router.port_opened.connect(self.on_port_opened)
         self.event_router.port_closed.connect(self.on_port_closed)
         self.event_router.port_error.connect(self.on_port_error)
@@ -149,9 +172,31 @@ class MainPresenter(QObject):
         # 로깅 시그널 연결
         self._connect_logging_signals()
 
+    # -------------------------------------------------------------------------
+    # Helper Methods for Logging
+    # -------------------------------------------------------------------------
+    def _log_info(self, message: str) -> None:
+        """INFO 레벨 시스템 로그 기록."""
+        self.view.log_system_message(SystemLogEvent(message=message, level="INFO"))
+
+    def _log_error(self, message: str) -> None:
+        """ERROR 레벨 시스템 로그 기록."""
+        self.view.log_system_message(SystemLogEvent(message=message, level="ERROR"))
+
+    def _log_success(self, message: str) -> None:
+        """SUCCESS 레벨 시스템 로그 기록."""
+        self.view.log_system_message(SystemLogEvent(message=message, level="SUCCESS"))
+
+    # -------------------------------------------------------------------------
+    # Settings & Lifecycle Handlers
+    # -------------------------------------------------------------------------
     def on_preferences_requested(self) -> None:
         """
-        설정을 변경할 수 있는 PreferencesDialog를 표시
+        설정을 변경할 수 있는 PreferencesDialog를 표시합니다.
+
+        Logic:
+            - SettingsManager에서 현재 설정을 조회
+            - PreferencesState DTO 생성 및 View에 전달
         """
         settings = self.settings_manager
         state = PreferencesState(
@@ -161,11 +206,11 @@ class MainPresenter(QObject):
             max_log_lines=settings.get(ConfigKeys.RX_MAX_LINES, 2000),
             baudrate=settings.get(ConfigKeys.PORT_BAUDRATE, 115200),
             newline=str(settings.get(ConfigKeys.PORT_NEWLINE, "\n")),
-            local_echo=settings.get(ConfigKeys.PORT_LOCAL_ECHO, False),
+            local_echo_enabled=settings.get(ConfigKeys.PORT_LOCAL_ECHO, False),
             scan_interval_ms=settings.get(ConfigKeys.PORT_SCAN_INTERVAL, 1000),
             command_prefix=settings.get(ConfigKeys.COMMAND_PREFIX, ""),
             command_suffix=settings.get(ConfigKeys.COMMAND_SUFFIX, ""),
-            log_path=settings.get(ConfigKeys.LOG_PATH, ""),
+            log_dir=settings.get(ConfigKeys.LOG_PATH, ""),
             parser_type=settings.get(ConfigKeys.PACKET_PARSER_TYPE, 0),
             delimiters=settings.get(ConfigKeys.PACKET_DELIMITERS, ["\\r\\n"]),
             packet_length=settings.get(ConfigKeys.PACKET_LENGTH, 64),
@@ -181,7 +226,14 @@ class MainPresenter(QObject):
 
     def on_close_requested(self) -> None:
         """
-        애플리케이션 종료 처리
+        애플리케이션 종료 처리 핸들러
+
+        Logic:
+            - 데이터 핸들러 및 타이머 정지
+            - View에서 현재 윈도우 및 위젯 상태(DTO) 수집
+            - SettingsManager를 통해 설정 저장
+            - 활성 연결 종료
+            - 종료 로그 기록
         """
         self.data_handler.stop()
         if self.status_timer:
@@ -189,6 +241,8 @@ class MainPresenter(QObject):
 
         state = self.view.get_window_state()
         manual_state_dto = self.manual_control_presenter.get_state()
+
+        # DTO -> Dict 변환하여 상태 병합
         state.left_section_state["manual_control"] = {
             "manual_control_widget": {
                 "input_text": manual_state_dto.input_text,
@@ -211,8 +265,9 @@ class MainPresenter(QObject):
         settings.set(ConfigKeys.RIGHT_PANEL_VISIBLE, state.right_panel_visible)
 
         if state.right_section_width is not None:
-             settings.set(ConfigKeys.SAVED_RIGHT_WIDTH, state.right_section_width)
+            settings.set(ConfigKeys.SAVED_RIGHT_WIDTH, state.right_section_width)
 
+        # 하위 위젯 상태 저장
         if ConfigKeys.MANUAL_CONTROL_STATE in state.left_section_state:
             settings.set(ConfigKeys.MANUAL_CONTROL_STATE, state.left_section_state[ConfigKeys.MANUAL_CONTROL_STATE])
         if ConfigKeys.PORTS_TABS_STATE in state.left_section_state:
@@ -223,13 +278,18 @@ class MainPresenter(QObject):
             settings.set(ConfigKeys.MACRO_CONTROL_STATE, state.right_section_state[ConfigKeys.MACRO_CONTROL_STATE])
 
         settings.save_settings()
+
         if self.connection_controller.has_active_connection:
             self.connection_controller.close_connection()
+
         logger.info("Shutdown completed.")
 
     def on_settings_change_requested(self, new_state: PreferencesState) -> None:
         """
         설정 변경 요청 처리
+
+        Args:
+            new_state (PreferencesState): 변경된 설정 상태 DTO.
         """
         settings = self.settings_manager
         settings.set(ConfigKeys.THEME, new_state.theme.lower())
@@ -238,12 +298,13 @@ class MainPresenter(QObject):
         settings.set(ConfigKeys.RX_MAX_LINES, new_state.max_log_lines)
         settings.set(ConfigKeys.PORT_BAUDRATE, new_state.baudrate)
         settings.set(ConfigKeys.PORT_NEWLINE, new_state.newline)
-        settings.set(ConfigKeys.PORT_LOCAL_ECHO, new_state.local_echo)
+        settings.set(ConfigKeys.PORT_LOCAL_ECHO, new_state.local_echo_enabled)
         settings.set(ConfigKeys.PORT_SCAN_INTERVAL, new_state.scan_interval_ms)
         settings.set(ConfigKeys.COMMAND_PREFIX, new_state.command_prefix)
         settings.set(ConfigKeys.COMMAND_SUFFIX, new_state.command_suffix)
-        settings.set(ConfigKeys.LOG_PATH, new_state.log_path)
+        settings.set(ConfigKeys.LOG_PATH, new_state.log_dir)
 
+        # Packet Settings
         settings.set(ConfigKeys.PACKET_PARSER_TYPE, new_state.parser_type)
         settings.set(ConfigKeys.PACKET_DELIMITERS, new_state.delimiters)
         settings.set(ConfigKeys.PACKET_LENGTH, new_state.packet_length)
@@ -257,29 +318,32 @@ class MainPresenter(QObject):
 
         settings.save_settings()
 
+        # 즉시 적용 필요한 설정 업데이트
         self.view.switch_theme(new_state.theme.lower())
         language_manager.set_language(new_state.language)
 
+        # 모든 데이터 로그 위젯에 Max Lines 적용
         count = self.view.get_port_tabs_count()
         for i in range(count):
             widget = self.view.get_port_tab_widget(i)
             if hasattr(widget, 'data_log_widget'):
                 widget.data_log_widget.set_max_lines(new_state.max_log_lines)
 
-        self.manual_control_presenter.update_local_echo_setting(new_state.local_echo)
+        self.manual_control_presenter.update_local_echo_setting(new_state.local_echo_enabled)
 
+        # EventBus로 변경 전파 (다른 컴포넌트용)
         from core.event_bus import event_bus
         event_bus.publish(EventTopics.SETTINGS_CHANGED, new_state)
 
         self.view.show_status_message("Settings updated", 2000)
-        self.view.log_system_message("Settings updated", "INFO")
+        self._log_info("Settings updated")
 
     def on_font_settings_changed(self, font_config: FontConfig) -> None:
         """
         폰트 설정 변경 처리
 
         Args:
-            font_config (FontConfig): 폰트 설정 DTO
+            font_config (FontConfig): 폰트 설정 DTO.
         """
         settings = self.settings_manager
         settings.set(ConfigKeys.PROP_FONT_FAMILY, font_config.prop_family)
@@ -289,38 +353,48 @@ class MainPresenter(QObject):
         settings.save_settings()
         logger.info("Font settings saved successfully.")
 
+    # -------------------------------------------------------------------------
+    # Port & Data Handlers
+    # -------------------------------------------------------------------------
     def _on_data_sent_router(self, event: PortDataEvent) -> None:
         """
-        데이터 송신 이벤트 (라우터 -> 핸들러)
+        데이터 송신 이벤트 (EventRouter -> DataHandler)
 
         Args:
-            event (PortDataEvent): 포트 데이터 이벤트
+            event (PortDataEvent): 포트 데이터 이벤트 DTO.
         """
         self.data_handler.on_data_sent(event)
 
-    def on_port_opened(self, port_name: str) -> None:
+    def on_port_opened(self, event: PortConnectionEvent) -> None:
         """
         포트 열림 알림
 
+        Logic:
+            - 상태바 업데이트
+            - 컨트롤 패널(수동/매크로) 활성화 동기화
+
         Args:
-            port_name (str): 열린 포트 이름
+            event (PortConnectionEvent): 포트 연결 이벤트 DTO.
         """
-        self.view.update_status_bar_port(port_name, True)
-        self.view.show_status_message(f"Connected to {port_name}", 3000)
+        self.view.update_status_bar_port(event.port, True)
+        self.view.show_status_message(f"Connected to {event.port}", 3000)
 
         self._update_controls_state_for_current_tab()
 
-    def on_port_closed(self, port_name: str) -> None:
+    def on_port_closed(self, event: PortConnectionEvent) -> None:
         """
         포트 닫힘 알림
 
-        Args:
-            port_name (str): 닫힌 포트 이름
-        """
-        self.view.update_status_bar_port(port_name, False)
-        self.view.show_status_message(f"Disconnected from {port_name}", 3000)
+        Logic:
+            - 상태바 업데이트
+            - 컨트롤 패널 비활성화 동기화
 
-        # 현재 활성 탭이 닫힌 포트라면 UI 비활성화
+        Args:
+            event (PortConnectionEvent): 포트 연결 이벤트 DTO.
+        """
+        self.view.update_status_bar_port(event.port, False)
+        self.view.show_status_message(f"Disconnected from {event.port}", 3000)
+
         self._update_controls_state_for_current_tab()
 
     def on_port_error(self, event: PortErrorEvent) -> None:
@@ -328,15 +402,17 @@ class MainPresenter(QObject):
         포트 오류 알림
 
         Args:
-            event (PortErrorEvent): 포트 오류 이벤트
+            event (PortErrorEvent): 포트 오류 이벤트 DTO.
         """
         self.view.show_status_message(f"Error ({event.port}): {event.message}", 5000)
-
 
     def _on_port_tab_changed(self, index: int) -> None:
         """
         포트 탭 변경 시 호출됨
         새로운 탭의 연결 상태에 따라 전역 컨트롤(매크로, 수동 제어) 활성화 상태 동기화
+
+        Args:
+            index (int): 변경된 탭 인덱스.
         """
         self._update_controls_state_for_current_tab()
 
@@ -349,8 +425,7 @@ class MainPresenter(QObject):
         widget = self.view.left_section.port_tab_panel.widget(current_index)
 
         is_connected = False
-        # PortPanel인지 확인 (플러스 탭 등 예외 처리)
-        # Duck typing: has method is_connected
+        # PortPanel인지 확인 (Duck typing)
         if hasattr(widget, 'is_connected'):
             is_connected = widget.is_connected()
 
@@ -361,114 +436,136 @@ class MainPresenter(QObject):
         if self.macro_presenter:
             self.macro_presenter.set_enabled(is_connected)
 
+    # -------------------------------------------------------------------------
+    # Macro Handlers
+    # -------------------------------------------------------------------------
     def on_macro_started(self) -> None:
-        """
-        매크로 시작 알림
-        """
-        self.view.log_system_message("Macro started", "INFO")
+        """매크로 시작 알림"""
+        self._log_info("Macro started")
         self.view.show_status_message("Macro Running...", 0)
 
     def on_macro_finished(self) -> None:
-        """
-        매크로 종료 알림
-        """
-        self.view.log_system_message("Macro finished", "SUCCESS")
+        """매크로 종료 알림"""
+        self._log_success("Macro finished")
         self.view.show_status_message("Macro Finished", 3000)
 
-    def on_macro_error(self, error_msg: str) -> None:
+    def on_macro_error(self, event: MacroErrorEvent) -> None:
         """
         매크로 오류 알림
 
         Args:
-            error_msg (str): 오류 메시지
+            event (MacroErrorEvent): 매크로 에러 이벤트 DTO.
         """
-        self.view.log_system_message(f"Macro Error: {error_msg}", "ERROR")
-        self.view.show_status_message(f"Macro Error: {error_msg}", 5000)
+        row_info = f"(Row {event.row_index})" if event.row_index >= 0 else ""
+        msg = f"Macro Error {row_info}: {event.message}"
+        self._log_error(msg)
+        self.view.show_status_message(msg, 5000)
 
     def on_macro_send_requested(self, manual_command: ManualCommand) -> None:
         """
-        매크로 전송 요청 처리
+        매크로 전송 요청 처리 (Runner -> Controller)
+
+        Logic:
+            - Broadcast 여부 확인
+            - 활성 포트 확인 (Single Port)
+            - CommandProcessor를 통한 데이터 가공 (Prefix/Suffix/Hex)
+            - ConnectionController를 통한 전송
 
         Args:
-            manual_command (ManualCommand): 매크로 명령어
+            manual_command (ManualCommand): 전송할 명령어 DTO.
         """
-        if manual_command.broadcast_enabled:
-            prefix = self.settings_manager.get(ConfigKeys.COMMAND_PREFIX) if manual_command.prefix_enabled else None
-            suffix = self.settings_manager.get(ConfigKeys.COMMAND_SUFFIX) if manual_command.suffix_enabled else None
-            try:
-                data = CommandProcessor.process_command(manual_command.text, manual_command.hex_mode, prefix=prefix, suffix=suffix)
-                self.connection_controller.send_broadcast_data(data)
-            except ValueError as e:
-                logger.error(f"Broadcast error: {e}")
-            return
-
-        active_port = self.port_presenter.get_active_port_name()
-        if not active_port or not self.connection_controller.is_connection_open(active_port):
-            logger.warning("No active port")
-            return
-
+        # 1. 설정값 조회 (Prefix/Suffix)
         prefix = self.settings_manager.get(ConfigKeys.COMMAND_PREFIX) if manual_command.prefix_enabled else None
         suffix = self.settings_manager.get(ConfigKeys.COMMAND_SUFFIX) if manual_command.suffix_enabled else None
-        try:
-            data = CommandProcessor.process_command(manual_command.text, manual_command.hex_mode, prefix=prefix, suffix=suffix)
-            self.connection_controller.send_data(active_port, data)
-        except ValueError as e:
-            logger.error(f"Send error: {e}")
 
-    def on_file_transfer_completed(self, success: bool) -> None:
+        # 2. 데이터 가공
+        try:
+            data = CommandProcessor.process_command(
+                manual_command.command,
+                manual_command.hex_mode,
+                prefix=prefix,
+                suffix=suffix
+            )
+        except ValueError as e:
+            logger.error(f"Command processing error: {e}")
+            return
+
+        # 3. 전송 (Broadcast vs Single)
+        if manual_command.broadcast_enabled:
+            self.connection_controller.send_broadcast_data(data)
+        else:
+            active_port = self.port_presenter.get_active_port_name()
+            if not active_port or not self.connection_controller.is_connection_open(active_port):
+                logger.warning("No active port for macro execution.")
+                return
+            self.connection_controller.send_data(active_port, data)
+
+    # -------------------------------------------------------------------------
+    # File Transfer Handlers
+    # -------------------------------------------------------------------------
+    def on_file_transfer_completed(self, event: FileCompletionEvent) -> None:
         """
         파일 전송 완료 처리
 
         Args:
-            success (bool): 성공 여부
+            event (FileCompletionEvent): 완료 이벤트 DTO.
         """
-        status = "Completed" if success else "Failed"
-        self.view.log_system_message(f"File transfer {status}", "SUCCESS" if success else "WARN")
+        status = "Completed" if event.success else "Failed"
+        msg = f"File transfer {status}: {event.message}"
+
+        if event.success:
+            self._log_success(msg)
+        else:
+            self._log_error(msg)
+
         self.view.show_status_message(f"File Transfer {status}", 3000)
 
-    def on_file_transfer_error(self, msg: str) -> None:
+    def on_file_transfer_error(self, event: FileErrorEvent) -> None:
         """
         파일 전송 오류 처리
 
         Args:
-            msg (str): 오류 메시지
+            event (FileErrorEvent): 에러 이벤트 DTO.
         """
-        self.view.log_system_message(f"File Transfer Error: {msg}", "ERROR")
+        self._log_error(f"File Transfer Error: {event.message}")
 
+    # -------------------------------------------------------------------------
+    # UI Updates & Shortcuts
+    # -------------------------------------------------------------------------
     def update_status_bar(self) -> None:
         """
-        상태 표시줄 업데이트
+        상태 표시줄 업데이트 (Timer Slot).
+        DataHandler의 통계를 바탕으로 UI 갱신.
         """
         stats = PortStatistics(
             rx_bytes=self.data_handler.rx_byte_count,
             tx_bytes=self.data_handler.tx_byte_count,
-            bps=0 # BPS calculation logic can be added here or in DataHandler
+            bps=0  # BPS 계산 로직은 필요시 추가
         )
 
         self.view.update_status_bar_stats(stats)
 
-        # Reset counts for next interval (rate calculation)
+        # 카운터 초기화 (Interval 단위 속도 계산용)
         self.data_handler.reset_counts()
         self.view.update_status_bar_time(QDateTime.currentDateTime().toString("HH:mm:ss"))
 
-    def on_shortcut_connect(self)-> None:
-        """
-        연결 단축키 처리
-        """
+    def on_shortcut_connect(self) -> None:
+        """연결 단축키(F2) 처리."""
         self.port_presenter.connect_current_port()
-    def on_shortcut_disconnect(self)-> None:
-        """
-        연결 해제 단축키 처리
-        """
+
+    def on_shortcut_disconnect(self) -> None:
+        """연결 해제 단축키(F3) 처리."""
         self.port_presenter.disconnect_current_port()
 
     def on_shortcut_clear(self) -> None:
-        """
-        로그 초기화 단축키 처리
-        """
+        """로그 초기화 단축키(F5) 처리."""
         self.port_presenter.clear_log_current_port()
 
+    # -------------------------------------------------------------------------
+    # Logging Connections
+    # -------------------------------------------------------------------------
     def _connect_logging_signals(self) -> None:
+        """기존 모든 포트 탭에 로깅 시그널을 연결합니다."""
         count = self.view.get_port_tabs_count()
         for i in range(count):
             widget = self.view.get_port_tab_widget(i)
@@ -476,29 +573,32 @@ class MainPresenter(QObject):
 
     def _on_port_tab_added(self, panel) -> None:
         """
-        포트 탭 추가 시 로깅 시그널 연결
+        포트 탭 추가 시 로깅 시그널 연결 핸들러
 
         Args:
-            panel (PortPanel): 추가된 포트 패널
+            panel (PortPanel): 추가된 포트 패널.
         """
         self._connect_single_port_logging(panel)
-        # Inject Color Rules into new DataLogWidget
+        # 새 탭에 색상 규칙 주입
         if hasattr(panel, 'data_log_widget'):
             panel.data_log_widget.set_color_rules(color_manager.rules)
 
     def _connect_single_port_logging(self, panel) -> None:
         """
-        포트 패널 로깅 시그널 연결
+        단일 포트 패널의 로깅 시그널 연결
 
         Args:
-            panel (PortPanel): 포트 패널
+            panel (PortPanel): 포트 패널.
         """
         if hasattr(panel, 'data_log_widget'):
             data_log_widget = panel.data_log_widget
             try:
                 data_log_widget.logging_start_requested.disconnect()
                 data_log_widget.logging_stop_requested.disconnect()
-            except TypeError: pass
+            except TypeError:
+                pass
+
+            # Lambda로 패널 컨텍스트 전달
             data_log_widget.logging_start_requested.connect(lambda: self._on_logging_start_requested(panel))
             data_log_widget.logging_stop_requested.connect(lambda: self._on_logging_stop_requested(panel))
 
@@ -508,8 +608,11 @@ class MainPresenter(QObject):
 
         Logic:
             - 파일 다이얼로그 표시
-            - 선택된 파일의 확장자를 기반으로 LogFormat 결정
-            - DataLoggerManager에 포맷과 함께 시작 요청
+            - 확장자 기반 포맷 결정 (BIN/HEX/PCAP)
+            - DataLoggerManager에 시작 요청
+
+        Args:
+            panel (PortPanel): 요청한 패널.
         """
         file_path = panel.data_log_widget.show_save_log_dialog()
         if not file_path:
@@ -525,29 +628,29 @@ class MainPresenter(QObject):
         _, ext = os.path.splitext(file_path)
         ext = ext.lower()
 
-        log_format = LogFormat.BIN # 기본값
+        log_format = LogFormat.BIN  # 기본값
         if ext == '.pcap':
             log_format = LogFormat.PCAP
         elif ext == '.txt':
             log_format = LogFormat.HEX
 
-        # 포맷 전달
+        # 포맷 전달 및 시작
         if data_logger_manager.start_logging(port, file_path, log_format):
             panel.data_log_widget.set_logging_active(True)
-            # 시작 메시지 (선택)
-            self.view.log_system_message(f"[{port}] Logging started ({log_format.value}): {file_path}", "INFO")
+            self._log_info(f"[{port}] Logging started ({log_format.value}): {file_path}")
         else:
             panel.data_log_widget.set_logging_active(False)
-            self.view.log_system_message(f"[{port}] Failed to start logging", "ERROR")
+            self._log_error(f"[{port}] Failed to start logging")
 
     def _on_logging_stop_requested(self, panel):
         """
         로깅 중지 요청 처리
 
         Args:
-            panel (PortPanel): 포트 패널
+            panel (PortPanel): 요청한 패널.
         """
         port = panel.get_port_name()
-        if port: data_logger_manager.stop_logging(port)
+        if port:
+            data_logger_manager.stop_logging(port)
         panel.data_log_widget.set_logging_active(False)
-
+        self._log_info(f"[{port}] Logging stopped")

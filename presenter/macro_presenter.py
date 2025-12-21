@@ -4,7 +4,7 @@
 매크로 실행 및 관리를 담당하는 Presenter입니다.
 
 ## WHY
-* 매크로 UI 이벤트와 실행 엔진(Model)의 분리
+* 매크로 UI 이벤트와 실행 엔진(Model)의 분리 (MVP 패턴)
 * 파일 I/O(저장/로드)와 실행 로직의 조율
 * 대용량 파일 로딩 시 UI 반응성 확보
 
@@ -12,30 +12,40 @@
 * MacroPanel(View)과 MacroRunner(Model) 연결
 * 스크립트 파일 저장/로드 (비동기 Worker 사용)
 * 매크로 실행/정지/일시정지 제어 및 상태 업데이트
+* DTO를 통한 데이터 흐름 제어
 
 ## HOW
 * ScriptLoadWorker(QThread)를 통한 비동기 로딩
-* DTO(MacroScriptData)를 사용한 데이터 전달
+* DTO(MacroScriptData, MacroExecutionRequest)를 사용한 데이터 전달
+* Signal/Slot을 이용한 이벤트 처리
 """
-from PyQt5.QtCore import QObject, QThread, pyqtSignal
-from typing import List, Dict, Any
+from typing import List, Dict, Any, Optional
 try:
     import commentjson
 except ImportError:
     import json as commentjson
 
+from PyQt5.QtCore import QObject, QThread, pyqtSignal
+
 from view.panels.macro_panel import MacroPanel
 from model.macro_runner import MacroRunner
 from common.dtos import (
-    MacroEntry, MacroScriptData, MacroRepeatOption,
-    MacroStepEvent, ManualCommand, MacroExecutionRequest
+    MacroEntry,
+    MacroScriptData,
+    MacroRepeatOption,
+    MacroStepEvent,
+    ManualCommand,
+    MacroExecutionRequest,
+    MacroErrorEvent
 )
 from core.logger import logger
+
 
 class ScriptLoadWorker(QThread):
     """
     비동기 스크립트 로딩 워커
-    대용량 JSON 파일 파싱 시 UI 블로킹 방지
+
+    대용량 JSON 파일 파싱 시 UI 블로킹을 방지하기 위해 별도 스레드에서 실행됩니다.
     """
     load_finished = pyqtSignal(dict)
     load_failed = pyqtSignal(str)
@@ -45,14 +55,18 @@ class ScriptLoadWorker(QThread):
         ScriptLoadWorker 초기화
 
         Args:
-            file_path (str): 로드할 파일 경로
+            file_path (str): 로드할 파일 경로.
         """
         super().__init__()
         self.file_path = file_path
 
     def run(self):
         """
-        스크립트 파일 로드 실행
+        스크립트 파일 로드 실행 (Thread Entry Point)
+
+        Logic:
+            - 파일 열기 및 JSON 파싱
+            - 성공 시 데이터 방출, 실패 시 에러 메시지 방출
         """
         try:
             with open(self.file_path, 'r', encoding='utf-8') as f:
@@ -61,9 +75,10 @@ class ScriptLoadWorker(QThread):
         except Exception as e:
             self.load_failed.emit(str(e))
 
+
 class MacroPresenter(QObject):
     """
-    매크로 실행 및 관리를 담당하는 Presenter
+    매크로 실행 및 관리를 담당하는 Presenter 클래스
     """
 
     def __init__(self, panel: MacroPanel, runner: MacroRunner):
@@ -71,15 +86,17 @@ class MacroPresenter(QObject):
         MacroPresenter 초기화
 
         Args:
-            panel (MacroPanel): 매크로 UI 패널 (View)
-            runner (MacroRunner): 매크로 실행 엔진 (Model)
+            panel (MacroPanel): 매크로 UI 패널 (View).
+            runner (MacroRunner): 매크로 실행 엔진 (Model).
         """
         super().__init__()
         self.panel = panel
         self.runner = runner
-        self._load_worker = None
+        self._load_worker: Optional[ScriptLoadWorker] = None
 
-        # View -> Presenter 연결
+        # ---------------------------------------------------------
+        # 1. View -> Presenter 연결
+        # ---------------------------------------------------------
         self.panel.repeat_start_requested.connect(self.on_repeat_start)
         self.panel.repeat_stop_requested.connect(self.on_repeat_stop)
 
@@ -87,10 +104,12 @@ class MacroPresenter(QObject):
         self.panel.script_save_requested.connect(self.on_script_save)
         self.panel.script_load_requested.connect(self.on_script_load)
 
-        # MacroListWidget의 개별 전송 버튼
+        # MacroListWidget의 개별 전송 버튼 (DTO 수신)
         self.panel.macro_list.send_row_requested.connect(self.on_single_send_requested)
 
-        # Model -> Presenter -> View 연결
+        # ---------------------------------------------------------
+        # 2. Model -> Presenter -> View 연결
+        # ---------------------------------------------------------
         self.runner.step_started.connect(self.on_step_started)
         self.runner.step_completed.connect(self.on_step_completed)
         self.runner.macro_finished.connect(self.on_macro_finished)
@@ -98,10 +117,10 @@ class MacroPresenter(QObject):
 
     def set_enabled(self, enabled: bool) -> None:
         """
-        매크로 제어 활성화/비활성화 (MainPresenter에서 호출)
+        매크로 제어 활성화/비활성화 상태를 설정합니다 (MainPresenter에서 호출).
 
         Args:
-            enabled (bool): 활성화 여부
+            enabled (bool): 활성화 여부.
         """
         self.panel.macro_control.set_controls_enabled(enabled)
         # 리스트의 전송 버튼들도 제어
@@ -109,10 +128,14 @@ class MacroPresenter(QObject):
 
     def on_script_save(self, script_data: MacroScriptData) -> None:
         """
-        스크립트 파일 저장 요청 처리
+        스크립트 파일 저장 요청 처리 핸들러
+
+        Logic:
+            - DTO에서 경로와 데이터를 추출하여 파일로 저장
+            - 성공/실패 여부를 View에 알림
 
         Args:
-            script_data (MacroScriptData): 저장할 스크립트 데이터
+            script_data (MacroScriptData): 저장할 스크립트 데이터 DTO.
         """
         try:
             self._save_script_file(script_data.file_path, script_data.data)
@@ -123,11 +146,11 @@ class MacroPresenter(QObject):
 
     def _save_script_file(self, file_path: str, data: dict) -> None:
         """
-        [I/O] 파일 저장 수행
+        [I/O] 파일 저장을 실제로 수행합니다.
 
         Args:
-            file_path (str): 저장할 파일 경로
-            data (dict): 저장할 데이터
+            file_path (str): 저장할 파일 경로.
+            data (dict): 저장할 데이터.
         """
         with open(file_path, 'w', encoding='utf-8') as f:
             commentjson.dump(data, f, indent=4)
@@ -137,8 +160,13 @@ class MacroPresenter(QObject):
         """
         스크립트 파일 로드 요청 처리 (비동기)
 
+        Logic:
+            - 기존 로딩 작업 확인
+            - Worker 생성 및 시작
+            - 성공/실패 시그널 연결
+
         Args:
-            file_path (str): 로드할 파일 경로
+            file_path (str): 로드할 파일 경로.
         """
         logger.debug(f"Starting async script load: {file_path}")
 
@@ -154,10 +182,10 @@ class MacroPresenter(QObject):
 
     def _on_load_success(self, data: dict) -> None:
         """
-        로드 성공 시 UI 적용
+        로드 성공 시 View에 데이터를 적용합니다.
 
         Args:
-            data (dict): 로드된 스크립트 데이터
+            data (dict): 로드된 스크립트 데이터.
         """
         logger.info("Script loaded successfully.")
         self.panel.apply_state(data)
@@ -165,30 +193,33 @@ class MacroPresenter(QObject):
 
     def _on_load_failed(self, error_msg: str) -> None:
         """
-        로드 실패 시 에러 표시
+        로드 실패 시 에러를 표시합니다.
 
         Args:
-            error_msg (str): 에러 메시지
+            error_msg (str): 에러 메시지.
         """
         logger.error(f"Failed to load script: {error_msg}")
         self.panel.show_error("Load Error", f"Failed to load script:\n{error_msg}")
         self._load_worker = None
 
-    def on_repeat_start(self, indices: List[int], option: MacroRepeatOption) -> None:
+    def on_repeat_start(self, request: MacroExecutionRequest) -> None:
         """
-        반복 실행 시작 요청 처리
+        반복 실행 시작 요청 처리 핸들러
 
         Logic:
-            - UI에서 전체 MacroEntry 리스트를 가져옴 (DTO)
-            - 선택된 인덱스의 엔트리만 필터링
-            - Runner에 로드 및 시작
+            - View에서 전달받은 DTO(`MacroExecutionRequest`)를 사용
+            - 전체 엔트리 중 선택된 인덱스의 엔트리만 필터링
+            - Runner에 로드 및 시작 명령 전달
+            - View 상태 업데이트
 
         Args:
-            indices (List[int]): 실행할 매크로 인덱스 리스트
-            option (MacroRepeatOption): 반복 옵션
+            request (MacroExecutionRequest): 실행 요청 DTO (인덱스 목록, 옵션 포함).
         """
-        if not indices: return
+        indices = request.indices
+        if not indices:
+            return
 
+        # View에서 전체 데이터 조회 (여기는 View 상태 조회가 필요함)
         all_entries = self.panel.macro_list.get_macro_entries()
         selected_entries = []
 
@@ -196,34 +227,44 @@ class MacroPresenter(QObject):
             if i in indices:
                 selected_entries.append(entry)
 
-        if not selected_entries: return
+        if not selected_entries:
+            return
 
         # 옵션 추출
         option = request.option
 
+        # Runner 설정 및 시작
         self.runner.load_macro(selected_entries)
-        self.runner.start(option.max_runs, option.interval_ms, option.broadcast_enabled)
+        self.runner.start(option.max_runs, option.delay_ms, option.broadcast_enabled)
+
+        # View 상태 업데이트
         self.panel.set_running_state(True)
 
     def on_repeat_stop(self) -> None:
         """
-        반복 실행 중지 요청 처리
+        반복 실행 중지 요청 처리 핸들러
         """
         self.runner.stop()
 
-    def on_single_send_requested(self, row_index: int) -> None:
+    def on_single_send_requested(self, row_index: int, entry: MacroEntry) -> None:
         """
-        개별 명령어 전송 요청 처리
+        개별 명령어 전송 요청 처리 핸들러
+
+        Logic:
+            - View로부터 전달받은 `MacroEntry` DTO를 `ManualCommand` DTO로 변환
+            - Runner의 단일 전송 메서드 호출
+            - (참고: 단일 전송은 기본적으로 Broadcast 하지 않음)
 
         Args:
-            row_index (int): 실행할 매크로 인덱스
+            row_index (int): 실행할 매크로 인덱스 (로깅용, 로직엔 미사용).
+            entry (MacroEntry): 실행할 매크로 엔트리 DTO.
         """
         if entry:
             manual_command = ManualCommand(
                 command=entry.command,
                 hex_mode=entry.hex_mode,
-                prefix_enabled=entry.prefix_enabled,
-                suffix_enabled=entry.suffix_enabled,
+                prefix_enabled=entry.prefix_enabled,  # MacroEntry 필드명 매핑
+                suffix_enabled=entry.suffix_enabled,  # MacroEntry 필드명 매핑
                 broadcast_enabled=False
             )
             self.runner.send_single_command(manual_command)
@@ -233,7 +274,7 @@ class MacroPresenter(QObject):
         스텝 시작 시 처리 (UI 하이라이트 등)
 
         Args:
-            event (MacroStepEvent): 스텝 이벤트 DTO
+            event (MacroStepEvent): 스텝 이벤트 DTO.
         """
         # TODO: 현재 실행 중인 행 하이라이트 등의 로직 구현 가능
         pass
@@ -243,23 +284,23 @@ class MacroPresenter(QObject):
         스텝 완료 시 처리 (UI 하이라이트 해제 등)
 
         Args:
-            event (MacroStepEvent): 스텝 이벤트 DTO
+            event (MacroStepEvent): 스텝 이벤트 DTO.
         """
         # TODO: 현재 실행 중인 행 하이라이트 해제 등의 로직 구현 가능
         pass
 
     def on_macro_finished(self) -> None:
         """
-        매크로 완료 시 처리 (UI 상태 초기화 등)
+        매크로 완료 시 처리 (UI 상태 초기화)
         """
         self.panel.set_running_state(False)
 
-    def on_error(self, message: str) -> None:
+    def on_error(self, event: MacroErrorEvent) -> None:
         """
-        에러 발생 시 처리
+        에러 발생 시 처리 핸들러
 
         Args:
-            message (str): 에러 메시지
+            event (MacroErrorEvent): 매크로 에러 이벤트 DTO.
         """
-        logger.error(f"Macro Error: {message}")
+        logger.error(f"Macro Error: {event.message}")
         self.panel.set_running_state(False)

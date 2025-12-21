@@ -1,116 +1,117 @@
 """
 수동 제어 패널 모듈
 
-ManualControlWidget을 래핑하여 섹션에 통합합니다.
+수동 제어 위젯(ManualControlWidget)을 포함하는 컨테이너 패널입니다.
+Presenter와 Widget 사이의 인터페이스 역할을 수행합니다.
 
 ## WHY
-* 위젯과 레이아웃 관리의 분리
-* Presenter가 내부 위젯 구조를 알 필요 없도록 추상화
-* 패널 단위의 상태 관리
+* UI 계층 구조(Section -> Panel -> Widget) 준수
+* 레이아웃 관리 및 확장성 확보
 
 ## WHAT
-* ManualControlWidget 생성 및 배치
-* 송신 요청 및 제어 신호(RTS/DTR) 중계
-* 상태 저장 및 복원 인터페이스
+* ManualControlWidget 배치
+* 시그널 중계 (Widget -> Panel -> Presenter)
+* 상태 복원 메서드(apply_state) 제공
 
 ## HOW
-* 단순 래퍼(Wrapper) 구조
-* 시그널 체이닝 (Widget -> Panel -> Presenter)
+* QVBoxLayout을 사용하여 위젯 배치
+* DTO(ManualControlState)를 하위 위젯으로 전달
 """
-from PyQt5.QtWidgets import QWidget, QVBoxLayout
-from PyQt5.QtCore import pyqtSignal
-from typing import Optional
+from typing import Optional, Dict, Any
 
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel
+from PyQt5.QtCore import pyqtSignal
+
+from view.managers.language_manager import language_manager
 from view.widgets.manual_control import ManualControlWidget
-from common.dtos import ManualCommand
+from common.dtos import ManualCommand, ManualControlState
+
 
 class ManualControlPanel(QWidget):
     """
     수동 제어 패널 클래스
 
-    Attributes:
-        manual_control_widget (ManualControlWidget): 수동 제어 위젯 인스턴스
+    ManualControlWidget을 감싸고 있으며, Presenter와의 통신을 위한 시그널을 정의합니다.
     """
-    send_requested = pyqtSignal(object)
-    rts_changed = pyqtSignal(bool)
+
+    # 시그널 정의 (Widget -> Presenter 중계)
+    send_requested = pyqtSignal(object)  # ManualCommand DTO
     dtr_changed = pyqtSignal(bool)
+    rts_changed = pyqtSignal(bool)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
         ManualControlPanel 초기화
 
         Args:
-            parent (Optional[QWidget]): 부모 위젯
+            parent (Optional[QWidget]): 부모 위젯.
         """
         super().__init__(parent)
+
+        # UI 컴포넌트
+        self.title_label: Optional[QLabel] = None
         self.manual_control_widget: Optional[ManualControlWidget] = None
+
         self.init_ui()
 
-    def init_ui(self) -> None:
-        """UI 컴포넌트 및 레이아웃 초기화"""
+        # 언어 변경 연결
+        language_manager.language_changed.connect(self.retranslate_ui)
 
+    def init_ui(self) -> None:
+        """UI 구성 및 레이아웃 설정"""
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(5)
+
+        # 타이틀
+        self.title_label = QLabel(language_manager.get_text("manual_panel_title"))
+        self.title_label.setProperty("class", "section-title")
+
+        # 수동 제어 위젯 생성
         self.manual_control_widget = ManualControlWidget()
 
         # 시그널 연결 (Widget -> Panel)
-        self.manual_control_widget.send_requested.connect(self._on_send_requested)
-        self.manual_control_widget.rts_changed.connect(self.rts_changed)
-        self.manual_control_widget.dtr_changed.connect(self.dtr_changed)
+        self.manual_control_widget.send_requested.connect(self.send_requested.emit)
+        self.manual_control_widget.dtr_changed.connect(self.dtr_changed.emit)
+        self.manual_control_widget.rts_changed.connect(self.rts_changed.emit)
 
-        layout = QVBoxLayout()
-        layout.setContentsMargins(5, 5, 5, 5)
-        layout.setSpacing(5)
+        layout.addWidget(self.title_label)
         layout.addWidget(self.manual_control_widget)
+        layout.addStretch()  # 하단 여백 확보
 
         self.setLayout(layout)
 
-    def _on_send_requested(self, manual_command: ManualCommand) -> None:
-        """
-        수동 전송 요청 핸들러
-
-        Logic:
-            - Widget에서 완성된 DTO를 그대로 상위 Presenter로 전달합니다.
-            - Panel 계층에서 비즈니스 로직(Broadcast 여부 판단 등)을 수행하지 않습니다.
-        """
-        self.send_requested.emit(manual_command)
+    def retranslate_ui(self) -> None:
+        """언어 변경 시 텍스트 업데이트"""
+        self.title_label.setText(language_manager.get_text("manual_panel_title"))
+        # 하위 위젯은 자체적으로 갱신됨
 
     def set_controls_enabled(self, enabled: bool) -> None:
         """
-        제어 위젯 활성화/비활성화
+        제어 위젯의 활성화 상태를 변경합니다.
 
         Args:
-            enabled (bool): 활성화 여부
+            enabled (bool): 활성화 여부.
         """
-        if self.manual_control_widget:
-            self.manual_control_widget.set_controls_enabled(enabled)
+        self.manual_control_widget.set_controls_enabled(enabled)
 
-    def set_local_echo_state(self, checked: bool) -> None:
+    def get_state(self) -> ManualControlState:
         """
-        Local Echo 체크박스 상태 설정 (Presenter -> View)
-
-        Args:
-            checked (bool): 체크 여부
-        """
-        if self.manual_control_widget:
-            self.manual_control_widget.set_local_echo_state(checked)
-
-    def get_state(self) -> dict:
-        """
-        패널 상태 반환
+        현재 상태를 DTO로 반환합니다.
 
         Returns:
-            dict: 상태 데이터
+            ManualControlState: 상태 DTO.
         """
-        if self.manual_control_widget:
-            return {"manual_control_widget": self.manual_control_widget.get_state()}
-        return {}
+        return self.manual_control_widget.get_state()
 
-    def apply_state(self, state: dict) -> None:
+    def apply_state(self, state: ManualControlState) -> None:
         """
-        패널 상태 적용
+        상태 DTO를 위젯에 적용합니다.
 
         Args:
-            state (dict): 적용할 상태 데이터
+            state (ManualControlState): 복원할 상태 DTO.
         """
-        if not state or not self.manual_control_widget:
+        if not isinstance(state, ManualControlState):
             return
-        self.manual_control_widget.apply_state(state.get("manual_control_widget", {}))
+
+        self.manual_control_widget.apply_state(state)

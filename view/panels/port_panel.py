@@ -119,7 +119,7 @@ class PortPanel(QWidget):
         Returns:
             str: 포트 이름.
         """
-        # [Fix] Use itemData (clean port name) instead of currentText (display text with description)
+        # Use itemData (clean port name) instead of currentText (display text with description)
         port_data = self.port_settings_widget.port_combo.currentData()
         if port_data:
             return str(port_data)

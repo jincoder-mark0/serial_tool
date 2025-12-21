@@ -10,13 +10,13 @@
     "proportional_font_size": 9,
     "fixed_font_family": "Consolas",
     "fixed_font_size": 9,
-    "window_width": 1337,
-    "window_height": 860,
-    "window_x": 446,
-    "window_y": 42,
-    "splitter_state": "AAAA/wAAAAEAAAACAAADVwAAAdUB/////wEAAAABAA==",
-    "right_section_visible": true,
-    "saved_right_section_width": 469
+    "window_width": 1394,
+    "window_height": 659,
+    "window_x": 94,
+    "window_y": 111,
+    "splitter_state": "AAAA/wAAAAEAAAACAAAIIwAAA80B/////wEAAAABAA==",
+    "right_section_visible": false,
+    "saved_right_section_width": 787
   },
   "serial": {
     "baudrate": 115200,
@@ -61,7 +61,7 @@
   },
   "manual_control": {
     "manual_control_widget": {
-      "input_text": "",
+      "input_text": "CAF",
       "hex_mode": true,
       "prefix_enabled": true,
       "suffix_enabled": true,

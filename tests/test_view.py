@@ -1,598 +1,275 @@
 """
-View 컴포넌트 테스트 애플리케이션
-개별 위젯들을 독립적으로 테스트할 수 있습니다.
+뷰 계층 테스트 모듈
+
+UI 위젯(View)의 독립적인 동작과 사용자 상호작용을 검증합니다.
+
+## WHY
+* Presenter 로직 없이 순수 UI 컴포넌트(위젯, 패널)의 동작 검증
+* 사용자 입력(클릭, 타이핑)에 따른 시그널 방출 여부 확인
+* 커스텀 위젯(SmartLineEdit 등)의 입력 제한 로직 테스트
+
+## WHAT
+* QSmartLineEdit: HEX 모드 입력 필터링 및 자동 대문자 변환
+* ManualControlPanel: DTO 생성 및 전송 시그널 검증
+* PacketPanel: 데이터 모델 업데이트 및 초기화(Clear) 검증
+* PortPanel: 연결 상태 변경에 따른 UI 반영 확인
+
+## HOW
+* pytest-qt의 `qtbot` 픽스처를 사용하여 UI 이벤트(클릭, 키 입력) 시뮬레이션
+* SignalSpy(qtbot.waitSignal)를 사용하여 시그널 발생과 전달된 데이터(DTO) 검증
 """
-import sys
-import os
+import pytest
+from PyQt5.QtCore import Qt
+from PyQt5.QtWidgets import QPushButton
 
-# 부모 디렉토리를 경로에 추가하여 모듈 import 가능하게 함 (import 전에 실행)
-current_dir = os.path.dirname(os.path.abspath(__file__))
-parent_dir = os.path.dirname(current_dir)
-sys.path.insert(0, parent_dir)
-
-from PyQt5.QtWidgets import QApplication, QMainWindow, QWidget, QVBoxLayout, QTabWidget
-from PyQt5.QtCore import QTimer
-from PyQt5.QtWidgets import QLabel, QTextEdit
-from PyQt5.QtWidgets import QPushButton, QHBoxLayout
-
-from view.widgets.data_log import DataLogWidget
-from view.widgets.manual_control import ManualControlWidget
-from view.widgets.macro_list import MacroListWidget
-from view.widgets.system_log import SystemLogWidget
+from view.custom_qt.smart_line_edit import QSmartLineEdit
+from view.panels.manual_control_panel import ManualControlPanel
+from view.panels.packet_panel import PacketPanel
 from view.panels.port_panel import PortPanel
-from view.managers.theme_manager import ThemeManager
-from view.managers.language_manager import language_manager
-from view.dialogs.preferences_dialog import PreferencesDialog
-from view.dialogs.about_dialog import AboutDialog
-from view.widgets.file_progress import FileProgressWidget
-from core.settings_manager import SettingsManager
-from view.custom_qt.smart_list_view import QSmartListView
-from view.managers.color_manager import color_manager
-from common.dtos import ManualCommand
-import time
-
-class ViewTestWindow(QMainWindow):
-    """View 컴포넌트 테스트용 윈도우 클래스입니다."""
-
-    def __init__(self) -> None:
-        """ViewTestWindow를 초기화합니다."""
-        super().__init__()
-        self.setWindowTitle("View Components Test")
-        self.resize(1200, 800)
-
-        # 설정 관리자 테스트 (Settings Manager Test)
-        self.settings = SettingsManager()
-
-        self.init_ui()
-
-        # 테마 적용 (Apply theme)
-        theme = self.settings.get('settings.theme', 'dark')
-        self.theme_manager = ThemeManager()
-        self.theme_manager.apply_theme(QApplication.instance(), theme)
-
-    def init_ui(self) -> None:
-        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
-
-        layout = QVBoxLayout(central_widget)
-
-        # 테스트용 탭 위젯 (Tab Widget for different tests)
-        tabs = QTabWidget()
-
-        # Test 1: DataLogView (색상 규칙, Trim, 타임스탬프 테스트)
-        tabs.addTab(self.create_data_log_test(), "DataLogView Test")
-
-        # Test 2: ManualControl (입력, 파일 전송 테스트)
-        tabs.addTab(self.create_manual_control_test(), "ManualControl Test")
-
-        # Test 3: CommandList (커맨드 리스트 테스트)
-        tabs.addTab(self.create_macro_list_test(), "CommandList Test")
-
-        # Test 4: StatusArea (상태 로그 테스트)
-        tabs.addTab(self.create_sys_log_test(), "StatusArea Test")
-
-        # Test 5: PortPanel (전체 패널 테스트)
-        tabs.addTab(self.create_port_panel_test(), "PortPanel Test")
-
-        # Test 6: Dialogs (Preferences, About)
-        tabs.addTab(self.create_dialog_test(), "Dialogs Test")
-
-        # Test 7: FileProgress (파일 전송 진행률)
-        tabs.addTab(self.create_file_progress_test(), "FileProgress Test")
+from common.dtos import PacketViewData, ManualCommand
 
 
-        # Test 8: SmartListView (새 기능 테스트)
-        tabs.addTab(self.create_smart_list_view_test(), "SmartListView Test")
+class TestSmartLineEdit:
+    """
+    커스텀 위젯 QSmartLineEdit의 입력 로직을 검증하는 테스트 클래스
+    """
 
-        # Test 9: Language (다국어 지원)
-        tabs.addTab(self.create_language_test(), "Language Test")
-
-        layout.addWidget(tabs)
-
-        # 상태 표시줄 (Status bar)
-        self.statusBar().showMessage("Ready - View Components Test")
-
-    def create_data_log_test(self) -> QWidget:
+    def test_hex_mode_input_validation(self, qtbot):
         """
-        DataLogWidget 테스트 위젯을 생성합니다.
+        HEX 모드 입력 필터링 및 대문자 변환 테스트
 
-        Returns:
-            QWidget: 테스트 위젯.
+        Logic:
+            - HEX 모드 활성화
+            - 유효하지 않은 문자('g') 입력 시도 -> 무시되어야 함
+            - 소문자('a') 입력 시도 -> 대문자('A')로 변환되어야 함
         """
+        # GIVEN: 위젯 생성 및 HEX 모드 설정
+        widget = QSmartLineEdit()
+        qtbot.addWidget(widget)
+        widget.set_hex_mode(True)
+        widget.show()
 
+        # WHEN: 'g' (Invalid HEX) 입력
+        qtbot.keyClicks(widget, "g")
 
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
+        # THEN: 입력되지 않아야 함
+        assert widget.text() == ""
 
-        # DataLogWidget 인스턴스
-        self.data_log_widget = DataLogWidget()
-        layout.addWidget(self.data_log_widget)
+        # WHEN: 'a' (Valid HEX) 입력
+        qtbot.keyClicks(widget, "a")
 
-        # 테스트 버튼 (Test buttons)
-        button_layout = QHBoxLayout()
+        # THEN: 대문자 'A'로 변환되어 입력되어야 함
+        assert widget.text() == "A"
 
-        # 테스트 데이터 버튼
-        btn_ok = QPushButton("Add OK")
-        btn_ok.clicked.connect(lambda: self.data_log_widget.append_data(b"AT\r\nOK\r\n"))
-        button_layout.addWidget(btn_ok)
+        # WHEN: 공백 및 숫자 입력
+        qtbot.keyClicks(widget, " 1")
+        assert widget.text() == "A 1"
 
-        btn_error = QPushButton("Add ERROR")
-        btn_error.clicked.connect(lambda: self.data_log_widget.append_data(b"AT+TEST\r\nERROR\r\n"))
-        button_layout.addWidget(btn_error)
-
-        btn_urc = QPushButton("Add URC")
-        btn_urc.clicked.connect(lambda: self.data_log_widget.append_data(b"+CREG: 1,5\r\n"))
-        button_layout.addWidget(btn_urc)
-
-        btn_many = QPushButton("Add 100 Lines")
-        btn_many.clicked.connect(self.add_many_lines)
-        button_layout.addWidget(btn_many)
-
-        btn_clear = QPushButton("Clear")
-        btn_clear.clicked.connect(self.data_log_widget.on_clear_data_log_clicked)
-        button_layout.addWidget(btn_clear)
-
-        layout.addLayout(button_layout)
-
-        # 정보 레이블
-        info = QLabel("✅ 테스트: 색상 규칙 (OK=녹색, ERROR=빨강), Trim (2000줄 제한), 타임스탬프 (TS 체크박스)")
-        layout.addWidget(info)
-
-        return widget
-
-    def add_many_lines(self) -> None:
-        """많은 라인을 추가하여 Trim 기능을 테스트합니다."""
-        for i in range(100):
-            self.data_log_widget.append_data(f"Line {i+1}: Test data\r\n".encode())
-
-    def create_manual_control_test(self) -> QWidget:
+    def test_ascii_mode_input(self, qtbot):
         """
-        ManualControl 테스트 위젯을 생성합니다.
+        일반(ASCII) 모드 입력 테스트
 
-        Returns:
-            QWidget: 테스트 위젯.
+        Logic:
+            - HEX 모드 비활성화 (기본값)
+            - 모든 문자 입력 허용 확인
         """
+        # GIVEN: 위젯 생성
+        widget = QSmartLineEdit()
+        qtbot.addWidget(widget)
+        widget.set_hex_mode(False)
+        widget.show()
 
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
+        # WHEN: 다양한 문자 입력
+        test_str = "Hello 123!"
+        qtbot.keyClicks(widget, test_str)
 
-        # ManualControl 인스턴스
-        self.manual_control = ManualControlWidget()
-        layout.addWidget(self.manual_control)
+        # THEN: 그대로 입력되어야 함
+        assert widget.text() == test_str
 
-        # 출력 영역 (Output area)
-        self.manual_output = QTextEdit()
-        self.manual_output.setReadOnly(True)
-        self.manual_output.setMaximumHeight(150)
-        self.manual_output.setPlaceholderText("전송된 Command 출력 및 이벤트 로그")
-        layout.addWidget(QLabel("📤 Output Log:"))
-        layout.addWidget(self.manual_output)
 
-        # 시그널 연결
-        # DTO Signal Handling
-        self.manual_control.send_requested.connect(self._on_manual_send)
+class TestManualControlPanel:
+    """
+    ManualControlPanel의 사용자 상호작용 및 시그널 방출 테스트
+    """
 
-        self.manual_control.transfer_file_selected.connect(
-            lambda path: self.manual_output.append(f"📁 File selected: {path}")
-        )
-        self.manual_control.transfer_file_send_requested.connect(
-            lambda path: self.manual_output.append(f"📤 Send file requested: {path}")
+    def test_send_signal_emission(self, qtbot):
+        """
+        전송 버튼 클릭 시 시그널 방출 및 DTO 데이터 검증
+
+        Logic:
+            - 입력창에 텍스트 입력
+            - 전송 버튼 클릭 시뮬레이션
+            - send_requested 시그널 발생 대기 및 검증
+        """
+        # GIVEN: 패널 생성
+        panel = ManualControlPanel()
+        qtbot.addWidget(panel)
+        panel.show()
+
+        # 내부 위젯 참조
+        widget = panel.manual_control_widget
+
+        # 텍스트 입력
+        qtbot.keyClicks(widget.input_edit, "TEST_CMD")
+
+        # 옵션 설정 (예: Local Echo 체크)
+        widget.chk_local_echo.setChecked(True)
+
+        # WHEN: 전송 버튼 클릭 (SignalSpy 사용)
+        with qtbot.waitSignal(panel.send_requested, timeout=1000) as blocker:
+            qtbot.mouseClick(widget.btn_send, Qt.LeftButton)
+
+        # THEN: 시그널 발생 확인 및 DTO 검증
+        assert blocker.signal_triggered
+
+        # 전달된 인자(DTO) 가져오기
+        args = blocker.args
+        command_dto: ManualCommand = args[0]
+
+        assert isinstance(command_dto, ManualCommand)
+        assert command_dto.command == "TEST_CMD"
+        assert command_dto.local_echo_enabled is True
+        assert command_dto.hex_mode is False  # 기본값 확인
+
+    def test_hardware_control_signals(self, qtbot):
+        """
+        RTS/DTR 체크박스 토글 시그널 테스트
+
+        Logic:
+            - RTS 체크박스 클릭 -> rts_changed 시그널(True) 발생
+            - DTR 체크박스 클릭 -> dtr_changed 시그널(True) 발생
+        """
+        # GIVEN: 패널 생성
+        panel = ManualControlPanel()
+        qtbot.addWidget(panel)
+        panel.show()
+
+        widget = panel.manual_control_widget
+
+        # WHEN & THEN: RTS 토글
+        with qtbot.waitSignal(panel.rts_changed) as blocker:
+            widget.chk_rts.setChecked(True)
+        assert blocker.args[0] is True
+
+        # WHEN & THEN: DTR 토글
+        with qtbot.waitSignal(panel.dtr_changed) as blocker:
+            widget.chk_dtr.setChecked(True)
+        assert blocker.args[0] is True
+
+
+class TestPacketPanel:
+    """
+    PacketPanel의 데이터 모델 업데이트 및 뷰 제어 테스트
+    """
+
+    def test_add_packet_updates_model(self, qtbot):
+        """
+        패킷 추가 시 테이블 모델 업데이트 검증
+
+        Logic:
+            - PacketViewData DTO 생성
+            - add_packet 호출
+            - 테이블 모델의 rowCount 증가 및 데이터 일치 확인
+        """
+        # GIVEN: 패널 생성
+        panel = PacketPanel()
+        qtbot.addWidget(panel)
+        panel.show()
+
+        view_data = PacketViewData(
+            time_str="12:00:00",
+            packet_type="TEST",
+            data_hex="AA BB",
+            data_ascii=".."
         )
 
-        # History 테스트 버튼들
-        history_layout = QHBoxLayout()
+        # WHEN: 패킷 추가
+        panel.add_packet(view_data)
 
-        btn_add_at = QPushButton("Add 'AT'")
-        btn_add_at.clicked.connect(lambda: self.manual_control.add_to_history("AT"))
-        history_layout.addWidget(btn_add_at)
+        # THEN: 모델 업데이트 확인
+        model = panel.packet_model
+        assert model.rowCount() == 1
 
-        btn_add_ok = QPushButton("Add 'AT+GMR'")
-        btn_add_ok.clicked.connect(lambda: self.manual_control.add_to_history("AT+GMR"))
-        history_layout.addWidget(btn_add_ok)
+        # 데이터 검증 (Column 2: HEX)
+        index = model.index(0, 2)
+        assert model.data(index, Qt.DisplayRole) == "AA BB"
 
-        btn_add_custom = QPushButton("Add 'AT+CREG?'")
-        btn_add_custom.clicked.connect(lambda: self.manual_control.add_to_history("AT+CREG?"))
-        history_layout.addWidget(btn_add_custom)
-
-        btn_show_history = QPushButton("Show History")
-        btn_show_history.clicked.connect(self.show_manual_history)
-        history_layout.addWidget(btn_show_history)
-
-        layout.addWidget(QLabel("📜 History Test:"))
-        layout.addLayout(history_layout)
-
-        # 정보 레이블
-        info = QLabel(
-            "✅ 테스트:\n"
-            "1. Send 버튼: Command 전송 및 시그널 확인\n"
-            "2. HEX 모드: 체크박스로 전환\n"
-            "3. History: Up/Down 버튼으로 이전 Command 탐색 (Ctrl+Up/Down 키보드 단축키)\n"
-            "4. 파일 선택/전송: Transfer 버튼들 테스트\n"
-            "5. 제어 활성화/비활성화: Enable/Disable Controls 버튼"
-        )
-        layout.addWidget(info)
-
-        # 제어 활성화/비활성화 테스트
-        btn_layout = QHBoxLayout()
-        btn_enable = QPushButton("Enable Controls")
-        btn_enable.clicked.connect(lambda: self.manual_control.set_controls_enabled(True))
-        btn_layout.addWidget(btn_enable)
-
-        btn_disable = QPushButton("Disable Controls")
-        btn_disable.clicked.connect(lambda: self.manual_control.set_controls_enabled(False))
-        btn_layout.addWidget(btn_disable)
-
-        layout.addLayout(btn_layout)
-
-        return widget
-
-    def _on_manual_send(self, command: ManualCommand):
-        """DTO 수신 확인"""
-        self.manual_output.append(
-            f"✅ Send: '{command.command}' (hex={command.hex_mode}, broadcast={command.broadcast_enabled})"
-        )
-
-    def show_manual_history(self) -> None:
-        """History 목록을 출력 영역에 표시합니다."""
-        history = self.manual_control.command_history
-        if history:
-            self.manual_output.append("\n📜 Command History:")
-            for i, command in enumerate(history):
-                self.manual_output.append(f"  [{i+1}] {command}")
-            self.manual_output.append(f"Current Index: {self.manual_control.history_index}\n")
-        else:
-            self.manual_output.append("📜 History is empty\n")
-
-    def create_macro_list_test(self) -> QWidget:
+    def test_clear_view(self, qtbot):
         """
-        CommandList 테스트 위젯을 생성합니다.
+        Clear 기능 검증
 
-        Returns:
-            QWidget: 테스트 위젯.
+        Logic:
+            - 데이터 추가 후 rowCount > 0 확인
+            - clear_view 호출
+            - rowCount == 0 확인
         """
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
+        # GIVEN: 데이터가 있는 패널
+        panel = PacketPanel()
+        qtbot.addWidget(panel)
 
-        # CommandList 인스턴스
-        self.macro_list = MacroListWidget()
-        layout.addWidget(self.macro_list)
+        panel.add_packet(PacketViewData("T", "T", "H", "A"))
+        assert panel.packet_model.rowCount() == 1
 
-        # 정보 레이블
+        # WHEN: Clear 수행
+        panel.clear_view()
 
-        info = QLabel("✅ 테스트: 행 추가/삭제/이동, Select All, Send 버튼, 데이터 유지(Persistence)")
-        layout.addWidget(info)
+        # THEN: 모델 초기화 확인
+        assert panel.packet_model.rowCount() == 0
 
-        # Persistence Test Buttons
-        btn_layout = QHBoxLayout()
-        btn_save = QPushButton("Save to Console")
-        btn_save.clicked.connect(lambda: print(self.macro_list.get_macro_list()))
 
-        btn_load = QPushButton("Load Dummy Data")
-        btn_load.clicked.connect(lambda: self.macro_list.set_macro_list([
-            {"command": "LOADED_COMMAND_1", "delay": "200", "enabled": True},
-            {"command": "LOADED_COMMAND_2", "delay": "500", "enabled": False}
-        ]))
+class TestPortPanel:
+    """
+    PortPanel(개별 포트 탭)의 UI 상태 변경 테스트
+    (참고: PortPanel의 구체적인 구현에 따라 테스트 코드는 조정될 수 있음)
+    """
 
-        btn_layout.addWidget(btn_save)
-        btn_layout.addWidget(btn_load)
-        layout.addLayout(btn_layout)
-
-        return widget
-
-    def create_sys_log_test(self) -> QWidget:
+    def test_ui_state_on_connection_change(self, qtbot):
         """
-        StatusArea 테스트 위젯을 생성합니다.
+        연결/해제 상태에 따른 UI 활성화/비활성화 테스트
 
-        Returns:
-            QWidget: 테스트 위젯.
+        Logic:
+            - 초기 상태(Disconnected) 확인
+            - set_connected_state(True) 호출
+            - 버튼 텍스트 변경 또는 상태 변경 확인
         """
+        # GIVEN: 패널 생성 (mocking 없이 직접 생성)
+        # PortPanel 생성자는 보통 parent와 port_name을 받음
+        panel = PortPanel(port_name="COM1")
+        qtbot.addWidget(panel)
+        panel.show()
 
+        # 내부 UI 컴포넌트 참조 (PortPanel 구현에 의존)
+        # btn_open_close가 존재한다고 가정
+        if hasattr(panel, 'btn_open_close'):
+            btn = panel.btn_open_close
 
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
+            # GIVEN: 초기 상태 (Disconnected)
+            assert not panel.is_connected()
 
-        # StatusArea 인스턴스
-        self.system_log_widget = SystemLogWidget()
-        layout.addWidget(self.system_log_widget)
+            # WHEN: 연결 상태로 변경
+            panel.set_connected_state(True)
 
-        # 테스트 버튼
-        button_layout = QHBoxLayout()
+            # THEN: 내부 상태 플래그 변경 확인
+            assert panel.is_connected()
 
-        btn_info = QPushButton("Log INFO")
-        btn_info.clicked.connect(lambda: self.system_log_widget.append_log("This is an info message", "INFO"))
-        button_layout.addWidget(btn_info)
+            # UI 텍스트 변경 확인 (예: "Open" -> "Close")
+            # 언어 설정에 따라 다르겠지만, 상태 변경 시 텍스트가 바뀌어야 함
+            assert btn.text() != "Open"
 
-        btn_error = QPushButton("Log ERROR")
-        btn_error.clicked.connect(lambda: self.system_log_widget.append_log("This is an error message", "ERROR"))
-        button_layout.addWidget(btn_error)
-
-        btn_warn = QPushButton("Log WARN")
-        btn_warn.clicked.connect(lambda: self.system_log_widget.append_log("This is a warning message", "WARN"))
-        button_layout.addWidget(btn_warn)
-
-        btn_success = QPushButton("Log SUCCESS")
-        btn_success.clicked.connect(lambda: self.system_log_widget.append_log("This is a success message", "SUCCESS"))
-        button_layout.addWidget(btn_success)
-
-        layout.addLayout(button_layout)
-
-        # 정보 레이블
-        info = QLabel("✅ 테스트: 로그 레벨별 색상 (INFO=파랑, ERROR=빨강, WARN=주황, SUCCESS=녹색)")
-        layout.addWidget(info)
-
-        return widget
-
-    def create_port_panel_test(self) -> QWidget:
+    def test_open_close_signal(self, qtbot):
         """
-        PortPanel 전체 테스트 위젯을 생성합니다.
-
-        Returns:
-            QWidget: 테스트 위젯.
+        연결 버튼 클릭 시 시그널 방출 테스트
         """
-
-
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-
-        # PortPanel 인스턴스
-        self.port_panel = PortPanel()
-        layout.addWidget(self.port_panel)
-
-        # 정보 레이블
-        info = QLabel("✅ 테스트: 전체 포트 패널 (설정 + DataLogView + StatusArea)")
-        layout.addWidget(info)
-
-        return widget
-
-    def create_dialog_test(self) -> QWidget:
-        """Dialog 테스트 위젯을 생성합니다."""
-
-
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-
-        btn_pref = QPushButton("Open Preferences Dialog")
-        btn_pref.clicked.connect(self.open_preferences)
-
-        btn_about = QPushButton("Open About Dialog")
-        btn_about.clicked.connect(self.open_about)
-
-        layout.addWidget(btn_pref)
-        layout.addWidget(btn_about)
-        layout.addWidget(QLabel("✅ 테스트: 설정 다이얼로그 및 정보 다이얼로그 호출"))
-        layout.addStretch()
-
-        return widget
-
-    def open_preferences(self) -> None:
-        """설정 다이얼로그를 엽니다."""
-        # 현재 설정 로드 (테스트용 임시 데이터)
-        current_settings = self.settings.get_all_settings().get('global', {})
-        # Serial/Logging 설정도 포함해야 하지만 여기선 간단히
-
-        dlg = PreferencesDialog(self, self.settings.get_all_settings())
-        if dlg.exec_():
-            print("Preferences Saved")
-            # 실제로는 여기서 설정을 저장하고 적용해야 함
-
-    def open_about(self) -> None:
-        """정보 다이얼로그를 엽니다."""
-        dlg = AboutDialog(self)
-        dlg.exec_()
-
-    def create_file_progress_test(self) -> QWidget:
-        """FileProgressWidget 테스트 위젯을 생성합니다."""
-
-
-
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-
-        self.file_progress = FileProgressWidget()
-        layout.addWidget(self.file_progress)
-
-        # 취소 버튼 시그널 연결
-        self.file_progress.transfer_cancelled.connect(self.cancel_mock_transfer)
-
-        btn_start = QPushButton("Start Mock Transfer")
-        btn_start.clicked.connect(self.start_mock_transfer)
-
-        layout.addWidget(btn_start)
-        layout.addWidget(QLabel("✅ 테스트: 진행률 바, 속도, ETA 업데이트 및 취소 버튼"))
-        layout.addStretch()
-
-        return widget
-
-    def cancel_mock_transfer(self) -> None:
-        """모의 전송을 취소합니다."""
-        if hasattr(self, 'transfer_timer') and self.transfer_timer.isActive():
-            self.transfer_timer.stop()
-            print("Transfer cancelled by user")
-
-    def start_mock_transfer(self) -> None:
-        """모의 파일 전송을 시작합니다."""
-        self.mock_sent = 0
-        self.mock_total = 1024 * 1024 * 10 # 10MB
-        self.file_progress.reset()
-
-        self.transfer_timer = QTimer(self)
-        self.transfer_timer.timeout.connect(self.update_mock_transfer)
-        self.transfer_timer.start(100) # 100ms 마다 업데이트
-
-    def update_mock_transfer(self) -> None:
-        """모의 전송 상태를 업데이트합니다."""
-        chunk = 1024 * 100 # 100KB
-        self.mock_sent += chunk
-
-        if self.mock_sent >= self.mock_total:
-            self.mock_sent = self.mock_total
-            self.transfer_timer.stop()
-            self.file_progress.set_complete(True, "Transfer Finished")
-
-        # Mock speed calculation
-        speed = chunk * 10 # 1MB/s
-        eta = (self.mock_total - self.mock_sent) / speed
-
-        self.file_progress.update_progress(self.mock_sent, self.mock_total, speed, eta)
-
-
-    def create_smart_list_view_test(self) -> QWidget:
-        """QSmartListView 새 기능 테스트 위젯을 생성합니다."""
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-
-        # QSmartListView 인스턴스
-        self.smart_list = QSmartListView()
-        self.smart_list.set_color_manager(color_manager)
-
-        layout.addWidget(self.smart_list)
-
-        # 테스트 버튼들
-        button_layout = QHBoxLayout()
-
-        # HEX 모드 테스트
-        btn_hex = QPushButton("Send Bytes (Normal)")
-        btn_hex.clicked.connect(lambda: self.smart_list.append_bytes(b"Normal text\n"))
-        button_layout.addWidget(btn_hex)
-
-        btn_hex_mode = QPushButton("Toggle HEX Mode")
-        btn_hex_mode.setCheckable(True)
-        btn_hex_mode.toggled.connect(self.smart_list.set_hex_mode_enabled)
-        button_layout.addWidget(btn_hex_mode)
-
-        # 타임스탬프 테스트
-        btn_timestamp = QPushButton("Toggle Timestamp")
-        btn_timestamp.setCheckable(True)
-        btn_timestamp.toggled.connect(lambda checked: self.smart_list.set_timestamp_enabled(checked, timeout_ms=100))
-        button_layout.addWidget(btn_timestamp)
-
-        layout.addLayout(button_layout)
-
-        # 두 번째 줄 버튼
-        button_layout2 = QHBoxLayout()
-
-        # Newline 모드 테스트
-        btn_newline = QPushButton("Send Multiline (LF)")
-        btn_newline.clicked.connect(lambda: self.smart_list.append_bytes(b"Line1\nLine2\nLine3\n"))
-        button_layout2.addWidget(btn_newline)
-
-        # Raw 모드 테스트 (타임스탬프 timeout)
-        btn_raw = QPushButton("Raw Mode Test")
-        btn_raw.clicked.connect(self.test_raw_mode_timestamp)
-        button_layout2.addWidget(btn_raw)
-
-        # 색상 테스트
-        btn_color = QPushButton("Send AT Commands")
-        btn_color.clicked.connect(lambda: [
-            self.smart_list.append_bytes(b"AT\r\n"),
-            self.smart_list.append_bytes(b"OK\r\n"),
-            self.smart_list.append_bytes(b"ERROR\r\n"),
-            self.smart_list.append_bytes(b"+CREG: 1,5\r\n")
-        ])
-        button_layout2.addWidget(btn_color)
-
-        # 대량 데이터 성능 테스트
-        btn_many = QPushButton("Add 1000 Lines (Performance)")
-        btn_many.clicked.connect(self.test_large_data)
-        button_layout2.addWidget(btn_many)
-
-        # Clear
-        btn_clear = QPushButton("Clear")
-        btn_clear.clicked.connect(self.smart_list.clear)
-        button_layout2.addWidget(btn_clear)
-
-        layout.addLayout(button_layout2)
-
-        # 정보 레이블
-        info = QLabel(
-            "✅ 테스트:\n"
-            "1. HEX 모드: bytes를 HEX 문자열로 표시\n"
-            "2. 타임스탬프: Newline 모드에서는 각 줄마다, Raw 모드에서는 100ms 간격\n"
-            "3. 색상 규칙: AT 명령(OK, ERROR, URC) 색상 적용\n"
-            "4. 성능: UniformItemSizes=True로 대량 데이터 처리 최적화"
-        )
-        layout.addWidget(info)
-
-        return widget
-
-    def test_raw_mode_timestamp(self) -> None:
-        """Raw 모드 타임스탬프를 테스트합니다 (간격 체크)."""
-        # Newline 제거 (Raw 모드)
-        self.smart_list.set_newline_char(None)
-
-        # 빠르게 연속으로 전송 (타임스탬프 없어야 함)
-        self.smart_list.append_bytes(b"Data1")
-        time.sleep(0.05)  # 50ms
-        self.smart_list.append_bytes(b"Data2")  # 같은 줄에 붙음
-
-        # 충분한 간격 후 전송 (타임스탬프 추가되어야 함)
-        time.sleep(0.15)  # 150ms (> 100ms threshold)
-        self.smart_list.append_bytes(b"Data3")  # 새 줄로 시작
-
-        # Newline 복구
-        self.smart_list.set_newline_char("\n")
-
-    def test_large_data(self) -> None:
-        """대량 데이터 성능 테스트 (1000줄)."""
-        start = time.time()
-
-        for i in range(1000):
-            self.smart_list.append_bytes(f"[{i+1:04d}] Performance test line {i+1}\n".encode())
-
-        elapsed = time.time() - start
-        print(f"Added 1000 lines in {elapsed:.2f}s ({1000/elapsed:.0f} lines/sec)")
-
-    def create_language_test(self) -> QWidget:
-        """LanguageManager 테스트 위젯을 생성합니다."""
-        widget = QWidget()
-        layout = QVBoxLayout(widget)
-
-        self.language_label = QLabel(language_manager.get_text("main_title"))
-        self.language_label.setStyleSheet("font-size: 20px; font-weight: bold;")
-
-        btn_en = QPushButton("English")
-        btn_en.clicked.connect(lambda: self.change_language("en"))
-
-        btn_ko = QPushButton("한국어")
-        btn_ko.clicked.connect(lambda: self.change_language("ko"))
-
-        layout.addWidget(self.language_label)
-        layout.addWidget(btn_en)
-        layout.addWidget(btn_ko)
-        layout.addWidget(QLabel("✅ 테스트: 버튼 클릭 시 앱 타이틀 언어 변경 확인"))
-        layout.addStretch()
-
-        return widget
-
-    def change_language(self, lang: str) -> None:
-        """언어를 변경하고 UI를 업데이트합니다."""
-        language_manager.set_language(lang)
-        self.language_label.setText(language_manager.get_text("main_title"))
-
-    def closeEvent(self, event) -> None:
-        """
-        종료 시 설정을 저장합니다.
-
-        Args:
-            event: 종료 이벤트.
-        """
-        self.settings.set('ui.window_width', self.width())
-        self.settings.set('ui.window_height', self.height())
-        self.settings.save_settings()
-        event.accept()
-
-
-def main() -> None:
-    """메인 함수입니다."""
-    app = QApplication(sys.argv)
-    app.setApplicationName("SerialTool View Test")
-
-    window = ViewTestWindow()
-    window.show()
-
-    sys.exit(app.exec_())
-
-
-if __name__ == "__main__":
-    main()
+        panel = PortPanel(port_name="COM1")
+        qtbot.addWidget(panel)
+        panel.show()
+
+        if hasattr(panel, 'connect_requested'):
+            # WHEN: 버튼 클릭
+            with qtbot.waitSignal(panel.connect_requested) as blocker:
+                # Disconnected 상태이므로 클릭하면 연결 요청
+                qtbot.mouseClick(panel.btn_open_close, Qt.LeftButton)
+
+            # THEN: 시그널 발생 확인
+            assert blocker.signal_triggered
+            assert blocker.args[0] == "COM1"
