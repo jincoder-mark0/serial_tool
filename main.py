@@ -12,7 +12,7 @@ SerialTool 애플리케이션 진입점
 ## WHAT
 * QApplication 생성 및 설정
 * ResourcePath 초기화
-* 핵심 Manager(Settings, Theme, Language, Color) 사전 초기화
+* 핵심 Manager(Settings, Theme, Language, Color) 사전 초기  화
 * MainWindow 및 MainPresenter 생성
 * 전역 에러 핸들러 설치
 

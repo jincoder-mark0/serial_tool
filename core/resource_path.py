@@ -60,6 +60,7 @@ class ResourcePath:
         # 설정 파일 경로
         self.config_dir = self.resources_dir / 'configs'
         self.settings_file = self.config_dir / 'settings.json'
+        self.color_rules_file = self.config_dir / 'color_rules.json'
 
         # 언어 파일 경로
         self.languages_dir = self.resources_dir / 'languages'
@@ -133,6 +134,7 @@ class ResourcePath:
             'config_dir': self.config_dir.exists(),
             'resources_dir': self.resources_dir.exists(),
             'settings_file': self.settings_file.exists(),
+            'color_rules_file': self.color_rules_file.exists(),
             'languages_dir': self.languages_dir.exists(),
             'themes_dir': self.themes_dir.exists(),
             'icons_dir': self.icons_dir.exists(),

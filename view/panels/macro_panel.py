@@ -58,10 +58,6 @@ class MacroPanel(QWidget):
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
-        layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(5)
-
         self.macro_list = MacroListWidget()
         self.macro_control = MacroControlWidget()
 
@@ -76,6 +72,10 @@ class MacroPanel(QWidget):
         # 데이터 변경 알림 연결
         self.macro_list.macro_list_changed.connect(self.state_changed.emit)
 
+        # 레이아웃을 초기화
+        layout = QVBoxLayout()
+        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setSpacing(5)
         layout.addWidget(self.macro_list)
         layout.addWidget(self.macro_control)
 

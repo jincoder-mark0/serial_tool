@@ -521,6 +521,7 @@ class ColorRule:
         dark_color (str): 다크 테마용 색상 코드.
         regex_enabled (bool): 정규식 사용 여부.
         enabled (bool): 규칙 활성화 여부.
+        bold (bool): 규칙 적용 시 폰트 굵게 표시 여부.
     """
     name: str
     pattern: str
@@ -529,6 +530,7 @@ class ColorRule:
     dark_color: str = ""
     regex_enabled: bool = True
     enabled: bool = True
+    bold: bool = False
 
 # =============================================================================
 # 5. 설정 및 상태 관련 DTO (Settings & State)

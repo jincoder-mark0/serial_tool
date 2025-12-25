@@ -117,10 +117,10 @@ class TestPacketPresenter:
         presenter.on_packet_received(event)
 
         # THEN: 뷰에 데이터가 추가되어야 함
-        mock_panel.add_packet.assert_called_once()
+        mock_panel.append_packet.assert_called_once()
 
         # 전달된 DTO 검증
-        args = mock_panel.add_packet.call_args[0]
+        args = mock_panel.append_packet.call_args[0]
         view_data: PacketViewData = args[0]
 
         assert isinstance(view_data, PacketViewData)
@@ -149,7 +149,7 @@ class TestPacketPresenter:
         presenter.on_packet_received(event)
 
         # THEN: 뷰에 추가되지 않음
-        mock_panel.add_packet.assert_not_called()
+        mock_panel.append_packet.assert_not_called()
 
     def test_settings_update(self, presenter, mock_panel):
         """
@@ -179,7 +179,7 @@ class TestPacketPresenter:
         # 내부 상태 변경 확인 (캡처 플래그가 꺼졌으므로 패킷 무시 확인)
         mock_packet = MagicMock()
         presenter.on_packet_received(PacketEvent(packet=mock_packet))
-        mock_panel.add_packet.assert_not_called()
+        mock_panel.append_packet.assert_not_called()
 
     def test_clear_view(self, presenter, mock_panel):
         """
@@ -208,7 +208,7 @@ class TestPacketPresenter:
 
         # Check logic: Packet ignored
         presenter.on_packet_received(PacketEvent(packet=MagicMock()))
-        mock_panel.add_packet.assert_not_called()
+        mock_panel.append_packet.assert_not_called()
 
         # GIVEN: 캡처 켜기
         presenter.on_capture_toggled(True)
@@ -217,4 +217,4 @@ class TestPacketPresenter:
         mock_packet = MagicMock()
         mock_packet.raw_data = b'\x01'
         presenter.on_packet_received(PacketEvent(packet=mock_packet))
-        mock_panel.add_packet.assert_called()
+        mock_panel.append_packet.assert_called()

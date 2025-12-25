@@ -125,7 +125,7 @@ class MainStatusBar(QStatusBar):
         self.buffer_bar.setValue(percent)
 
         if percent >= 80:
-            self.buffer_bar.setStyleSheet("QProgressBar::chunk { background-color: #FF5252; }") # Red
+            self.buffer_bar.setStyleSheet("QProgressBar::chunk { background-color: #FF5252; }") # TODO - using name_themes.QSS
         else:
             self.buffer_bar.setStyleSheet("") # Default Theme Style
 

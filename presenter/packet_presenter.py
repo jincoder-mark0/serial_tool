@@ -16,7 +16,7 @@
 
 ## HOW
 * EventRouter의 시그널을 구독하여 패킷 수신
-* DTO 변환 후 View의 add_packet 메서드 호출
+* DTO 변환 후 View의 append_packet 메서드 호출
 * SettingsManager를 통해 초기 설정 로드 및 변경 사항 반영
 """
 from typing import Optional
@@ -129,7 +129,7 @@ class PacketPresenter(QObject):
         )
 
         # View 업데이트
-        self.panel.add_packet(view_data)
+        self.panel.append_packet(view_data)
 
     def on_settings_changed(self, state: PreferencesState) -> None:
         """

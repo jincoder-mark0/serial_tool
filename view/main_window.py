@@ -39,6 +39,7 @@ from view.dialogs.file_transfer_dialog import FileTransferDialog
 
 from view.managers.theme_manager import theme_manager
 from view.managers.language_manager import language_manager
+from view.managers.color_manager import color_manager
 
 from common.dtos import (
     FontConfig, MainWindowState, PreferencesState,
@@ -89,6 +90,7 @@ class MainWindow(QMainWindow):
         # ThemeManager는 View Helper로서 사용 (싱글톤 인스턴스)
         self.theme_manager = theme_manager
         self.language_manager = language_manager
+        self.color_manager = color_manager
 
         # 기본 타이틀 및 크기 설정
         self.setWindowTitle(f"{language_manager.get_text('main_title')} v1.0")
@@ -123,10 +125,10 @@ class MainWindow(QMainWindow):
             4. 하위 섹션의 시그널을 MainWindow 시그널로 연결 (Chaining)
             5. 전역 상태바 설정
         """
-        central_widget = QWidget()
-        self.setCentralWidget(central_widget)
+        self.central_widget = QWidget()
+        self.setCentralWidget(self.central_widget)
 
-        main_layout = QVBoxLayout(central_widget)
+        main_layout = QVBoxLayout(self.central_widget)
         main_layout.setContentsMargins(5, 5, 5, 5)
         main_layout.setSpacing(5)
 
@@ -441,6 +443,7 @@ class MainWindow(QMainWindow):
         """
         # 인자 개수 오류 수정: QApplication.instance() 제거
         self.theme_manager.apply_theme(theme_name)
+        self.color_manager.apply_theme(theme_name)
 
         # 메뉴바의 테마 체크 표시 업데이트
         if hasattr(self, 'menu_bar'):
@@ -535,42 +538,55 @@ class MainWindow(QMainWindow):
         Args:
             visible (bool): 표시 여부.
         """
-        if visible == self.right_section.isVisible():
+        if self.isMaximized():
+            right_panel.setVisible(visible)
+            self.menu_bar.set_right_section_checked(visible)
             return
 
+        # 현재 상태 측정
         current_width = self.width()
         handle_width = self.splitter.handleWidth()
 
-        if visible:
-            # 보이기: 윈도우 폭 증가
-            # 저장된 너비가 있으면 사용, 없으면 기본값(윈도우의 30% 또는 최소 300px)
-            if hasattr(self, '_right_section_width') and self._right_section_width is not None:
-                target_right_width = self._right_section_width
+        # 깜빡임 방지
+        self.setUpdatesEnabled(False)
+
+        try:
+            if visible:
+                # 보이기: 윈도우 폭 증가
+                # 저장된 오른쪽 패널 너비가 있으면 사용, 없으면 기본값 400
+                if hasattr(self, '_right_section_width') and self._right_section_width is not None:
+                    target_right_width = self._right_section_width
+                else:
+                    target_right_width = max(int(self.width() * 0.3), 300)
+
+                # 현재 왼쪽 패널 너비 사용 (사용자가 조절했을 수 있으므로 저장된 값보다 현재 값 우선)
+                left_width = self.left_section.width()
+
+                self.resize(current_width + target_right_width + handle_width, self.height())
+                self.right_section.setVisible(True)
+
+                # 스플리터 크기 설정: 왼쪽 패널 크기 유지, 오른쪽 패널 크기 설정
+                self.splitter.setSizes([left_width, target_right_width])
+
+                # 복원 후 저장된 값 초기화
+                self._saved_left_width = None
+                self._right_section_width = None
+
             else:
-                target_right_width = max(int(self.width() * 0.3), 300)
+                # 숨기기: 윈도우 폭 감소
+                # 현재 패널 너비 저장
+                self._right_section_width = self.right_section.width()
 
-            # 현재 왼쪽 패널 너비 유지
-            left_width = self.left_section.width()
+                # 왼쪽 패널의 현재 너비를 기준으로 윈도우 크기 재조정
+                # 중앙 위젯의 좌우 마진을 동적으로 계산
+                margins = self.centralWidget().layout().contentsMargins()
+                total_margin = margins.left() + margins.right()
 
-            self.resize(current_width + target_right_width + handle_width, self.height())
-            self.right_section.setVisible(True)
+                new_window_width = self.left_section.width() + total_margin
+                self.right_section.setVisible(False)
+                self.resize(new_window_width, self.height())
 
-            # 스플리터 크기 설정
-            self.splitter.setSizes([left_width, target_right_width])
+            self.menu_bar.set_right_section_checked(visible)
 
-            # 복원 후 저장값 초기화
-            self._saved_left_width = None
-            self._right_section_width = None
-
-        else:
-            # 숨기기: 윈도우 폭 감소
-            # 현재 패널 너비 저장
-            self._right_section_width = self.right_section.width()
-
-            # 왼쪽 패널의 현재 너비를 기준으로 윈도우 크기 재조정
-            margins = self.centralWidget().layout().contentsMargins()
-            total_margin = margins.left() + margins.right()
-
-            new_window_width = self.left_section.width() + total_margin
-            self.right_section.setVisible(False)
-            self.resize(new_window_width, self.height())
+        finally:
+            self.setUpdatesEnabled(True)

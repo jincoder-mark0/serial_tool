@@ -40,7 +40,7 @@ from core.command_processor import CommandProcessor
 from core.settings_manager import SettingsManager
 from core.data_logger import data_logger_manager
 from view.managers.language_manager import language_manager
-
+from view.managers.color_manager import color_manager
 from core.logger import logger
 from common.constants import ConfigKeys, EventTopics
 from common.enums import LogFormat

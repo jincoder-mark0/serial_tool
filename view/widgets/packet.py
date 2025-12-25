@@ -71,7 +71,7 @@ class PacketWidget(QWidget):
             language_manager.get_text("packet_col_value")
         ])
 
-    def add_packet(self, data: PacketViewData) -> None:
+    def append_packet(self, data: PacketViewData) -> None:
         """
         패킷 데이터를 트리에 추가합니다.
 

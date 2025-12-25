@@ -162,13 +162,13 @@ class TestPacketPanel:
     PacketPanel의 데이터 모델 업데이트 및 뷰 제어 테스트
     """
 
-    def test_add_packet_updates_model(self, qtbot):
+    def test_append_packet_updates_model(self, qtbot):
         """
         패킷 추가 시 테이블 모델 업데이트 검증
 
         Logic:
             - PacketViewData DTO 생성
-            - add_packet 호출
+            - append_packet 호출
             - 테이블 모델의 rowCount 증가 및 데이터 일치 확인
         """
         # GIVEN: 패널 생성
@@ -184,7 +184,7 @@ class TestPacketPanel:
         )
 
         # WHEN: 패킷 추가
-        panel.add_packet(view_data)
+        panel.append_packet(view_data)
 
         # THEN: 모델 업데이트 확인
         model = panel.packet_model
@@ -207,7 +207,7 @@ class TestPacketPanel:
         panel = PacketPanel()
         qtbot.addWidget(panel)
 
-        panel.add_packet(PacketViewData("T", "T", "H", "A"))
+        panel.append_packet(PacketViewData("T", "T", "H", "A"))
         assert panel.packet_model.rowCount() == 1
 
         # WHEN: Clear 수행

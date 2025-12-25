@@ -95,7 +95,7 @@ class PacketModel(QAbstractTableModel):
             return self.COLUMNS[section]
         return QVariant()
 
-    def add_packet(self, packet: PacketViewData) -> None:
+    def append_packet(self, packet: PacketViewData) -> None:
         """
         패킷 데이터를 추가합니다.
         버퍼가 가득 찬 경우 가장 오래된 데이터를 제거합니다.
@@ -167,9 +167,9 @@ class PacketPanel(QWidget):
         # UI 컴포넌트
         self.packet_table: QTableView = None
         self.packet_model: PacketModel = None
-        self.chk_autoscroll: QCheckBox = None
-        self.chk_capture: QCheckBox = None
-        self.btn_clear: QPushButton = None
+        self.autoscroll_chk: QCheckBox = None
+        self.capture_chk: QCheckBox = None
+        self.clear_btn: QPushButton = None
 
         self._autoscroll_enabled = True
 
@@ -188,26 +188,26 @@ class PacketPanel(QWidget):
         toolbar_layout = QHBoxLayout()
 
         # 타이틀
-        title_label = QLabel(language_manager.get_text("packet_panel_title", "Packet Inspector"))
-        title_label.setProperty("class", "section-title")
+        self.title_lbl = QLabel(language_manager.get_text("packet_panel_title", "Packet Inspector"))
+        self.title_lbl.setProperty("class", "section-title")
 
         # 제어 버튼들
-        self.chk_capture = QCheckBox(language_manager.get_text("packet_chk_capture", "Capture"))
-        self.chk_capture.setChecked(True)
-        self.chk_capture.toggled.connect(self.capture_toggled.emit)
+        self.capture_chk = QCheckBox(language_manager.get_text("packet_capture_chk", "Capture"))
+        self.capture_chk.setChecked(True)
+        self.capture_chk.toggled.connect(self.capture_toggled.emit)
 
-        self.chk_autoscroll = QCheckBox(language_manager.get_text("packet_chk_autoscroll", "Auto Scroll"))
-        self.chk_autoscroll.setChecked(True)
-        self.chk_autoscroll.toggled.connect(self._on_autoscroll_toggled)
+        self.autoscroll_chk = QCheckBox(language_manager.get_text("packet_autoscroll_chk", "Auto Scroll"))
+        self.autoscroll_chk.setChecked(True)
+        self.autoscroll_chk.toggled.connect(self._on_autoscroll_toggled)
 
-        self.btn_clear = QPushButton(language_manager.get_text("packet_btn_clear", "Clear"))
-        self.btn_clear.clicked.connect(self.clear_requested.emit)
+        self.clear_btn = QPushButton(language_manager.get_text("packet_panel_btn_clear"))
+        self.clear_btn.clicked.connect(self.clear_requested.emit)
 
-        toolbar_layout.addWidget(title_label)
+        toolbar_layout.addWidget(self.title_lbl)
         toolbar_layout.addStretch()
-        toolbar_layout.addWidget(self.chk_capture)
-        toolbar_layout.addWidget(self.chk_autoscroll)
-        toolbar_layout.addWidget(self.btn_clear)
+        toolbar_layout.addWidget(self.capture_chk)
+        toolbar_layout.addWidget(self.autoscroll_chk)
+        toolbar_layout.addWidget(self.clear_btn)
 
         # 2. 패킷 테이블 (Table View)
         self.packet_table = QTableView()
@@ -232,9 +232,10 @@ class PacketPanel(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 텍스트 업데이트"""
-        self.chk_capture.setText(language_manager.get_text("packet_chk_capture", "Capture"))
-        self.chk_autoscroll.setText(language_manager.get_text("packet_chk_autoscroll", "Auto Scroll"))
-        self.btn_clear.setText(language_manager.get_text("packet_btn_clear", "Clear"))
+        self.title_lbl.setText(language_manager.get_text("packet_panel_title"))
+        self.clear_btn.setText(language_manager.get_text("packet_panel_btn_clear"))
+        self.capture_chk.setText(language_manager.get_text("packet_panel_chk_capture"))
+        self.autoscroll_chk.setText(language_manager.get_text("packet_panel_chk_autoscroll"))
         # 타이틀 라벨 업데이트 로직 필요 시 추가 (객체 참조 저장 필요)
 
     # -------------------------------------------------------------------------
@@ -257,7 +258,7 @@ class PacketPanel(QWidget):
             enabled (bool): 활성화 여부.
         """
         self._autoscroll_enabled = enabled
-        self.chk_autoscroll.setChecked(enabled)
+        self.autoscroll_chk.setChecked(enabled)
 
     def set_capture_state(self, enabled: bool) -> None:
         """
@@ -266,16 +267,16 @@ class PacketPanel(QWidget):
         Args:
             enabled (bool): 활성화 여부.
         """
-        self.chk_capture.setChecked(enabled)
+        self.capture_chk.setChecked(enabled)
 
-    def add_packet(self, data: PacketViewData) -> None:
+    def append_packet(self, data: PacketViewData) -> None:
         """
         새 패킷 데이터를 뷰에 추가합니다.
 
         Args:
             data (PacketViewData): 패킷 데이터 DTO.
         """
-        self.packet_model.add_packet(data)
+        self.packet_model.append_packet(data)
 
         if self._autoscroll_enabled:
             self.packet_table.scrollToBottom()

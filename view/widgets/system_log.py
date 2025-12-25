@@ -104,6 +104,7 @@ class SystemLogWidget(QWidget):
         """
         self.setFixedHeight(100)  # 위젯 전체 높이 고정 (레이아웃 밸런스)
 
+        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
         # 1. 툴바 영역 (타이틀 + 도구들)
         # 타이틀 섹션
         self.sys_log_title = QLabel(language_manager.get_text("sys_log_title"))
@@ -116,19 +117,20 @@ class SystemLogWidget(QWidget):
         self.sys_log_search_input.setToolTip(language_manager.get_text("sys_log_input_search_tooltip"))
         self.sys_log_search_input.setMaximumWidth(200)
         self.sys_log_search_input.returnPressed.connect(self.on_sys_log_search_next_clicked)
+        # 검색어 변경 시 실시간 하이라이트 갱신
         self.sys_log_search_input.textChanged.connect(self.on_sys_log_search_text_changed)
 
         # Buttons
         self.sys_log_search_prev_btn = QPushButton()
         self.sys_log_search_prev_btn.setObjectName("sys_log_search_prev_btn")
-        self.sys_log_search_prev_btn.setText("<")
+        self.sys_log_search_prev_btn.setText("<") # 아이콘이 없을 경우를 대비한 텍스트
         self.sys_log_search_prev_btn.setToolTip(language_manager.get_text("sys_log_btn_search_prev_tooltip"))
         self.sys_log_search_prev_btn.setFixedWidth(30)
         self.sys_log_search_prev_btn.clicked.connect(self.on_sys_log_search_prev_clicked)
 
         self.sys_log_search_next_btn = QPushButton()
         self.sys_log_search_next_btn.setObjectName("sys_log_search_next_btn")
-        self.sys_log_search_next_btn.setText(">")
+        self.sys_log_search_next_btn.setText(">") # 아이콘이 없을 경우를 대비한 텍스트
         self.sys_log_search_next_btn.setToolTip(language_manager.get_text("sys_log_btn_search_next_tooltip"))
         self.sys_log_search_next_btn.setFixedWidth(30)
         self.sys_log_search_next_btn.clicked.connect(self.on_sys_log_search_next_clicked)
@@ -139,7 +141,7 @@ class SystemLogWidget(QWidget):
 
         self.sys_log_toggle_logging_btn = QPushButton(language_manager.get_text("sys_log_btn_toggle_logging"))
         self.sys_log_toggle_logging_btn.setToolTip(language_manager.get_text("sys_log_btn_toggle_logging_tooltip"))
-        self.sys_log_toggle_logging_btn.setCheckable(True)
+        self.sys_log_toggle_logging_btn.setCheckable(True)  # 토글 버튼으로 변경
         self.sys_log_toggle_logging_btn.toggled.connect(self.on_sys_log_logging_toggled)
 
         # Options
@@ -351,4 +353,6 @@ class SystemLogWidget(QWidget):
         Args:
             event (QCloseEvent): 종료 이벤트.
         """
+        # if self.ui_update_timer.isActive():
+        #     self.ui_update_timer.stop()
         super().closeEvent(event)

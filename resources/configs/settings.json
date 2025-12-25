@@ -4,19 +4,34 @@
     "theme": "dark",
     "language": "ko"
   },
+  "settings": {
+    "theme": "dracula",
+    "language": "en",
+    "proportional_font_size": 10,
+    "max_log_lines": 2000,
+    "port_baudrate": 115200,
+    "port_newline": "\n",
+    "port_local_echo": false,
+    "port_scan_interval_ms": 1000,
+    "command_prefix": "",
+    "command_suffix": "",
+    "proportional_font_family": "나눔고딕",
+    "fixed_font_family": "D2Coding",
+    "fixed_font_size": 9
+  },
   "ui": {
     "max_log_lines": 2000,
     "proportional_font_family": "Segoe UI",
     "proportional_font_size": 9,
     "fixed_font_family": "Consolas",
     "fixed_font_size": 9,
-    "window_width": 1394,
-    "window_height": 659,
-    "window_x": 94,
-    "window_y": 111,
-    "splitter_state": "AAAA/wAAAAEAAAACAAAIIwAAA80B/////wEAAAABAA==",
-    "right_section_visible": false,
-    "saved_right_section_width": 787
+    "window_width": 1520,
+    "window_height": 697,
+    "window_x": 342,
+    "window_y": 80,
+    "splitter_state": "AAAA/wAAAAEAAAACAAADVQAAAowB/////wEAAAABAA==",
+    "right_section_visible": true,
+    "saved_right_section_width": 652
   },
   "serial": {
     "baudrate": 115200,
@@ -34,7 +49,8 @@
   },
   "logging": {
     "log_dir": "",
-    "log_path": ""
+    "log_path": "",
+    "path": "C:\\Users\\lkj01\\Desktop\\Serial_Tool"
   },
   "packet": {
     "parser_type": 0,
@@ -61,7 +77,7 @@
   },
   "manual_control": {
     "manual_control_widget": {
-      "input_text": "CAF",
+      "input_text": "zx\nzc\nz\nzc\n",
       "hex_mode": true,
       "prefix_enabled": true,
       "suffix_enabled": true,

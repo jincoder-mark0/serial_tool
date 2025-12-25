@@ -50,8 +50,14 @@ class SettingsManager:
     CURRENT_VERSION = "1.0"
 
     def __new__(cls, *args, **kwargs):
-        if cls._instance is None:
+        """
+        Singleton 인스턴스 보장 및 초기화 플래그 설정
+        """
+        if not cls._instance:
+            # QObject 상속 시 super().__new__에는 인자를 전달하지 않는 것이 안전함
             cls._instance = super(SettingsManager, cls).__new__(cls)
+            # 인스턴스 생성 직후 플래그 초기화
+            cls._instance._initialized = False
         return cls._instance
 
     def __init__(self, resource_path: Optional[ResourcePath] = None):
@@ -61,17 +67,26 @@ class SettingsManager:
         Args:
             resource_path: ResourcePath 인스턴스. None이면 내부에서 생성.
         """
+        # ResourcePath 설정 (주입받거나 없으면 생성)
         if resource_path is None:
             resource_path = ResourcePath()
 
-        SettingsManager._resource_path = resource_path
-
-        if self._initialized:
+        # 싱글톤 중복 초기화 방지
+        if hasattr(self, '_initialized') and self._initialized:
+            # 이미 초기화되었더라도, 새로운 resource_path가 들어오면 업데이트
+            if resource_path is not None:
+                self._resource_path = resource_path
             return
+
+        # QObject 초기화 (가장 먼저 호출해야 함)
+        super().__init__()
+
+        self._resource_path = resource_path
+
 
         self.settings: Dict[str, Any] = {}
         # 프로퍼티를 통해 경로 접근
-        self.config_path = self._get_config_path
+        self.config_path = self._get_config_path()
         # 개발 모드에서는 설정 파일과 사용자 설정 파일이 동일
         self.user_settings_path = self._get_user_settings_path()
 
@@ -81,9 +96,10 @@ class SettingsManager:
 
         # 설정 로드
         self.load_settings()
+
+        # 초기화 완료 플래그 설정
         self._initialized = True
 
-    @property
     def _get_config_path(self) -> Path:
         """
         기본 설정 파일의 경로를 반환합니다.
@@ -91,7 +107,7 @@ class SettingsManager:
         Returns:
             Path: resources/configs/settings.json 파일의 ResourcePath 객체.
         """
-        return SettingsManager._resource_path.settings_file
+        return self._resource_path.settings_file
 
     def _get_user_settings_path(self) -> Path:
         """

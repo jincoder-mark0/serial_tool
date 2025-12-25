@@ -342,9 +342,9 @@ class TestIntegrationRefactored:
         QCoreApplication.processEvents()
 
         # THEN: PacketPanel에 데이터 추가 확인
-        window.right_section.packet_panel.add_packet.assert_called_once()
+        window.right_section.packet_panel.append_packet.assert_called_once()
 
         # DTO 값 검증
-        view_data = window.right_section.packet_panel.add_packet.call_args[0][0]
+        view_data = window.right_section.packet_panel.append_packet.call_args[0][0]
         assert view_data.data_hex == "AA BB"
         assert view_data.packet_type == "TEST_PKT"
