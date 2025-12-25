@@ -4,24 +4,26 @@
 QListView를 기반으로 대량의 로그 데이터를 효율적으로 표시하고 관리하는 커스텀 위젯입니다.
 
 ## WHY
-* 대량 데이터(로그)의 고성능 렌더링 필요
-* 검색, 필터링, 하이라이트 등 고급 기능 통합
+* 대량 데이터(로그)의 고성능 렌더링 및 메모리 관리 필요
+* 검색, 필터링, 하이라이트, HEX 뷰 등 고급 기능 통합 필요
+* 텍스트 에디터(QTextEdit)의 성능 한계 극복
 
 ## WHAT
-* QAbstractListModel 기반 데이터 관리
-* 검색 탐색(Next/Prev) 및 필터링
-* HEX/ASCII 모드 및 타임스탬프 지원
-* ColorRule 주입을 통한 색상 적용
+* QAbstractListModel 기반의 고속 데이터 관리 (LogModel)
+* 검색 탐색(Next/Prev) 및 정규식 필터링 (QSortFilterProxyModel)
+* HEX/ASCII 모드 전환 및 스마트 타임스탬프 지원
+* ColorRule 주입을 통한 동적 색상 적용 및 HTML 렌더링
 
 ## HOW
-* QSortFilterProxyModel로 필터링 구현
-* QStyledItemDelegate로 커스텀 렌더링
-* ColorService를 활용한 텍스트 포맷팅
+* QSortFilterProxyModel로 검색어 필터링 구현 (디바운싱 적용)
+* QStyledItemDelegate로 HTML 텍스트 및 하이라이트 커스텀 렌더링
+* ColorService를 활용한 텍스트 포맷팅 및 테마별 색상 보정
+* deque를 사용한 원본 데이터 버퍼링 및 메모리 제한
 """
 import re
+import datetime
 from typing import List, Any, Optional
 from collections import deque
-import datetime
 
 from PyQt5.QtWidgets import QListView, QAbstractItemView, QStyle, QStyledItemDelegate
 from PyQt5.QtCore import (
@@ -37,22 +39,28 @@ from common.dtos import ColorRule
 from view.services.color_service import ColorService
 from view.managers.theme_manager import theme_manager
 
+
 class QSmartListView(QListView):
     """
     QListView를 확장하여 로그 뷰어 기능을 캡슐화한 클래스입니다.
-    설정값(Newline 등)은 외부에서 주입받습니다.
-    검색 탐색(Next/Prev) 및 필터링 기능을 제공
+
+    설정값(Newline, Hex 모드 등)은 외부에서 주입받으며,
+    검색 탐색(Next/Prev) 및 필터링 기능을 제공합니다.
     """
+
     def __init__(self, parent=None):
         """
-        QSmartListView를 초기화
+        QSmartListView를 초기화합니다.
 
         Args:
             parent (QWidget, optional): 부모 위젯.
         """
         super().__init__(parent)
 
-        # 모델 설정
+        # ---------------------------------------------------------
+        # 1. 모델 및 델리게이트 설정
+        # ---------------------------------------------------------
+        # 데이터 모델 생성
         self.log_model = LogModel()
 
         # 프록시 모델 설정 (필터링 지원)
@@ -64,22 +72,27 @@ class QSmartListView(QListView):
 
         self.setModel(self.proxy_model)
 
+        # 델리게이트 설정 (렌더링 담당)
         self.delegate = LogDelegate(self)
         self.setItemDelegate(self.delegate)
 
-        # 뷰 설정
-        self.setProperty("class", "fixed-font") # 고정폭 폰트
+        # ---------------------------------------------------------
+        # 2. 뷰 속성 설정
+        # ---------------------------------------------------------
+        self.setProperty("class", "fixed-font")  # 고정폭 폰트 적용 (QSS)
         self.setSelectionMode(QAbstractItemView.ExtendedSelection)
 
         # 성능 최적화: 모든 항목이 동일한 높이라고 가정
-        # 대량 로그 처리 시 스크롤 성능 크게 향상
+        # 대량 로그 처리 시 스크롤 계산 성능 크게 향상
         self.setUniformItemSizes(True)
 
-        # 스크롤 모드: PerPixel이 부드럽지만, 대량 데이터에서는 PerItem이 더 빠름
-        # 필요시 ScrollPerItem으로 변경 가능
+        # 스크롤 모드: PerPixel이 부드럽지만, 대량 데이터에서는 PerItem이 더 빠를 수 있음
+        # 여기서는 부드러운 스크롤을 위해 PerPixel 사용
         self.setVerticalScrollMode(QAbstractItemView.ScrollPerPixel)
 
-        # 설정 관리자
+        # ---------------------------------------------------------
+        # 3. 내부 상태 변수 초기화
+        # ---------------------------------------------------------
         self._newline_char = "\n"
         self._placeholder_text = ""
         self._filter_enabled = False
@@ -90,7 +103,7 @@ class QSmartListView(QListView):
         self._timestamp_enabled = False
         self._timestamp_timeout_ms = 100
 
-        # ColorManager 의존성 제거 -> ColorRule 리스트 사용
+        # 색상 규칙 (외부 주입)
         self._color_rules: List[ColorRule] = []
 
         self._last_data_time = None
@@ -102,61 +115,59 @@ class QSmartListView(QListView):
         # 복잡한 정규식 입력 시 UI 프리징 방지
         self._filter_debounce_timer = QTimer()
         self._filter_debounce_timer.setSingleShot(True)
-        self._filter_debounce_timer.setInterval(300) # 300ms 대기
+        self._filter_debounce_timer.setInterval(300)  # 300ms 대기
         self._filter_debounce_timer.timeout.connect(self._execute_filter_update)
 
         self.setObjectName("SmartListView")
 
     def set_color_rules(self, rules: List[ColorRule]) -> None:
         """
-        색상 규칙 설정 (Dependency Injection)
+        색상 규칙을 설정합니다 (Dependency Injection).
 
         Args:
-            rules: 적용할 ColorRule 리스트
+            rules (List[ColorRule]): 적용할 ColorRule 리스트.
         """
         self._color_rules = rules
         # 규칙이 변경되면 기존 데이터 다시 렌더링
         self._refresh_all_data()
 
-    def set_newline_char(self, char: str) -> None:
+    def set_newline_char(self, char: Optional[str]) -> None:
         """
-        줄바꿈 문자를 설정
+        줄바꿈 문자를 설정합니다.
 
         Args:
-            char (str): 사용할 줄바꿈 문자 (예: '\n', '\r\n').
+            char (Optional[str]): 사용할 줄바꿈 문자 (예: '\n', '\r\n'). None이면 Raw 모드.
         """
         self._newline_char = char
 
     def set_hex_mode_enabled(self, enabled: bool) -> None:
         """
-        HEX 모드 활성화/비활성화를 설정
-        모드 변경 시 모든 데이터를 다시 렌더링
+        HEX 모드 활성화/비활성화를 설정합니다.
+        모드 변경 시 원본 데이터를 사용하여 화면을 다시 렌더링합니다.
 
         Args:
-            enabled: HEX 모드 활성화 여부
+            enabled (bool): HEX 모드 활성화 여부.
         """
         if self._hex_mode == enabled:
             return
 
         self._hex_mode = enabled
-
-        # 모든 데이터를 다시 렌더링
         self._refresh_all_data()
 
     def set_timestamp_enabled(self, enabled: bool, timeout_ms: int = 100) -> None:
         """
-        타임스탬프 활성화
+        타임스탬프 기능을 활성화합니다.
 
         Args:
-            enabled: 타임스탬프 활성화 여부
-            timeout_ms: Raw 모드에서 타임스탬프를 찍을 최소 간격 (ms)
+            enabled (bool): 타임스탬프 활성화 여부.
+            timeout_ms (int): Raw 모드에서 타임스탬프를 찍을 최소 간격 (ms).
         """
         self._timestamp_enabled = enabled
         self._timestamp_timeout_ms = timeout_ms
 
     def setPlaceholderText(self, text: str) -> None:
         """
-        데이터가 없을 때 표시할 안내 문구(Placeholder)를 설정
+        데이터가 없을 때 표시할 안내 문구(Placeholder)를 설정합니다.
 
         Args:
             text (str): 표시할 텍스트.
@@ -166,13 +177,13 @@ class QSmartListView(QListView):
 
     def append(self, text: str, line_formatter=None) -> None:
         """
-        로그 데이터를 추가
-        newline 문자로 분할하여 여러 줄로 추가하며, 각 라인에 formatter를 적용할 수 있습니다.
+        로그 데이터를 모델에 추가합니다.
+        설정된 newline 문자로 분할하여 여러 줄로 추가하며, 각 라인에 formatter를 적용합니다.
 
         Args:
             text (str): 로그 내용 (newline 포함 가능).
             line_formatter (callable, optional): 각 라인을 포맷팅할 함수.
-                                                 함수 시그니처: formatter(line: str) -> str
+                                                 signature: formatter(line: str) -> str
         """
         # 1. Newline으로 분할
         if self._newline_char and self._newline_char in text:
@@ -181,14 +192,14 @@ class QSmartListView(QListView):
             if lines and lines[-1] == "":
                 lines.pop()
         else:
-            # newline이 없으면 단일 라인
+            # newline이 없으면 단일 라인으로 처리
             lines = [text] if text else []
 
         # 2. 각 라인에 formatter 적용 (제공된 경우)
         if line_formatter:
             lines = [line_formatter(line) for line in lines]
 
-        # 3. 모델에 batch 추가
+        # 3. 모델에 배치(Batch) 추가
         if lines:
             self.log_model.add_logs(lines)
 
@@ -198,13 +209,21 @@ class QSmartListView(QListView):
 
     def append_bytes(self, data: bytes) -> None:
         """
-        바이트 데이터를 추가
+        바이트 데이터를 받아 내부 설정에 따라 처리 후 추가합니다.
+
+        Logic:
+            1. 원본 데이터 저장 (HEX 모드 전환용)
+            2. 설정에 따라 HEX 문자열 또는 디코딩된 문자열로 변환
+            3. 타임스탬프 및 색상 적용을 위한 포맷터 생성
+            4. append() 호출
 
         Args:
-            data (bytes): 추가할 바이트 데이터.
+            data (bytes): 수신된 바이트 데이터.
         """
+        # 원본 데이터 저장 (HEX 모드 전환용, deque가 maxlen 관리)
         self._original_data.append(data)
 
+        # 1. 텍스트 변환
         if self._hex_mode:
             text = " ".join([f"{b:02X}" for b in data]) + " "
         else:
@@ -213,17 +232,18 @@ class QSmartListView(QListView):
             except Exception:
                 text = str(data)
 
+        # 2. 타임스탬프 판단 (스마트 로직)
         should_add_timestamp = self._should_add_timestamp()
 
-        # Formatter 생성
-        # ColorService 사용
+        # 3. Formatter 생성 (클로저)
         formatter = self._create_line_formatter(should_add_timestamp)
 
+        # 4. 모델에 추가
         self.append(text, formatter)
 
     def _create_line_formatter(self, add_timestamp: bool):
         """
-        라인 포맷터 함수를 생성
+        라인 포맷터 함수(클로저)를 생성합니다.
 
         Args:
             add_timestamp (bool): 타임스탬프 추가 여부.
@@ -231,18 +251,18 @@ class QSmartListView(QListView):
         Returns:
             callable: 생성된 포맷터 함수.
         """
-        # 캡처 시점의 테마 상태 확인
+        # 캡처 시점의 테마 상태 확인 (다크 모드 여부)
         is_dark = theme_manager.is_dark_theme()
 
         def formatter(line: str) -> str:
             """
-            라인 포맷터 함수
+            개별 라인을 포맷팅하는 내부 함수.
 
             Args:
-                line (str): 포맷팅할 라인.
+                line (str): 원본 라인 텍스트.
 
             Returns:
-                str: 포맷팅된 라인.
+                str: 포맷팅된(타임스탬프, HTML 색상) 텍스트.
             """
             formatted = line
 
@@ -251,7 +271,7 @@ class QSmartListView(QListView):
                 formatted = f"{ts} {formatted}"
 
             if self._color_rules:
-                # 테마 상태 전달
+                # ColorService를 통해 규칙 적용 (테마 반영)
                 formatted = ColorService.apply_rules(formatted, self._color_rules, is_dark)
 
             return formatted
@@ -259,7 +279,12 @@ class QSmartListView(QListView):
 
     def _should_add_timestamp(self) -> bool:
         """
-        타임스탬프를 추가할지 결정
+        타임스탬프를 추가할지 결정합니다.
+
+        Logic:
+            - 비활성화 상태면 False
+            - Newline 모드면 항상 True (각 줄마다 찍힘)
+            - Raw 모드면 이전 데이터와의 시간 간격이 timeout_ms 이상일 때만 True
 
         Returns:
             bool: 타임스탬프 추가 여부.
@@ -285,8 +310,8 @@ class QSmartListView(QListView):
 
     def _refresh_all_data(self) -> None:
         """
-        모든 데이터를 다시 렌더링
-        HEX 모드 변경 또는 테마 변경 시 호출
+        모든 데이터를 다시 렌더링합니다.
+        HEX 모드 변경 또는 테마 변경 시 호출됩니다.
         """
         if not self._original_data:
             return
@@ -294,11 +319,13 @@ class QSmartListView(QListView):
         scroll_pos = self.verticalScrollBar().value()
         was_at_bottom = self.is_at_bottom()
 
+        # 모델 초기화
         self.log_model.clear()
 
         # 현재 테마 상태 확인
         is_dark = theme_manager.is_dark_theme()
 
+        # 원본 데이터 순회하며 재생성
         for data in self._original_data:
             if self._hex_mode:
                 text = " ".join([f"{b:02X}" for b in data]) + " "
@@ -308,14 +335,16 @@ class QSmartListView(QListView):
                 except Exception:
                     text = str(data)
 
-            # Re-apply color rules (no timestamps on refresh for now to keep simple)
+            # 재생성 시에는 타임스탬프를 정확히 복원하기 어려우므로 생략하거나
+            # 저장된 타임스탬프가 있다면 그것을 써야 함.
+            # 현재 구조에서는 단순 텍스트 재구성이므로 타임스탬프 생략 (또는 규칙만 적용)
             formatter = None
             if self._color_rules:
-                # 테마 상태 전달
                 formatter = lambda line: ColorService.apply_rules(line, self._color_rules, is_dark)
 
             self.append(text, formatter)
 
+        # 스크롤 위치 복원
         if was_at_bottom:
             self.scrollToBottom()
         else:
@@ -323,29 +352,29 @@ class QSmartListView(QListView):
 
     def set_max_lines(self, max_lines: int) -> None:
         """
-        최대 로그 라인 수를 설정
+        최대 로그 라인 수를 설정합니다.
 
         Args:
             max_lines (int): 최대 라인 수.
         """
         self.log_model.set_max_lines(max_lines)
-        # deque는 maxlen 변경이 불가하므로 새 deque 생성 (기존 데이터 유지)
+        # deque의 크기도 조정 (기존 데이터 유지하며 리사이징)
         self._original_data = deque(self._original_data, maxlen=max_lines)
 
     def is_at_bottom(self) -> bool:
         """
-        스크롤바가 맨 아래에 있는지 확인
+        스크롤바가 맨 아래에 있는지 확인합니다.
 
         Returns:
             bool: 맨 아래에 있으면 True.
         """
         sb = self.verticalScrollBar()
-        # 오차 범위를 두어 판별
+        # 약간의 오차 범위를 두어 판별
         return sb.value() >= (sb.maximum() - 10)
 
     def clear(self) -> None:
         """
-        로그 모델과 원본 데이터를 초기화
+        로그 모델과 원본 데이터 버퍼를 초기화합니다.
         """
         self.log_model.clear()
         self._original_data.clear()
@@ -353,12 +382,12 @@ class QSmartListView(QListView):
     @pyqtSlot(str)
     def set_search_pattern(self, text: str) -> None:
         """
-        검색어를 설정 정규식으로 컴파일하여 델리게이트에 전달하고,
-        필터 모드일 경우 프록시 모델의 필터도 업데이트
+        검색어를 설정하고 하이라이트 및 필터링을 갱신합니다.
 
-        [Perf] 디바운싱 적용:
-        - 하이라이트(Delegate)는 즉시 적용하여 반응성 확보
-        - 필터링(ProxyModel)은 타이머를 통해 지연 적용하여 UI 프리징 방지
+        Logic:
+            - 정규식 컴파일 (실패 시 일반 텍스트 이스케이프)
+            - 델리게이트에 패턴 전달 (하이라이트 즉시 갱신)
+            - 필터링은 디바운싱 타이머 시작 (UI 프리징 방지)
 
         Args:
             text (str): 검색할 문자열 (정규식 지원).
@@ -385,7 +414,7 @@ class QSmartListView(QListView):
 
     def set_filter_mode(self, enabled: bool) -> None:
         """
-        검색어 필터링 모드를 설정
+        검색어 필터링 모드를 설정합니다.
 
         Args:
             enabled (bool): True면 검색어가 포함된 라인만 표시.
@@ -396,18 +425,18 @@ class QSmartListView(QListView):
 
     def _execute_filter_update(self) -> None:
         """
-        [Slot] 디바운스 타이머 종료 후 실제 필터링을 수행
-        QSortFilterProxyModel의 필터를 업데이트하여 뷰를 갱신
+        [Slot] 디바운스 타이머 종료 후 실제 필터링을 수행합니다.
+        QSortFilterProxyModel의 필터를 업데이트하여 뷰를 갱신합니다.
         """
         if self._filter_enabled and self._current_pattern:
             self.proxy_model.setFilterRegExp(self._current_pattern)
         else:
-            self.proxy_model.setFilterRegExp("") # 필터 해제
+            self.proxy_model.setFilterRegExp("")  # 필터 해제
 
     def find_next(self, text: str) -> bool:
         """
-        다음 검색 결과를 찾아 해당 행으로 이동 (Wrap around 지원)
-        현재 보이는(필터링된) 항목 내에서 검색
+        다음 검색 결과를 찾아 해당 행으로 이동합니다 (Wrap around 지원).
+        현재 보이는(필터링된) 항목 내에서 검색합니다.
 
         Args:
             text (str): 검색할 문자열.
@@ -415,11 +444,11 @@ class QSmartListView(QListView):
         Returns:
             bool: 찾았으면 True, 아니면 False.
         """
-        if not text: return False
+        if not text:
+            return False
 
         pattern = self._create_pattern(text)
         current_row = self.currentIndex().row()
-        # 현재 모델(프록시)의 행 수 사용
         total_rows = self.model().rowCount()
 
         start_row = current_row + 1 if current_row >= 0 else 0
@@ -440,8 +469,7 @@ class QSmartListView(QListView):
 
     def find_prev(self, text: str) -> bool:
         """
-        이전 검색 결과를 찾아 해당 행으로 이동 (Wrap around 지원)
-        현재 보이는(필터링된) 항목 내에서 검색
+        이전 검색 결과를 찾아 해당 행으로 이동합니다 (Wrap around 지원).
 
         Args:
             text (str): 검색할 문자열.
@@ -449,11 +477,11 @@ class QSmartListView(QListView):
         Returns:
             bool: 찾았으면 True, 아니면 False.
         """
-        if not text: return False
+        if not text:
+            return False
 
         pattern = self._create_pattern(text)
         current_row = self.currentIndex().row()
-        # 현재 모델(프록시)의 행 수 사용
         total_rows = self.model().rowCount()
 
         start_row = current_row - 1 if current_row >= 0 else total_rows - 1
@@ -474,21 +502,19 @@ class QSmartListView(QListView):
 
     def get_all_text(self) -> str:
         """
-        모델에 있는 모든 로그 데이터를 가져와 하나의 문자열로 반환
+        모델에 있는 모든 로그 데이터를 가져와 하나의 문자열로 반환합니다.
         HTML 태그는 제거됩니다.
 
         Returns:
             str: 개행 문자로 구분된 전체 로그 텍스트.
         """
-        # 모델에서 태그가 제거된 리스트를 가져옴
         lines = self.log_model.get_plain_text_logs()
-        # 줄바꿈으로 연결하여 반환
         return "\n".join(lines)
 
     @staticmethod
     def _create_pattern(text: str) -> QRegExp:
         """
-        검색 문자열을 QRegExp 객체로 변환
+        검색 문자열을 QRegExp 객체로 변환합니다.
 
         Args:
             text (str): 검색 문자열.
@@ -496,18 +522,14 @@ class QSmartListView(QListView):
         Returns:
             QRegExp: 컴파일된 정규식 객체.
         """
-        # 대소문자 구분 없음
         pattern = QRegExp(text, Qt.CaseInsensitive)
-
-        # 유효하지 않은 정규식 패턴(예: '[')인 경우 이스케이프 처리하여 일반 텍스트로 검색
         if not pattern.isValid():
             pattern = QRegExp(QRegExp.escape(text), Qt.CaseInsensitive)
         return pattern
 
     def _match_row(self, row: int, pattern: QRegExp) -> bool:
         """
-        특정 행의 데이터가 검색 패턴과 일치하는지 확인
-        현재 모델(프록시)의 데이터를 기준으로 확인
+        특정 행의 데이터가 검색 패턴과 일치하는지 확인합니다.
 
         Args:
             row (int): 행 인덱스.
@@ -516,40 +538,35 @@ class QSmartListView(QListView):
         Returns:
             bool: 일치하면 True.
         """
-        # 현재 모델(프록시)에서 데이터 가져오기
         index = self.model().index(row, 0)
         text = self.model().data(index)
         return pattern.indexIn(text) != -1
 
     def _select_and_scroll(self, row: int) -> None:
         """
-        특정 행을 선택하고 화면 중앙으로 스크롤
+        특정 행을 선택하고 화면 중앙으로 스크롤합니다.
 
         Args:
             row (int): 이동할 행 인덱스.
         """
-        # 현재 모델(프록시)의 인덱스 사용
         index = self.model().index(row, 0)
         self.setCurrentIndex(index)
         self.scrollTo(index, QAbstractItemView.PositionAtCenter)
 
     def setReadOnly(self, val: bool) -> None:
         """
-        뷰의 읽기 전용 상태를 설정
+        뷰의 읽기 전용 상태를 설정합니다.
+        (로그 뷰어 특성상 텍스트 선택 및 복사는 항상 가능합니다)
 
         Args:
-            val (bool): True일 경우 편집 트리거를 비활성화
-                       (로그 뷰어 특성상 텍스트 선택 및 복사는 여전히 가능합니다)
+            val (bool): True일 경우 편집 트리거를 비활성화.
         """
         if val:
-            # 어떠한 동작으로도 편집 모드로 진입하지 않도록 설정
             self.setEditTriggers(QAbstractItemView.NoEditTriggers)
         else:
-            # 기본 편집 트리거 복원 (더블 클릭, 키 입력 등)
             self.setEditTriggers(QAbstractItemView.DoubleClicked |
                                  QAbstractItemView.EditKeyPressed |
                                  QAbstractItemView.SelectedClicked)
-            # self.setSelectionMode(QAbstractItemView.ExtendedSelection) # 선택 가능 복원
 
         # 스타일시트 갱신을 위해 속성 설정 및 폴리싱
         self.setProperty("readOnly", val)
@@ -558,7 +575,7 @@ class QSmartListView(QListView):
 
     def isReadOnly(self) -> bool:
         """
-        뷰가 현재 읽기 전용 상태인지 확인
+        뷰가 현재 읽기 전용 상태인지 확인합니다.
 
         Returns:
             bool: 읽기 전용이면 True.
@@ -567,7 +584,7 @@ class QSmartListView(QListView):
 
     def paintEvent(self, event) -> None:
         """
-        화면을 그립니다. 데이터가 없을 경우 플레이스홀더를 표시
+        화면을 그립니다. 데이터가 없을 경우 플레이스홀더를 표시합니다.
 
         Args:
             event (QPaintEvent): 페인트 이벤트.
@@ -737,11 +754,12 @@ class LogModel(QAbstractListModel):
     대량의 로그 데이터를 관리하는 데이터 모델 클래스입니다.
 
     QAbstractListModel을 상속받아 데이터를 리스트 형태로 관리하며,
-    최대 라인 수 제한(Trim) 로직을 포함
+    최대 라인 수 제한(Trim) 로직을 포함합니다.
     """
+
     def __init__(self, max_lines: int = DEFAULT_LOG_MAX_LINES):
         """
-        LogModel을 초기화
+        LogModel을 초기화합니다.
 
         Args:
             max_lines (int): 유지할 최대 로그 라인 수.
@@ -753,7 +771,7 @@ class LogModel(QAbstractListModel):
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
         """
-        데이터의 행(row) 개수를 반환
+        데이터의 행(row) 개수를 반환합니다.
 
         Args:
             parent (QModelIndex): 부모 인덱스.
@@ -765,7 +783,7 @@ class LogModel(QAbstractListModel):
 
     def data(self, index: QModelIndex, role: int = Qt.DisplayRole) -> Any:
         """
-        지정된 인덱스와 역할에 해당하는 데이터를 반환
+        지정된 인덱스와 역할에 해당하는 데이터를 반환합니다.
 
         Args:
             index (QModelIndex): 데이터 인덱스.
@@ -784,7 +802,7 @@ class LogModel(QAbstractListModel):
 
     def add_logs(self, lines: List[str]) -> None:
         """
-        로그 데이터를 배치로 추가하고 필요시 오래된 로그를 삭제(Trim)
+        로그 데이터를 배치로 추가하고 필요시 오래된 로그를 삭제(Trim)합니다.
 
         Args:
             lines (List[str]): 추가할 로그 문자열 리스트.
@@ -804,7 +822,7 @@ class LogModel(QAbstractListModel):
             remove_count = self._trim_size
             # 여유분 계산: 너무 많이 지우지 않도록 안전장치
             if len(self._data) - remove_count < self._max_lines * 0.8:
-                 remove_count = len(self._data) - int(self._max_lines * 0.9)
+                remove_count = len(self._data) - int(self._max_lines * 0.9)
 
             if remove_count > 0:
                 self.beginRemoveRows(QModelIndex(), 0, remove_count - 1)
@@ -812,16 +830,14 @@ class LogModel(QAbstractListModel):
                 self.endRemoveRows()
 
     def clear(self) -> None:
-        """
-        모든 데이터를 삭제
-        """
+        """모든 데이터를 삭제합니다."""
         self.beginResetModel()
         self._data.clear()
         self.endResetModel()
 
     def set_max_lines(self, max_lines: int) -> None:
         """
-        최대 로그 라인 수를 설정
+        최대 로그 라인 수를 설정합니다.
 
         Args:
             max_lines (int): 최대 라인 수.
@@ -831,7 +847,7 @@ class LogModel(QAbstractListModel):
 
     def get_plain_text_logs(self) -> List[str]:
         """
-        저장된 모든 로그에서 HTML 태그를 제거하여 리스트로 반환
+        저장된 모든 로그에서 HTML 태그를 제거하여 리스트로 반환합니다.
 
         Returns:
             List[str]: 태그가 제거된 로그 문자열 리스트.
@@ -841,22 +857,23 @@ class LogModel(QAbstractListModel):
 
         plain_logs = []
         for line in self._data:
-            # 정규식으로 태그 제거
             clean_text = re.sub(cleaner, '', line)
             plain_logs.append(clean_text)
 
         return plain_logs
 
+
 class LogDelegate(QStyledItemDelegate):
     """
     로그 아이템의 렌더링을 담당하는 델리게이트 클래스입니다.
 
-    paint 시점에 QPalette에서 현재 텍스트 색상을 가져와 HTML에 강제로 적용
-    HTML 텍스트 렌더링 및 검색어 하이라이트 기능을 수행
+    QTextDocument를 사용하여 HTML 텍스트를 렌더링하고,
+    검색 결과 하이라이트 기능을 수행합니다.
     """
+
     def __init__(self, parent=None):
         """
-        LogDelegate를 초기화
+        LogDelegate를 초기화합니다.
 
         Args:
             parent (QObject, optional): 부모 객체.
@@ -872,7 +889,7 @@ class LogDelegate(QStyledItemDelegate):
 
     def set_search_pattern(self, pattern: Optional[QRegExp]) -> None:
         """
-        검색 패턴을 설정
+        검색 패턴을 설정합니다.
 
         Args:
             pattern (Optional[QRegExp]): 검색할 정규식 객체. None이면 해제.
@@ -883,6 +900,12 @@ class LogDelegate(QStyledItemDelegate):
         """
         아이템을 화면에 그립니다.
 
+        Logic:
+            1. 선택 상태에 따른 배경 그리기
+            2. 테마에 맞는 텍스트 색상 결정 (QPalette)
+            3. 데이터(HTML) 설정 및 검색어 하이라이트 적용
+            4. QTextDocument를 사용하여 페인팅
+
         Args:
             painter (QPainter): 페인터 객체.
             option (QStyleOptionViewItem): 스타일 옵션.
@@ -891,28 +914,22 @@ class LogDelegate(QStyledItemDelegate):
         painter.save()
 
         # 1. 배경 그리기
-        # 선택된 항목의 배경색 처리 (기본 스타일 준수)
         if option.state & QStyle.State_Selected:
             painter.fillRect(option.rect, option.palette.highlight())
 
         # 2. 텍스트 색상 결정 (테마 및 선택 상태 반영)
-        # 선택된 상태라면 HighlightedText 색상, 아니면 일반 Text 색상 사용
         if option.state & QStyle.State_Selected:
             text_color = option.palette.highlightedText().color().name()
         else:
             text_color = option.palette.text().color().name()
 
         # 3. 데이터 설정 및 HTML 래핑
-        # QTextDocument는 기본적으로 검은색을 사용하므로,
-        # 현재 테마의 색상을 적용한 <div> 태그로 감싸서 색상을 강제합니다.
         raw_text = index.data(Qt.DisplayRole)
 
         # 문서 기본 폰트 설정
         self.doc.setDefaultFont(option.font)
 
-        # 색상이 적용된 HTML 생성
-        # 이미 HTML 태그(span style=...)가 있는 부분은 그 색상이 우선 적용되고,
-        # 그렇지 않은 일반 텍스트는 여기서 지정한 text_color를 따르게 됩니다.
+        # 색상이 적용된 HTML 생성 (기본 텍스트 색상 강제)
         styled_html = f'<div style="color: {text_color};">{raw_text}</div>'
         self.doc.setHtml(styled_html)
 
@@ -936,7 +953,7 @@ class LogDelegate(QStyledItemDelegate):
 
     def sizeHint(self, option: 'QStyleOptionViewItem', index: QModelIndex) -> QSize:
         """
-        아이템의 크기 힌트를 반환
+        아이템의 크기 힌트를 반환합니다.
 
         Args:
             option (QStyleOptionViewItem): 스타일 옵션.

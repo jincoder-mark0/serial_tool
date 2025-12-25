@@ -5,23 +5,26 @@ EventBus와 Presenter/View 사이의 이벤트를 라우팅합니다.
 
 ## WHY
 * EventBus의 범용 이벤트를 PyQt Signal로 변환하여 타입 안전성 확보
-* UI Thread에서 안전한 이벤트 처리 보장
+* 비동기 스레드(Worker) 이벤트를 UI 스레드(Main)에서 안전하게 처리 보장
 
 ## WHAT
 * EventBus 이벤트 구독 및 PyQt Signal 발행
-* 포트, 매크로, 파일, 시스템 이벤트 라우팅
+* 포트, 매크로, 파일, 시스템 관련 이벤트 중계
 
 ## HOW
 * QObject 상속으로 PyQt Signal 제공
-* EventBus.subscribe로 이벤트 구독 후 Signal emit
+* EventBus.subscribe로 이벤트 구독 후 핸들러에서 Signal emit
+* DTO를 그대로 전달하여 데이터 구조 유지
 """
 from PyQt5.QtCore import QObject, pyqtSignal
 from core.event_bus import event_bus
 from common.dtos import (
     PortDataEvent, PortErrorEvent, PacketEvent,
-    FileProgressEvent, PreferencesState, PortConnectionEvent
+    FileProgressEvent, PreferencesState, PortConnectionEvent,
+    FileErrorEvent, MacroErrorEvent, FileCompletionEvent
 )
 from common.constants import EventTopics
+
 
 class EventRouter(QObject):
     """
@@ -34,31 +37,31 @@ class EventRouter(QObject):
     # ---------------------------------------------------------
     # 1. Port Events
     # ---------------------------------------------------------
-    port_opened = pyqtSignal(object)
-    port_closed = pyqtSignal(object)
-    port_error = pyqtSignal(object)
-    data_received = pyqtSignal(object)
-    data_sent = pyqtSignal(object)
-    packet_received = pyqtSignal(object)
+    port_opened = pyqtSignal(object)       # PortConnectionEvent
+    port_closed = pyqtSignal(object)       # PortConnectionEvent
+    port_error = pyqtSignal(object)        # PortErrorEvent
+    data_received = pyqtSignal(object)     # PortDataEvent
+    data_sent = pyqtSignal(object)         # PortDataEvent
+    packet_received = pyqtSignal(object)   # PacketEvent
 
     # ---------------------------------------------------------
     # 2. Macro Events
     # ---------------------------------------------------------
     macro_started = pyqtSignal()
     macro_finished = pyqtSignal()
-    macro_error = pyqtSignal(str)
+    macro_error = pyqtSignal(object)       # MacroErrorEvent
 
     # ---------------------------------------------------------
     # 3. File Transfer Events
     # ---------------------------------------------------------
-    file_transfer_progress = pyqtSignal(object)
-    file_transfer_completed = pyqtSignal(bool)
-    file_transfer_error = pyqtSignal(str)
+    file_transfer_progress = pyqtSignal(object)   # FileProgressEvent
+    file_transfer_completed = pyqtSignal(object)  # FileCompletionEvent
+    file_transfer_error = pyqtSignal(object)      # FileErrorEvent
 
     # ---------------------------------------------------------
     # 4. System Events
     # ---------------------------------------------------------
-    settings_changed = pyqtSignal(object) # PreferencesState DTO
+    settings_changed = pyqtSignal(object)  # PreferencesState DTO
 
     def __init__(self):
         """EventRouter 초기화 및 이벤트 구독"""
@@ -77,8 +80,6 @@ class EventRouter(QObject):
         # Port Events
         self.bus.subscribe(EventTopics.PORT_OPENED, self._on_port_opened)
         self.bus.subscribe(EventTopics.PORT_CLOSED, self._on_port_closed)
-
-        # DTO를 그대로 emit
         self.bus.subscribe(EventTopics.PORT_ERROR, self._on_port_error)
         self.bus.subscribe(EventTopics.PORT_DATA_RECEIVED, self._on_data_received)
         self.bus.subscribe(EventTopics.PORT_DATA_SENT, self._on_data_sent)
@@ -101,35 +102,70 @@ class EventRouter(QObject):
     # Event Handlers (Port)
     # ---------------------------------------------------------
     def _on_port_opened(self, event: PortConnectionEvent):
-        """포트 열림 이벤트 처리"""
+        """
+        포트 열림 이벤트 처리
+
+        Args:
+            event (PortConnectionEvent): 연결 이벤트 DTO.
+        """
         self.port_opened.emit(event)
 
     def _on_port_closed(self, event: PortConnectionEvent):
-        """포트 닫힘 이벤트 처리"""
+        """
+        포트 닫힘 이벤트 처리
+
+        Args:
+            event (PortConnectionEvent): 연결 이벤트 DTO.
+        """
         self.port_closed.emit(event)
 
     def _on_port_error(self, event: PortErrorEvent):
-        """포트 에러 이벤트 처리"""
+        """
+        포트 에러 이벤트 처리
+
+        Args:
+            event (PortErrorEvent): 에러 이벤트 DTO.
+        """
         self.port_error.emit(event)
 
     def _on_data_received(self, event: PortDataEvent):
-        """포트 데이터 수신 이벤트 처리"""
+        """
+        포트 데이터 수신 이벤트 처리
+
+        Args:
+            event (PortDataEvent): 데이터 이벤트 DTO.
+        """
         self.data_received.emit(event)
 
     def _on_data_sent(self, event: PortDataEvent):
-        """포트 데이터 송신 이벤트 처리"""
+        """
+        포트 데이터 송신 이벤트 처리
+
+        Args:
+            event (PortDataEvent): 데이터 이벤트 DTO.
+        """
         self.data_sent.emit(event)
 
     def _on_packet_received(self, event: PacketEvent):
-        """패킷 파싱 완료 이벤트 처리"""
+        """
+        패킷 파싱 완료 이벤트 처리
+
+        Args:
+            event (PacketEvent): 패킷 이벤트 DTO.
+        """
         self.packet_received.emit(event)
 
     # ---------------------------------------------------------
     # Event Handlers (Macro)
     # ---------------------------------------------------------
-    def _on_macro_error(self, error_msg: str):
-        """매크로 에러 이벤트 처리"""
-        self.macro_error.emit(str(error_msg))
+    def _on_macro_error(self, event: MacroErrorEvent):
+        """
+        매크로 에러 이벤트 처리
+
+        Args:
+            event (MacroErrorEvent): 에러 이벤트 DTO.
+        """
+        self.macro_error.emit(event)
 
     # ---------------------------------------------------------
     # Event Handlers (File Transfer)
@@ -139,21 +175,36 @@ class EventRouter(QObject):
         파일 전송 진행률 이벤트 처리
 
         Args:
-            event: FileProgressEvent DTO
+            event (FileProgressEvent): 진행률 이벤트 DTO.
         """
         self.file_transfer_progress.emit(event)
 
-    def _on_file_completed(self, success: bool):
-        """파일 전송 완료 이벤트 처리"""
-        self.file_transfer_completed.emit(success)
+    def _on_file_completed(self, event: FileCompletionEvent):
+        """
+        파일 전송 완료 이벤트 처리
 
-    def _on_file_error(self, error_msg: str):
-        """파일 전송 에러 이벤트 처리"""
-        self.file_transfer_error.emit(str(error_msg))
+        Args:
+            event (FileCompletionEvent): 완료 이벤트 DTO.
+        """
+        self.file_transfer_completed.emit(event)
+
+    def _on_file_error(self, event: FileErrorEvent):
+        """
+        파일 전송 에러 이벤트 처리
+
+        Args:
+            event (FileErrorEvent): 에러 이벤트 DTO.
+        """
+        self.file_transfer_error.emit(event)
 
     # ---------------------------------------------------------
     # Event Handlers (System)
     # ---------------------------------------------------------
     def _on_settings_changed(self, state: PreferencesState):
-        """설정 변경 이벤트 처리"""
+        """
+        설정 변경 이벤트 처리
+
+        Args:
+            state (PreferencesState): 설정 상태 DTO.
+        """
         self.settings_changed.emit(state)

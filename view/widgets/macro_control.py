@@ -1,89 +1,107 @@
 """
 매크로 제어 위젯 모듈
 
-매크로 실행(반복, 간격) 설정 및 스크립트 파일 관리를 담당합니다.
+매크로 실행(반복 횟수, 지연 시간) 설정 및 스크립트 파일 관리를 담당합니다.
+사용자가 입력한 설정을 바탕으로 자동 반복 실행을 제어합니다.
 
 ## WHY
-* 매크로의 실행 조건 설정 및 제어 인터페이스 필요
-* 스크립트 파일의 저장/로드 진입점
+* 매크로의 실행 조건(반복 횟수, 간격)을 정밀하게 제어할 인터페이스 필요
+* 스크립트 파일의 저장/로드 기능을 통해 설정 공유 및 백업 지원
 
 ## WHAT
-* 반복 횟수, 지연 시간 설정 UI
-* 시작/정지/일시정지 버튼
-* 스크립트 저장/로드 버튼
+* 반복 횟수(SpinBox), 지연 시간(LineEdit) 설정 UI
+* 시작/정지/일시정지 제어 버튼
+* 스크립트 저장/로드 및 Broadcast 옵션 체크박스
 
 ## HOW
-* 사용자 입력을 DTO(MacroRepeatOption)로 변환하여 시그널 발생
+* 사용자 입력을 `MacroRepeatOption` DTO로 변환하여 시그널 발생
+* ThemeManager/LanguageManager 연동
 """
+from typing import Optional, Dict, Any
+
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QPushButton,
     QLabel, QLineEdit, QSpinBox, QGroupBox, QGridLayout, QCheckBox
 )
 from PyQt5.QtCore import pyqtSignal, Qt
-from typing import Optional
+
 from view.managers.language_manager import language_manager
 from common.dtos import MacroRepeatOption
 from common.constants import DEFAULT_MACRO_DELAY_MS
 
+
 class MacroControlWidget(QWidget):
     """
     Command List 실행을 제어하는 위젯 클래스입니다.
-    Repeat, 스크립트 저장/로드 기능을 제공합니다.
+    반복 실행 옵션 설정 및 스크립트 파일 관리를 제공합니다.
     """
 
-    # 시그널 정의
-    macro_repeat_start_requested = pyqtSignal(object)
+    # -------------------------------------------------------------------------
+    # Signals
+    # -------------------------------------------------------------------------
+    # 매크로 실행 제어 시그널
+    macro_repeat_start_requested = pyqtSignal(object)  # MacroRepeatOption DTO 전달
     macro_repeat_stop_requested = pyqtSignal()
     macro_repeat_pause_requested = pyqtSignal()
 
+    # 스크립트 파일 관리 시그널
     script_save_requested = pyqtSignal()
     script_load_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
-        MacroControlWidget을 초기화합니다.
+        MacroControlWidget 초기화
 
         Args:
-            parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
+            parent (Optional[QWidget]): 부모 위젯.
         """
         super().__init__(parent)
-        self.macro_repeat_count_lbl: Optional[QLabel] = None
-        self.macro_repeat_stop_btn: Optional[QPushButton] = None
-        self.macro_repeat_start_btn: Optional[QPushButton] = None
-        self.repeat_count_spin = None
-        self.repeat_max_lbl: Optional[QLabel] = None
-        self.repeat_delay_ms_line_edit = None
+
+        # UI 컴포넌트 선언
+        self.execution_settings_grp: Optional[QGroupBox] = None
         self.interval_lbl: Optional[QLabel] = None
-        self.execution_settings_grp = None
-        self.script_load_btn: Optional[QPushButton] = None
-        self.script_save_btn: Optional[QPushButton] = None
+        self.repeat_max_lbl: Optional[QLabel] = None
+        self.macro_repeat_count_lbl: Optional[QLabel] = None
+
+        self.repeat_delay_ms_line_edit: Optional[QLineEdit] = None
+        self.repeat_count_spin: Optional[QSpinBox] = None
         self.broadcast_chk: Optional[QCheckBox] = None
+
+        self.macro_repeat_start_btn: Optional[QPushButton] = None
+        self.macro_repeat_stop_btn: Optional[QPushButton] = None
+        self.macro_repeat_pause_btn: Optional[QPushButton] = None
+        self.script_save_btn: Optional[QPushButton] = None
+        self.script_load_btn: Optional[QPushButton] = None
+
         self.init_ui()
 
-        # 언어 변경 시 UI 업데이트 연결
+        # 언어 변경 시그널 연결
         language_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
 
-        # Row 0: 자동 실행 설정
+        # -----------------------------------------------------
+        # Row 0: 설정값 입력 (Interval, Max Count, Broadcast)
+        # -----------------------------------------------------
+        # Interval
         self.interval_lbl = QLabel(language_manager.get_text("macro_control_lbl_interval"))
-
         self.repeat_delay_ms_line_edit = QLineEdit(str(DEFAULT_MACRO_DELAY_MS))
         self.repeat_delay_ms_line_edit.setFixedWidth(50)
         self.repeat_delay_ms_line_edit.setAlignment(Qt.AlignRight)
 
+        # Repeat Count
         self.repeat_max_lbl = QLabel(language_manager.get_text("macro_control_lbl_repeat_max"))
-
         self.repeat_count_spin = QSpinBox()
-        self.repeat_count_spin.setRange(0, 9999)
+        self.repeat_count_spin.setRange(0, 9999) # 0 = Infinite
         self.repeat_count_spin.setValue(0)
         self.repeat_count_spin.setToolTip(language_manager.get_text("macro_control_spin_repeat_tooltip"))
 
-        # Broadcast 체크박스
+        # Broadcast Checkbox
         self.broadcast_chk = QCheckBox(language_manager.get_text("macro_control_chk_broadcast"))
         self.broadcast_chk.setToolTip(language_manager.get_text("macro_control_chk_broadcast_tooltip"))
 
+        # Script Buttons
         self.script_save_btn = QPushButton(language_manager.get_text("macro_control_btn_save_script"))
         self.script_save_btn.setToolTip(language_manager.get_text("macro_control_btn_save_script_tooltip"))
         self.script_save_btn.clicked.connect(self.on_script_save_requested)
@@ -92,22 +110,24 @@ class MacroControlWidget(QWidget):
         self.script_load_btn.setToolTip(language_manager.get_text("macro_control_btn_load_script_tooltip"))
         self.script_load_btn.clicked.connect(self.on_script_load_requested)
 
-        # Row 1: 자동 실행 제어
+        # -----------------------------------------------------
+        # Row 1: 제어 버튼 (Start, Stop, Pause, Status Label)
+        # -----------------------------------------------------
         self.macro_repeat_start_btn = QPushButton(language_manager.get_text("macro_control_btn_repeat_start"))
         self.macro_repeat_start_btn.setToolTip(language_manager.get_text("macro_control_btn_repeat_start_tooltip"))
-        self.macro_repeat_start_btn.setProperty("class", "accent") # 초록색 스타일
+        self.macro_repeat_start_btn.setProperty("class", "accent") # 테마 스타일 적용
         self.macro_repeat_start_btn.clicked.connect(self.on_macro_repeat_start_clicked)
 
         self.macro_repeat_stop_btn = QPushButton(language_manager.get_text("macro_control_btn_repeat_stop"))
         self.macro_repeat_stop_btn.setToolTip(language_manager.get_text("macro_control_btn_repeat_stop_tooltip"))
         self.macro_repeat_stop_btn.setEnabled(False)
-        self.macro_repeat_stop_btn.setProperty("class", "danger") # 빨간색 스타일
+        self.macro_repeat_stop_btn.setProperty("class", "danger") # 테마 스타일 적용
         self.macro_repeat_stop_btn.clicked.connect(self.on_macro_repeat_stop_clicked)
 
         self.macro_repeat_pause_btn = QPushButton(language_manager.get_text("macro_control_btn_repeat_pause"))
         self.macro_repeat_pause_btn.setToolTip(language_manager.get_text("macro_control_btn_repeat_pause_tooltip"))
         self.macro_repeat_pause_btn.setEnabled(False)
-        self.macro_repeat_pause_btn.setProperty("class", "warning") # 노란색 스타일
+        self.macro_repeat_pause_btn.setProperty("class", "warning") # 테마 스타일 적용
         self.macro_repeat_pause_btn.clicked.connect(self.on_macro_repeat_pause_clicked)
 
         self.macro_repeat_count_lbl = QLabel("0 / ∞")
@@ -123,29 +143,30 @@ class MacroControlWidget(QWidget):
         execution_layout.addWidget(self.repeat_delay_ms_line_edit, 0, 1)
         execution_layout.addWidget(self.repeat_max_lbl, 0, 2)
         execution_layout.addWidget(self.repeat_count_spin, 0, 3)
-        execution_layout.addWidget(self.broadcast_chk, 0, 4) # 체크박스 추가
+        execution_layout.addWidget(self.broadcast_chk, 0, 4)
         execution_layout.addWidget(self.script_save_btn, 0, 5)
         execution_layout.addWidget(self.script_load_btn, 0, 6)
 
         # Row 1 배치
+        # Span을 사용하여 버튼 크기 조절
         execution_layout.addWidget(self.macro_repeat_start_btn, 1, 0, 1, 3) # Span 3
         execution_layout.addWidget(self.macro_repeat_stop_btn, 1, 3, 1, 2)  # Span 2
         execution_layout.addWidget(self.macro_repeat_pause_btn, 1, 5)
         execution_layout.addWidget(self.macro_repeat_count_lbl, 1, 6)
 
-        # 자동 실행 설정 그룹 (Repeat Settings Group)
+        # 자동 실행 설정 그룹 (Execution Group)
         self.execution_settings_grp = QGroupBox(language_manager.get_text("macro_control_grp_execution"))
-        self.execution_settings_grp.setFixedHeight(100) # 높이 고정 (SystemLogWidget과 맞춤)
+        self.execution_settings_grp.setFixedHeight(100)
         self.execution_settings_grp.setLayout(execution_layout)
 
+        # 메인 레이아웃 적용
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
         layout.addWidget(self.execution_settings_grp)
-
         self.setLayout(layout)
 
-        # 초기 상태: 연결 전까지 비활성화
+        # 초기 상태 설정 (연결 전 비활성화)
         self.set_controls_enabled(False)
 
     def retranslate_ui(self) -> None:
@@ -162,19 +183,33 @@ class MacroControlWidget(QWidget):
         self.repeat_max_lbl.setText(language_manager.get_text("macro_control_lbl_repeat_max"))
         self.repeat_count_spin.setToolTip(language_manager.get_text("macro_control_spin_repeat_tooltip"))
 
+        self.broadcast_chk.setText(language_manager.get_text("macro_control_chk_broadcast"))
+        self.broadcast_chk.setToolTip(language_manager.get_text("macro_control_chk_broadcast_tooltip"))
+
         self.macro_repeat_start_btn.setText(language_manager.get_text("macro_control_btn_repeat_start"))
         self.macro_repeat_stop_btn.setText(language_manager.get_text("macro_control_btn_repeat_stop"))
+        self.macro_repeat_pause_btn.setText(language_manager.get_text("macro_control_btn_repeat_pause"))
 
     def get_repeat_option(self) -> MacroRepeatOption:
-        """현재 UI 설정값을 바탕으로 MacroRepeatOption DTO 생성"""
+        """
+        현재 UI 설정값을 바탕으로 MacroRepeatOption DTO를 생성하여 반환합니다.
+
+        Returns:
+            MacroRepeatOption: 실행 옵션 데이터 객체.
+        """
         try:
             delay_ms = int(self.repeat_delay_ms_line_edit.text())
         except ValueError:
             delay_ms = DEFAULT_MACRO_DELAY_MS
+
         max_runs = self.repeat_count_spin.value()
         broadcast_enabled = self.broadcast_chk.isChecked()
 
-        return MacroRepeatOption(delay_ms=delay_ms, max_runs=max_runs, broadcast_enabled=broadcast_enabled)
+        return MacroRepeatOption(
+            delay_ms=delay_ms,
+            max_runs=max_runs,
+            broadcast_enabled=broadcast_enabled
+        )
 
     def on_macro_repeat_start_clicked(self) -> None:
         """자동 실행 시작 버튼 핸들러"""
@@ -186,7 +221,7 @@ class MacroControlWidget(QWidget):
         self.macro_repeat_stop_requested.emit()
 
     def on_macro_repeat_pause_clicked(self) -> None:
-        """자동 실행 정지 버튼 핸들러"""
+        """자동 실행 일시정지 버튼 핸들러"""
         self.macro_repeat_pause_requested.emit()
 
     def on_script_save_requested(self) -> None:
@@ -199,37 +234,39 @@ class MacroControlWidget(QWidget):
 
     def set_running_state(self, running: bool, is_repeat: bool = False) -> None:
         """
-        실행 상태에 따라 버튼 활성화/비활성화를 설정합니다.
+        매크로 실행 상태에 따라 버튼 활성화/비활성화를 제어합니다.
 
         Args:
-            running (bool): 실행 중 여부.
-            is_repeat (bool): 자동 실행 모드 여부.
+            running (bool): 현재 실행 중인지 여부.
+            is_repeat (bool): 반복 실행 모드인지 여부.
         """
         if running:
+            # 실행 중: 시작 버튼 비활성화, 정지/일시정지 활성화 (반복 모드일 때)
             self.macro_repeat_start_btn.setEnabled(False)
             if is_repeat:
                 self.macro_repeat_stop_btn.setEnabled(True)
                 self.macro_repeat_pause_btn.setEnabled(True)
         else:
-            # 실행 중이 아닐 때, 연결 상태에 따라 활성화 여부가 결정됨
-            # 여기서는 단순히 토글 로직만 처리하고, 실제 활성화는 set_controls_enabled에서 결정
-            pass
+            # 정지 상태: 시작 버튼 활성화 (단, 연결 상태여야 함)
+            # 연결 상태는 별도로 set_controls_enabled로 관리되므로 여기서는 시작 버튼만 복구
+            self.macro_repeat_start_btn.setEnabled(True)
+            self.macro_repeat_stop_btn.setEnabled(False)
+            self.macro_repeat_pause_btn.setEnabled(False)
 
     def update_auto_count(self, current: int, total: int) -> None:
         """
-        자동 실행 카운트를 업데이트합니다.
+        자동 실행 카운트 라벨을 업데이트합니다.
 
         Args:
             current (int): 현재 실행 횟수.
-            total (int): 전체 실행 횟수 (0이면 무한).
+            total (int): 전체 설정 횟수 (0이면 무한).
         """
         total_str = "∞" if total == 0 else str(total)
         self.macro_repeat_count_lbl.setText(f"{current} / {total_str}")
 
     def set_controls_enabled(self, enabled: bool) -> None:
         """
-        제어 위젯들의 활성화 상태를 설정합니다.
-        포트 연결 상태에 따라 호출됩니다.
+        제어 위젯들의 활성화 상태를 설정합니다. (포트 연결 상태에 연동)
 
         Args:
             enabled (bool): 활성화 여부.
@@ -237,29 +274,25 @@ class MacroControlWidget(QWidget):
         # 시작 버튼 활성화 제어
         self.macro_repeat_start_btn.setEnabled(enabled)
 
-        # 연결 끊기면 정지/일시정지도 비활성화
+        # 연결 끊기면 정지/일시정지도 강제 비활성화
         if not enabled:
             self.macro_repeat_stop_btn.setEnabled(False)
             self.macro_repeat_pause_btn.setEnabled(False)
 
-        # 설정 입력 필드는 항상 활성화 유지할지, 비활성화할지 결정 가능
-        # 여기서는 편의상 입력은 허용하되 실행만 막음
-
-    def get_state(self) -> dict:
+    def get_state(self) -> Dict[str, Any]:
         """
-        현재 위젯의 상태를 딕셔너리로 반환합니다.
+        현재 위젯의 상태를 딕셔너리로 반환합니다 (설정 저장용).
 
         Returns:
             dict: 위젯 상태 데이터.
         """
-        state = {
-            "delay": self.repeat_delay_ms_line_edit.text(),
+        return {
+            "delay_ms": self.repeat_delay_ms_line_edit.text(),
             "max_runs": self.repeat_count_spin.value(),
-            "broadcast": self.broadcast_chk.isChecked()
+            "broadcast_enabled": self.broadcast_chk.isChecked()
         }
-        return state
 
-    def apply_state(self, state: dict) -> None:
+    def apply_state(self, state: Dict[str, Any]) -> None:
         """
         저장된 상태를 위젯에 적용합니다.
 
@@ -269,6 +302,6 @@ class MacroControlWidget(QWidget):
         if not state:
             return
 
-        self.repeat_delay_ms_line_edit.setText(state.get("delay_ms", str(DEFAULT_MACRO_DELAY_MS)))
+        self.repeat_delay_ms_line_edit.setText(str(state.get("delay_ms", DEFAULT_MACRO_DELAY_MS)))
         self.repeat_count_spin.setValue(state.get("max_runs", 0))
         self.broadcast_chk.setChecked(state.get("broadcast_enabled", False))

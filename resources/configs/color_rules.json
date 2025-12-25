@@ -1,46 +1,76 @@
 {
-    "color_rules": [
-        {
-            "name": "AT_OK",
-            "pattern": "\\bOK\\b",
-            "color": "#4CAF50",
-            "regex_enabled": true,
-            "enabled": true
-        },
-        {
-            "name": "AT_ERROR",
-            "pattern": "\\bERROR\\b",
-            "color": "#F44336",
-            "regex_enabled": true,
-            "enabled": true
-        },
-        {
-            "name": "URC",
-            "pattern": "(\\+\\w+:)",
-            "color": "#FFEB3B",
-            "regex_enabled": true,
-            "enabled": true
-        },
-        {
-            "name": "PROMPT",
-            "pattern": "^>",
-            "color": "#00BCD4",
-            "regex_enabled": true,
-            "enabled": true
-        },
-        {
-            "name": "INFO",
-            "pattern": "\\bINFO\\b",
-            "color": "#2196F3",
-            "regex_enabled": true,
-            "enabled": true
-        },
-        {
-            "name": "WARNING",
-            "pattern": "\\b(WARN|WARNING)\\b",
-            "color": "#FF9800",
-            "regex_enabled": true,
-            "enabled": true
-        }
-    ]
+  "color_rules": [
+    {
+      "name": "AT_OK",
+      "pattern": "\\bOK\\b",
+      "color": "",
+      "light_color": "#008000",
+      "dark_color": "#4CAF50",
+      "regex_enabled": true,
+      "enabled": true
+    },
+    {
+      "name": "AT_ERROR",
+      "pattern": "\\bERROR\\b",
+      "color": "",
+      "light_color": "#CC0000",
+      "dark_color": "#F44336",
+      "regex_enabled": true,
+      "enabled": true
+    },
+    {
+      "name": "URC",
+      "pattern": "(\\+\\w+:)",
+      "color": "",
+      "light_color": "#D4A017",
+      "dark_color": "#D4A017",
+      "regex_enabled": true,
+      "enabled": true
+    },
+    {
+      "name": "PROMPT",
+      "pattern": "^>",
+      "color": "",
+      "light_color": "#008B8B",
+      "dark_color": "#00BCD4",
+      "regex_enabled": true,
+      "enabled": true
+    },
+    {
+      "name": "SYS_INFO",
+      "pattern": "\\[INFO\\]",
+      "color": "",
+      "light_color": "#0000FF",
+      "dark_color": "#2196F3",
+      "regex_enabled": true,
+      "enabled": true
+    },
+    {
+      "name": "SYS_ERROR",
+      "pattern": "\\[ERROR\\]",
+      "color": "",
+      "light_color": "#CC0000",
+      "dark_color": "#F44336",
+      "regex_enabled": true,
+      "enabled": true
+    },
+    {
+      "name": "SYS_WARN",
+      "pattern": "\\[WARN\\]",
+      "color": "",
+      "light_color": "#D4A017",
+      "dark_color": "#D4A017",
+      "regex_enabled": true,
+      "enabled": true
+    },
+    {
+      "name": "TIMESTAMP",
+      "pattern": "\\[\\d{2}:\\d{2}:\\d{2}\\]",
+      "color": "",
+      "light_color": "#808080",
+      "dark_color": "#9E9E9E",
+      "regex_enabled": true,
+      "enabled": true
+    }
+  ]
 }

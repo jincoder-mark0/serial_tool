@@ -154,11 +154,11 @@ class ThemeManager(QObject):
 
         # 플랫폼 확인 및 기본 폰트 설정
         system = platform.system()
-
+        
         # 1. 가변폭 폰트 (Proportional)
         prop_family, prop_size = self._PROPORTIONAL_FONTS.get(system, ("Arial", 9))
         self._proportional_font = QFont(prop_family, prop_size)
-
+        
         # 2. 고정폭 폰트 (Fixed)
         fixed_family, fixed_size = self._FIXED_FONTS.get(system, ("Courier New", 9))
         self._fixed_font = QFont(fixed_family, fixed_size)
@@ -194,7 +194,7 @@ class ThemeManager(QObject):
 
         # 1. 테마별 아이콘 시도 (ResourcePath 활용)
         icon_path = self._resource_path.get_icon_path(icon_name, theme_suffix)
-
+        
         if not icon_path.exists():
             # 2. 폴백: 테마 접미사 없이 시도
             icon_path = self._resource_path.get_icon_path(icon_name)
@@ -268,18 +268,18 @@ class ThemeManager(QObject):
 
         # 파일명 규칙: {theme_name}_theme.qss (소문자 기준)
         filename = f"{theme_name.lower()}_theme.qss"
-
+        
         # ResourcePath를 통해 경로 획득 시도
         path_obj = self._resource_path.get_theme_path(filename)
-
+        
         if path_obj:
             return str(path_obj)
-
+            
         # 직접 경로 조합 (Fallback)
         full_path = self._theme_dir / filename
         if full_path.exists():
             return str(full_path)
-
+            
         return None
 
     # -------------------------------------------------------------------------
@@ -458,9 +458,9 @@ class ThemeManager(QObject):
             str: 처리된 QSS 문자열.
         """
         theme_path = self._get_theme_file_path(theme_name)
-
+        
         # common.qss 경로 찾기
-        common_path_obj = self._resource_path.get_theme_path('common')
+        common_path_obj = self._resource_path.get_theme_path('common') 
         if not common_path_obj:
              common_path = str(self._theme_dir / 'common.qss')
         else:
@@ -519,7 +519,7 @@ class ThemeManager(QObject):
             return
 
         theme_name = theme_name.lower()
-
+        
         # 파일 경로 확인 (유효성 검사)
         file_path = self._get_theme_file_path(theme_name)
         if not file_path and theme_name not in ["dark", "light"]:
@@ -541,7 +541,7 @@ class ThemeManager(QObject):
         # 2. Stylesheet 로드
         # 파일에서 로드 시도 (common.qss 포함)
         stylesheet = self.load_theme_file_content(theme_name)
-
+        
         # 파일 로드 실패 또는 내용 없음 -> Fallback 생성
         if not stylesheet.strip():
             stylesheet = self._get_fallback_stylesheet(colors, theme_name)
@@ -551,6 +551,9 @@ class ThemeManager(QObject):
         full_stylesheet = stylesheet + "\n" + font_qss
 
         app.setStyleSheet(full_stylesheet)
+
+        # 4. ColorManager 업데이트 (구문 강조 등)
+        color_manager.update_theme(theme_name)
 
         # 로그 출력 제어
         if previous_theme != theme_name:
@@ -619,7 +622,7 @@ class ThemeManager(QObject):
             selection-background-color: {c['selection']};
             selection-color: {c['fg_primary']};
         }}
-
+        
         QMainWindow {{
             background-color: {c['bg_alt']};
         }}
@@ -716,7 +719,7 @@ class ThemeManager(QObject):
             background-color: {c['button_bg']};
             border: 1px solid {c['table_grid']};
         }}
-
+        
         /* 탭 위젯 */
         QTabWidget::pane {{
             border: 1px solid {c['border']};

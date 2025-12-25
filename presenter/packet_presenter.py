@@ -1,144 +1,168 @@
 """
 패킷 프레젠터 모듈
 
-패킷 인스펙터의 비즈니스 로직을 담당합니다.
+패킷 분석 뷰(PacketPanel)와 데이터 소스(EventRouter)를 연결하고 관리합니다.
 
 ## WHY
-* 패킷 데이터 포맷팅 로직을 View에서 분리
-* Model 이벤트와 View 업데이트 연결
-* 사용자 설정(Buffer Size, Scroll) 반영
+* 실시간 패킷 데이터의 UI 업데이트 로직 분리 (MVP 패턴)
+* 패킷 파싱 데이터의 시각화 형식(Hex/ASCII) 변환 담당
+* 대량 패킷 수신 시 UI 버퍼링 및 설정 동기화 관리
 
 ## WHAT
-* 패킷 수신 이벤트 처리 및 데이터 포맷팅 (Hex/ASCII/Time)
-* View의 Clear 요청 처리
-* 설정 변경에 따른 뷰 옵션 업데이트
+* PacketPanel(View)과 EventRouter(Model Interface) 연결
+* 패킷 수신 이벤트(PacketEvent) 처리 및 View 데이터(PacketViewData) 변환
+* 설정 변경(버퍼 크기, 색상 등)에 따른 View 업데이트
+* 캡처 시작/정지 및 초기화 제어
 
 ## HOW
-* EventRouter 시그널 구독
-* SettingsManager 주입 (DI)
+* EventRouter의 시그널을 구독하여 패킷 수신
+* DTO 변환 후 View의 append_packet 메서드 호출
+* SettingsManager를 통해 초기 설정 로드 및 변경 사항 반영
 """
+from typing import Optional
 from PyQt5.QtCore import QObject, QDateTime
+
 from view.panels.packet_panel import PacketPanel
 from presenter.event_router import EventRouter
 from core.settings_manager import SettingsManager
+from core.logger import logger
 from common.constants import ConfigKeys
-from common.dtos import PacketEvent, PreferencesState, PacketViewData
+from common.dtos import (
+    PacketEvent,
+    PacketViewData,
+    PreferencesState
+)
+
 
 class PacketPresenter(QObject):
     """
-    패킷 인스펙터 제어 Presenter
-
-    Model로부터 수신된 패킷 데이터를 가공하여 View에 표시하고,
-    View의 사용자 요청(Clear)을 처리합니다.
+    패킷 분석 화면의 로직을 담당하는 Presenter 클래스
     """
 
-    def __init__(self, view: PacketPanel, event_router: EventRouter, settings_manager: SettingsManager) -> None:
+    def __init__(self, panel: PacketPanel, event_router: EventRouter, settings_manager: SettingsManager) -> None:
         """
         PacketPresenter 초기화
 
         Args:
-            view (PacketPanel): 패킷 인스펙터 뷰
-            event_router (EventRouter): 이벤트 라우터
-            settings_manager (SettingsManager): 설정 관리자 (주입)
+            panel (PacketPanel): 패킷 뷰 인스턴스.
+            event_router (EventRouter): 이벤트 라우터 (패킷 수신용).
+            settings_manager (SettingsManager): 설정 관리자.
         """
         super().__init__()
-        self.view = view
+        self.panel = panel
         self.event_router = event_router
         self.settings_manager = settings_manager
 
-        # 이벤트 구독
-        self.event_router.packet_received.connect(self.on_packet_received)
+        # 캡처 활성화 상태 (기본값 True)
+        self._is_capturing = True
 
-        # 설정 변경 이벤트 구독 (EventBus -> EventRouter -> Here)
+        # 1. 초기 설정 적용
+        self._apply_initial_settings()
+
+        # 2. View 시그널 연결
+        self.panel.clear_requested.connect(self.on_clear_requested)
+        self.panel.capture_toggled.connect(self.on_capture_toggled)
+
+        # 3. EventRouter 시그널 연결
+        self.event_router.packet_received.connect(self.on_packet_received)
         self.event_router.settings_changed.connect(self.on_settings_changed)
 
-        # View 시그널 연결 (Clear 버튼)
-        self.view.clear_requested.connect(self.on_clear_requested)
-
-        # 초기 설정 적용
-        self.apply_settings()
-
-    def apply_settings(self) -> None:
+    def _apply_initial_settings(self) -> None:
         """
-        초기 설정을 로드하여 View에 적용합니다.
-        (이후 변경사항은 on_settings_changed로 처리)
+        SettingsManager에서 초기 설정을 로드하여 View에 적용합니다.
 
         Logic:
-            - SettingsManager에서 버퍼 크기 및 자동 스크롤 설정 조회
-            - View에 설정값 전달
+            - 버퍼 크기, 자동 스크롤 여부 로드
+            - View의 설정 메서드 호출
         """
         buffer_size = self.settings_manager.get(ConfigKeys.PACKET_BUFFER_SIZE, 100)
-        auto_scroll = self.settings_manager.get(ConfigKeys.PACKET_AUTOSCROLL, True)
+        autoscroll = self.settings_manager.get(ConfigKeys.PACKET_AUTOSCROLL, True)
+        realtime = self.settings_manager.get(ConfigKeys.PACKET_REALTIME, True)
 
-        self.view.set_packet_options(buffer_size, auto_scroll)
-
-    def on_settings_changed(self, state: PreferencesState) -> None:
-        """
-        설정 변경 이벤트 핸들러
-
-        Args:
-            state (PreferencesState): 변경된 설정 DTO
-        """
-        self.view.set_packet_options(state.packet_buffer_size, state.packet_autoscroll)
+        self.panel.set_buffer_size(buffer_size)
+        self.panel.set_autoscroll(autoscroll)
+        self._is_capturing = realtime
+        self.panel.set_capture_state(realtime)
 
     def on_packet_received(self, event: PacketEvent) -> None:
         """
-        패킷 수신 이벤트 핸들러
+        패킷 수신 이벤트 처리 핸들러
 
         Logic:
-            - 실시간 추적 설정 확인
-            - 타임스탬프 포맷팅 (HH:mm:ss.zzz)
-            - 데이터 포맷팅 (Hex, ASCII)
-            - View에 데이터 추가 요청
+            1. 캡처 중지 상태면 무시
+            2. DTO(`PacketEvent`)에서 패킷 객체 추출
+            3. 패킷 데이터를 View용 DTO(`PacketViewData`)로 변환
+            4. View에 추가 요청
 
         Args:
-            event (PacketEvent): 수신된 패킷 이벤트 (DTO)
+            event (PacketEvent): 수신된 패킷 이벤트 DTO.
         """
-        packet = event.packet
+        if not self._is_capturing:
+            return
 
+        packet = event.packet
         if not packet:
             return
 
-        # 실시간 추적 옵션 확인
-        realtime = self.settings_manager.get(ConfigKeys.PACKET_REALTIME, True)
-        if not realtime:
-            return
+        # 타임스탬프 포맷팅
+        timestamp = QDateTime.currentDateTime().toString("HH:mm:ss.zzz")
 
-        # 데이터 가공
-        timestamp = QDateTime.fromMSecsSinceEpoch(int(packet.timestamp * 1000))
-        time_str = timestamp.toString("HH:mm:ss.zzz")
+        # 데이터 변환 (Hex / ASCII)
+        # Packet 객체(model.packet_parser.Packet)는 raw_data 속성을 가진다고 가정
+        raw_data = getattr(packet, 'raw_data', b'')
 
-        packet_type = "Raw"
-        if packet.metadata and "type" in packet.metadata:
-            packet_type = packet.metadata["type"]
+        # Hex 문자열 변환 (예: "01 02 0A")
+        data_hex = " ".join(f"{b:02X}" for b in raw_data)
 
-        data_bytes = packet.data
+        # ASCII 문자열 변환 (제어 문자는 점으로 표시)
+        data_ascii = "".join(chr(b) if 32 <= b < 127 else "." for b in raw_data)
 
-        # HEX 포맷팅
-        data_hex = " ".join([f"{b:02X}" for b in data_bytes])
+        # 패킷 타입 (클래스 이름 또는 type 속성)
+        packet_type = getattr(packet, 'type_name', 'Unknown')
 
-        # ASCII 포맷팅
-        try:
-            data_ascii = "".join([chr(b) if 32 <= b <= 126 else "." for b in data_bytes])
-        except Exception:
-            data_ascii = str(data_bytes)
-
-        # Create DTO
+        # View용 DTO 생성
         view_data = PacketViewData(
-            time_str=time_str,
+            time_str=timestamp,
             packet_type=packet_type,
             data_hex=data_hex,
             data_ascii=data_ascii
         )
 
-        # View 업데이트 (DTO 전달)
-        self.view.append_packet(view_data)
+        # View 업데이트
+        self.panel.append_packet(view_data)
+
+    def on_settings_changed(self, state: PreferencesState) -> None:
+        """
+        전역 설정 변경 시 호출되는 핸들러
+
+        Logic:
+            - 패킷 관련 설정(버퍼, 오토스크롤)이 변경되었는지 확인하고 View 업데이트
+            - 캡처 상태(Realtime) 동기화
+
+        Args:
+            state (PreferencesState): 변경된 설정 상태 DTO.
+        """
+        self.panel.set_buffer_size(state.packet_buffer_size)
+        self.panel.set_autoscroll(state.packet_autoscroll)
+
+        # 캡처 상태가 외부 설정에 의해 변경된 경우 반영
+        if self._is_capturing != state.packet_realtime:
+            self._is_capturing = state.packet_realtime
+            self.panel.set_capture_state(state.packet_realtime)
 
     def on_clear_requested(self) -> None:
         """
-        로그 지우기 요청 처리
-
-        Logic:
-            - View의 clear_view 메서드 호출
+        View의 Clear 버튼 클릭 요청 처리
         """
-        self.view.clear_view()
+        self.panel.clear_view()
+        logger.debug("Packet view cleared by user.")
+
+    def on_capture_toggled(self, enabled: bool) -> None:
+        """
+        View의 캡처 토글 버튼 클릭 요청 처리
+
+        Args:
+            enabled (bool): 캡처 활성화 여부.
+        """
+        self._is_capturing = enabled
+        logger.debug(f"Packet capture state changed: {enabled}")
