@@ -14,6 +14,7 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 * 설정 로드/저장 및 초기화 로직 (LifecycleManager 위임)
 * Fast Path 데이터 수신 처리 및 UI Throttling
 * 애플리케이션 종료 처리 및 상태 저장
+* 매크로 실행 중 예외 상황(포트 끊김, 종료 등) 방어 로직
 
 ## HOW
 * EventRouter 및 Signal/Slot 기반 통신
@@ -21,6 +22,7 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 * SettingsManager 주입 및 관리
 """
 import os
+from typing import Optional
 from PyQt5.QtCore import QObject, QTimer, QDateTime
 
 from view.main_window import MainWindow
@@ -229,12 +231,21 @@ class MainPresenter(QObject):
         애플리케이션 종료 처리 핸들러
 
         Logic:
+            - 매크로 러너 안전 종료 (Wait)
             - 데이터 핸들러 및 타이머 정지
             - View에서 현재 윈도우 및 위젯 상태(DTO) 수집
             - SettingsManager를 통해 설정 저장
             - 활성 연결 종료
             - 종료 로그 기록
         """
+        logger.info("Shutdown initiated...")
+
+        # [안전 종료] 매크로 러너가 실행 중이라면 강제 종료 및 대기
+        if self.macro_runner.isRunning():
+            logger.info("Stopping active macro runner...")
+            self.macro_runner.stop()
+            self.macro_runner.wait(1000)  # 최대 1초 대기 (Deadlock 방지)
+
         self.data_handler.stop()
         if self.status_timer:
             self.status_timer.stop()
@@ -386,12 +397,27 @@ class MainPresenter(QObject):
         포트 닫힘 알림
 
         Logic:
+            - [Safety Check] 매크로 실행 중 포트가 닫히면 매크로 중단
             - 상태바 업데이트
             - 컨트롤 패널 비활성화 동기화
 
         Args:
             event (PortConnectionEvent): 포트 연결 이벤트 DTO.
         """
+        port_name = event.port
+
+        # 매크로 실행 중 포트가 닫히면 매크로 중단 (Ghost Run 방지)
+        if self.macro_runner.isRunning():
+            # 1. 단일 전송 모드인데 타겟 포트가 닫힌 경우
+            target_port = self.port_presenter.get_active_port_name()
+            if not self.macro_runner.broadcast_enabled and target_port == port_name:
+                self._notify_macro_error(f"Target port '{port_name}' closed. Macro stopped.")
+
+            # 2. 브로드캐스트 모드인데 남은 활성 포트가 없는 경우
+            elif self.macro_runner.broadcast_enabled:
+                if not self.connection_controller.has_active_broadcast_ports():
+                    self._notify_macro_error("No active ports left. Macro stopped.")
+
         self.view.update_status_bar_port(event.port, False)
         self.view.show_status_message(f"Disconnected from {event.port}", 3000)
 
@@ -466,10 +492,10 @@ class MainPresenter(QObject):
         매크로 전송 요청 처리 (Runner -> Controller)
 
         Logic:
-            - Broadcast 여부 확인
-            - 활성 포트 확인 (Single Port)
-            - CommandProcessor를 통한 데이터 가공 (Prefix/Suffix/Hex)
-            - ConnectionController를 통한 전송
+            - Prefix/Suffix 등 설정 조회 및 데이터 가공
+            - [Safety] 전송 대상 포트의 유효성 검사 (Gatekeeping)
+            - Broadcast 여부에 따른 전송 분기
+            - [Feedback] 전송 성공 시 Local Echo 출력
 
         Args:
             manual_command (ManualCommand): 전송할 명령어 DTO.
@@ -487,18 +513,56 @@ class MainPresenter(QObject):
                 suffix=suffix
             )
         except ValueError as e:
-            logger.error(f"Command processing error: {e}")
+            self._notify_macro_error(f"Command processing error: {e}")
             return
 
         # 3. 전송 (Broadcast vs Single)
+        sent_success = False
+
         if manual_command.broadcast_enabled:
-            self.connection_controller.send_broadcast_data(data)
-        else:
-            active_port = self.port_presenter.get_active_port_name()
-            if not active_port or not self.connection_controller.is_connection_open(active_port):
-                logger.warning("No active port for macro execution.")
+            # 브로드캐스트 가능한 활성 포트가 하나도 없는 경우 중단
+            if not self.connection_controller.has_active_broadcast_ports():
+                self._notify_macro_error("No active ports available for broadcast.")
                 return
+
+            self.connection_controller.send_broadcast_data(data)
+            sent_success = True
+        else:
+            # 단일 포트 전송
+            active_port = self.port_presenter.get_active_port_name()
+
+            if not active_port:
+                self._notify_macro_error("No port selected.")
+                return
+
+            if not self.connection_controller.is_connection_open(active_port):
+                self._notify_macro_error(f"Port '{active_port}' is disconnected.")
+                return
+
             self.connection_controller.send_data(active_port, data)
+            sent_success = True
+
+        # 4. Local Echo 처리 (성공 시에만)
+        local_echo_enabled = self.settings_manager.get(ConfigKeys.PORT_LOCAL_ECHO, False)
+        if sent_success and local_echo_enabled:
+            self.view.append_local_echo_data(data)
+
+    def _notify_macro_error(self, message: str) -> None:
+        """
+        매크로 실행 중 에러 발생 시 처리 (Helper)
+
+        Logic:
+            - 로그 기록
+            - 매크로 강제 중단(stop) 요청
+            - 사용자 알림
+
+        Args:
+            message (str): 에러 메시지.
+        """
+        logger.error(f"Macro stopped: {message}")
+        self.macro_runner.stop()
+        self.view.show_status_message(f"Macro Stopped: {message}", 5000)
+        self.view.show_alert_message("Macro Error", message)
 
     # -------------------------------------------------------------------------
     # File Transfer Handlers
@@ -580,7 +644,7 @@ class MainPresenter(QObject):
         """
         self._connect_single_port_logging(panel)
         # 새 탭에 색상 규칙 주입
-        if hasattr(panel, 'data_log_widget'):   # TODO : MVP / 캡슐화 위반 검토
+        if hasattr(panel, 'data_log_widget'):
             panel.data_log_widget.set_color_rules(color_manager.rules)
 
     def _connect_single_port_logging(self, panel) -> None:

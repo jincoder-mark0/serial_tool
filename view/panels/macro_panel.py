@@ -10,12 +10,13 @@
 
 ## WHAT
 * MacroListWidget과 MacroControlWidget 배치
-* 파일 저장/로드 및 실행 제어 시그널 정의
+* 파일 저장/로드 및 실행 제어(시작/정지/일시정지) 시그널 정의
 * 상태 저장/복원 인터페이스
 
 ## HOW
 * QVBoxLayout 사용
 * 하위 위젯의 이벤트를 상위로 전달(Bubbling)하거나 직접 처리
+* DTO를 사용하여 데이터 구조화
 """
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QFileDialog, QMessageBox
 from PyQt5.QtCore import pyqtSignal
@@ -35,8 +36,10 @@ class MacroPanel(QWidget):
     """
 
     # 매크로 실행 제어 시그널
-    repeat_start_requested = pyqtSignal(object)
+    repeat_start_requested = pyqtSignal(object)  # MacroExecutionRequest DTO
     repeat_stop_requested = pyqtSignal()
+    repeat_pause_requested = pyqtSignal()
+
     state_changed = pyqtSignal()  # 데이터 변경 알림
 
     # 파일 저장/로드 요청 시그널 (DTO 사용)
@@ -51,9 +54,10 @@ class MacroPanel(QWidget):
             parent (Optional[QWidget]): 부모 위젯.
         """
         super().__init__(parent)
-        self.macro_control = None
-        self.macro_list = None
+        self.macro_control: Optional[MacroControlWidget] = None
+        self.macro_list: Optional[MacroListWidget] = None
         self._loading = False
+
         self.init_ui()
 
     def init_ui(self) -> None:
@@ -61,9 +65,12 @@ class MacroPanel(QWidget):
         self.macro_list = MacroListWidget()
         self.macro_control = MacroControlWidget()
 
-        # 제어 위젯 시그널 연결
+        # 제어 위젯 시그널 연결 (Control Widget -> Panel Signal -> Presenter)
         self.macro_control.macro_repeat_start_requested.connect(self.on_repeat_start_requested)
         self.macro_control.macro_repeat_stop_requested.connect(self.on_repeat_stop_requested)
+
+        # 일시정지 시그널 연결 (직접 중계)
+        self.macro_control.macro_repeat_pause_requested.connect(self.repeat_pause_requested.emit)
 
         # 저장/로드 버튼 클릭 시 파일 다이얼로그 호출 핸들러 연결
         self.macro_control.script_save_requested.connect(self.on_save_clicked)
@@ -180,6 +187,11 @@ class MacroPanel(QWidget):
         """
         Repeat Start 버튼 클릭 핸들러 (Widget -> Panel)
 
+        Logic:
+            - MacroList에서 선택된 항목의 인덱스를 가져옴
+            - 선택된 항목이 있다면 ExecutionRequest DTO를 생성하여 Presenter로 전달하고 UI 상태 변경
+            - 선택된 항목이 없다면 사용자에게 경고 메시지 표시
+
         Args:
             option (MacroRepeatOption): 매크로 반복 옵션 DTO
         """
@@ -189,6 +201,13 @@ class MacroPanel(QWidget):
             request = MacroExecutionRequest(indices=indices, option=option)
             self.repeat_start_requested.emit(request)
             self.macro_control.set_running_state(True, is_repeat=True)
+        else:
+            # 선택된 항목이 없으면 경고 메시지 표시
+            QMessageBox.warning(
+                self,
+                "No Commands Selected",
+                "Please select at least one command to run."
+            )
 
     def on_repeat_stop_requested(self) -> None:
         """
@@ -196,13 +215,12 @@ class MacroPanel(QWidget):
         """
         self.repeat_stop_requested.emit()
 
-    def set_running_state(self, running: bool) -> None:
+    def set_running_state(self, running: bool, is_repeat: bool = False) -> None:
         """
         실행 상태를 UI에 반영합니다.
 
         Args:
-            running (bool): 실행 중 여부
+            running (bool): 실행 중 여부.
+            is_repeat (bool): 반복 모드인지 여부 (단일 실행과 구분).
         """
-        # 현재는 단순히 running 상태만 전달
-        # 향후 is_repeat 파라미터를 추가하여 Repeat/Pause 버튼 상태를 구분할 수 있음
-        self.macro_control.set_running_state(running)
+        self.macro_control.set_running_state(running, is_repeat)

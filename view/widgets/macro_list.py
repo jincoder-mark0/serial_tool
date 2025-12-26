@@ -9,17 +9,20 @@
 * 다수의 명령어를 순차적으로 관리하고 편집할 수 있는 직관적인 UI 필요
 * 각 명령어별 옵션(Hex, Delay, Prefix/Suffix 등)을 개별적으로 설정해야 함
 * 매크로 데이터의 저장/복원(Persistence) 및 실행 엔진(Runner)과의 연동 데이터 제공
+* 실행 중인 명령어의 위치를 시각적으로 추적(Highlight)해야 함
 
 ## WHAT
 * QTableView 기반의 매크로 목록 표시 및 편집
 * 행 추가/삭제/이동 및 컨텍스트 메뉴 지원
 * 체크박스를 통한 활성화/비활성화 및 전체 선택 기능
-* DTO(MacroEntry) 기반의 데이터 추출 및 삽입
+* 실행 중인 행 하이라이트(set_current_row) 기능
+* 연결 상태에 따른 전송 버튼 활성화/비활성화 동기화
 
 ## HOW
 * QStandardItemModel을 사용하여 데이터 관리
-* setIndexWidget을 사용하여 테이블 셀 내에 버튼 배치
+* setIndexWidget을 사용하여 테이블 셀 내에 전송 버튼 배치
 * 시그널(send_row_requested)을 통해 Presenter에 DTO 전달
+* QItemSelectionModel을 사용하여 실행 중인 행 강조
 """
 from typing import Optional, List, Dict, Any
 
@@ -28,7 +31,7 @@ from PyQt5.QtWidgets import (
     QHeaderView, QCheckBox, QMenu, QAction
 )
 from PyQt5.QtGui import QStandardItemModel, QStandardItem
-from PyQt5.QtCore import Qt, pyqtSignal, QPoint
+from PyQt5.QtCore import Qt, pyqtSignal, QPoint, QItemSelectionModel
 
 from view.managers.language_manager import language_manager
 from common.dtos import MacroEntry
@@ -65,7 +68,7 @@ class MacroListWidget(QWidget):
         self.add_row_btn: Optional[QPushButton] = None
         self.select_all_chk: Optional[QCheckBox] = None
 
-        self._send_enabled = False  # 전송 버튼 활성화 상태
+        self._send_enabled = False  # 전송 버튼 활성화 상태 (연결 상태와 동기화)
 
         self.init_ui()
 
@@ -173,9 +176,96 @@ class MacroListWidget(QWidget):
 
         # 모델 시그널 연결 (데이터 변경 감지)
         self.macro_table_model.itemChanged.connect(self.on_item_changed)
+        # 행 추가/삭제/이동 시 변경 알림
         self.macro_table_model.rowsInserted.connect(lambda: self.macro_list_changed.emit())
         self.macro_table_model.rowsRemoved.connect(lambda: self.macro_list_changed.emit())
         self.macro_table_model.rowsMoved.connect(lambda: self.macro_list_changed.emit())
+
+    # -------------------------------------------------------------------------
+    # 실행 추적 및 UI 제어 (Execution Tracking & UI Control)
+    # -------------------------------------------------------------------------
+    def set_current_row(self, row: int) -> None:
+        """
+        현재 실행 중인 행을 하이라이트하고 스크롤합니다.
+
+        Logic:
+            - 기존 선택 초기화
+            - 유효한 행 인덱스인 경우 해당 행 선택
+            - scrollTo를 호출하여 화면에 표시
+
+        Args:
+            row (int): 실행 중인 행 인덱스. -1이면 하이라이트 해제.
+        """
+        # 사용자 선택과 충돌 방지를 위해 기존 선택 해제
+        self.macro_table.clearSelection()
+        
+        if row >= 0 and row < self.macro_table_model.rowCount():
+            index = self.macro_table_model.index(row, 0)
+            if index.isValid():
+                # 행 전체 선택 (하이라이트 효과)
+                self.macro_table.selectionModel().select(
+                    index, QItemSelectionModel.Select | QItemSelectionModel.Rows
+                )
+                # 해당 행으로 스크롤 이동
+                self.macro_table.scrollTo(index)
+
+    def set_send_enabled(self, enabled: bool) -> None:
+        """
+        모든 Send 버튼의 활성화 상태를 변경합니다.
+        (포트 연결 상태에 따라 Presenter가 호출)
+
+        Args:
+            enabled (bool): 활성화 여부.
+        """
+        self._send_enabled = enabled
+        for row in range(self.macro_table_model.rowCount()):
+            index = self.macro_table_model.index(row, 6)
+            widget = self.macro_table.indexWidget(index)
+            if widget:
+                # widget은 Layout을 가진 컨테이너이므로 그 안의 버튼을 찾아야 함
+                btn = widget.findChild(QPushButton)
+                if btn:
+                    btn.setEnabled(enabled)
+
+    # -------------------------------------------------------------------------
+    # UI 갱신 및 컨텍스트 메뉴 (UI Updates & Context Menu)
+    # -------------------------------------------------------------------------
+    def update_header_labels(self) -> None:
+        """테이블 헤더 라벨을 업데이트합니다."""
+        labels = [
+            "",  # Checkbox
+            language_manager.get_text("macro_list_col_prefix"),
+            language_manager.get_text("macro_list_col_command"),
+            language_manager.get_text("macro_list_col_suffix"),
+            language_manager.get_text("macro_list_col_hex"),
+            language_manager.get_text("macro_list_col_delay"),
+            language_manager.get_text("macro_list_col_send")
+        ]
+        self.macro_table_model.setHorizontalHeaderLabels(labels)
+
+    def retranslate_ui(self) -> None:
+        """
+        언어 변경 시 UI 텍스트를 현재 언어 설정에 맞게 업데이트합니다.
+        """
+        self.select_all_chk.setText(language_manager.get_text("macro_list_chk_select_all"))
+        self.select_all_chk.setToolTip(language_manager.get_text("macro_list_chk_select_all_tooltip"))
+
+        self.add_row_btn.setToolTip(language_manager.get_text("macro_list_btn_add_row_tooltip"))
+        self.remove_row_btn.setToolTip(language_manager.get_text("macro_list_btn_remove_row_tooltip"))
+        self.up_row_btn.setToolTip(language_manager.get_text("macro_list_btn_up_row_tooltip"))
+        self.down_row_btn.setToolTip(language_manager.get_text("macro_list_btn_down_row_tooltip"))
+
+        self.macro_table.setToolTip(language_manager.get_text("macro_list_table_command"))
+        self.update_header_labels()
+
+        # Send 버튼 텍스트 업데이트 (모든 행 순회)
+        for row in range(self.macro_table_model.rowCount()):
+            index = self.macro_table_model.index(row, 6)
+            widget = self.macro_table.indexWidget(index)
+            if widget:
+                send_btn = widget.findChild(QPushButton)
+                if send_btn:
+                    send_btn.setText(language_manager.get_text("macro_list_btn_send"))
 
     def show_context_menu(self, pos: QPoint) -> None:
         """
@@ -206,43 +296,9 @@ class MacroListWidget(QWidget):
 
         menu.exec_(self.macro_table.mapToGlobal(pos))
 
-    def retranslate_ui(self) -> None:
-        """
-        언어 변경 시 UI 텍스트를 현재 언어 설정에 맞게 업데이트합니다.
-        """
-        self.select_all_chk.setText(language_manager.get_text("macro_list_chk_select_all"))
-        self.select_all_chk.setToolTip(language_manager.get_text("macro_list_chk_select_all_tooltip"))
-
-        self.add_row_btn.setToolTip(language_manager.get_text("macro_list_btn_add_row_tooltip"))
-        self.remove_row_btn.setToolTip(language_manager.get_text("macro_list_btn_remove_row_tooltip"))
-        self.up_row_btn.setToolTip(language_manager.get_text("macro_list_btn_up_row_tooltip"))
-        self.down_row_btn.setToolTip(language_manager.get_text("macro_list_btn_down_row_tooltip"))
-
-        self.macro_table.setToolTip(language_manager.get_text("macro_list_table_command"))
-        self.update_header_labels()
-
-        # Send 버튼 텍스트 업데이트 (모든 행 순회)
-        for row in range(self.macro_table_model.rowCount()):
-            index = self.macro_table_model.index(row, 6)
-            widget = self.macro_table.indexWidget(index)
-            if widget:
-                send_btn = widget.findChild(QPushButton)
-                if send_btn:
-                    send_btn.setText(language_manager.get_text("macro_list_send_btn"))
-
-    def update_header_labels(self) -> None:
-        """테이블 헤더 라벨을 업데이트합니다."""
-        labels = [
-            "",  # Checkbox
-            language_manager.get_text("macro_list_col_prefix"),
-            language_manager.get_text("macro_list_col_command"),
-            language_manager.get_text("macro_list_col_suffix"),
-            language_manager.get_text("macro_list_col_hex"),
-            language_manager.get_text("macro_list_col_delay"),
-            language_manager.get_text("macro_list_col_send")
-        ]
-        self.macro_table_model.setHorizontalHeaderLabels(labels)
-
+    # -------------------------------------------------------------------------
+    # 데이터 처리 (Data Manipulation)
+    # -------------------------------------------------------------------------
     def on_item_changed(self, item: QStandardItem) -> None:
         """
         모델 아이템 변경 핸들러입니다.
@@ -473,6 +529,12 @@ class MacroListWidget(QWidget):
         해당 행에 Send 버튼을 설정합니다.
         Widget을 생성하여 테이블 셀에 배치합니다.
 
+        Logic:
+            - 컨테이너 위젯 및 레이아웃 생성
+            - 전송 버튼 생성 및 텍스트/툴팁 설정
+            - [중요] 현재 활성화 상태(self._send_enabled) 적용
+            - 버튼 클릭 시 람다를 통해 해당 행 인덱스 전달
+
         Args:
             row (int): 행 인덱스.
         """
@@ -483,7 +545,7 @@ class MacroListWidget(QWidget):
 
         btn = QPushButton(language_manager.get_text("macro_list_btn_send"))
         btn.setCursor(Qt.PointingHandCursor)
-        # 현재 활성화 상태에 따라 설정
+        # 현재 활성화 상태에 따라 설정 (연결 끊기면 비활성화 상태로 생성됨)
         btn.setEnabled(self._send_enabled)
 
         # 버튼 클릭 시 헬퍼 메서드를 통해 DTO 생성 및 시그널 발생
@@ -506,28 +568,13 @@ class MacroListWidget(QWidget):
         if entry:
             self.send_row_requested.emit(row, entry)
 
-    def set_send_enabled(self, enabled: bool) -> None:
-        """
-        모든 Send 버튼의 활성화 상태를 변경합니다.
-
-        Args:
-            enabled (bool): 활성화 여부.
-        """
-        self._send_enabled = enabled
-        for row in range(self.macro_table_model.rowCount()):
-            index = self.macro_table_model.index(row, 6)
-            widget = self.macro_table.indexWidget(index)
-            if widget:
-                # widget은 컨테이너이므로 그 안의 버튼을 찾아야 함
-                btn = widget.findChild(QPushButton)
-                if btn:
-                    btn.setEnabled(enabled)
-
     def remove_selected_rows(self) -> None:
         """선택된 행들을 삭제합니다."""
         rows = sorted(set(index.row() for index in self.macro_table.selectionModel().selectedRows()), reverse=True)
         for row in rows:
             self.macro_table_model.removeRow(row)
+        
+        # 행 삭제 후 인덱스가 당겨지므로 버튼 재설정 필요
         self._refresh_send_buttons()
         self.update_select_all_state()
 
@@ -541,10 +588,8 @@ class MacroListWidget(QWidget):
         for row in rows:
             self._move_row(row, row - 1)
 
-        # 버튼 갱신
+        # 이동 후 버튼 및 선택 상태 복구
         self._refresh_send_buttons()
-
-        # 선택 상태 복구
         self._restore_selection([row - 1 for row in rows])
 
     def move_down_selected_row(self) -> None:
@@ -557,10 +602,8 @@ class MacroListWidget(QWidget):
         for row in rows:
             self._move_row(row, row + 1)
 
-        # 버튼 갱신
+        # 이동 후 버튼 및 선택 상태 복구
         self._refresh_send_buttons()
-
-        # 선택 상태 복구
         self._restore_selection([row + 1 for row in rows])
 
     def _restore_selection(self, rows: List[int]) -> None:
