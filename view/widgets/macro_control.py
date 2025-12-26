@@ -27,7 +27,7 @@ from PyQt5.QtCore import pyqtSignal, Qt
 
 from view.managers.language_manager import language_manager
 from common.dtos import MacroRepeatOption
-from common.constants import DEFAULT_MACRO_DELAY_MS
+from common.constants import DEFAULT_MACRO_INTERVAL_MS
 
 
 class MacroControlWidget(QWidget):
@@ -63,8 +63,8 @@ class MacroControlWidget(QWidget):
         self.repeat_max_lbl: Optional[QLabel] = None
         self.macro_repeat_count_lbl: Optional[QLabel] = None
 
-        self.repeat_delay_ms_line_edit: Optional[QLineEdit] = None
-        self.repeat_count_spin: Optional[QSpinBox] = None
+        self.repeat_interval_ms_edit: Optional[QLineEdit] = None
+        self.repeat_max_spin: Optional[QSpinBox] = None
         self.broadcast_chk: Optional[QCheckBox] = None
 
         self.macro_repeat_start_btn: Optional[QPushButton] = None
@@ -85,17 +85,18 @@ class MacroControlWidget(QWidget):
         # Row 0: 설정값 입력 (Interval, Max Count, Broadcast)
         # -----------------------------------------------------
         # Interval
-        self.interval_lbl = QLabel(language_manager.get_text("macro_control_lbl_interval"))
-        self.repeat_delay_ms_line_edit = QLineEdit(str(DEFAULT_MACRO_DELAY_MS))
-        self.repeat_delay_ms_line_edit.setFixedWidth(50)
-        self.repeat_delay_ms_line_edit.setAlignment(Qt.AlignRight)
+        self.interval_lbl = QLabel(language_manager.get_text("macro_control_lbl_repeat_interval"))
+        self.repeat_interval_ms_edit = QLineEdit(str(DEFAULT_MACRO_INTERVAL_MS))
+        self.repeat_interval_ms_edit.setFixedWidth(50)
+        self.repeat_interval_ms_edit.setAlignment(Qt.AlignRight)
+        self.repeat_interval_ms_edit.setToolTip(language_manager.get_text("macro_control_edit_repeat_interval_tooltip"))
 
         # Repeat Count
         self.repeat_max_lbl = QLabel(language_manager.get_text("macro_control_lbl_repeat_max"))
-        self.repeat_count_spin = QSpinBox()
-        self.repeat_count_spin.setRange(0, 9999) # 0 = Infinite
-        self.repeat_count_spin.setValue(0)
-        self.repeat_count_spin.setToolTip(language_manager.get_text("macro_control_spin_repeat_tooltip"))
+        self.repeat_max_spin = QSpinBox()
+        self.repeat_max_spin.setRange(0, 9999) # 0 = Infinite
+        self.repeat_max_spin.setValue(0)
+        self.repeat_max_spin.setToolTip(language_manager.get_text("macro_control_spin_repeat_max_tooltip"))
 
         # Broadcast Checkbox
         self.broadcast_chk = QCheckBox(language_manager.get_text("macro_control_chk_broadcast"))
@@ -140,9 +141,9 @@ class MacroControlWidget(QWidget):
 
         # Row 0 배치
         execution_layout.addWidget(self.interval_lbl, 0, 0)
-        execution_layout.addWidget(self.repeat_delay_ms_line_edit, 0, 1)
+        execution_layout.addWidget(self.repeat_interval_ms_edit, 0, 1)
         execution_layout.addWidget(self.repeat_max_lbl, 0, 2)
-        execution_layout.addWidget(self.repeat_count_spin, 0, 3)
+        execution_layout.addWidget(self.repeat_max_spin, 0, 3)
         execution_layout.addWidget(self.broadcast_chk, 0, 4)
         execution_layout.addWidget(self.script_save_btn, 0, 5)
         execution_layout.addWidget(self.script_load_btn, 0, 6)
@@ -179,9 +180,9 @@ class MacroControlWidget(QWidget):
 
         self.execution_settings_grp.setTitle(language_manager.get_text("macro_control_grp_execution"))
 
-        self.interval_lbl.setText(language_manager.get_text("macro_control_lbl_interval"))
+        self.interval_lbl.setText(language_manager.get_text("macro_control_lbl_repeat_interval"))
         self.repeat_max_lbl.setText(language_manager.get_text("macro_control_lbl_repeat_max"))
-        self.repeat_count_spin.setToolTip(language_manager.get_text("macro_control_spin_repeat_tooltip"))
+        self.repeat_max_spin.setToolTip(language_manager.get_text("macro_control_spin_repeat_max_tooltip"))
 
         self.broadcast_chk.setText(language_manager.get_text("macro_control_chk_broadcast"))
         self.broadcast_chk.setToolTip(language_manager.get_text("macro_control_chk_broadcast_tooltip"))
@@ -198,15 +199,15 @@ class MacroControlWidget(QWidget):
             MacroRepeatOption: 실행 옵션 데이터 객체.
         """
         try:
-            delay_ms = int(self.repeat_delay_ms_line_edit.text())
+            interval_ms = int(self.repeat_interval_ms_edit.text())
         except ValueError:
-            delay_ms = DEFAULT_MACRO_DELAY_MS
+            interval_ms = DEFAULT_MACRO_INTERVAL_MS
 
-        max_runs = self.repeat_count_spin.value()
+        max_runs = self.repeat_max_spin.value()
         broadcast_enabled = self.broadcast_chk.isChecked()
 
         return MacroRepeatOption(
-            delay_ms=delay_ms,
+            interval_ms=interval_ms,
             max_runs=max_runs,
             broadcast_enabled=broadcast_enabled
         )
@@ -287,8 +288,8 @@ class MacroControlWidget(QWidget):
             dict: 위젯 상태 데이터.
         """
         return {
-            "delay_ms": self.repeat_delay_ms_line_edit.text(),
-            "max_runs": self.repeat_count_spin.value(),
+            "delay_ms": self.repeat_interval_ms_edit.text(),
+            "max_runs": self.repeat_max_spin.value(),
             "broadcast_enabled": self.broadcast_chk.isChecked()
         }
 
@@ -302,6 +303,6 @@ class MacroControlWidget(QWidget):
         if not state:
             return
 
-        self.repeat_delay_ms_line_edit.setText(str(state.get("delay_ms", DEFAULT_MACRO_DELAY_MS)))
-        self.repeat_count_spin.setValue(state.get("max_runs", 0))
+        self.repeat_interval_ms_edit.setText(str(state.get("delay_ms", DEFAULT_MACRO_INTERVAL_MS)))
+        self.repeat_max_spin.setValue(state.get("max_runs", 0))
         self.broadcast_chk.setChecked(state.get("broadcast_enabled", False))

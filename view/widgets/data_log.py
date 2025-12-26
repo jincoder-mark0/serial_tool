@@ -72,7 +72,7 @@ class DataLogWidget(QWidget):
         self.data_log_search_prev_btn: Optional[QPushButton] = None
         self.data_log_search_next_btn: Optional[QPushButton] = None
         self.data_log_tx_broadcast_allowed_chk: Optional[QCheckBox] = None
-        self.data_log_search_input = None
+        self.data_log_search_edit = None
         self.data_log_toggle_logging_btn: Optional[QPushButton] = None
         self.data_log_clear_log_btn: Optional[QPushButton] = None
         self.data_log_pause_chk: Optional[QCheckBox] = None
@@ -142,13 +142,13 @@ class DataLogWidget(QWidget):
         self.data_log_tx_broadcast_allowed_chk.stateChanged.connect(self.on_data_log_tx_broadcast_allowed_changed)
 
         # Search Bar
-        self.data_log_search_input = QLineEdit()
-        self.data_log_search_input.setPlaceholderText(language_manager.get_text("data_log_input_search_placeholder"))
-        self.data_log_search_input.setToolTip(language_manager.get_text("data_log_input_search_tooltip"))
-        self.data_log_search_input.setMaximumWidth(200)
-        self.data_log_search_input.returnPressed.connect(self.on_data_log_search_next_clicked)
+        self.data_log_search_edit = QLineEdit()
+        self.data_log_search_edit.setPlaceholderText(language_manager.get_text("data_log_edit_search_placeholder"))
+        self.data_log_search_edit.setToolTip(language_manager.get_text("data_log_edit_search_tooltip"))
+        self.data_log_search_edit.setMaximumWidth(200)
+        self.data_log_search_edit.returnPressed.connect(self.on_data_log_search_next_clicked)
         # 검색어 변경 시 실시간 하이라이트 갱신
-        self.data_log_search_input.textChanged.connect(self.on_data_log_search_text_changed)
+        self.data_log_search_edit.textChanged.connect(self.on_data_log_search_text_changed)
 
         # Buttons
         self.data_log_search_prev_btn = QPushButton()
@@ -216,9 +216,9 @@ class DataLogWidget(QWidget):
         self.data_log_title.setProperty("class", "section-title")
         self.data_log_tx_broadcast_allowed_chk = QCheckBox(language_manager.get_text("data_log_chk_tx_broadcast_allowed"))
         self.data_log_tx_broadcast_allowed_chk.stateChanged.connect(self.on_data_log_tx_broadcast_allowed_changed)
-        self.data_log_search_input = QLineEdit()
-        self.data_log_search_input.returnPressed.connect(self.on_data_log_search_next_clicked)
-        self.data_log_search_input.textChanged.connect(self.on_data_log_search_text_changed)
+        self.data_log_search_edit = QLineEdit()
+        self.data_log_search_edit.returnPressed.connect(self.on_data_log_search_next_clicked)
+        self.data_log_search_edit.textChanged.connect(self.on_data_log_search_text_changed)
         self.data_log_search_prev_btn = QPushButton("<")
         self.data_log_search_prev_btn.clicked.connect(self.on_data_log_search_prev_clicked)
         self.data_log_search_next_btn = QPushButton(">")
@@ -242,7 +242,7 @@ class DataLogWidget(QWidget):
         toolbar_layout.addStretch()
         toolbar_layout.addWidget(self.data_log_tx_broadcast_allowed_chk)
         toolbar_layout.addStretch()
-        toolbar_layout.addWidget(self.data_log_search_input)
+        toolbar_layout.addWidget(self.data_log_search_edit)
         toolbar_layout.addWidget(self.data_log_search_prev_btn)
         toolbar_layout.addWidget(self.data_log_search_next_btn)
         toolbar_layout.addWidget(self.data_log_filter_chk)
@@ -273,8 +273,8 @@ class DataLogWidget(QWidget):
         self.data_log_tx_broadcast_allowed_chk.setToolTip(language_manager.get_text("data_log_chk_tx_broadcast_allowed_tooltip"))
 
         # Search Components
-        self.data_log_search_input.setPlaceholderText(language_manager.get_text("data_log_input_search_placeholder"))
-        self.data_log_search_input.setToolTip(language_manager.get_text("data_log_input_search_tooltip"))
+        self.data_log_search_edit.setPlaceholderText(language_manager.get_text("data_log_edit_search_placeholder"))
+        self.data_log_search_edit.setToolTip(language_manager.get_text("data_log_edit_search_tooltip"))
         self.data_log_search_prev_btn.setToolTip(language_manager.get_text("data_log_btn_search_prev_tooltip"))
         self.data_log_search_next_btn.setToolTip(language_manager.get_text("data_log_btn_search_next_tooltip"))
 
@@ -359,7 +359,7 @@ class DataLogWidget(QWidget):
     @pyqtSlot()
     def on_data_log_search_next_clicked(self) -> None:
         """검색창의 텍스트로 다음 항목을 찾습니다."""
-        text = self.data_log_search_input.text()
+        text = self.data_log_search_edit.text()
 
         if text:
             # 패턴 설정은 textChanged에서 실시간으로 되지만 안전을 위해 호출
@@ -369,7 +369,7 @@ class DataLogWidget(QWidget):
     @pyqtSlot()
     def on_data_log_search_prev_clicked(self) -> None:
         """검색창의 텍스트로 이전 항목을 찾습니다."""
-        text = self.data_log_search_input.text()
+        text = self.data_log_search_edit.text()
         if text:
             self.data_log_list.find_prev(text)
 
@@ -527,7 +527,7 @@ class DataLogWidget(QWidget):
             "hex_mode": self.hex_mode,
             "timestamp": self.timestamp_enabled,
             "is_paused": self.is_paused,
-            "search_text": self.data_log_search_input.text(),
+            "search_text": self.data_log_search_edit.text(),
             "filter_enabled": self.filter_enabled,
             "newline_mode": self.data_log_newline_combo.currentData()
         }
@@ -549,7 +549,7 @@ class DataLogWidget(QWidget):
         self.data_log_timestamp_chk.setChecked(state.get("timestamp", False))
         self.data_log_pause_chk.setChecked(state.get("is_paused", False))
         self.data_log_filter_chk.setChecked(state.get("filter_enabled", False))
-        self.data_log_search_input.setText(state.get("search_text", ""))
+        self.data_log_search_edit.setText(state.get("search_text", ""))
 
         newline_mode = state.get("newline_mode", NewlineMode.RAW.value)
         index = self.data_log_newline_combo.findData(newline_mode)

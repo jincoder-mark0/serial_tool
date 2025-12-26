@@ -135,10 +135,6 @@ class AppLifecycleManager:
         theme = self.settings_manager.get(ConfigKeys.THEME, 'dark')
         self.view.switch_theme(theme)
 
-        # 시스템 로그 위젯에 색상 규칙 주입
-        # View가 Model(ColorManager)에 직접 접근하지 않도록 주입
-        self.view.left_section.system_log_widget.set_color_rules(color_manager._rules)
-
     def _restore_sub_presenter_states(self) -> None:
         """
         하위 Presenter들의 상태를 복원합니다.

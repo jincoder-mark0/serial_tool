@@ -226,9 +226,9 @@ class MacroListWidget(QWidget):
             index = self.macro_table_model.index(row, 6)
             widget = self.macro_table.indexWidget(index)
             if widget:
-                btn_send = widget.findChild(QPushButton)
-                if btn_send:
-                    btn_send.setText(language_manager.get_text("macro_list_btn_send"))
+                send_btn = widget.findChild(QPushButton)
+                if send_btn:
+                    send_btn.setText(language_manager.get_text("macro_list_send_btn"))
 
     def update_header_labels(self) -> None:
         """테이블 헤더 라벨을 업데이트합니다."""

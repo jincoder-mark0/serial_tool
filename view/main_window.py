@@ -449,6 +449,9 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'menu_bar'):
             self.menu_bar.set_current_theme(theme_name)
 
+        # 시스템 로그 위젯에 색상 규칙 주입 # TODO : MVP / 캡슐화 위반 검토
+        self.left_section.system_log_widget.set_color_rules(self.color_manager._rules)
+
         msg = f"Theme changed to {theme_name.capitalize()}"
         self.show_status_message(msg, 2000)
 

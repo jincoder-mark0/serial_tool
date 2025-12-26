@@ -25,7 +25,7 @@ import time
 
 from common.constants import (
     DEFAULT_BAUDRATE,
-    DEFAULT_MACRO_DELAY_MS,
+    DEFAULT_MACRO_INTERVAL_MS,
     FONT_FAMILY_SEGOE,
     FONT_FAMILY_CONSOLAS
 )
@@ -184,7 +184,7 @@ class PortDataEvent:
     """
     port: str
     data: bytes
-    timestamp: float = 0.0
+    timestamp: float = field(default_factory=time.time)
 
 @dataclass
 class PortErrorEvent:
@@ -326,12 +326,10 @@ class MacroRepeatOption:
     매크로 반복 실행 옵션 DTO
 
     Attributes:
-        delay_ms (int): 반복 간격 (ms).
         max_runs (int): 최대 실행 횟수 (0=무한).
-        interval_ms (int): 실행 간격 (ms) - delay_ms와 동일 의미로 사용될 수 있음.
+        interval_ms (int): 실행 간격 (ms).
         broadcast_enabled (bool): 브로드캐스트 사용 여부.
     """
-    delay_ms: int
     max_runs: int = 0
     interval_ms: int = 0
     broadcast_enabled: bool = False
@@ -695,4 +693,4 @@ class ErrorContext:
     message: str
     traceback: str
     level: str = "CRITICAL"
-    timestamp: float = 0.0
+    timestamp: float = field(default_factory=time.time)

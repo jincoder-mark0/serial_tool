@@ -7,7 +7,7 @@ SettingsManager의 하드코딩을 방지하고 설정값 관리를 중앙화합
 from common.constants import (
     DEFAULT_BAUDRATE,
     DEFAULT_LOG_MAX_LINES,
-    DEFAULT_MACRO_DELAY_MS
+    DEFAULT_MACRO_INTERVAL_MS
 )
 
 # ==========================================
@@ -88,7 +88,7 @@ DEFAULT_MANUAL_CONTROL_STATE = {
 DEFAULT_MACRO_LIST_STATE = {
     "commands": [],
     "control_state": {
-        "delay_ms": str(DEFAULT_MACRO_DELAY_MS),
+        "delay_ms": str(DEFAULT_MACRO_INTERVAL_MS),
         "max_runs": 0,
         "broadcast_enabled": False
     }

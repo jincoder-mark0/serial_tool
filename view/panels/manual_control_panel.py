@@ -49,7 +49,7 @@ class ManualControlPanel(QWidget):
         super().__init__(parent)
 
         # UI 컴포넌트
-        self.title_label: Optional[QLabel] = None
+        self.title_lbl: Optional[QLabel] = None
         self.manual_control_widget: Optional[ManualControlWidget] = None
 
         self.init_ui()
@@ -64,8 +64,8 @@ class ManualControlPanel(QWidget):
         layout.setSpacing(5)
 
         # 타이틀
-        self.title_label = QLabel(language_manager.get_text("manual_panel_title"))
-        self.title_label.setProperty("class", "section-title")
+        self.title_lbl = QLabel(language_manager.get_text("manual_panel_title"))
+        self.title_lbl.setProperty("class", "section-title")
 
         # 수동 제어 위젯 생성
         self.manual_control_widget = ManualControlWidget()
@@ -75,7 +75,7 @@ class ManualControlPanel(QWidget):
         self.manual_control_widget.dtr_changed.connect(self.dtr_changed.emit)
         self.manual_control_widget.rts_changed.connect(self.rts_changed.emit)
 
-        layout.addWidget(self.title_label)
+        layout.addWidget(self.title_lbl)
         layout.addWidget(self.manual_control_widget)
         layout.addStretch()  # 하단 여백 확보
 
@@ -83,7 +83,7 @@ class ManualControlPanel(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 텍스트 업데이트"""
-        self.title_label.setText(language_manager.get_text("manual_panel_title"))
+        self.title_lbl.setText(language_manager.get_text("manual_panel_title"))
         # 하위 위젯은 자체적으로 갱신됨
 
     def set_controls_enabled(self, enabled: bool) -> None:

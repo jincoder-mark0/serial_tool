@@ -580,7 +580,7 @@ class MainPresenter(QObject):
         """
         self._connect_single_port_logging(panel)
         # 새 탭에 색상 규칙 주입
-        if hasattr(panel, 'data_log_widget'):
+        if hasattr(panel, 'data_log_widget'):   # TODO : MVP / 캡슐화 위반 검토
             panel.data_log_widget.set_color_rules(color_manager.rules)
 
     def _connect_single_port_logging(self, panel) -> None:
