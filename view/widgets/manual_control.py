@@ -44,7 +44,8 @@ class ManualControlWidget(QWidget):
     history_up_requested = pyqtSignal()
     history_down_requested = pyqtSignal()
 
-    # 하드웨어 제어 신호 변경 시그널
+    # 상태 변경 시그널 (즉시 로직 반영이 필요한 항목들)
+    broadcast_changed = pyqtSignal(bool)  # 브로드캐스트 변경 (전송 버튼 활성화 로직용)
     rts_changed = pyqtSignal(bool)
     dtr_changed = pyqtSignal(bool)
 
@@ -128,6 +129,9 @@ class ManualControlWidget(QWidget):
         # Broadcast 체크박스
         self.broadcast_chk = QCheckBox(language_manager.get_text("manual_control_chk_broadcast"))
         self.broadcast_chk.setToolTip(language_manager.get_text("manual_control_chk_broadcast_tooltip"))
+        self.broadcast_chk.stateChanged.connect(
+            lambda state: self.broadcast_changed.emit(state == Qt.Checked)
+        )
 
         # 레이아웃 배치
         btn_layout = QVBoxLayout()
@@ -344,6 +348,18 @@ class ManualControlWidget(QWidget):
         self.send_command_btn.setEnabled(enabled)
         self.rts_chk.setEnabled(enabled)
         self.dtr_chk.setEnabled(enabled)
+        
+        # Hex, Prefix, Suffix, Broadcast 설정은 연결 여부와 무관하게 변경 가능해야 함
+        # 따라서 이들은 enabled 인자의 영향을 받지 않도록 따로 처리하거나 그대로 둡니다.
+        # self.command_edit.setEnabled(True)
+        # self.hex_chk.setEnabled(True)
+        # self.prefix_chk.setEnabled(True)
+        # self.suffix_chk.setEnabled(True)
+        # self.broadcast_chk.setEnabled(True)
+
+    def set_input_focus(self) -> None:
+        """입력 필드에 포커스를 설정합니다."""
+        self.command_edit.setFocus()
 
     def set_local_echo_state(self, checked: bool) -> None:
         """

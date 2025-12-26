@@ -15,6 +15,7 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 * Fast Path 데이터 수신 처리 및 UI Throttling
 * 애플리케이션 종료 처리 및 상태 저장
 * 매크로 실행 중 예외 상황(포트 끊김, 종료 등) 방어 로직
+* 브로드캐스트 모드에 따른 UI 활성화 상태 동기화
 
 ## HOW
 * EventRouter 및 Signal/Slot 기반 통신
@@ -23,7 +24,7 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 """
 import os
 from typing import Optional
-from PyQt5.QtCore import QObject, QTimer, QDateTime
+from PyQt5.QtCore import QObject, QTimer, QDateTime, Qt
 
 from view.main_window import MainWindow
 from model.connection_controller import ConnectionController
@@ -137,6 +138,7 @@ class MainPresenter(QObject):
             - EventRouter를 통해 비동기 이벤트를 수신하여 핸들러 연결
             - View의 사용자 입력 이벤트를 핸들러 연결
             - Model의 직접적인 시그널 연결
+            - 하위 Presenter의 브로드캐스트 변경 감지 연결
         """
         # EventRouter 연결 (Model -> UI Thread)
         self.event_router.port_opened.connect(self.on_port_opened)
@@ -173,6 +175,15 @@ class MainPresenter(QObject):
 
         # 로깅 시그널 연결
         self._connect_logging_signals()
+
+        # 하위 Presenter의 브로드캐스트 설정 변경 감지
+        # 사용자가 'Broadcast' 체크박스를 누를 때마다 활성화 상태를 재계산해야 함
+        self.manual_control_presenter.broadcast_changed.connect(
+            lambda _: self._update_controls_state_for_current_tab()
+        )
+        self.macro_presenter.broadcast_changed.connect(
+            lambda _: self._update_controls_state_for_current_tab()
+        )
 
     # -------------------------------------------------------------------------
     # Helper Methods for Logging
@@ -444,23 +455,39 @@ class MainPresenter(QObject):
 
     def _update_controls_state_for_current_tab(self) -> None:
         """
-        현재 선택된 포트 탭의 연결 상태를 확인하고
-        ManualControl과 MacroControl의 활성화 상태를 업데이트합니다.
+        컨트롤 패널(Manual/Macro)의 활성화 상태 동기화
+
+        규칙:
+        1. 기본적으로 '현재 탭'이 연결되어 있으면 활성화.
+        2. 단, 'Broadcast'가 체크되어 있다면, '현재 탭'이 끊겨 있어도
+           '다른 어떤 포트라도' 연결되어 있으면 활성화 (전송 가능).
         """
+        if not hasattr(self.view.left_section, 'port_tab_panel'):
+            return
+
+        # 1. 현재 탭의 연결 상태 확인
         current_index = self.view.left_section.port_tab_panel.currentIndex()
         widget = self.view.left_section.port_tab_panel.widget(current_index)
+        is_current_connected = False
+        
+        # 유효한 PortPanel인지 확인
+        if widget and hasattr(widget, 'is_connected'):
+            is_current_connected = widget.is_connected()
 
-        is_connected = False
         # PortPanel인지 확인 (Duck typing)
-        if hasattr(widget, 'is_connected'):
-            is_connected = widget.is_connected()
+        has_any_connection = self.connection_controller.has_active_connection
 
         # 하위 Presenter를 통해 View 제어
         if self.manual_control_presenter:
-            self.manual_control_presenter.set_enabled(is_connected)
+            is_broadcast = self.manual_control_presenter.is_broadcast_enabled()
+            # (현재 연결됨) OR (브로드캐스트 켜짐 AND 활성 포트 있음)
+            should_enable = is_current_connected or (is_broadcast and has_any_connection)
+            self.manual_control_presenter.set_enabled(should_enable)
 
         if self.macro_presenter:
-            self.macro_presenter.set_enabled(is_connected)
+            is_broadcast = self.macro_presenter.is_broadcast_enabled()
+            should_enable = is_current_connected or (is_broadcast and has_any_connection)
+            self.macro_presenter.set_enabled(should_enable)
 
     # -------------------------------------------------------------------------
     # Macro Handlers

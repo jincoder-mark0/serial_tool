@@ -34,8 +34,13 @@ class ManualControlPanel(QWidget):
     ManualControlWidget을 감싸고 있으며, Presenter와의 통신을 위한 시그널을 정의합니다.
     """
 
+    # -------------------------------------------------------------------------
+    # Signals
+    # -------------------------------------------------------------------------
     # 시그널 정의 (Widget -> Presenter 중계)
     send_requested = pyqtSignal(object)  # ManualCommand DTO
+
+    broadcast_changed = pyqtSignal(bool)
     dtr_changed = pyqtSignal(bool)
     rts_changed = pyqtSignal(bool)
 
@@ -71,7 +76,10 @@ class ManualControlPanel(QWidget):
         self.manual_control_widget = ManualControlWidget()
 
         # 시그널 연결 (Widget -> Panel)
+        # self.manual_control_widget.send_requested.connect(self._on_send_requested)
         self.manual_control_widget.send_requested.connect(self.send_requested.emit)
+
+        self.manual_control_widget.broadcast_changed.connect(self.broadcast_changed.emit)
         self.manual_control_widget.dtr_changed.connect(self.dtr_changed.emit)
         self.manual_control_widget.rts_changed.connect(self.rts_changed.emit)
 
@@ -94,6 +102,34 @@ class ManualControlPanel(QWidget):
             enabled (bool): 활성화 여부.
         """
         self.manual_control_widget.set_controls_enabled(enabled)
+
+    def _on_send_requested(self) -> None:
+        """
+        위젯의 전송 요청 처리 핸들러
+
+        Logic:
+            1. 위젯의 현재 상태(입력값, 체크박스 등)를 조회
+            2. ManualCommand DTO 생성
+            3. send_requested 시그널을 통해 Presenter로 DTO 전달
+        """
+        widget = self.manual_control_widget
+        
+        # DTO 생성
+        command_dto = ManualCommand(
+            command=widget.input_edit.text(),
+            hex_mode=widget.hex_chk.isChecked(),
+            prefix_enabled=widget.prefix_chk.isChecked(),
+            suffix_enabled=widget.suffix_chk.isChecked(),
+            broadcast_enabled=widget.broadcast_chk.isChecked(),
+            local_echo_enabled=True # 로컬 에코는 기본적으로 활성화 (Presenter 설정에 따름)
+        )
+
+        # Presenter로 전달
+        self.send_requested.emit(command_dto)
+
+        # 편의성: 전송 후 포커스 유지 및 텍스트 선택 (입력 편의성)
+        widget.input_edit.selectAll()
+        widget.input_edit.setFocus()
 
     def get_state(self) -> ManualControlState:
         """
