@@ -4,21 +4,6 @@
     "theme": "dark",
     "language": "ko"
   },
-  "settings": {
-    "theme": "dracula",
-    "language": "en",
-    "proportional_font_size": 10,
-    "max_log_lines": 2000,
-    "port_baudrate": 115200,
-    "port_newline": "\n",
-    "port_local_echo": false,
-    "port_scan_interval_ms": 1000,
-    "command_prefix": "",
-    "command_suffix": "",
-    "proportional_font_family": "나눔고딕",
-    "fixed_font_family": "D2Coding",
-    "fixed_font_size": 9
-  },
   "ui": {
     "max_log_lines": 2000,
     "proportional_font_family": "Segoe UI",
@@ -29,9 +14,9 @@
     "window_height": 697,
     "window_x": 342,
     "window_y": 80,
-    "splitter_state": "AAAA/wAAAAEAAAACAAADVQAAAowB/////wEAAAABAA==",
+    "splitter_state": "AAAA/wAAAAEAAAACAAADVwAAAowB/////wEAAAABAA==",
     "right_section_visible": true,
-    "saved_right_section_width": 652
+    "saved_right_section_width": 651
   },
   "serial": {
     "baudrate": 115200,
@@ -78,7 +63,7 @@
   "manual_control": {
     "manual_control_widget": {
       "input_text": "zx\nzc\nz\nzc\n",
-      "hex_mode": true,
+      "hex_mode": false,
       "prefix_enabled": true,
       "suffix_enabled": true,
       "rts_enabled": false,
@@ -94,5 +79,20 @@
       "max_runs": 0,
       "broadcast_enabled": false
     }
+  },
+  "settings": {
+    "theme": "dracula",
+    "language": "en",
+    "proportional_font_size": 10,
+    "max_log_lines": 2000,
+    "port_baudrate": 115200,
+    "port_newline": "\n",
+    "port_local_echo": false,
+    "port_scan_interval_ms": 1000,
+    "command_prefix": "",
+    "command_suffix": "",
+    "proportional_font_family": "나눔고딕",
+    "fixed_font_family": "D2Coding",
+    "fixed_font_size": 9
   }
 }

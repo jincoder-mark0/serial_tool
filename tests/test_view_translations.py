@@ -40,12 +40,12 @@ def reset_language_manager():
     # 실제 구현에서는 JSON 파일에서 로드하지만, 테스트의 결정성을 위해 직접 주입
     language_manager._translations = {
         "en": {
-            "manual_btn_send": "Send",
+            "manual_send_command_btn": "Send",
             "manual_panel_title": "Manual Control",
             "packet_btn_clear": "Clear"
         },
         "ko": {
-            "manual_btn_send": "전송",
+            "manual_send_command_btn": "전송",
             "manual_panel_title": "수동 제어",
             "packet_btn_clear": "지우기"
         }
@@ -95,13 +95,13 @@ class TestLanguageManager:
         language_manager.set_language('en')
 
         # WHEN & THEN
-        assert language_manager.get_text("manual_btn_send") == "Send"
+        assert language_manager.get_text("manual_send_command_btn") == "Send"
 
         # WHEN: 한국어 모드 변경
         language_manager.set_language('ko')
 
         # THEN
-        assert language_manager.get_text("manual_btn_send") == "전송"
+        assert language_manager.get_text("manual_send_command_btn") == "전송"
 
     def test_get_text_fallback(self):
         """
@@ -142,20 +142,20 @@ class TestViewRetranslation:
         qtbot.addWidget(panel)
 
         # 초기 상태(영어) 확인
-        # ManualControlPanel -> ManualControlWidget -> btn_send
-        btn_send = panel.manual_control_widget.btn_send
-        title_label = panel.title_label
+        # ManualControlPanel -> ManualControlWidget -> send_command_btn
+        send_command_btn = panel.manual_control_widget.send_command_btn
+        title_lbl = panel.title_lbl
 
-        assert btn_send.text() == "Send"
-        assert title_label.text() == "Manual Control"
+        assert send_command_btn.text() == "Send"
+        assert title_lbl.text() == "Manual Control"
 
         # WHEN: 언어 변경 (한국어)
         with qtbot.waitSignal(language_manager.language_changed):
             language_manager.set_language('ko')
 
         # THEN: 텍스트 갱신 확인
-        assert btn_send.text() == "전송"
-        assert title_label.text() == "수동 제어"
+        assert send_command_btn.text() == "전송"
+        assert title_lbl.text() == "수동 제어"
 
     def test_packet_panel_retranslation(self, qtbot):
         """
@@ -193,7 +193,7 @@ class TestViewRetranslation:
         # GIVEN
         panel = ManualControlPanel()
         qtbot.addWidget(panel)
-        btn = panel.manual_control_widget.btn_send
+        btn = panel.manual_control_widget.send_command_btn
 
         # 1. En -> Ko
         language_manager.set_language('ko')

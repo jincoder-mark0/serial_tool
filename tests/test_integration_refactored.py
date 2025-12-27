@@ -282,7 +282,7 @@ class TestIntegrationRefactored:
         # 1번 인덱스의 매크로만 1회 실행
         request = MacroExecutionRequest(
             indices=[0],
-            option=MacroRepeatOption(max_runs=1, delay_ms=0, broadcast_enabled=False)
+            option=MacroRepeatOption(max_runs=1, interval_ms=0, broadcast_enabled=False)
         )
 
         # View Mocking: 매크로 리스트 데이터 제공

@@ -38,9 +38,10 @@
     "macro_control_btn_save_script": "Save",
     "macro_control_btn_save_script_tooltip": "Save command script to file",
     "macro_control_grp_execution": "Execution Control",
-    "macro_control_lbl_interval": "Interval (ms)",
+    "macro_control_lbl_repeat_interval": "Interval (ms)",
+    "macro_control_edit_repeat_interval_tooltip": "Command execution interval (ms)",
     "macro_control_lbl_repeat_max": "Repeat",
-    "macro_control_spin_repeat_tooltip": "Number of times to repeat",
+    "macro_control_spin_repeat_max_tooltip": "Number of times to repeat",
     "macro_control_chk_broadcast": "Broadcast",
     "macro_control_chk_broadcast_tooltip": "Send macro commands to all active ports",
     "macro_list_btn_add_row_tooltip": "Add new command",
@@ -198,8 +199,8 @@
     "data_log_combo_newline_tooltip": "Select newline mode",
     "data_log_chk_tx_broadcast_allowed": "TX Broadcast",
     "data_log_chk_tx_broadcast_allowed_tooltip": "Enable TX Broadcast",
-    "data_log_input_search_placeholder": "Search...",
-    "data_log_input_search_tooltip": "Search in received data",
+    "data_log_edit_search_placeholder": "Search...",
+    "data_log_edit_search_tooltip": "Search in received data",
     "data_log_list_log_placeholder": "Received data will be displayed here...",
     "data_log_list_log_tooltip": "Received data will be displayed here...",
     "data_log_newline_cr": "CR (\\r)",
@@ -219,6 +220,6 @@
     "sys_log_btn_toggle_logging_tooltip": "Save system log to file",
     "sys_log_chk_filter": "Filter",
     "sys_log_chk_filter_tooltip": "Enable system log filtering",
-    "sys_log_input_search_placeholder": "Search...",
-    "sys_log_input_search_tooltip": "Search in system log data"
+    "sys_log_edit_search_placeholder": "Search...",
+    "sys_log_edit_search_tooltip": "Search in system log data"
 }

@@ -18,7 +18,7 @@ JSON 기반의 언어 리소스를 로드하고, 런타임 언어 변경 및 텍
 ## HOW
 * Singleton 패턴으로 전역에서 접근 가능한 인스턴스 제공
 * ResourcePath를 사용하여 실행 환경(Dev/Prod)에 따른 정확한 경로 탐색
-* 모든 언어 파일을 초기화 시 메모리에 로드(Pre-load)하여 빠른 전환 지원
+* Lazy Initialization: 초기화 시 경로가 없으면 로드를 지연하여 시작 속도 최적화
 """
 import os
 from typing import Dict, Optional, List, Any
@@ -66,27 +66,25 @@ class LanguageManager(QObject):
 
         Logic:
             - 중복 초기화 방지 (Singleton)
-            - ResourcePath 설정 및 언어 리소스 로드 수행
+            - ResourcePath 설정
+            - 리소스 경로가 주입된 경우에만 언어 파일 로드 수행 (Lazy Load)
             - super().__init__() 호출 (QObject 초기화)
 
         Args:
-            resource_path: ResourcePath 인스턴스. None이면 내부에서 생성.
+            resource_path: ResourcePath 인스턴스. None이면 내부에서 생성하지 않고 대기.
         """
-        # ResourcePath 설정 (주입받거나 없으면 생성)
-        if resource_path is None:
-            resource_path = ResourcePath()
-
-        # 싱글톤 중복 초기화 방지
+        # 1. 싱글톤 중복 초기화 방지 및 재설정 로직
         if hasattr(self, '_initialized') and self._initialized:
-            # 이미 초기화되었더라도, 새로운 resource_path가 들어오면 업데이트
+            # 이미 초기화되었더라도, 새로운 resource_path가 들어오면 업데이트 및 리로드
             if resource_path is not None:
                 self._resource_path = resource_path
                 self.load_languages()
             return
 
-        # QObject 초기화 (가장 먼저 호출해야 함)
+        # 2. QObject 초기화 (가장 먼저 호출해야 함)
         super().__init__()
 
+        # 3. 리소스 경로 설정 (None일 수 있음)
         self._resource_path = resource_path
 
         # 4. 멤버 변수 초기화
@@ -94,10 +92,11 @@ class LanguageManager(QObject):
         # 전체 언어 데이터를 메모리에 저장 { 'en': {...}, 'ko': {...} }
         self.resources: Dict[str, Dict[str, str]] = {}
 
-        # 5. 로직 실행 (언어 파일 로드)
-        self.load_languages()
+        # 5. 로직 실행 (경로가 있을 때만 로드하여 불필요한 스캔 방지)
+        if self._resource_path:
+            self.load_languages()
 
-        # 초기화 완료 플래그 설정
+        # 6. 초기화 완료 플래그 설정
         self._initialized = True
 
     def load_languages(self) -> None:
@@ -114,7 +113,7 @@ class LanguageManager(QObject):
             IOError: 파일 읽기 실패 시 로그 출력 (중단되지 않음)
         """
         if not self._resource_path:
-            logger.error("ResourcePath is not initialized.")
+            # 경로가 설정되지 않았으면 로드하지 않음 (Lazy Init 대기)
             return
 
         language_dir = self._resource_path.languages_dir
@@ -251,4 +250,5 @@ class LanguageManager(QObject):
         return False
 
 # 전역에서 접근 가능한 싱글톤 인스턴스 생성
+# 여기서는 ResourcePath가 없으므로 초기화만 되고 로드는 수행하지 않음 (Lazy Load)
 language_manager = LanguageManager()

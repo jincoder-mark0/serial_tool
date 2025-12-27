@@ -25,7 +25,7 @@ import time
 
 from common.constants import (
     DEFAULT_BAUDRATE,
-    DEFAULT_MACRO_DELAY_MS,
+    DEFAULT_MACRO_INTERVAL_MS,
     FONT_FAMILY_SEGOE,
     FONT_FAMILY_CONSOLAS
 )
@@ -41,6 +41,12 @@ def _safe_cast(value: Any, target_type: type, default: Any) -> Any:
     """
     값을 안전하게 대상 타입으로 변환합니다.
     None이거나 변환 실패 시 기본값을 반환합니다.
+
+    Logic:
+        - 값이 None이면 기본값 반환
+        - 목표 타입에 맞춰 형변환 시도
+        - bool 타입의 경우 "true"/"false" 문자열 처리 지원
+        - 변환 중 에러 발생 시 기본값 반환
 
     Args:
         value (Any): 변환할 값.
@@ -184,7 +190,7 @@ class PortDataEvent:
     """
     port: str
     data: bytes
-    timestamp: float = 0.0
+    timestamp: float = field(default_factory=time.time)
 
 @dataclass
 class PortErrorEvent:
@@ -326,15 +332,15 @@ class MacroRepeatOption:
     매크로 반복 실행 옵션 DTO
 
     Attributes:
-        delay_ms (int): 반복 간격 (ms).
         max_runs (int): 최대 실행 횟수 (0=무한).
-        interval_ms (int): 실행 간격 (ms) - delay_ms와 동일 의미로 사용될 수 있음.
+        interval_ms (int): 실행 간격 (ms).
         broadcast_enabled (bool): 브로드캐스트 사용 여부.
+        stop_on_error (bool): 에러 발생 시 매크로 중단 여부.
     """
-    delay_ms: int
     max_runs: int = 0
     interval_ms: int = 0
     broadcast_enabled: bool = False
+    stop_on_error: bool = True
 
 
 @dataclass
@@ -356,7 +362,7 @@ class MacroStepEvent:
     매크로 실행 단계 이벤트 DTO
 
     Attributes:
-        index (int): 현재 실행 중인 단계의 인덱스.
+        index (int): 현재 실행 중인 단계의 인덱스 (원본 행 번호).
         entry (Optional[MacroEntry]): 실행된 매크로 항목 객체.
         success (bool): 실행 성공 여부.
         type (str): 이벤트 타입 ('started', 'completed' 등).
@@ -695,4 +701,4 @@ class ErrorContext:
     message: str
     traceback: str
     level: str = "CRITICAL"
-    timestamp: float = 0.0
+    timestamp: float = field(default_factory=time.time)

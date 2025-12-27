@@ -38,9 +38,10 @@
     "macro_control_btn_save_script": "저장",
     "macro_control_btn_save_script_tooltip": "명령 스크립트를 파일로 저장",
     "macro_control_grp_execution": "실행 제어",
-    "macro_control_lbl_interval": "간격 (ms)",
+    "macro_control_lbl_repeat_interval": "간격 (ms)",
+    "macro_control_edit_repeat_interval_tooltip": "명령 실행 간격 (ms)",
     "macro_control_lbl_repeat_max": "반복",
-    "macro_control_spin_repeat_tooltip": "반복 횟수",
+    "macro_control_spin_repeat_max_tooltip": "반복 횟수",
     "macro_control_chk_broadcast": "브로드캐스트",
     "macro_control_chk_broadcast_tooltip": "브로드캐스트가 설정된 모든 활성 포트에 Command 전송",
     "macro_list_btn_add_row_tooltip": "새 명령 추가",
@@ -198,8 +199,8 @@
     "data_log_combo_newline_tooltip": "줄바꿈 모드 선택",
     "data_log_chk_tx_broadcast_allowed": "TX Broadcast",
     "data_log_chk_tx_broadcast_allowed_tooltip": "TX Broadcast 활성화",
-    "data_log_input_search_placeholder": "검색...",
-    "data_log_input_search_tooltip": "수신 데이터에서 검색",
+    "data_log_edit_search_placeholder": "검색...",
+    "data_log_edit_search_tooltip": "수신 데이터에서 검색",
     "data_log_list_log_placeholder": "수신 데이터가 여기에 표시됩니다...",
     "data_log_list_log_tooltip": "수신 데이터가 여기에 표시됩니다...",
     "data_log_newline_cr": "CR (\\r)",
@@ -219,6 +220,6 @@
     "sys_log_btn_toggle_logging_tooltip": "시스템 로그를 파일로 저장",
     "sys_log_chk_filter": "필터",
     "sys_log_chk_filter_tooltip": "시스템 로그 필터링 활성화",
-    "sys_log_input_search_placeholder": "검색...",
-    "sys_log_input_search_tooltip": "시스템 로그에서 검색"
+    "sys_log_edit_search_placeholder": "검색...",
+    "sys_log_edit_search_tooltip": "시스템 로그에서 검색"
 }

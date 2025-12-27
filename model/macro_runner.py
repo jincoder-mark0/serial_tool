@@ -13,15 +13,16 @@
 * QThread 기반의 독립 실행 환경 제공
 * 매크로 항목(MacroEntry) 순차 실행 및 루프 제어
 * Expect 기능(정규식 기반 응답 대기) 및 타임아웃 처리
-* Broadcast 실행 모드 지원
+* 에러 발생 시 처리 정책(중단/무시) 지원
 
 ## HOW
 * QThread, QWaitCondition, QMutex를 사용한 정밀 제어 및 스레드 동기화
 * EventBus를 통해 수신 데이터를 구독하여 Expect 패턴 매칭
 * DTO를 통한 데이터 교환 및 에러 보고
+* (RowIndex, Entry) 튜플 구조를 사용하여 UI 필터링 상황에서도 정확한 행 추적
 """
 import time
-from typing import List, Optional
+from typing import List, Optional, Tuple
 
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QWaitCondition
 
@@ -49,6 +50,7 @@ class MacroRunner(QThread):
     # -------------------------------------------------------------------------
     # Signals (DTO 기반)
     # -------------------------------------------------------------------------
+    # 실행 단계별 이벤트 (index는 UI의 원본 Row Index를 의미함)
     step_started = pyqtSignal(object)    # MacroStepEvent
     step_completed = pyqtSignal(object)  # MacroStepEvent
     macro_finished = pyqtSignal()
@@ -56,6 +58,9 @@ class MacroRunner(QThread):
 
     # 실제 전송 요청 시그널 (ConnectionController 등으로 연결)
     send_requested = pyqtSignal(object)  # ManualCommand
+
+    # 반복 진행 상태 알림 (현재 횟수, 총 횟수)
+    loop_progress = pyqtSignal(int, int)
 
     def __init__(self) -> None:
         """
@@ -67,46 +72,50 @@ class MacroRunner(QThread):
             - EventBus 구독 설정 (데이터 수신 감지용)
         """
         super().__init__()
-        self._entries: List[MacroEntry] = []
+        
+        # (Row Index, Entry DTO) 튜플 리스트로 관리하여 UI 위치 추적 보장
+        self._entries: List[Tuple[int, MacroEntry]] = []
 
         # 스레드 동기화 객체
         self._mutex = QMutex()
-        self._cond = QWaitCondition()
+        self._cond = QWaitCondition()        # 일반 대기 (Sleep/Pause)
+        self._expect_cond = QWaitCondition() # Expect 대기 전용
 
         # 실행 제어 플래그
         self._is_running = False
         self._is_paused = False
-        self.broadcast_enabled = False
-
-        # 반복 설정
+        
+        # 실행 옵션
         self._loop_count = 0
         self._loop_interval_ms = 0
+        self.broadcast_enabled = False
+        self.stop_on_error = True
 
         # Expect 처리 변수
         self._expect_matcher: Optional[ExpectMatcher] = None
         self._expect_found = False
-        self._expect_cond = QWaitCondition()  # Expect 대기 전용 조건 변수
 
         self.event_bus = event_bus
         # 데이터 수신 이벤트 구독 (Expect 매칭용)
         self.event_bus.subscribe(EventTopics.PORT_DATA_RECEIVED, self._on_data_received)
 
-    def load_macro(self, entries: List[MacroEntry]) -> None:
+    def load_macro(self, entries: List[Tuple[int, MacroEntry]]) -> None:
         """
         실행할 매크로 리스트를 로드합니다.
 
         Args:
-            entries (List[MacroEntry]): 매크로 항목 리스트.
+            entries: (원본 행 번호, 매크로 항목) 튜플의 리스트.
         """
         self._entries = entries
 
-    def start(self, loop_count: int = 1, interval_ms: int = 0, broadcast_enabled: bool = False) -> None:
+    def start(self, loop_count: int = 1, interval_ms: int = 0, 
+              broadcast_enabled: bool = False, stop_on_error: bool = True) -> None:
         """
         매크로 실행을 시작합니다.
 
         Logic:
             1. 매크로 엔트리 존재 여부 확인
-            2. Mutex를 사용하여 실행 플래그(`_is_running`) 안전하게 설정
+            2. Mutex를 사용하여 실행 플래그 및 옵션 설정
             3. 시작 이벤트 발행 (`macro.started`)
             4. QThread 시작 (`run` 메서드 호출)
 
@@ -114,6 +123,7 @@ class MacroRunner(QThread):
             loop_count (int): 반복 횟수 (0=무한). 기본값 1.
             interval_ms (int): 루프 간 대기 시간 (ms). 기본값 0.
             broadcast_enabled (bool): 브로드캐스트 모드 여부.
+            stop_on_error (bool): 에러 발생 시 중단 여부.
         """
         if not self._entries:
             # 에러 DTO 생성 및 전송
@@ -126,7 +136,8 @@ class MacroRunner(QThread):
         self._is_paused = False
         self._loop_count = loop_count
         self._loop_interval_ms = interval_ms
-        self.broadcast_enabled = broadcast_enabled  # 상태 저장
+        self.broadcast_enabled = broadcast_enabled
+        self.stop_on_error = stop_on_error
         self._mutex.unlock()
 
         self.event_bus.publish(EventTopics.MACRO_STARTED)
@@ -144,18 +155,30 @@ class MacroRunner(QThread):
             3. 스레드가 완전히 종료될 때까지 대기 (`wait`)
             4. 종료 이벤트 발행
         """
-        self._mutex.lock()
-        self._is_running = False
-        self._is_paused = False
-        self._cond.wakeAll()
-        self._expect_cond.wakeAll()
-        self._mutex.unlock()
-
+        self._stop_internal(reason="User stopped macro")
+        
         # 스레드 종료 대기 (블로킹)
         self.wait()
 
         self.macro_finished.emit()
         self.event_bus.publish(EventTopics.MACRO_FINISHED)
+
+    def _stop_internal(self, reason: str = "") -> None:
+        """
+        내부적인 중단 처리 (스레드 내부 또는 강제 종료 시 사용)
+
+        Args:
+            reason (str): 중단 사유 (로깅용).
+        """
+        self._mutex.lock()
+        if self._is_running:
+            self._is_running = False
+            self._is_paused = False
+            self._cond.wakeAll()
+            self._expect_cond.wakeAll()
+            if reason:
+                logger.info(f"Macro stopping: {reason}")
+        self._mutex.unlock()
 
     def pause(self) -> None:
         """
@@ -241,9 +264,11 @@ class MacroRunner(QThread):
                 break
 
             current_loop += 1
+            # 반복 진행 상황 알림 (UI 업데이트)
+            self.loop_progress.emit(current_loop, self._loop_count)
 
-            # 2. 엔트리 순차 실행
-            for i, entry in enumerate(self._entries):
+            # 2. 엔트리 순차 실행 (row_index와 entry unpacking)
+            for row_idx, entry in self._entries:
                 # 실행 중지 확인
                 if not self._check_running():
                     break
@@ -255,30 +280,31 @@ class MacroRunner(QThread):
                 if not entry.enabled:
                     continue
 
-                # DTO 이벤트 발생 (Started)
-                self.step_started.emit(MacroStepEvent(index=i, entry=entry, type="started"))
+                # DTO 이벤트 발생 (Started) - 원본 Row Index 사용
+                self.step_started.emit(MacroStepEvent(index=row_idx, entry=entry, type="started"))
 
                 step_success = True
                 error_msg = ""
 
                 try:
-                    # DTO 생성 및 전송
+                    # DTO 생성
                     manual_command = ManualCommand(
                         command=entry.command,
                         hex_mode=entry.hex_mode,
                         prefix_enabled=entry.prefix_enabled,
                         suffix_enabled=entry.suffix_enabled,
-                        broadcast_enabled=self.broadcast_enabled  # 설정된 브로드캐스트 모드 적용
+                        broadcast_enabled=self.broadcast_enabled
                     )
+                    
                     # 2-1. 명령 전송 요청 (Signal)
                     self.send_requested.emit(manual_command)
 
                     # 2-2. Expect 처리 (응답 대기)
                     if entry.expect:
-                        # 브로드캐스트 모드에서는 동기화 문제로 인해 Expect를 무시하고 경고 로그 출력
+                        # 브로드캐스트 모드에서는 동기화 문제로 인해 Expect를 무시
                         if self.broadcast_enabled:
-                            logger.warning(f"Macro: Expect pattern '{entry.expect}' ignored in broadcast mode.")
-                            step_success = True  # 무조건 성공 처리하고 Delay로 넘어감
+                            logger.debug(f"Row {row_idx}: Expect pattern ignored in broadcast mode.")
+                            step_success = True
                         else:
                             step_success = self._wait_for_expect(entry.expect, entry.timeout_ms)
                             if not step_success:
@@ -286,36 +312,39 @@ class MacroRunner(QThread):
 
                     # 2-3. 결과 처리 및 지연
                     if step_success:
-                        self.step_completed.emit(MacroStepEvent(index=i, success=True, type="completed"))
-                        # 최소 10ms 지연 보장
+                        self.step_completed.emit(MacroStepEvent(index=row_idx, success=True, type="completed"))
+                        # 최소 10ms 지연 보장 (UI 프리징 방지)
                         delay = entry.delay_ms if entry.delay_ms > 0 else 10
                         self._interruptible_sleep(delay)
                     else:
-                        # 실패 시 중단 처리
-                        self.step_completed.emit(MacroStepEvent(index=i, success=False, type="completed"))
+                        # 실패 처리
+                        self.step_completed.emit(MacroStepEvent(index=row_idx, success=False, type="completed"))
 
                         # [DTO] 에러 이벤트 생성 및 발행
-                        error_event = MacroErrorEvent(message=error_msg, row_index=i)
+                        error_event = MacroErrorEvent(message=error_msg, row_index=row_idx)
                         self.error_occurred.emit(error_event)
                         self.event_bus.publish(EventTopics.MACRO_ERROR, error_event)
 
-                        # 실행 플래그 해제
-                        self._mutex.lock()
-                        self._is_running = False
-                        self._mutex.unlock()
-                        break
+                        # 에러 발생 시 처리 정책 확인
+                        if self.stop_on_error:
+                            logger.warning(f"Macro stopped due to error at row {row_idx}")
+                            self._stop_internal()
+                            break
+                        else:
+                            logger.info(f"Macro error at row {row_idx}, but continuing (stop_on_error=False)")
+                            # 에러 후에도 최소한의 안전 지연
+                            self._interruptible_sleep(100)
 
                 except Exception as e:
-                    logger.error(f"Macro execution error at index {i}: {e}")
+                    # 예상치 못한 시스템 에러는 무조건 중단
+                    logger.error(f"Critical macro execution error at row {row_idx}: {e}")
 
                     # [DTO] 에러 이벤트 생성 및 발행
-                    error_event = MacroErrorEvent(message=str(e), row_index=i)
+                    error_event = MacroErrorEvent(message=str(e), row_index=row_idx)
                     self.error_occurred.emit(error_event)
                     self.event_bus.publish(EventTopics.MACRO_ERROR, error_event)
 
-                    self._mutex.lock()
-                    self._is_running = False
-                    self._mutex.unlock()
+                    self._stop_internal()
                     break
 
             # 루프 간 간격 대기
@@ -323,10 +352,8 @@ class MacroRunner(QThread):
                 self._interruptible_sleep(self._loop_interval_ms)
 
         # 실행 종료 처리
-        self._mutex.lock()
-        self._is_running = False
-        self._mutex.unlock()
-
+        self._stop_internal()
+        
         # 완료 시그널 방출
         self.macro_finished.emit()
 

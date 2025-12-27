@@ -345,6 +345,7 @@ class PortPresenter(QObject):
 
         Logic:
             - 에러 로그(Logger) 기록
+            - 연결 시도 중 에러 발생 시 UI 버튼 상태를 'Disconnected'로 복구
             - 사용자에게 팝업(MessageBox)으로 알림
             - 시스템 로그 위젯에 에러 기록 (SystemLogEvent)
 
@@ -352,6 +353,16 @@ class PortPresenter(QObject):
             event (PortErrorEvent): 포트 에러 이벤트 DTO (port, message).
         """
         logger.error(f"Port Error ({event.port}): {event.message}")
+
+        # 연결 시도 중 에러 발생 시 UI 버튼 상태를 'Disconnected'로 강제 복구
+        # (Connecting 상태에서 에러가 났을 때 UI가 꼬이는 것을 방지)
+        count = self.left_section.port_tab_panel.count()
+        for i in range(count):
+            widget = self.left_section.port_tab_panel.widget(i)
+            if hasattr(widget, 'get_port_name') and widget.get_port_name() == event.port:
+                if hasattr(widget, 'port_settings_widget'):
+                    widget.port_settings_widget.set_connected(False)
+                break
 
         # View 계층을 통해 에러 메시지 표시 (View가 없는 경우 대비)
         if self.left_section:

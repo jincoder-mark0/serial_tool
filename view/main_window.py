@@ -72,7 +72,8 @@ class MainWindow(QMainWindow):
     shortcut_clear_requested = pyqtSignal()
 
     # 파일 전송 다이얼로그 오픈 알림 (Presenter 연결용)
-    file_transfer_dialog_opened = pyqtSignal(object)
+    # dialog 객체와 target_port 문자열을 함께 전달
+    file_transfer_dialog_opened = pyqtSignal(object, str)
 
     # 하위 컴포넌트 시그널 중계 (Bubbling)
     send_requested = pyqtSignal(object)      # ManualCommand DTO
@@ -449,6 +450,9 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'menu_bar'):
             self.menu_bar.set_current_theme(theme_name)
 
+        # 시스템 로그 위젯에 색상 규칙 주입 # TODO : MVP / 캡슐화 위반 검토
+        self.left_section.system_log_widget.set_color_rules(self.color_manager._rules)
+
         msg = f"Theme changed to {theme_name.capitalize()}"
         self.show_status_message(msg, 2000)
 
@@ -495,12 +499,25 @@ class MainWindow(QMainWindow):
         파일 전송 대화상자를 엽니다.
 
         Logic:
+            - 현재 활성화된 포트 이름 확인
             - 다이얼로그 생성
-            - Presenter에 다이얼로그 인스턴스를 전달하여 로직 연결 (Signal)
+            - Presenter에 다이얼로그 인스턴스와 타겟 포트를 전달 (Signal)
             - 다이얼로그 실행
         """
+        # 현재 활성 포트 이름 획득
+        target_port = ""
+        if hasattr(self, 'left_section'):
+            tab_panel = self.left_section.port_tab_panel
+            current_index = tab_panel.currentIndex()
+            current_widget = tab_panel.widget(current_index)
+            
+            # PortPanel인지 확인 (Duck typing)
+            if hasattr(current_widget, 'get_port_name'):
+                target_port = current_widget.get_port_name()
+
         dialog = FileTransferDialog(self)
-        self.file_transfer_dialog_opened.emit(dialog)
+        # 다이얼로그 객체와 타겟 포트를 함께 전달
+        self.file_transfer_dialog_opened.emit(dialog, target_port)
         dialog.exec_()
 
     def on_settings_change_requested(self, new_state: PreferencesState) -> None:
@@ -539,7 +556,7 @@ class MainWindow(QMainWindow):
             visible (bool): 표시 여부.
         """
         if self.isMaximized():
-            right_panel.setVisible(visible)
+            self.right_section.setVisible(visible)
             self.menu_bar.set_right_section_checked(visible)
             return
 
