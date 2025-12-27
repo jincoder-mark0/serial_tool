@@ -180,6 +180,10 @@ class MacroControlWidget(QWidget):
         # 초기 상태 설정 (연결 전 비활성화)
         self.set_controls_enabled(False)
 
+    def is_broadcast_enabled(self) -> bool:
+        """브로드캐스트 옵션이 활성화되어 있는지 확인합니다."""
+        return self.broadcast_chk.isChecked()
+
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
         self.script_save_btn.setText(language_manager.get_text("macro_control_btn_save_script"))
@@ -222,7 +226,7 @@ class MacroControlWidget(QWidget):
             interval_ms=interval_ms,
             max_runs=max_runs,
             broadcast_enabled=broadcast_enabled,
-            stop_on_error=True 
+            stop_on_error=True
         )
 
     def on_macro_repeat_start_clicked(self) -> None:
@@ -262,7 +266,7 @@ class MacroControlWidget(QWidget):
         if running:
             # 실행 중: 시작 버튼 비활성화
             self.macro_repeat_start_btn.setEnabled(False)
-            
+
             # 반복 모드일 때만 정지/일시정지 활성화
             if is_repeat:
                 self.macro_repeat_stop_btn.setEnabled(True)

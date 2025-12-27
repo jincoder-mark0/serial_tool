@@ -10,12 +10,13 @@
 * 브로드캐스트 상태 변경을 상위 Presenter에 알림 (UI 동기화용)
 
 ## WHAT
-* View의 전송 요청(Signal)을 받아 데이터 가공 후 Controller로 전달
+* View의 전송 요청(Signal)을 받아 상태를 직접 수집하여 DTO 생성 후 Controller로 전달
 * DTR/RTS 제어 요청 처리
 * 전송 성공 시 로컬 에코(Local Echo) 처리
 * 브로드캐스트 모드 지원 (다중 포트 전송)
 
 ## HOW
+* View(Panel)가 제공하는 Getter 메서드(Facade)를 통해 상태 조회 (Widget 직접 접근 제거)
 * CommandProcessor를 사용하여 입력 데이터 가공
 * ConnectionController를 통해 데이터 전송 수행
 * Callable 콜백을 통해 MainPresenter(View)에 로컬 에코 데이터 전달
@@ -68,6 +69,7 @@ class ManualControlPresenter(QObject):
         self.settings_manager = SettingsManager()
 
         # View -> Presenter 시그널 연결
+        # View는 단순한 시그널만 보내고, 데이터 수집은 Presenter가 수행함 (Passive View)
         self.panel.send_requested.connect(self.on_send_requested)
         self.panel.dtr_changed.connect(self.on_dtr_changed)
         self.panel.rts_changed.connect(self.on_rts_changed)
@@ -100,29 +102,53 @@ class ManualControlPresenter(QObject):
         Returns:
             bool: 브로드캐스트 활성화 여부.
         """
-        # Panel -> Widget -> Checkbox 접근 (캡슐화를 위해 Panel에 getter가 있으면 더 좋음)
-        if hasattr(self.panel, 'manual_control_widget'):
-            return self.panel.manual_control_widget.broadcast_chk.isChecked()
-        return False
+        return self.panel.is_broadcast_enabled()
 
-    def on_send_requested(self, command: ManualCommand) -> None:
+    def on_send_requested(self, _=None) -> None:
         """
         전송 요청 처리 핸들러
 
         Logic:
-            1. 설정된 Prefix/Suffix 조회
-            2. 데이터 가공 (Hex/ASCII 변환, 접두사/접미사 붙임)
-            3. 단일/브로드캐스트 모드에 따라 전송 수행
-            4. 성공 시 로컬 에코 출력
+            1. View(Panel)의 Getter 메서드를 통해 현재 UI 상태(입력값, 옵션)를 직접 수집
+            2. ManualCommand DTO 생성
+            3. 설정된 Prefix/Suffix 조회 및 데이터 가공
+            4. 단일/브로드캐스트 모드에 따라 전송 수행
+            5. 성공 시 로컬 에코 출력
 
         Args:
-            command (ManualCommand): 전송할 명령어 DTO.
+            _ (Any): 시그널에서 전달되는 인자 (사용하지 않음, View가 DTO를 보내지 않도록 가정).
         """
-        # 1. 설정값 조회
+        # 1. View에서 상태 수집 (Passive View 패턴 강화)
+        # Presenter가 View의 내부 위젯 구조를 알 필요 없이 인터페이스만 호출
+        try:
+            command_text = self.panel.get_input_text()
+            hex_mode = self.panel.is_hex_mode()
+            prefix_enabled = self.panel.is_prefix_enabled()
+            suffix_enabled = self.panel.is_suffix_enabled()
+            broadcast_enabled = self.panel.is_broadcast_enabled()
+            # Local Echo는 Presenter가 관리하는 전역 설정 값을 사용 (또는 UI 체크박스 값 사용 가능)
+            # 여기서는 UI 체크박스 값과 전역 설정 중 UI 값을 우선하거나 동기화된 값을 사용
+            # View에 is_local_echo_enabled()가 있다고 가정
+            local_echo_enabled = self.panel.is_local_echo_enabled()
+        except AttributeError as e:
+            logger.error(f"Failed to gather state from ManualControlPanel: {e}")
+            return
+
+        # DTO 생성
+        command = ManualCommand(
+            command=command_text,
+            hex_mode=hex_mode,
+            prefix_enabled=prefix_enabled,
+            suffix_enabled=suffix_enabled,
+            local_echo_enabled=local_echo_enabled,
+            broadcast_enabled=broadcast_enabled
+        )
+
+        # 2. 설정값 조회 (Prefix/Suffix)
         prefix = self.settings_manager.get(ConfigKeys.COMMAND_PREFIX) if command.prefix_enabled else None
         suffix = self.settings_manager.get(ConfigKeys.COMMAND_SUFFIX) if command.suffix_enabled else None
 
-        # 2. 데이터 가공
+        # 3. 데이터 가공
         try:
             data = CommandProcessor.process_command(
                 command.command,
@@ -132,7 +158,7 @@ class ManualControlPresenter(QObject):
             )
         except ValueError as e:
             logger.error(f"Command processing error: {e}")
-            # View에 에러 알림 필요 시 추가 구현 (현재는 로그만)
+            # View에 에러 알림 필요 시 추가 구현
             return
 
         if not data:
@@ -140,9 +166,9 @@ class ManualControlPresenter(QObject):
 
         sent_success = False
 
-        # 3. 전송 수행
+        # 4. 전송 수행
         if command.broadcast_enabled:
-            # 브로드캐스트 모드
+            # 브로드캐스트 모드: 활성 포트가 하나라도 있는지 확인 (Gatekeeping)
             if self.connection_controller.has_active_broadcast_ports():
                 self.connection_controller.send_broadcast_data(data)
                 sent_success = True
@@ -157,7 +183,8 @@ class ManualControlPresenter(QObject):
             else:
                 logger.warning(f"Port '{active_port}' is not open.")
 
-        # 4. Local Echo 처리
+        # 5. 로컬 에코 처리
+        # 전송 성공하고 로컬 에코가 활성화되어 있으면 콜백 호출
         if sent_success and self.local_echo_enabled:
             self.local_echo_callback(data)
 
@@ -193,13 +220,28 @@ class ManualControlPresenter(QObject):
 
     def get_state(self) -> ManualControlState:
         """
-        현재 패널의 UI 상태(입력값, 체크박스 등)를 DTO로 반환합니다.
-        (애플리케이션 종료 시 저장용)
+        현재 UI 상태를 DTO로 반환합니다. (설정 저장용)
+
+        Logic:
+            - 데이터를 조합하여 DTO 생성
 
         Returns:
             ManualControlState: 현재 상태 DTO.
         """
-        return self.panel.get_state()
+        # View가 아직 초기화되지 않았거나 인터페이스가 없는 경우 방어
+        if not self.panel:
+            return ManualControlState()
+
+        return ManualControlState(
+            input_text=self.panel.get_input_text(),
+            hex_mode=self.panel.is_hex_mode(),
+            prefix_enabled=self.panel.is_prefix_enabled(),
+            suffix_enabled=self.panel.is_suffix_enabled(),
+            rts_enabled=self.panel.is_rts_enabled(),
+            dtr_enabled=self.panel.is_dtr_enabled(),
+            local_echo_enabled=self.local_echo_enabled, # 전역 설정 사용
+            broadcast_enabled=self.panel.is_broadcast_enabled()
+        )
 
     def apply_state(self, state: ManualControlState) -> None:
         """
@@ -209,5 +251,5 @@ class ManualControlPresenter(QObject):
         Args:
             state (ManualControlState): 복원할 상태 DTO.
         """
-        # DTO를 View로 전달
+        # DTO를 View로 전달 (View 내부 구현은 캡슐화됨)
         self.panel.apply_state(state)

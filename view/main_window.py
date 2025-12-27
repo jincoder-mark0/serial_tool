@@ -11,15 +11,16 @@
 ## WHAT
 * 좌/우 섹션(Section) 배치 및 스플리터(Splitter) 관리
 * 메뉴바(MenuBar), 상태바(StatusBar) 관리
-* Presenter용 공개 API 제공 및 DTO 기반 상태 관리 (MVP 패턴 준수)
+* Presenter용 공개 API 제공 (Facade Properties & Methods)
+* DTO 기반 상태 관리 (MVP 패턴 준수)
 * 다이얼로그(설정, 정보, 파일전송) 호출 관리
 
 ## HOW
 * QMainWindow를 상속받아 기본 프레임 구성
 * MVP 패턴을 위해 비즈니스 로직 없이 시그널(Signal)과 슬롯(Slot)으로 동작
-* apply_state/get_window_state 메서드를 통해 상태 데이터 교환
+* 하위 위젯 직접 접근을 막기 위해 Property와 Wrapper 메서드 제공
 """
-from typing import Optional
+from typing import Optional, Callable
 
 from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QSplitter, QApplication, QShortcut, QMessageBox
@@ -247,21 +248,66 @@ class MainWindow(QMainWindow):
         return state
 
     # --------------------------------------------------------
-    # Presenter Interface (View 인터페이스)
+    # Presenter Interface (View Facade Properties)
     # --------------------------------------------------------
     @property
-    def port_view(self):
-        """PortPresenter용 뷰 인터페이스 반환."""
+    def port_view(self) -> MainLeftSection:
+        """
+        PortPresenter용 뷰 인터페이스(LeftSection)를 반환합니다.
+        """
         return self.left_section
 
     @property
     def macro_view(self):
-        """MacroPresenter용 뷰 인터페이스 반환."""
+        """
+        MacroPresenter용 뷰 인터페이스(MacroPanel)를 반환합니다.
+        Presenter가 right_section 내부 구조를 알 필요 없이 접근 가능하게 합니다.
+        """
         return self.right_section.macro_panel
+
+    @property
+    def packet_view(self):
+        """
+        PacketPresenter용 뷰 인터페이스(PacketPanel)를 반환합니다.
+        """
+        return self.right_section.packet_panel
+
+    @property
+    def manual_control_view(self):
+        """
+        ManualControlPresenter용 뷰 인터페이스(ManualControlPanel)를 반환합니다.
+        """
+        return self.left_section.manual_control_panel
+
+    # --------------------------------------------------------
+    # Presenter Interface (Facade Methods)
+    # --------------------------------------------------------
+    def is_current_port_connected(self) -> bool:
+        """
+        현재 활성화된 포트 탭이 연결된 상태인지 반환합니다.
+        (MainPresenter의 UI 동기화 로직용)
+
+        Returns:
+            bool: 연결 여부.
+        """
+        if hasattr(self.left_section, 'is_current_port_connected'):
+            return self.left_section.is_current_port_connected()
+        return False
+
+    def connect_port_tab_changed(self, slot: Callable[[int], None]) -> None:
+        """
+        포트 탭 변경 시그널을 외부 슬롯에 연결합니다.
+        Presenter가 내부 위젯(port_tab_panel)에 직접 접근하지 않도록 합니다.
+
+        Args:
+            slot (Callable): 연결할 슬롯 함수.
+        """
+        if hasattr(self.left_section, 'connect_tab_changed_signal'):
+            self.left_section.connect_tab_changed_signal(slot)
 
     def get_port_tabs_count(self) -> int:
         """현재 열려있는 포트 탭의 개수를 반환합니다."""
-        return self.left_section.port_tab_panel.count()
+        return self.left_section.get_port_tabs_count()
 
     def get_port_tab_widget(self, index: int) -> QWidget:
         """
@@ -273,7 +319,7 @@ class MainWindow(QMainWindow):
         Returns:
             QWidget: 포트 패널 위젯.
         """
-        return self.left_section.port_tab_panel.widget(index)
+        return self.left_section.get_port_panel_at(index)
 
     def log_system_message(self, event: SystemLogEvent) -> None:
         """
@@ -282,7 +328,7 @@ class MainWindow(QMainWindow):
         Args:
             event (SystemLogEvent): 시스템 로그 이벤트 DTO.
         """
-        self.left_section.system_log_widget.append_log(event)
+        self.left_section.log_system_message(event)
 
     def update_status_bar_stats(self, stats: PortStatistics) -> None:
         """
@@ -337,11 +383,7 @@ class MainWindow(QMainWindow):
         현재 활성 탭의 로그 저장 다이얼로그를 호출합니다.
         (메뉴바의 'Save Log' 액션 핸들러)
         """
-        current_index = self.left_section.port_tab_panel.currentIndex()
-        current_widget = self.left_section.port_tab_panel.widget(current_index)
-        if hasattr(current_widget, 'data_log_widget'):
-            # DataLogWidget의 로깅 토글 슬롯을 강제로 호출하여 저장 로직 수행
-            current_widget.data_log_widget.on_data_log_logging_toggled(True)
+        self.left_section.trigger_current_port_log_save()
 
     def append_local_echo_data(self, data: bytes) -> None:
         """
@@ -424,11 +466,7 @@ class MainWindow(QMainWindow):
 
     def clear_log(self) -> None:
         """현재 활성 탭의 로그를 삭제합니다 (단축키 처리용)."""
-        if hasattr(self, 'left_section'):
-            current_index = self.left_section.port_tab_panel.currentIndex()
-            current_widget = self.left_section.port_tab_panel.widget(current_index)
-            if current_widget and hasattr(current_widget, 'data_log_widget'):
-                current_widget.data_log_widget.on_clear_data_log_clicked()
+        self.left_section.clear_current_port_log()
 
     def switch_theme(self, theme_name: str) -> None:
         """
@@ -442,7 +480,6 @@ class MainWindow(QMainWindow):
         Args:
             theme_name (str): 테마 이름 (예: 'dark', 'light').
         """
-        # 인자 개수 오류 수정: QApplication.instance() 제거
         self.theme_manager.apply_theme(theme_name)
         self.color_manager.apply_theme(theme_name)
 
@@ -450,8 +487,9 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'menu_bar'):
             self.menu_bar.set_current_theme(theme_name)
 
-        # 시스템 로그 위젯에 색상 규칙 주입 # TODO : MVP / 캡슐화 위반 검토
-        self.left_section.system_log_widget.set_color_rules(self.color_manager._rules)
+        # 시스템 로그 위젯에 색상 규칙 주입 (Facade 활용 권장)
+        if hasattr(self.left_section, 'set_system_log_color_rules'):
+            self.left_section.set_system_log_color_rules(self.color_manager.rules)
 
         msg = f"Theme changed to {theme_name.capitalize()}"
         self.show_status_message(msg, 2000)
@@ -471,7 +509,7 @@ class MainWindow(QMainWindow):
             font_config = self.theme_manager.get_font_settings()
             self.font_settings_changed.emit(font_config)
 
-            # 애플리케이션에 가변폭 폰트 적용 (UI 즉시 반영)
+            # 애플리케이션 전체 폰트 적용 (UI 즉시 반영)
             prop_font = self.theme_manager.get_proportional_font()
             QApplication.instance().setFont(prop_font)
 
@@ -504,16 +542,8 @@ class MainWindow(QMainWindow):
             - Presenter에 다이얼로그 인스턴스와 타겟 포트를 전달 (Signal)
             - 다이얼로그 실행
         """
-        # 현재 활성 포트 이름 획득
-        target_port = ""
-        if hasattr(self, 'left_section'):
-            tab_panel = self.left_section.port_tab_panel
-            current_index = tab_panel.currentIndex()
-            current_widget = tab_panel.widget(current_index)
-            
-            # PortPanel인지 확인 (Duck typing)
-            if hasattr(current_widget, 'get_port_name'):
-                target_port = current_widget.get_port_name()
+        # 현재 활성 포트 이름 획득 (Facade)
+        target_port = self.left_section.get_current_port_name()
 
         dialog = FileTransferDialog(self)
         # 다이얼로그 객체와 타겟 포트를 함께 전달

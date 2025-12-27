@@ -193,15 +193,56 @@ class ManualControlWidget(QWidget):
         self.history_down_btn.setToolTip(language_manager.get_text("manual_control_btn_history_down_tooltip"))
         self.command_edit.setPlaceholderText(language_manager.get_text("manual_control_txt_command_placeholder"))
 
+    # -------------------------------------------------------------------------
+    # Getters for Encapsulation (캡슐화를 위한 상태 조회 메서드)
+    # -------------------------------------------------------------------------
+    def is_hex_mode(self) -> bool:
+        """HEX 모드 여부 반환"""
+        return self.hex_chk.isChecked()
+
+    def is_prefix_enabled(self) -> bool:
+        """접두사 사용 여부 반환"""
+        return self.prefix_chk.isChecked()
+
+    def is_suffix_enabled(self) -> bool:
+        """접미사 사용 여부 반환"""
+        return self.suffix_chk.isChecked()
+
+    def is_rts_enabled(self) -> bool:
+        """RTS 체크 여부 반환"""
+        return self.rts_chk.isChecked()
+
+    def is_dtr_enabled(self) -> bool:
+        """DTR 체크 여부 반환"""
+        return self.dtr_chk.isChecked()
+
+    def is_local_echo_enabled(self) -> bool:
+        """로컬 에코 체크 여부 반환"""
+        return self.local_echo_chk.isChecked()
+
+    def is_broadcast_enabled(self) -> bool:
+        """브로드캐스트 체크 여부 반환"""
+        return self.broadcast_chk.isChecked()
+
     def set_controls_enabled(self, enabled: bool) -> None:
         """
-        전송 버튼 활성화 상태를 제어합니다.
+        컨트롤 활성화 상태 설정
 
         Args:
-            enabled (bool): 활성화 여부.
+            enabled (bool): 활성화 여부
         """
         self.send_command_btn.setEnabled(enabled)
-        # 입력창은 항상 활성화하여 미리 입력할 수 있도록 함
+        self.rts_chk.setEnabled(enabled)
+        self.dtr_chk.setEnabled(enabled)
+
+        # Hex, Prefix, Suffix, Broadcast 설정은 연결 여부와 무관하게 변경 가능해야 함
+        # 따라서 이들은 enabled 인자의 영향을 받지 않도록 따로 처리하거나 그대로 둡니다.
+        # self.command_edit.setEnabled(True)
+        # self.hex_chk.setEnabled(True)
+        # self.prefix_chk.setEnabled(True)
+        # self.suffix_chk.setEnabled(True)
+        # self.broadcast_chk.setEnabled(True)
+
 
     def _command_input_key_press_event(self, event: QKeyEvent) -> None:
         """
@@ -260,11 +301,11 @@ class ManualControlWidget(QWidget):
         # DTO 생성
         command_dto = ManualCommand(
             command=command,
-            hex_mode=self.hex_chk.isChecked(),
-            prefix_enabled=self.prefix_chk.isChecked(),
-            suffix_enabled=self.suffix_chk.isChecked(),
-            local_echo_enabled=self.local_echo_chk.isChecked(),
-            broadcast_enabled=self.broadcast_chk.isChecked()
+            hex_mode=self.is_hex_mode(),
+            prefix_enabled=self.is_prefix_enabled(),
+            suffix_enabled=self.is_suffix_enabled(),
+            local_echo_enabled=self.is_local_echo_enabled(),
+            broadcast_enabled=self.is_broadcast_enabled()
         )
 
         self.send_requested.emit(command_dto)
@@ -338,25 +379,6 @@ class ManualControlWidget(QWidget):
             cursor.movePosition(cursor.End)
             self.command_edit.setTextCursor(cursor)
 
-    def set_controls_enabled(self, enabled: bool) -> None:
-        """
-        컨트롤 활성화 상태 설정
-
-        Args:
-            enabled (bool): 활성화 여부
-        """
-        self.send_command_btn.setEnabled(enabled)
-        self.rts_chk.setEnabled(enabled)
-        self.dtr_chk.setEnabled(enabled)
-        
-        # Hex, Prefix, Suffix, Broadcast 설정은 연결 여부와 무관하게 변경 가능해야 함
-        # 따라서 이들은 enabled 인자의 영향을 받지 않도록 따로 처리하거나 그대로 둡니다.
-        # self.command_edit.setEnabled(True)
-        # self.hex_chk.setEnabled(True)
-        # self.prefix_chk.setEnabled(True)
-        # self.suffix_chk.setEnabled(True)
-        # self.broadcast_chk.setEnabled(True)
-
     def set_input_focus(self) -> None:
         """입력 필드에 포커스를 설정합니다."""
         self.command_edit.setFocus()
@@ -378,14 +400,14 @@ class ManualControlWidget(QWidget):
             ManualControlState: 현재 상태 정보가 담긴 DTO.
         """
         return ManualControlState(
-            input_text=self.command_edit.toPlainText(),
-            hex_mode=self.hex_chk.isChecked(),
-            prefix_enabled=self.prefix_chk.isChecked(),
-            suffix_enabled=self.suffix_chk.isChecked(),
-            rts_enabled=self.rts_chk.isChecked(),
-            dtr_enabled=self.dtr_chk.isChecked(),
-            local_echo_enabled=self.local_echo_chk.isChecked(),
-            broadcast_enabled=self.broadcast_chk.isChecked()
+            input_text=self.get_input_text(),
+            hex_mode=self.is_hex_mode(),
+            prefix_enabled=self.is_prefix_enabled(),
+            suffix_enabled=self.is_suffix_enabled(),
+            rts_enabled=self.is_rts_enabled(),
+            dtr_enabled=self.is_dtr_enabled(),
+            local_echo_enabled=self.is_local_echo_enabled(),
+            broadcast_enabled=self.is_broadcast_enabled()
         )
 
     def apply_state(self, state: ManualControlState) -> None:
