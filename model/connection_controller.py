@@ -309,7 +309,7 @@ class ConnectionController(QObject):
             del self.parsers[name]
         if name in self.connection_configs:
             del self.connection_configs[name]
-        
+
         self.connection_closed.emit(PortConnectionEvent(port=name, state="closed"))
 
     def _emit_error(self, port: str, message: str) -> None:
@@ -371,7 +371,7 @@ class ConnectionController(QObject):
         브로드캐스트 활성화된 모든 포트로 데이터 전송.
 
         Logic:
-            - [Safety] 딕셔너리 변경 대비 리스트 복사본을 순회
+            - 딕셔너리 변경 대비 리스트 복사본을 순회
             - 각 Worker의 broadcast_enabled 상태 확인 후 전송
 
         Args:

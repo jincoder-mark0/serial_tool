@@ -2,20 +2,23 @@
 수동 제어 패널 모듈
 
 수동 제어 위젯(ManualControlWidget)을 포함하는 컨테이너 패널입니다.
-Presenter와 Widget 사이의 인터페이스 역할을 수행합니다.
+Presenter와 Widget 사이의 인터페이스(Facade) 역할을 수행합니다.
 
 ## WHY
 * UI 계층 구조(Section -> Panel -> Widget) 준수
 * 레이아웃 관리 및 확장성 확보
+* Presenter가 구체적인 위젯 구현(Checkbox 이름 등)을 알지 못하게 하여 결합도 감소 (LoD 준수)
 
 ## WHAT
-* ManualControlWidget 배치
+* ManualControlWidget 배치 및 레이아웃 구성
 * 시그널 중계 (Widget -> Panel -> Presenter)
+* 하위 위젯의 상태를 조회하거나 설정하는 Facade 메서드 제공
 * 상태 복원 메서드(apply_state) 제공
 
 ## HOW
 * QVBoxLayout을 사용하여 위젯 배치
-* DTO(ManualControlState)를 하위 위젯으로 전달
+* Presenter가 호출할 수 있는 Getter/Setter 메서드 정의
+* 시그널을 재발행(Re-emit)하여 계층 간 통신
 """
 from typing import Optional, Dict, Any
 
@@ -31,14 +34,15 @@ class ManualControlPanel(QWidget):
     """
     수동 제어 패널 클래스
 
-    ManualControlWidget을 감싸고 있으며, Presenter와의 통신을 위한 시그널을 정의합니다.
+    ManualControlWidget을 감싸고 있으며, Presenter와의 통신을 위한
+    시그널 및 상태 조회 인터페이스(Facade)를 정의합니다.
     """
 
     # -------------------------------------------------------------------------
     # Signals
     # -------------------------------------------------------------------------
     # 시그널 정의 (Widget -> Presenter 중계)
-    send_requested = pyqtSignal(object)  # ManualCommand DTO
+    send_requested = pyqtSignal(object)  # ManualCommand DTO (혹은 None)
 
     broadcast_changed = pyqtSignal(bool)
     dtr_changed = pyqtSignal(bool)
@@ -55,7 +59,7 @@ class ManualControlPanel(QWidget):
 
         # UI 컴포넌트
         self.title_lbl: Optional[QLabel] = None
-        self.manual_control_widget: Optional[ManualControlWidget] = None
+        self._manual_control_widget: Optional[ManualControlWidget] = None
 
         self.init_ui()
 
@@ -73,18 +77,20 @@ class ManualControlPanel(QWidget):
         self.title_lbl.setProperty("class", "section-title")
 
         # 수동 제어 위젯 생성
-        self.manual_control_widget = ManualControlWidget()
+        # 내부 변수명에 밑줄(_)을 붙여 외부 직접 접근을 지양함 (캡슐화 의도)
+        self._manual_control_widget = ManualControlWidget()
 
-        # 시그널 연결 (Widget -> Panel)
+        # 시그널 연결 (Widget -> Panel Signal Relay)
+        # 위젯의 시그널을 패널의 시그널로 바로 연결하여 중계
         # self.manual_control_widget.send_requested.connect(self._on_send_requested)
-        self.manual_control_widget.send_requested.connect(self.send_requested.emit)
+        self._manual_control_widget.send_requested.connect(self.send_requested.emit)
 
-        self.manual_control_widget.broadcast_changed.connect(self.broadcast_changed.emit)
-        self.manual_control_widget.dtr_changed.connect(self.dtr_changed.emit)
-        self.manual_control_widget.rts_changed.connect(self.rts_changed.emit)
+        self._manual_control_widget.broadcast_changed.connect(self.broadcast_changed.emit)
+        self._manual_control_widget.dtr_changed.connect(self.dtr_changed.emit)
+        self._manual_control_widget.rts_changed.connect(self.rts_changed.emit)
 
         layout.addWidget(self.title_lbl)
-        layout.addWidget(self.manual_control_widget)
+        layout.addWidget(self._manual_control_widget)
         layout.addStretch()  # 하단 여백 확보
 
         self.setLayout(layout)
@@ -94,14 +100,76 @@ class ManualControlPanel(QWidget):
         self.title_lbl.setText(language_manager.get_text("manual_panel_title"))
         # 하위 위젯은 자체적으로 갱신됨
 
+    # -------------------------------------------------------------------------
+    # Facade Interfaces (Presenter용 Getter/Setter)
+    # -------------------------------------------------------------------------
     def set_controls_enabled(self, enabled: bool) -> None:
         """
-        제어 위젯의 활성화 상태를 변경합니다.
+        제어 위젯의 전송 버튼 활성화 상태를 변경합니다.
 
         Args:
             enabled (bool): 활성화 여부.
         """
-        self.manual_control_widget.set_controls_enabled(enabled)
+        self._manual_control_widget.set_controls_enabled(enabled)
+
+    def set_local_echo_checked(self, checked: bool) -> None:
+        """
+        로컬 에코 체크박스 상태를 설정합니다.
+
+        Args:
+            checked (bool): 체크 여부.
+        """
+        self._manual_control_widget.set_local_echo_state(checked)
+
+    def get_input_text(self) -> str:
+        """
+        현재 입력창의 텍스트를 반환합니다.
+
+        Returns:
+            str: 입력된 명령어 텍스트.
+        """
+        return self._manual_control_widget.get_input_text()
+
+    def set_input_text(self, text: str) -> None:
+        """
+        입력창의 텍스트를 설정합니다.
+
+        Args:
+            text (str): 설정할 텍스트.
+        """
+        self._manual_control_widget.set_input_text(text)
+
+    def is_hex_mode(self) -> bool:
+        """HEX 모드 체크 여부를 반환합니다."""
+        return self._manual_control_widget.hex_chk.isChecked()
+
+    def is_prefix_enabled(self) -> bool:
+        """Prefix 사용 여부를 반환합니다."""
+        return self._manual_control_widget.prefix_chk.isChecked()
+
+    def is_suffix_enabled(self) -> bool:
+        """Suffix 사용 여부를 반환합니다."""
+        return self._manual_control_widget.suffix_chk.isChecked()
+
+    def is_rts_enabled(self) -> bool:
+        """RTS 체크 여부를 반환합니다."""
+        return self._manual_control_widget.rts_chk.isChecked()
+
+    def is_dtr_enabled(self) -> bool:
+        """DTR 체크 여부를 반환합니다."""
+        return self._manual_control_widget.dtr_chk.isChecked()
+
+    def is_local_echo_enabled(self) -> bool:
+        """Local Echo 체크 여부를 반환합니다."""
+        return self._manual_control_widget.local_echo_chk.isChecked()
+
+    def is_broadcast_enabled(self) -> bool:
+        """Broadcast 체크 여부를 반환합니다."""
+        return self._manual_control_widget.broadcast_chk.isChecked()
+
+    def set_input_focus(self) -> None:
+        """입력창에 포커스를 설정합니다."""
+        self._manual_control_widget.set_input_focus()
 
     def _on_send_requested(self) -> None:
         """
@@ -113,7 +181,7 @@ class ManualControlPanel(QWidget):
             3. send_requested 시그널을 통해 Presenter로 DTO 전달
         """
         widget = self.manual_control_widget
-        
+
         # DTO 생성
         command_dto = ManualCommand(
             command=widget.input_edit.text(),
@@ -131,18 +199,21 @@ class ManualControlPanel(QWidget):
         widget.input_edit.selectAll()
         widget.input_edit.setFocus()
 
+    # -------------------------------------------------------------------------
+    # State Persistence
+    # -------------------------------------------------------------------------
     def get_state(self) -> ManualControlState:
         """
-        현재 상태를 DTO로 반환합니다.
+        현재 패널의 상태를 DTO로 반환합니다. (저장용)
 
         Returns:
             ManualControlState: 상태 DTO.
         """
-        return self.manual_control_widget.get_state()
+        return self._manual_control_widget.get_state()
 
     def apply_state(self, state: ManualControlState) -> None:
         """
-        상태 DTO를 위젯에 적용합니다.
+        상태 DTO를 위젯에 적용합니다. (복원용)
 
         Args:
             state (ManualControlState): 복원할 상태 DTO.
@@ -150,4 +221,4 @@ class ManualControlPanel(QWidget):
         if not isinstance(state, ManualControlState):
             return
 
-        self.manual_control_widget.apply_state(state)
+        self._manual_control_widget.apply_state(state)

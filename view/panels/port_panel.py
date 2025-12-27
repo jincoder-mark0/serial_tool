@@ -2,37 +2,56 @@
 포트 패널 모듈
 
 개별 포트 탭의 메인 컨테이너로서, 설정/상태/로그 위젯을 포함합니다.
+Presenter와 하위 위젯 사이의 인터페이스(Facade) 역할을 수행합니다.
 
 ## WHY
 * 포트 단위의 독립적인 UI 컴포넌트 구성 (탭 내부 콘텐츠)
 * 하위 위젯들의 레이아웃 및 상호작용 관리
 * 다중 포트 지원을 위한 인스턴스화 가능한 구조
+* Presenter가 내부 위젯 구조를 몰라도 제어할 수 있도록 캡슐화 (LoD 준수)
 
 ## WHAT
 * PortSettings, PortStats, DataLog 위젯 배치
 * 탭 제목 관리(커스텀 이름) 및 연결 상태 표시
-* 데이터 로그 추가 인터페이스
+* 하위 위젯 제어를 위한 Facade 메서드 및 시그널 제공
 
 ## HOW
 * QVBoxLayout 사용
-* 하위 위젯의 시그널을 집계하여 Presenter로 전달하거나 내부 처리
+* 하위 위젯의 시그널을 패널 시그널로 중계(Relay)
+* DTO(PortConfig, PortStatistics)를 사용하여 데이터 교환
 """
+from typing import Optional, List, Dict, Any
+
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtCore import pyqtSignal
-from typing import Optional
 
 from view.widgets.port_settings import PortSettingsWidget
 from view.widgets.data_log import DataLogWidget
 from view.widgets.port_stats import PortStatsWidget
+from common.dtos import PortConfig, PortInfo, PortStatistics
+
 
 class PortPanel(QWidget):
     """
     개별 시리얼 포트 탭의 메인 위젯 클래스입니다.
-    포트 설정(PortSettings), 통신 로그(DataLogWidget), 상태 로그(PortStats) 영역을 포함합니다.
+
+    포트 설정(PortSettings), 통신 로그(DataLogWidget), 상태 로그(PortStats) 영역을 포함하며,
+    외부에는 통합된 인터페이스만 노출합니다.
     """
 
-    # 시그널 정의
-    tab_title_changed = pyqtSignal(str)  # 탭 제목 변경 시그널
+    # -------------------------------------------------------------------------
+    # Signals (Presenter 통신용)
+    # -------------------------------------------------------------------------
+    # 탭 관리 시그널
+    tab_title_changed = pyqtSignal(str)
+
+    # 설정 위젯 중계 시그널
+    connect_requested = pyqtSignal(object)     # PortConfig DTO
+    disconnect_requested = pyqtSignal()
+    port_scan_requested = pyqtSignal()
+    connection_changed = pyqtSignal(bool)      # 연결 상태 변경 알림
+
+    # 로그 위젯 중계 시그널
     tx_broadcast_allowed_changed = pyqtSignal(bool)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
@@ -43,91 +62,172 @@ class PortPanel(QWidget):
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
-        self.data_log_widget = None
-        self.port_stats_widget = None
-        self.port_settings_widget = None
+
+        # 내부 위젯 (캡슐화)
+        self._data_log_widget: Optional[DataLogWidget] = None
+        self._port_stats_widget: Optional[PortStatsWidget] = None
+        self._port_settings_widget: Optional[PortSettingsWidget] = None
+
         self.custom_name = "Port"  # 커스텀 이름 (기본값)
+
         self.init_ui()
 
-        # 포트 변경 시 탭 제목 업데이트
-        self.port_settings_widget.port_combo.currentTextChanged.connect(self._on_port_changed)
+        # 내부 로직: 포트 변경 시 탭 제목 자동 업데이트
+        # (이는 View 내부적인 UI 갱신 로직이므로 Presenter를 거치지 않아도 무방함)
+        if self._port_settings_widget:
+            self._port_settings_widget.port_combo.currentTextChanged.connect(self._on_port_changed)
 
     def init_ui(self) -> None:
-        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
+        """
+        UI 컴포넌트 및 레이아웃을 초기화합니다.
+
+        Logic:
+            - 하위 위젯 생성
+            - 시그널 중계 연결
+            - 레이아웃 배치
+        """
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
 
-        # 컴포넌트 생성
-        self.port_settings_widget = PortSettingsWidget()
-        self.port_stats_widget = PortStatsWidget()
-        self.data_log_widget = DataLogWidget()
+        # 1. 컴포넌트 생성
+        self._port_settings_widget = PortSettingsWidget()
+        self._port_stats_widget = PortStatsWidget()
+        self._data_log_widget = DataLogWidget()
 
-        self.data_log_widget.tx_broadcast_allowed_changed.connect(self.tx_broadcast_allowed_changed.emit)
+        # 2. 시그널 중계 (Widget -> Panel Signal Relay)
+        # Port Settings
+        self._port_settings_widget.connect_requested.connect(self.connect_requested.emit)
+        self._port_settings_widget.disconnect_requested.connect(self.disconnect_requested.emit)
+        self._port_settings_widget.port_scan_requested.connect(self.port_scan_requested.emit)
+        self._port_settings_widget.port_connection_changed.connect(self.connection_changed.emit)
 
-        # 레이아웃 구성
-        # 상단: 설정 (Top: Settings)
-        layout.addWidget(self.port_settings_widget)
+        # Data Log
+        self._data_log_widget.tx_broadcast_allowed_changed.connect(self.tx_broadcast_allowed_changed.emit)
 
-        # 상태 패널 (Status Panel)
-        layout.addWidget(self.port_stats_widget)
-
-        # 중간: 로그 (Middle: Log)
-        layout.addWidget(self.data_log_widget, 1) # Stretch 1
+        # 3. 레이아웃 구성
+        layout.addWidget(self._port_settings_widget)
+        layout.addWidget(self._port_stats_widget)
+        layout.addWidget(self._data_log_widget, 1) # 로그 영역이 남은 공간 차지 (Stretch)
 
         self.setLayout(layout)
 
-    def toggle_connection(self) -> None:
-        """연결 상태를 토글합니다."""
-        self.port_settings_widget.toggle_connection()
+    # -------------------------------------------------------------------------
+    # Facade Interfaces (Presenter용 Getter/Setter)
+    # -------------------------------------------------------------------------
 
-    def is_connected(self) -> bool:
-        """현재 연결 상태를 반환합니다."""
-        return self.port_settings_widget.is_connected()
+    # --- Port Configuration & Connection ---
 
-    def _on_port_changed(self, port_name: str) -> None:
-        """포트 변경 시 탭 제목을 업데이트합니다."""
-        self.update_tab_title()
-
-    def set_custom_name(self, name: str) -> None:
+    def get_port_config(self) -> PortConfig:
         """
-        커스텀 이름을 설정합니다.
-
-        Args:
-            name (str): 커스텀 이름.
-        """
-        self.custom_name = name
-        self.update_tab_title()
-
-    def get_custom_name(self) -> str:
-        """
-        커스텀 이름을 반환합니다.
+        현재 UI에 설정된 포트 구성 정보를 반환합니다.
 
         Returns:
-            str: 커스텀 이름.
+            PortConfig: 포트 설정 DTO.
         """
-        return self.custom_name
+        return self._port_settings_widget.get_current_config()
+
+    def set_port_list(self, ports: List[PortInfo]) -> None:
+        """
+        콤보박스의 포트 목록을 갱신합니다.
+
+        Args:
+            ports (List[PortInfo]): 포트 정보 리스트.
+        """
+        self._port_settings_widget.set_port_list(ports)
+
+    def set_connected(self, connected: bool) -> None:
+        """
+        UI의 연결 상태(버튼 스타일 등)를 변경합니다.
+
+        Args:
+            connected (bool): 연결 여부.
+        """
+        self._port_settings_widget.set_connected(connected)
+
+    def toggle_connection(self) -> None:
+        """연결 버튼 클릭을 시뮬레이션합니다 (단축키 등)."""
+        self._port_settings_widget.toggle_connection()
+
+    def is_connected(self) -> bool:
+        """
+        현재 연결 상태를 반환합니다.
+
+        Returns:
+            bool: 연결되어 있으면 True.
+        """
+        return self._port_settings_widget.is_connected()
 
     def get_port_name(self) -> str:
         """
         현재 선택된 포트 이름을 반환합니다.
 
-        Logic:
-            - 콤보박스의 텍스트(예: "COM1 (Serial Port)") 대신
-            - 내부 데이터(예: "COM1")를 우선적으로 반환하여 설명 문자열을 제외합니다.
-
         Returns:
-            str: 포트 이름.
+            str: 포트 이름 (예: "COM1").
         """
-        # Use itemData (clean port name) instead of currentText (display text with description)
-        port_data = self.port_settings_widget.port_combo.currentData()
+        # 콤보박스의 UserData(실제 포트명)를 우선 사용
+        port_data = self._port_settings_widget.port_combo.currentData()
         if port_data:
             return str(port_data)
-        return self.port_settings_widget.port_combo.currentText()
+        return self._port_settings_widget.port_combo.currentText()
+
+    # --- Data Log & Stats ---
+
+    def append_log_data(self, data: bytes) -> None:
+        """
+        로그 뷰어에 데이터를 추가합니다.
+
+        Args:
+            data (bytes): 추가할 데이터.
+        """
+        self._data_log_widget.append_data(data)
+
+    def clear_data_log(self) -> None:
+        """로그 뷰어를 초기화합니다."""
+        self._data_log_widget.on_clear_data_log_clicked()
+
+    def trigger_log_save(self) -> None:
+        """로그 저장 다이얼로그를 엽니다."""
+        self._data_log_widget.on_data_log_logging_toggled(True)
+
+    def set_max_log_lines(self, max_lines: int) -> None:
+        """
+        최대 로그 라인 수를 설정합니다.
+
+        Args:
+            max_lines (int): 라인 수.
+        """
+        self._data_log_widget.set_max_lines(max_lines)
+
+    def update_statistics(self, stats: PortStatistics) -> None:
+        """
+        통계 위젯을 업데이트합니다.
+
+        Args:
+            stats (PortStatistics): 통계 정보 DTO.
+        """
+        self._port_stats_widget.update_statistics(stats)
+
+    # --- Tab Management ---
+
+    def get_custom_name(self) -> str:
+        """커스텀 탭 이름을 반환합니다."""
+        return self.custom_name
+
+    def set_custom_name(self, name: str) -> None:
+        """
+        커스텀 탭 이름을 설정하고 탭 제목을 갱신합니다.
+
+        Args:
+            name (str): 새 커스텀 이름.
+        """
+        self.custom_name = name
+        self.update_tab_title()
 
     def get_tab_title(self) -> str:
         """
-        탭 제목을 생성합니다 ("[커스텀명]:포트명" 형식).
+        현재 설정에 맞는 탭 제목을 생성하여 반환합니다.
+        형식: "[커스텀명]:포트명"
 
         Returns:
             str: 탭 제목.
@@ -139,34 +239,53 @@ class PortPanel(QWidget):
             return self.custom_name
 
     def update_tab_title(self) -> None:
-        """탭 제목 변경 시그널을 발생시킵니다."""
+        """
+        탭 제목 변경 시그널을 발생시킵니다.
+        상위 컨테이너(PortTabPanel)가 이를 감지하여 실제 탭 텍스트를 변경합니다.
+        """
         title = self.get_tab_title()
-        self.data_log_widget.set_tab_name(title)
+        # 로그 위젯의 내부 탭 이름 설정 (저장 파일명용)
+        self._data_log_widget.set_tab_name(title)
         self.tab_title_changed.emit(title)
 
+    # -------------------------------------------------------------------------
+    # Internal Slots
+    # -------------------------------------------------------------------------
+    def _on_port_changed(self, _port_name: str) -> None:
+        """포트 콤보박스 변경 시 호출되어 탭 제목을 갱신합니다."""
+        self.update_tab_title()
+
+    # -------------------------------------------------------------------------
+    # State Persistence
+    # -------------------------------------------------------------------------
     def get_state(self) -> dict:
         """
-        패널 상태 반환
+        패널의 현재 상태를 딕셔너리로 반환합니다 (저장용).
 
         Returns:
             dict: 패널 상태 데이터.
         """
         return {
             "custom_name": self.custom_name,
-            "port_settings_widget": self.port_settings_widget.get_state(),
-            "data_log_widget": self.data_log_widget.get_state() # DataLogWidget은 내부적으로 get_state 유지
+            "port_settings_widget": self._port_settings_widget.get_state(),
+            "data_log_widget": self._data_log_widget.get_state()
         }
 
     def apply_state(self, state: dict) -> None:
         """
-        패널 상태 적용
+        저장된 상태를 패널에 적용합니다 (복원용).
 
         Args:
             state (dict): 패널 상태 데이터.
         """
         if not state:
             return
+
         self.custom_name = state.get("custom_name", "Port")
-        self.port_settings_widget.apply_state(state.get("port_settings_widget", {}))
-        self.data_log_widget.apply_state(state.get("data_log_widget", {})) # DataLogWidget은 내부적으로 apply_state 유지
+
+        # 하위 위젯 상태 복원
+        self._port_settings_widget.apply_state(state.get("port_settings_widget", {}))
+        self._data_log_widget.apply_state(state.get("data_log_widget", {}))
+
+        # 제목 갱신
         self.update_tab_title()

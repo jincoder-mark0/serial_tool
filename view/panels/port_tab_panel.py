@@ -7,11 +7,13 @@
 * 멀티 포트 환경에서 효율적인 공간 활용
 * 탭 추가/삭제 및 동적 관리 기능 캡슐화
 * '플러스(+)' 탭을 통한 직관적인 추가 UX 제공
+* 외부에서 개별 탭의 내부 구현을 몰라도 데이터를 라우팅할 수 있는 인터페이스 제공
 
 ## WHAT
 * QTabWidget 상속 및 커스텀 동작 구현
 * 탭 추가, 닫기, 이름 변경 기능
 * 특정 포트 탭으로의 데이터 라우팅 지원 (DTO 기반)
+* 활성 탭 및 특정 인덱스 탭에 대한 안전한 접근자 제공
 
 ## HOW
 * EventFilter를 통한 탭바 더블클릭 감지
@@ -33,7 +35,7 @@ from common.dtos import LogDataBatch
 class PortTabPanel(QTabWidget):
     """
     포트 탭들을 관리하는 패널입니다.
-    탭 추가/삭제 및 '+' 탭 기능을 캡슐화합니다.
+    탭 추가/삭제 및 '+' 탭 기능을 캡슐화하며, 하위 패널에 대한 접근 인터페이스를 제공합니다.
     """
 
     # 시그널 정의
@@ -67,6 +69,39 @@ class PortTabPanel(QTabWidget):
         """
         self.setToolTip(language_manager.get_text("left_tooltip_port_tab"))
 
+    # -------------------------------------------------------------------------
+    # Facade Accessors (View 내부 및 Presenter용 접근자)
+    # -------------------------------------------------------------------------
+    def get_current_port_panel(self) -> Optional[PortPanel]:
+        """
+        현재 선택된 탭의 PortPanel을 반환합니다.
+
+        Returns:
+            Optional[PortPanel]: 현재 활성화된 포트 패널. (없거나 +탭인 경우 None)
+        """
+        current_widget = self.currentWidget()
+        if isinstance(current_widget, PortPanel):
+            return current_widget
+        return None
+
+    def get_port_panel_at(self, index: int) -> Optional[PortPanel]:
+        """
+        특정 인덱스의 PortPanel을 반환합니다.
+
+        Args:
+            index (int): 탭 인덱스.
+
+        Returns:
+            Optional[PortPanel]: 해당 인덱스의 포트 패널.
+        """
+        widget = self.widget(index)
+        if isinstance(widget, PortPanel):
+            return widget
+        return None
+
+    # -------------------------------------------------------------------------
+    # Event Handlers & Logic
+    # -------------------------------------------------------------------------
     def eventFilter(self, obj, event):
         """
         탭바 더블클릭 이벤트를 감지합니다.
@@ -253,7 +288,7 @@ class PortTabPanel(QTabWidget):
         Logic:
             - DTO에서 포트 이름과 데이터 추출
             - 모든 탭을 순회하며 일치하는 PortPanel 검색
-            - 일치 시 해당 패널의 로그 위젯에 데이터 추가
+            - 일치 시 해당 패널의 로그 인터페이스(Facade) 호출
 
         Args:
             batch (LogDataBatch): 로그 데이터 배치 DTO.
@@ -268,8 +303,7 @@ class PortTabPanel(QTabWidget):
             if isinstance(widget, PortPanel):
                 # DTO의 포트 이름과 일치하는지 확인
                 if widget.get_port_name() == batch.port:
-                    if hasattr(widget, 'data_log_widget'):
-                        widget.data_log_widget.append_data(batch.data)
+                    widget.append_log_data(batch.data)
                     return  # 찾았으면 종료
 
     def _on_panel_title_changed(self, panel: PortPanel, title: str) -> None:

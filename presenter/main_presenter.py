@@ -19,6 +19,7 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 
 ## HOW
 * EventRouter 및 Signal/Slot 기반 통신
+* View의 Facade 메서드를 통한 상태 조회 (LoD 준수)
 * DTO를 활용한 데이터 교환 (Type Safety)
 * SettingsManager 주입 및 관리
 """
@@ -67,7 +68,7 @@ class MainPresenter(QObject):
     메인 프레젠터 클래스
 
     애플리케이션의 전체적인 흐름을 제어하고 하위 Presenter를 관리합니다.
-    초기화 로직은 AppLifecycleManager에 위임합니다.
+    View의 내부 구조를 알지 못해도 인터페이스를 통해 제어할 수 있도록 설계되었습니다.
     """
 
     def __init__(self, view: MainWindow) -> None:
@@ -76,7 +77,7 @@ class MainPresenter(QObject):
 
         Logic:
             - LifecycleManager를 통한 초기화 시퀀스 실행
-            - 탭 변경 시그널 연결 (UI 상태 동기화)
+            - View의 추상화된 시그널 연결 (UI 상태 동기화)
 
         Args:
             view (MainWindow): 메인 윈도우 뷰 인스턴스.
@@ -91,7 +92,7 @@ class MainPresenter(QObject):
         self.lifecycle_manager.initialize_app()
 
         # 탭 변경 시 UI 상태 동기화를 위해 시그널 연결
-        self.view.left_section.port_tab_panel.currentChanged.connect(self._on_port_tab_changed)
+        self.view.connect_port_tab_changed(self._on_port_tab_changed)
 
     def _init_core_systems(self) -> None:
         """
@@ -115,16 +116,20 @@ class MainPresenter(QObject):
         # File Transfer
         self.file_presenter = FilePresenter(self.connection_controller)
 
-        # Packet Inspector (SettingsManager 주입)
+        # Packet Inspector
+        # View 계층 구조를 모르더라도 접근 가능하도록 MainWindow가 프로퍼티 제공
+        packet_view = getattr(self.view, 'packet_view', None)
         self.packet_presenter = PacketPresenter(
-            self.view.right_section.packet_panel,
+            packet_view,
             self.event_router,
             self.settings_manager
         )
 
         # Manual Control
+        # View 계층 구조를 모르더라도 접근 가능하도록 MainWindow가 프로퍼티 제공
+        manual_view = getattr(self.view, 'manual_control_view', None)
         self.manual_control_presenter = ManualControlPresenter(
-            self.view.left_section.manual_control_panel,
+            manual_view,
             self.connection_controller,
             self.view.append_local_echo_data,
             self.port_presenter.get_active_port_name
@@ -160,7 +165,7 @@ class MainPresenter(QObject):
         # 내부 Model 연결
         self.macro_runner.send_requested.connect(self.on_macro_send_requested)
 
-        # View 연결
+        # View 연결 (Facade Signal 사용)
         self.view.settings_save_requested.connect(self.on_settings_change_requested)
         self.view.font_settings_changed.connect(self.on_font_settings_changed)
         self.view.close_requested.connect(self.on_close_requested)
@@ -244,7 +249,7 @@ class MainPresenter(QObject):
         Logic:
             - 매크로 러너 안전 종료 (Wait)
             - 데이터 핸들러 및 타이머 정지
-            - View에서 현재 윈도우 및 위젯 상태(DTO) 수집
+            - View에서 현재 윈도우 및 위젯 상태(DTO) 수집 (Facade)
             - SettingsManager를 통해 설정 저장
             - 활성 연결 종료
             - 종료 로그 기록
@@ -255,16 +260,22 @@ class MainPresenter(QObject):
         if self.macro_runner.isRunning():
             logger.info("Stopping active macro runner...")
             self.macro_runner.stop()
-            self.macro_runner.wait(1000)  # 최대 1초 대기 (Deadlock 방지)
+            self.macro_runner.wait(1000)  # 최대 1초 대기
 
         self.data_handler.stop()
         if self.status_timer:
             self.status_timer.stop()
 
+        # View 상태 수집 (Facade Method 사용)
         state = self.view.get_window_state()
+
+        # ManualControlPresenter를 통해 상태 DTO 획득
+        # View 내부 위젯 이름을 몰라도 됨
         manual_state_dto = self.manual_control_presenter.get_state()
 
         # DTO -> Dict 변환하여 상태 병합
+        # (SettingsManager가 기대하는 구조로 변환)
+        # 차후 SettingsManager도 DTO를 받도록 리팩토링 가능
         state.left_section_state["manual_control"] = {
             "manual_control_widget": {
                 "input_text": manual_state_dto.input_text,
@@ -344,12 +355,14 @@ class MainPresenter(QObject):
         self.view.switch_theme(new_state.theme.lower())
         language_manager.set_language(new_state.language)
 
-        # 모든 데이터 로그 위젯에 Max Lines 적용
+        # 모든 데이터 로그 위젯에 Max Lines 적용 (Facade Method 사용)
+        # View가 제공하는 이터레이터나 일괄 설정 메서드 활용
+        # 여기서는 View의 인터페이스를 통해 접근한다고 가정
         count = self.view.get_port_tabs_count()
         for i in range(count):
             widget = self.view.get_port_tab_widget(i)
-            if hasattr(widget, 'data_log_widget'):
-                widget.data_log_widget.set_max_lines(new_state.max_log_lines)
+            # PortPanel인지 확인하고 설정 (View 내부 로직 의존 최소화)
+            widget.set_max_log_lines(new_state.max_log_lines)
 
         self.manual_control_presenter.update_local_echo_setting(new_state.local_echo_enabled)
 
@@ -408,7 +421,7 @@ class MainPresenter(QObject):
         포트 닫힘 알림
 
         Logic:
-            - [Safety Check] 매크로 실행 중 포트가 닫히면 매크로 중단
+            - 매크로 실행 중 포트가 닫히면 매크로 중단
             - 상태바 업데이트
             - 컨트롤 패널 비활성화 동기화
 
@@ -457,33 +470,24 @@ class MainPresenter(QObject):
         """
         컨트롤 패널(Manual/Macro)의 활성화 상태 동기화
 
-        규칙:
-        1. 기본적으로 '현재 탭'이 연결되어 있으면 활성화.
-        2. 단, 'Broadcast'가 체크되어 있다면, '현재 탭'이 끊겨 있어도
-           '다른 어떤 포트라도' 연결되어 있으면 활성화 (전송 가능).
+        Logic:
+            - View의 Facade 메서드를 통해 현재 탭의 연결 상태 확인
+            - 규칙: (현재 탭 연결됨) OR (브로드캐스트 켜짐 AND 활성 포트 있음)
         """
-        if not hasattr(self.view.left_section, 'port_tab_panel'):
-            return
+        # 1. View를 통해 현재 탭 연결 상태 조회 (Facade Method)
+        is_current_connected = self.view.is_current_port_connected()
 
-        # 1. 현재 탭의 연결 상태 확인
-        current_index = self.view.left_section.port_tab_panel.currentIndex()
-        widget = self.view.left_section.port_tab_panel.widget(current_index)
-        is_current_connected = False
-        
-        # 유효한 PortPanel인지 확인
-        if widget and hasattr(widget, 'is_connected'):
-            is_current_connected = widget.is_connected()
-
-        # PortPanel인지 확인 (Duck typing)
+        # 2. 전체 시스템의 활성 포트 존재 여부 확인
         has_any_connection = self.connection_controller.has_active_connection
 
-        # 하위 Presenter를 통해 View 제어
+        # 3. Manual Control 활성화 로직
         if self.manual_control_presenter:
             is_broadcast = self.manual_control_presenter.is_broadcast_enabled()
             # (현재 연결됨) OR (브로드캐스트 켜짐 AND 활성 포트 있음)
             should_enable = is_current_connected or (is_broadcast and has_any_connection)
             self.manual_control_presenter.set_enabled(should_enable)
 
+        # 4. Macro Control 활성화 로직
         if self.macro_presenter:
             is_broadcast = self.macro_presenter.is_broadcast_enabled()
             should_enable = is_current_connected or (is_broadcast and has_any_connection)
@@ -520,9 +524,9 @@ class MainPresenter(QObject):
 
         Logic:
             - Prefix/Suffix 등 설정 조회 및 데이터 가공
-            - [Safety] 전송 대상 포트의 유효성 검사 (Gatekeeping)
+            - 전송 대상 포트의 유효성 검사
             - Broadcast 여부에 따른 전송 분기
-            - [Feedback] 전송 성공 시 Local Echo 출력
+            - 전송 성공 시 Local Echo 출력
 
         Args:
             manual_command (ManualCommand): 전송할 명령어 DTO.
@@ -569,7 +573,7 @@ class MainPresenter(QObject):
             self.connection_controller.send_data(active_port, data)
             sent_success = True
 
-        # 4. Local Echo 처리 (성공 시에만)
+        # 4. Local Echo 처리
         local_echo_enabled = self.settings_manager.get(ConfigKeys.PORT_LOCAL_ECHO, False)
         if sent_success and local_echo_enabled:
             self.view.append_local_echo_data(data)
@@ -631,7 +635,7 @@ class MainPresenter(QObject):
         stats = PortStatistics(
             rx_bytes=self.data_handler.rx_byte_count,
             tx_bytes=self.data_handler.tx_byte_count,
-            bps=0  # BPS 계산 로직은 필요시 추가
+            bps=0
         )
 
         self.view.update_status_bar_stats(stats)

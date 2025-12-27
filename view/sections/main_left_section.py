@@ -11,14 +11,14 @@
 ## WHAT
 * PortTabPanel, ManualControlPanel, SystemLogWidget 배치 및 레이아웃 설정
 * 하위 패널 간의 시그널 라우팅 및 상태 동기화 로직
-* Presenter와의 통신을 위한 시그널 집계 (Facade 역할)
+* Presenter와의 통신을 위한 시그널 집계 및 Facade 메서드 제공
 
 ## HOW
 * QVBoxLayout을 사용하여 위젯들을 수직으로 배치
 * PortTabPanel에 가변 공간(Stretch)을 할당하여 윈도우 리사이징 대응
-* DTO(LogDataBatch)를 사용하여 데이터 흐름 처리
+* DTO(LogDataBatch, SystemLogEvent)를 사용하여 데이터 흐름 처리
 """
-from typing import Optional, Dict, Any
+from typing import Optional, Dict, Any, Callable, List
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtCore import pyqtSignal
@@ -28,22 +28,21 @@ from view.panels.port_panel import PortPanel
 from view.panels.manual_control_panel import ManualControlPanel
 from view.panels.port_tab_panel import PortTabPanel
 from view.widgets.system_log import SystemLogWidget
-from common.dtos import LogDataBatch
+from common.dtos import LogDataBatch, SystemLogEvent, ColorRule
 
 
 class MainLeftSection(QWidget):
     """
     좌측 섹션 관리 클래스
 
-    Attributes:
-        port_tab_panel (PortTabPanel): 다중 포트 탭을 관리하는 패널.
-        manual_control_panel (ManualControlPanel): 수동 명령어 전송 패널.
-        system_log_widget (SystemLogWidget): 전역 시스템 로그 표시 위젯.
+    PortTabPanel, ManualControlPanel, SystemLogWidget을 포함하며,
+    외부(Presenter)에서 내부 구조를 몰라도 기능을 수행할 수 있도록 Facade 메서드를 제공합니다.
     """
 
     # 하위 패널의 이벤트를 상위(MainWindow/Presenter)로 전달하기 위한 시그널
     send_requested = pyqtSignal(object)  # ManualCommand DTO 전달
     port_tab_added = pyqtSignal(object)  # 생성된 PortPanel 객체 전달
+    current_tab_changed = pyqtSignal()   # 탭 변경 알림 (Presenter 동기화용)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -88,8 +87,9 @@ class MainLeftSection(QWidget):
         # 외부 전달용 시그널 연결
         self.port_tab_panel.port_tab_added.connect(self.port_tab_added.emit)
 
-        # 탭 변경 시 매뉴얼 컨트롤 활성화 상태 동기화
+        # 탭 변경 시 시그널 연결
         self.port_tab_panel.currentChanged.connect(self._on_tab_changed)
+        self.port_tab_panel.currentChanged.connect(self.current_tab_changed.emit)
 
         # ---------------------------------------------------------
         # 2. 수동 제어 패널 (Manual Control)
@@ -118,7 +118,112 @@ class MainLeftSection(QWidget):
         pass
 
     # -------------------------------------------------------------------------
-    # 포트 및 탭 제어 인터페이스 (Facade)
+    # Facade Interface (Presenter 연동)
+    # -------------------------------------------------------------------------
+    def is_current_port_connected(self) -> bool:
+        """
+        현재 활성 포트 패널의 연결 여부를 반환합니다.
+
+        Returns:
+            bool: 연결 여부. 탭이 없거나 선택되지 않았으면 False.
+        """
+        current_widget = self.port_tab_panel.currentWidget()
+        if isinstance(current_widget, PortPanel):
+            if hasattr(current_widget, 'is_connected'):
+                return current_widget.is_connected()
+        return False
+
+    def connect_tab_changed_signal(self, slot: Callable[[int], None]) -> None:
+        """
+        탭 변경 시그널을 외부 슬롯에 연결합니다.
+
+        Args:
+            slot (Callable): 연결할 슬롯.
+        """
+        self.port_tab_panel.currentChanged.connect(slot)
+
+    def get_port_tabs_count(self) -> int:
+        """현재 열려있는 포트 탭의 개수를 반환합니다."""
+        return self.port_tab_panel.count()
+
+    def get_port_panel_at(self, index: int) -> Optional[PortPanel]:
+        """
+        인덱스에 해당하는 포트 패널을 반환합니다.
+
+        Args:
+            index (int): 탭 인덱스.
+
+        Returns:
+            Optional[PortPanel]: 포트 패널 객체.
+        """
+        widget = self.port_tab_panel.widget(index)
+        if isinstance(widget, PortPanel):
+            return widget
+        return None
+
+    def get_current_port_panel(self) -> Optional[PortPanel]:
+        """
+        현재 활성화된 포트 패널을 반환합니다.
+
+        Returns:
+            Optional[PortPanel]: 현재 포트 패널 객체.
+        """
+        widget = self.port_tab_panel.currentWidget()
+        if isinstance(widget, PortPanel):
+            return widget
+        return None
+
+    def get_current_port_name(self) -> str:
+        """
+        현재 활성 포트의 이름을 반환합니다.
+
+        Returns:
+            str: 포트 이름. (없으면 빈 문자열)
+        """
+        panel = self.get_current_port_panel()
+        if panel and hasattr(panel, 'get_port_name'):
+            return panel.get_port_name()
+        return ""
+
+    def log_system_message(self, event: SystemLogEvent) -> None:
+        """
+        시스템 로그에 메시지를 추가합니다.
+
+        Args:
+            event (SystemLogEvent): 시스템 로그 이벤트 DTO.
+        """
+        self.system_log_widget.append_log(event)
+
+    def set_system_log_color_rules(self, rules: List[ColorRule]) -> None:
+        """
+        시스템 로그 위젯에 색상 규칙을 설정합니다.
+
+        Args:
+            rules (List[ColorRule]): 색상 규칙 리스트.
+        """
+        self.system_log_widget.set_color_rules(rules)
+
+    def trigger_current_port_log_save(self) -> None:
+        """
+        현재 활성 탭의 로그 저장을 트리거합니다.
+        """
+        panel = self.get_current_port_panel()
+        if panel and hasattr(panel, 'trigger_log_save'):
+             panel.trigger_log_save()
+        # Fallback: PortPanel에 메서드가 없고 widget을 직접 알아야 하는 경우
+        elif panel and hasattr(panel, 'data_log_widget'):
+             panel.data_log_widget.on_data_log_logging_toggled(True)
+
+    def clear_current_port_log(self) -> None:
+        """
+        현재 활성 탭의 로그를 지웁니다.
+        """
+        panel = self.get_current_port_panel()
+        if panel and hasattr(panel, 'clear_data_log'):
+            panel.clear_data_log()
+
+    # -------------------------------------------------------------------------
+    # 포트 및 탭 제어 인터페이스
     # -------------------------------------------------------------------------
 
     def add_new_port_tab(self) -> None:
@@ -127,18 +232,18 @@ class MainLeftSection(QWidget):
 
     def add_new_tab(self, port: str) -> None:
         """
-        새로운 포트 탭을 추가합니다.
+        특정 포트로 새로운 탭을 추가합니다 (복원용).
         """
         # 탭 위젯 생성 (PortPanel 가정)
         tab = PortPanel(port)
-        
+
         # 개별 탭의 연결 상태 변경 시그널을 핸들러에 연결
-        # PortPanel 내부에서 connection_changed(bool) 시그널이 정의되어 있어야 함
-        tab.connection_changed.connect(self._on_port_connection_changed)
+        if hasattr(tab, 'connection_changed'):
+             tab.connection_changed.connect(self._on_port_connection_changed)
 
         # 탭 추가
         self.port_tab_panel.addTab(tab, port)
-        
+
         # 새 탭으로 포커스 이동 (이때 _on_tab_changed가 호출됨)
         self.port_tab_panel.setCurrentWidget(tab)
 
@@ -146,10 +251,8 @@ class MainLeftSection(QWidget):
         """
         현재 활성화된 탭의 포트 연결을 엽니다.
         """
-        current_index = self.port_tab_panel.currentIndex()
-        current_widget = self.port_tab_panel.widget(current_index)
-
-        if isinstance(current_widget, PortPanel):
+        current_widget = self.get_current_port_panel()
+        if current_widget:
             if not current_widget.is_connected():
                 current_widget.toggle_connection()
 
@@ -157,10 +260,8 @@ class MainLeftSection(QWidget):
         """
         현재 활성화된 탭의 포트 연결을 닫습니다.
         """
-        current_index = self.port_tab_panel.currentIndex()
-        current_widget = self.port_tab_panel.widget(current_index)
-
-        if isinstance(current_widget, PortPanel):
+        current_widget = self.get_current_port_panel()
+        if current_widget:
             if current_widget.is_connected():
                 current_widget.toggle_connection()
 
@@ -187,11 +288,12 @@ class MainLeftSection(QWidget):
         Args:
             data (bytes): 추가할 데이터.
         """
-        current_index = self.port_tab_panel.currentIndex()
-        current_widget = self.port_tab_panel.widget(current_index)
-
-        if isinstance(current_widget, PortPanel):
-            if hasattr(current_widget, 'data_log_widget'):
+        current_widget = self.get_current_port_panel()
+        if current_widget:
+            # PortPanel Facade 호출
+            if hasattr(current_widget, 'append_log_data'):
+                current_widget.append_log_data(data)
+            elif hasattr(current_widget, 'data_log_widget'):
                 current_widget.data_log_widget.append_data(data)
 
     def append_rx_data(self, batch: LogDataBatch) -> None:
@@ -218,9 +320,13 @@ class MainLeftSection(QWidget):
         Args:
             panel (PortPanel): 추가된 포트 패널.
         """
-        panel.port_settings_widget.port_connection_changed.connect(
-            self._on_port_connection_changed
-        )
+        # PortPanel의 Facade Signal을 통해 연결 상태 변경 감지
+        if hasattr(panel, 'connection_changed'):
+             panel.connection_changed.connect(self._on_port_connection_changed)
+        elif hasattr(panel, 'port_settings_widget'): # Fallback
+             panel.port_settings_widget.port_connection_changed.connect(
+                self._on_port_connection_changed
+             )
 
     def _on_tab_changed(self, index: int) -> None:
         """
@@ -230,7 +336,6 @@ class MainLeftSection(QWidget):
         Args:
             index (int): 변경된 탭 인덱스.
         """
-        # 탭 변경 시 현재 활성 탭의 연결 상태를 확인하여 UI 갱신
         self._sync_manual_control_state()
 
     def _on_port_connection_changed(self, connected: bool) -> None:
@@ -250,11 +355,9 @@ class MainLeftSection(QWidget):
         """
         현재 활성 탭의 연결 상태를 기반으로 ManualControlPanel의 활성화 상태를 동기화합니다.
         """
-        current_index = self.port_tab_panel.currentIndex()
-        current_widget = self.port_tab_panel.widget(current_index)
+        current_widget = self.get_current_port_panel()
 
-        if current_widget and isinstance(current_widget, PortPanel):
-            # 현재 탭이 PortPanel이면 그 연결 상태를 따름
+        if current_widget:
             is_connected = current_widget.is_connected()
             self.manual_control_panel.set_controls_enabled(is_connected)
         else:
