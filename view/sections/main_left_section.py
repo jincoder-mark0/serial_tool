@@ -208,11 +208,7 @@ class MainLeftSection(QWidget):
         현재 활성 탭의 로그 저장을 트리거합니다.
         """
         panel = self.get_current_port_panel()
-        if panel and hasattr(panel, 'trigger_log_save'):
-             panel.trigger_log_save()
-        # Fallback: PortPanel에 메서드가 없고 widget을 직접 알아야 하는 경우
-        elif panel and hasattr(panel, 'data_log_widget'):
-             panel.data_log_widget.on_data_log_logging_toggled(True)
+        panel.trigger_log_save()
 
     def clear_current_port_log(self) -> None:
         """
@@ -291,10 +287,7 @@ class MainLeftSection(QWidget):
         current_widget = self.get_current_port_panel()
         if current_widget:
             # PortPanel Facade 호출
-            if hasattr(current_widget, 'append_log_data'):
-                current_widget.append_log_data(data)
-            elif hasattr(current_widget, 'data_log_widget'):
-                current_widget.data_log_widget.append_data(data)
+            current_widget.append_log_data(data)
 
     def append_rx_data(self, batch: LogDataBatch) -> None:
         """
@@ -321,12 +314,7 @@ class MainLeftSection(QWidget):
             panel (PortPanel): 추가된 포트 패널.
         """
         # PortPanel의 Facade Signal을 통해 연결 상태 변경 감지
-        if hasattr(panel, 'connection_changed'):
-             panel.connection_changed.connect(self._on_port_connection_changed)
-        elif hasattr(panel, 'port_settings_widget'): # Fallback
-             panel.port_settings_widget.port_connection_changed.connect(
-                self._on_port_connection_changed
-             )
+        panel.connection_changed.connect(self._on_port_connection_changed)
 
     def _on_tab_changed(self, index: int) -> None:
         """

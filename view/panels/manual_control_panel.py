@@ -141,31 +141,31 @@ class ManualControlPanel(QWidget):
 
     def is_hex_mode(self) -> bool:
         """HEX 모드 체크 여부를 반환합니다."""
-        return self._manual_control_widget.hex_chk.isChecked()
+        return self._manual_control_widget.is_hex_mode()
 
     def is_prefix_enabled(self) -> bool:
         """Prefix 사용 여부를 반환합니다."""
-        return self._manual_control_widget.prefix_chk.isChecked()
+        return self._manual_control_widget.is_prefix_enabled()
 
     def is_suffix_enabled(self) -> bool:
         """Suffix 사용 여부를 반환합니다."""
-        return self._manual_control_widget.suffix_chk.isChecked()
+        return self._manual_control_widget.is_suffix_enabled()
 
     def is_rts_enabled(self) -> bool:
         """RTS 체크 여부를 반환합니다."""
-        return self._manual_control_widget.rts_chk.isChecked()
+        return self._manual_control_widget.is_rts_enabled()
 
     def is_dtr_enabled(self) -> bool:
         """DTR 체크 여부를 반환합니다."""
-        return self._manual_control_widget.dtr_chk.isChecked()
+        return self._manual_control_widget.is_dtr_enabled()
 
     def is_local_echo_enabled(self) -> bool:
         """Local Echo 체크 여부를 반환합니다."""
-        return self._manual_control_widget.local_echo_chk.isChecked()
+        return self._manual_control_widget.is_local_echo_enabled()
 
     def is_broadcast_enabled(self) -> bool:
         """Broadcast 체크 여부를 반환합니다."""
-        return self._manual_control_widget.broadcast_chk.isChecked()
+        return self._manual_control_widget.is_broadcast_enabled()
 
     def set_input_focus(self) -> None:
         """입력창에 포커스를 설정합니다."""

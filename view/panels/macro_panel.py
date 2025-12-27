@@ -149,13 +149,7 @@ class MacroPanel(QWidget):
         Returns:
             bool: 브로드캐스트 활성화 여부.
         """
-        if self._macro_control:
-            # Widget 내부 구현은 Widget이 알아서 처리하도록 getter가 있다면 더 좋음
-            # 현재는 Widget의 checkbox에 직접 접근하는 구조라면:
-            # return self._macro_control.broadcast_chk.isChecked()
-            # Widget 리팩토링이 되었다면:
-            return self._macro_control.broadcast_chk.isChecked()
-        return False
+        return self._macro_control.is_broadcast_enabled()
 
     def get_macro_entries(self) -> List[MacroEntry]:
         """

@@ -314,6 +314,19 @@ class PortSettingsWidget(QGroupBox):
             # 해제 요청 (Request Close)
             self.disconnect_requested.emit()
 
+    def get_port_name(self) -> str:
+        """
+        현재 선택된 포트 이름을 반환합니다.
+        (콤보박스의 UserData 우선, 없으면 Text)
+
+        Returns:
+            str: 포트 이름 (예: 'COM1')
+        """
+        port_data = self.port_combo.currentData()
+        if port_data:
+            return str(port_data)
+        return self.port_combo.currentText()
+
     def get_current_config(self) -> PortConfig:
         """
         현재 UI 설정값을 바탕으로 DTO 생성
@@ -328,10 +341,7 @@ class PortSettingsWidget(QGroupBox):
         protocol = self.protocol_combo.currentText()
 
         # 화면 표시 텍스트가 아닌 실제 데이터(포트명)를 사용
-        port = self.port_combo.currentData()
-        if port is None:
-            # 데이터가 없으면 텍스트(직접 입력 등) 사용
-            port = self.port_combo.currentText()
+        port = self.get_port_name()
 
         # DTO 생성
         config = PortConfig(port=port, protocol=protocol)
@@ -498,8 +508,7 @@ class PortSettingsWidget(QGroupBox):
             dict: 설정 데이터
         """
         # 저장 시에는 실제 포트 이름(Data)을 저장
-        current_data = self.port_combo.currentData()
-        port_val = current_data if current_data else self.port_combo.currentText()
+        port_val = self.get_port_name()
 
         state = {
             "protocol": self.protocol_combo.currentText(),

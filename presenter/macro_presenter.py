@@ -356,8 +356,7 @@ class MacroPresenter(QObject):
             current (int): 현재 반복 횟수.
             total (int): 전체 반복 횟수 (0=무한).
         """
-        if hasattr(self.panel, 'update_auto_count'):
-            self.panel.update_auto_count(current, total)
+        self.panel.update_auto_count(current, total)
 
     def on_error(self, event: MacroErrorEvent) -> None:
         """

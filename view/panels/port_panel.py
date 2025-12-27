@@ -165,11 +165,8 @@ class PortPanel(QWidget):
         Returns:
             str: 포트 이름 (예: "COM1").
         """
-        # 콤보박스의 UserData(실제 포트명)를 우선 사용
-        port_data = self._port_settings_widget.port_combo.currentData()
-        if port_data:
-            return str(port_data)
-        return self._port_settings_widget.port_combo.currentText()
+        # 하위 위젯의 Getter 호출 (캡슐화 준수)
+        return self._port_settings_widget.get_port_name()
 
     # --- Data Log & Stats ---
 
