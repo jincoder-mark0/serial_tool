@@ -192,10 +192,6 @@ class PortPanel(QWidget):
         """로그 뷰어를 초기화합니다."""
         self._data_log_widget.on_clear_data_log_clicked()
 
-    def trigger_log_save(self) -> None:
-        """로그 저장 다이얼로그를 엽니다."""
-        self._data_log_widget.on_data_log_logging_toggled(True)
-
     def set_max_log_lines(self, max_lines: int) -> None:
         """
         최대 로그 라인 수를 설정합니다.
@@ -299,6 +295,10 @@ class PortPanel(QWidget):
         """
         if self.is_connected():
             self.toggle_connection()
+
+    def trigger_log_save(self) -> None:
+        """로그 저장 다이얼로그를 엽니다."""
+        self._data_log_widget.on_data_log_logging_toggled(True)
 
     def trigger_clear_log(self) -> None:
         """

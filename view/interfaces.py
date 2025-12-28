@@ -201,6 +201,13 @@ class IPortView(Protocol):
         """연결 해제 동작 트리거"""
         ...
 
+    def trigger_log_save(self) -> None:
+        """
+        로그 저장(또는 설정 저장) 동작을 트리거합니다.
+        (주로 단축키나 외부 액션에 의해 호출됨)
+        """
+        ...
+
     def trigger_clear_log(self) -> None:
         """로그 지우기 동작 트리거"""
         ...
