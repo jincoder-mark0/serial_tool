@@ -366,34 +366,3 @@ class PortPresenter(QObject):
 
         # 시스템 로그 기록
         self._log_event(f"[{event.port}] Error: {event.message}", "ERROR")
-
-    def connect_current_port(self) -> None:
-        """
-        현재 활성화된 탭의 포트 연결을 시도합니다. (단축키 F2 등에서 호출)
-        """
-        self.update_current_port_view()
-        if self.current_port_view:
-            config = self.current_port_view.get_port_config()
-            port_name = config.port
-            if port_name and not self.connection_controller.is_connection_open(port_name):
-                self.connection_controller.open_connection(config)
-            elif not port_name:
-                logger.warning("No port selected")
-
-    def disconnect_current_port(self) -> None:
-        """
-        현재 활성화된 탭의 포트 연결을 해제합니다. (단축키 F3 등에서 호출)
-        """
-        self.update_current_port_view()
-        if self.current_port_view:
-            port_name = self.current_port_view.get_port_name()
-            if port_name and self.connection_controller.is_connection_open(port_name):
-                self.connection_controller.close_connection(port_name)
-
-    def clear_log_current_port(self) -> None:
-        """
-        현재 활성화된 탭의 데이터 로그를 지웁니다. (단축키 F5 등에서 호출)
-        """
-        self.update_current_port_view()
-        if self.current_port_view:
-            self.current_port_view.clear_data_log()

@@ -1,89 +1,168 @@
 /* ==================================================================================
    SerialTool Light Theme
    ==================================================================================
-   [Color Palette Reference]
+   [Color Palette Strict Reference]
+
+   0. Palette (Definitions)
+      [Cyan Family]
+      - Cyan Base:          #0097A7
+      - Cyan Dark:          #00BCD4 (Button BG)
+      - Cyan Hover:         #26C6DA (Button Hover BG)
+      - Cyan Light:         #80DEEA (Button Hover Border)
+      - Cyan Pressed:       #00838F
+      - Cyan Disabled:      #E0F7FA (BG), #B2EBF2 (Border), #80DEEA (Text)
+      - Cyan Selection:     #00BCD4
+
+      [Green Family]
+      - Green Base:         #388E3C
+      - Green Dark:         #4CAF50 (Button BG)
+      - Green Hover:        #66BB6A (Button Hover BG)
+      - Green Light:        #81C784 (Button Hover Border)
+      - Green Pressed:      #2E7D32
+      - Green Disabled:     #E8F5E9 (BG), #C8E6C9 (Border), #A5D6A7 (Text)
+      - Green Selection:    #4CAF50
+
+      [Orange Family]
+      - Orange Base:        #F57C00
+      - Orange Dark:        #FF9800 (Button BG)
+      - Orange Hover:       #FFB74D (Button Hover BG)
+      - Orange Light:       #FFCC80 (Button Hover Border)
+      - Orange Pressed:     #EF6C00
+      - Orange Disabled:    #FFF3E0 (BG), #FFE0B2 (Border), #FFCC80 (Text)
+      - Orange Selection:   #FF9800
+
+      [Pink Family]
+      - Pink Base:          #C2185B
+      - Pink Dark:          #E91E63 (Button BG)
+      - Pink Hover:         #F06292 (Button Hover BG)
+      - Pink Light:         #F48FB1 (Button Hover Border)
+      - Pink Pressed:       #AD1457
+      - Pink Disabled:      #FCE4EC (BG), #F8BBD0 (Border), #F48FB1 (Text)
+      - Pink Selection:     #E91E63
+
+      [Purple Family]
+      - Purple Base:        #7B1FA2
+      - Purple Dark:        #9C27B0 (Button BG)
+      - Purple Hover:       #BA68C8 (Button Hover BG)
+      - Purple Light:       #CE93D8 (Button Hover Border)
+      - Purple Pressed:     #6A1B9A
+      - Purple Disabled:    #F3E5F5 (BG), #E1BEE7 (Border), #CE93D8 (Text)
+      - Purple Selection:   #9C27B0
+
+      [Red Family]
+      - Red Base:           #D32F2F
+      - Red Dark:           #F44336 (Button BG)
+      - Red Hover:          #EF5350 (Button Hover BG)
+      - Red Light:          #E57373 (Button Hover Border)
+      - Red Pressed:        #C62828
+      - Red Disabled:       #FFEBEE (BG), #FFCDD2 (Border), #EF9A9A (Text)
+      - Red Selection:      #F44336
+
+      [Yellow Family]
+      - Yellow Base:        #FBC02D
+      - Yellow Dark:        #FFEB3B (Button BG)
+      - Yellow Hover:       #FFF176 (Button Hover BG)
+      - Yellow Light:       #FFF59D (Button Hover Border)
+      - Yellow Pressed:     #F9A825
+      - Yellow Disabled:    #FFFDE7 (BG), #FFF9C4 (Border), #FFF59D (Text)
+      - Yellow Selection:   #FFEB3B
+
+      [Blue Family]
+      - Blue Base:          #1976D2
+      - Blue Dark:          #2196F3 (Button Checked BG)
+      - Blue Hover:         #42A5F5 (Button Hover BG)
+      - Blue Light:         #64B5F6 (Button Hover Border)
+      - Blue Pressed:       #1565C0
+      - Blue Disabled:      #E3F2FD (BG), #BBDEFB (Border), #90CAF9 (Text)
+      - Blue Selection:     #2196F3
+
+      [Special]
+      - Warning BG:         #FFC107 (Amber)
+      - Warning Border:     #FFA000
+      - Warning Pressed:    #FF6F00
 
    1. Backgrounds
-      - BG Main:            #ffffff (Window, Input Base)
-      - BG Panel/Alt:       #f5f5f5 (Widget, Tab Selected)
-      - BG Header/Bar:      #e0e0e0 (Header, Button Normal)
-      - BG Disabled:        #f0f0f0
+      - BG Main:            #FFFFFF (Window Base, Inputs)
+      - BG Panel/Alt:       #F5F5F5 (Widget, Tab Selected)
+      - BG Header/Bar:      #E0E0E0 (Header, Button Normal, StatusBar)
+      - BG Disabled:        #EEEEEE (Inputs Disabled)
 
    2. Foregrounds (Text)
-      - Text Main:          #333333
-      - Text Dim/Hint:      #505050
-      - Text Disabled:      #a0a0a0
-      - Text Inverted:      #000000
+      - Text Main:          #212121
+      - Text Dim/Hint:      #757575
+      - Text Disabled:      #9E9E9E
+      - Text Inverted:      #FFFFFF
 
    3. Borders & Separators
-      - Border Main:        #c0c0c0
-      - Border Light:       #d0d0d0
-      - Border Focus:       #2196F3
+      - Border Main:        #BDBDBD
+      - Border Light:       #E0E0E0
+      - Border Focus:       #4CAF50 (Green Dark - Primary)
 
    4. Selections
-      - Selection BG:       #a0c8f0
+      - Selection BG:       #BBDEFB
       - Selection Text:     #000000
 
    5. Accents & States
-      - Primary (Blue):     #2196F3 (Focus, Active Tab, Links)
-      - Success (Green):    #4CAF50 (Connect, Start)
-      - Danger  (Red):      #F44336 (Error, Stop, Delete)
-      - Warning (Orange):   #FFC107 (Pause, Warning)
+      - Primary:            #4CAF50 (Green Dark)
+      - Secondary:          #2196F3 (Blue Dark)
+      - Danger:             #F44336 (Red Dark)
+      - Warning:            #FFC107 (Amber)
 
    6. Component Specific
-      - Hover Overlay:      Darken by ~10% (e.g., #d0d0d0 for buttons)
-      - Pressed Overlay:    Darken by ~20% (e.g., #c0c0c0 for buttons)
-      - SmartEdit LineNum:  #f0f0f0 (BG), #808080 (Text), #e8e8e8 (Current)
+      - Button Hover:       #D6D6D6
+      - Button Pressed:     #BDBDBD
+      - ScrollBar Handle:   #BDBDBD
+      - SmartEdit LineNum:  #F5F5F5 (BG), #757575 (Text), #E0E0E0 (Current)
    ================================================================================== */
 
 /* Global Settings */
 QWidget {
-    background-color: #f5f5f5;
-    color: #333333;
-    selection-background-color: #a0c8f0;
+    background-color: #F5F5F5;
+    color: #212121;
+    selection-background-color: #BBDEFB;
     selection-color: #000000;
 }
 
 QToolTip {
-    background-color: #ffffff;
-    color: #333333;
-    border-color: #c0c0c0;
+    background-color: #E0E0E0;
+    color: #212121;
+    border-color: #BDBDBD;
 }
 
 /* MainWindow */
 QMainWindow {
-    background-color: #ffffff;
+    background-color: #FFFFFF;
 }
 
 QMainWindow::separator {
-    background-color: #d0d0d0;
+    background-color: #E0E0E0;
 }
 
 QMainWindow::separator:hover {
-    background-color: #c0c0c0;
+    background-color: #BDBDBD;
 }
 
 /* QTabWidget */
 QTabWidget::pane {
-    border-color: #d0d0d0;
-    background-color: #f5f5f5;
+    border-color: #BDBDBD;
+    background-color: #F5F5F5;
 }
 
 QTabBar::tab {
-    background-color: #e0e0e0;
-    color: #505050;
-    border-color: #d0d0d0;
+    background-color: #E0E0E0;
+    color: #757575;
+    border-color: #BDBDBD;
 }
 
 QTabBar::tab:selected {
-    background-color: #f5f5f5;
-    color: #000000;
-    border-bottom-color: #2196F3;
+    background-color: #F5F5F5;
+    color: #212121;
+    border-bottom-color: #4CAF50;
 }
 
 QTabBar::tab:hover {
-    background-color: #d0d0d0;
-    color: #333333;
+    background-color: #D6D6D6;
+    color: #212121;
 }
 
 QTabBar::close-button {
@@ -91,36 +170,36 @@ QTabBar::close-button {
 }
 
 QTabBar::close-button:hover {
-    background-color: #c0c0c0;
+    background-color: #BDBDBD;
 }
 
-/* QPushButton */
+/* QPushButton (Default) */
 QPushButton {
-    background-color: #e0e0e0;
-    border-color: #c0c0c0;
-    color: #333333;
+    background-color: #E0E0E0;
+    border-color: #BDBDBD;
+    color: #212121;
 }
 
 QPushButton:hover {
-    background-color: #d0d0d0;
-    border-color: #b0b0b0;
+    background-color: #D6D6D6;
+    border-color: #9E9E9E;
 }
 
 QPushButton:pressed {
-    background-color: #c0c0c0;
-    color: #000000;
+    background-color: #BDBDBD;
+    border-color: #4CAF50;
 }
 
 QPushButton:checked {
-    background-color: #a0c8f0;
+    background-color: #BBDEFB;
     border-color: #2196F3;
     color: #000000;
 }
 
 QPushButton:disabled {
-    background-color: #f0f0f0;
-    color: #a0a0a0;
-    border-color: #e0e0e0;
+    background-color: #EEEEEE;
+    color: #9E9E9E;
+    border-color: #E0E0E0;
 }
 
 /* Icons */
@@ -133,42 +212,42 @@ QPushButton#data_log_search_next_btn { qproperty-icon: url(resources/icons/light
 
 /* Inputs */
 QLineEdit, QTextEdit, QPlainTextEdit, QSmartTextEdit, QSmartListView {
-    background-color: #ffffff;
-    border-color: #c0c0c0;
-    color: #333333;
-    selection-background-color: #a0c8f0;
+    background-color: #FFFFFF;
+    border-color: #BDBDBD;
+    color: #212121;
+    selection-background-color: #BBDEFB;
     selection-color: #000000;
 }
 
 QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QSmartTextEdit:focus, QSmartListView:focus {
-    border-color: #2196F3;
+    border-color: #4CAF50;
 }
 
 QLineEdit:disabled, QTextEdit:disabled, QPlainTextEdit:disabled, QSmartTextEdit:disabled, QSmartListView:disabled {
-    background-color: #f0f0f0;
-    color: #a0a0a0;
+    background-color: #EEEEEE;
+    color: #9E9E9E;
 }
 
 /* QSmartTextEdit Properties */
 QSmartTextEdit {
-    qproperty-lineNumberBackgroundColor: #f0f0f0;
-    qproperty-lineNumberColor: #808080;
-    qproperty-currentLineColor: #e8e8e8;
+    qproperty-lineNumberBackgroundColor: #F5F5F5;
+    qproperty-lineNumberColor: #757575;
+    qproperty-currentLineColor: #E0E0E0;
 }
 
 /* QComboBox */
 QComboBox {
-    background-color: #ffffff;
-    border-color: #c0c0c0;
-    color: #333333;
+    background-color: #E0E0E0;
+    border-color: #BDBDBD;
+    color: #212121;
 }
 
 QComboBox:hover {
-    background-color: #f0f0f0;
+    background-color: #D6D6D6;
 }
 
 QComboBox:on {
-    border-color: #2196F3;
+    border-color: #4CAF50;
 }
 
 QComboBox::down-arrow {
@@ -176,217 +255,217 @@ QComboBox::down-arrow {
 }
 
 QComboBox QAbstractItemView {
-    background-color: #ffffff;
-    border-color: #c0c0c0;
-    selection-background-color: #a0c8f0;
-    selection-color: #000000;
+    background-color: #E0E0E0;
+    border-color: #BDBDBD;
+    selection-background-color: #4CAF50;
+    selection-color: #FFFFFF;
 }
 
 /* QProgressBar */
 QProgressBar {
-    background-color: #ffffff;
-    border-color: #c0c0c0;
+    background-color: #FFFFFF;
+    border-color: #BDBDBD;
     color: #000000;
 }
 
 QProgressBar::chunk {
-    background-color: #2196F3;
+    background-color: #4CAF50;
 }
 
 /* QScrollBar */
 QScrollBar:vertical, QScrollBar:horizontal {
-    background-color: #f0f0f0;
+    background-color: #F5F5F5;
 }
 
 QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
-    background-color: #c0c0c0;
+    background-color: #BDBDBD;
 }
 
 QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
-    background-color: #a0a0a0;
+    background-color: #9E9E9E;
 }
 
 /* Views */
 QTableView, QListView, QTreeWidget, QSmartListView {
-    background-color: #ffffff;
-    border-color: #c0c0c0;
-    gridline-color: #e0e0e0;
-    selection-background-color: #a0c8f0;
+    background-color: #FFFFFF;
+    border-color: #BDBDBD;
+    gridline-color: #E0E0E0;
+    selection-background-color: #BBDEFB;
     selection-color: #000000;
-    color: #333333;
+    color: #212121;
 }
 
 QHeaderView::section {
-    background-color: #f0f0f0;
-    color: #505050;
-    border-right-color: #d0d0d0;
-    border-bottom-color: #d0d0d0;
+    background-color: #E0E0E0;
+    color: #757575;
+    border-right-color: #BDBDBD;
+    border-bottom-color: #BDBDBD;
 }
 
 QTableCornerButton::section {
-    background-color: #f0f0f0;
-    border-color: #d0d0d0;
+    background-color: #E0E0E0;
+    border-color: #BDBDBD;
 }
 
 /* QCheckBox */
 QCheckBox::indicator {
-    border-color: #c0c0c0;
-    background-color: #ffffff;
+    border-color: #BDBDBD;
+    background-color: #FFFFFF;
 }
 
 QCheckBox::indicator:checked {
-    background-color: #2196F3;
-    border-color: #2196F3;
+    background-color: #4CAF50;
+    border-color: #4CAF50;
 }
 
 QCheckBox::indicator:hover {
-    border-color: #2196F3;
+    border-color: #4CAF50;
 }
 
 /* QGroupBox */
 QGroupBox {
-    border-color: #c0c0c0;
+    border-color: #BDBDBD;
 }
 
 QGroupBox::title, QLabel[class="section-title"] {
-    color: #2196F3;
+    color: #4CAF50;
 }
 
 /* QStatusBar */
 QStatusBar {
-    background-color: #f0f0f0;
-    color: #505050;
-    border-top-color: #d0d0d0;
+    background-color: #E0E0E0;
+    color: #757575;
+    border-top-color: #BDBDBD;
 }
 
 /* QMenu */
 QMenuBar {
-    background-color: #f0f0f0;
-    color: #333333;
+    background-color: #E0E0E0;
+    color: #212121;
 }
 QMenuBar::item:selected {
-    background-color: #c0c0c0;
+    background-color: #BDBDBD;
 }
 
 QMenu {
-    background-color: #ffffff;
-    border-color: #c0c0c0;
+    background-color: #F5F5F5;
+    border-color: #BDBDBD;
 }
 
 QMenu::item:selected {
-    background-color: #a0c8f0;
-    color: #000000;
+    background-color: #4CAF50;
+    color: #FFFFFF;
 }
 
 /* QToolBar */
 QToolBar {
-    background-color: #f0f0f0;
-    border-bottom-color: #d0d0d0;
+    background-color: #E0E0E0;
+    border-bottom-color: #BDBDBD;
 }
 
 QToolBar QToolButton:hover {
-    background-color: #e0e0e0;
+    background-color: #D6D6D6;
 }
 
 QToolBar QToolButton:pressed {
-    background-color: #d0d0d0;
+    background-color: #BDBDBD;
 }
 
 /* ==================================================================================
    Custom Buttons & States (Accent, Danger, Warning, Connected)
    ================================================================================== */
 
-/* Accent - Save, Start */
+/* Accent - Save, Start (Green) */
 QPushButton[class="accent"] {
     background-color: #4CAF50;
     border-color: #388E3C;
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
 QPushButton[class="accent"]:hover {
     background-color: #66BB6A;
-    border-color: #2E7D32;
+    border-color: #81C784;
 }
 
 QPushButton[class="accent"]:pressed {
-    background-color: #388E3C;
+    background-color: #2E7D32;
 }
 
 QPushButton[class="accent"]:disabled {
-    background-color: #A5D6A7;
-    border-color: #81C784;
-    color: #E8F5E9;
+    background-color: #E8F5E9;
+    border-color: #C8E6C9;
+    color: #A5D6A7;
 }
 
-/* Danger - Stop, Delete */
+/* Danger - Stop, Delete (Red) */
 QPushButton[class="danger"] {
     background-color: #F44336;
     border-color: #D32F2F;
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
 QPushButton[class="danger"]:hover {
     background-color: #EF5350;
-    border-color: #C62828;
+    border-color: #E57373;
 }
 
 QPushButton[class="danger"]:pressed {
-    background-color: #D32F2F;
+    background-color: #C62828;
 }
 
 QPushButton[class="danger"]:disabled {
-    background-color: #EF9A9A;
-    border-color: #E57373;
-    color: #FFEBEE;
+    background-color: #FFEBEE;
+    border-color: #FFCDD2;
+    color: #EF9A9A;
 }
 
-/* Warning - Pause */
+/* Warning - Pause (Orange/Amber) */
 QPushButton[class="warning"] {
     background-color: #FFC107;
-    border-color: #FFD740;
-    color: #333333;
+    border-color: #FFA000;
+    color: #212121;
 }
 
 QPushButton[class="warning"]:hover {
-    background-color: #FFD740;
-    border-color: #FFEA00;
+    background-color: #FFD54F;
+    border-color: #FFCA28;
 }
 
 QPushButton[class="warning"]:pressed {
-    background-color: #B71C1C;
+    background-color: #FF6F00;
 }
 
 QPushButton[class="warning"]:disabled {
-    background-color: #FFE082;
-    border-color: #FFD54F;
-    color: #FFF8E1;
+    background-color: #FFF8E1;
+    border-color: #FFECB3;
+    color: #FFE082;
 }
 
 /* Port States */
 QPushButton[state="connected"] {
     background-color: #4CAF50;
     border-color: #388E3C;
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
 QPushButton[state="connected"]:hover {
     background-color: #66BB6A;
-    border-color: #2E7D32;
+    border-color: #81C784;
 }
 
 QPushButton[state="disconnected"] {
-    background-color: #e0e0e0;
-    border-color: #c0c0c0;
-    color: #333333;
+    background-color: #E0E0E0;
+    border-color: #BDBDBD;
+    color: #212121;
 }
 
 QPushButton[state="error"] {
     background-color: #F44336;
     border-color: #D32F2F;
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
 QPushButton[state="error"]:hover {
     background-color: #EF5350;
-    border-color: #C62828;
+    border-color: #E57373;
 }

@@ -192,6 +192,19 @@ class IPortView(Protocol):
         """패널 상태 적용"""
         ...
 
+    # --- Trigger Actions (For Shortcuts) ---
+    def trigger_connect(self) -> None:
+        """연결 동작 트리거"""
+        ...
+
+    def trigger_disconnect(self) -> None:
+        """연결 해제 동작 트리거"""
+        ...
+
+    def trigger_clear_log(self) -> None:
+        """로그 지우기 동작 트리거"""
+        ...
+
 
 class IPortContainerView(Protocol):
     """
@@ -235,6 +248,19 @@ class IPortContainerView(Protocol):
 
     def connect_tab_changed_signal(self, slot: Callable[[int], None]) -> None:
         """탭 변경 시그널 연결"""
+        ...
+
+    # --- Trigger Actions (For Shortcuts) ---
+    def trigger_current_port_connect(self) -> None:
+        """현재 탭의 연결 동작 트리거"""
+        ...
+
+    def trigger_current_port_disconnect(self) -> None:
+        """현재 탭의 연결 해제 동작 트리거"""
+        ...
+
+    def trigger_current_port_clear_log(self) -> None:
+        """현재 탭의 로그 지우기 동작 트리거"""
         ...
 
 

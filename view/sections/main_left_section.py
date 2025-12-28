@@ -2,6 +2,7 @@
 메인 윈도우 좌측 섹션 모듈
 
 포트 탭 패널, 수동 제어 패널, 시스템 로그 위젯을 포함하는 좌측 영역 컨테이너입니다.
+Presenter와 하위 위젯 사이의 인터페이스(Facade) 역할을 수행합니다.
 
 ## WHY
 * 화면 레이아웃의 논리적 구획(좌/우)을 분리하여 관리
@@ -29,6 +30,7 @@ from view.panels.manual_control_panel import ManualControlPanel
 from view.panels.port_tab_panel import PortTabPanel
 from view.widgets.system_log import SystemLogWidget
 from common.dtos import LogDataBatch, SystemLogEvent, ColorRule
+from view.interfaces import IPortView
 
 
 class MainLeftSection(QWidget):
@@ -173,7 +175,7 @@ class MainLeftSection(QWidget):
         """현재 열려있는 포트 탭의 개수를 반환합니다."""
         return self._port_tab_panel.count()
 
-    def get_port_panel_at(self, index: int) -> Optional[PortPanel]:
+    def get_port_panel_at(self, index: int) -> Optional[IPortView]:
         """
         인덱스에 해당하는 포트 패널을 반환합니다.
 
@@ -181,19 +183,19 @@ class MainLeftSection(QWidget):
             index (int): 탭 인덱스.
 
         Returns:
-            Optional[PortPanel]: 포트 패널 객체.
+            Optional[IPortView]: 포트 패널 객체.
         """
         widget = self._port_tab_panel.widget(index)
         if isinstance(widget, PortPanel):
             return widget
         return None
 
-    def get_current_port_panel(self) -> Optional[PortPanel]:
+    def get_current_port_panel(self) -> Optional[IPortView]:
         """
         현재 활성화된 포트 패널을 반환합니다.
 
         Returns:
-            Optional[PortPanel]: 현재 포트 패널 객체.
+            Optional[IPortView]: 현재 포트 패널 객체.
         """
         widget = self._port_tab_panel.currentWidget()
         if isinstance(widget, PortPanel):
@@ -235,7 +237,8 @@ class MainLeftSection(QWidget):
         현재 활성 탭의 로그 저장을 트리거합니다.
         """
         panel = self.get_current_port_panel()
-        panel.trigger_log_save()
+        if panel:
+            panel.trigger_log_save()
 
     def clear_current_port_log(self) -> None:
         """
@@ -272,21 +275,15 @@ class MainLeftSection(QWidget):
 
     def open_current_port(self) -> None:
         """
-        현재 활성화된 탭의 포트 연결을 엽니다.
+        현재 활성화된 탭의 포트 연결을 엽니다. (메뉴바용 Helper)
         """
-        current_widget = self.get_current_port_panel()
-        if current_widget:
-            if not current_widget.is_connected():
-                current_widget.toggle_connection()
+        self.trigger_current_port_connect()
 
     def close_current_port(self) -> None:
         """
         현재 활성화된 탭의 포트 연결을 닫습니다.
         """
-        current_widget = self.get_current_port_panel()
-        if current_widget:
-            if current_widget.is_connected():
-                current_widget.toggle_connection()
+        self.trigger_current_port_disconnect()
 
     def close_current_tab(self) -> None:
         """
@@ -299,6 +296,27 @@ class MainLeftSection(QWidget):
 
         if current_index >= 0:
             self._port_tab_panel.close_port_tab(current_index)
+
+    # -------------------------------------------------------------------------
+    # Trigger Actions (For Shortcuts)
+    # -------------------------------------------------------------------------
+    def trigger_current_port_connect(self) -> None:
+        """현재 탭의 연결 동작을 트리거합니다."""
+        panel = self.get_current_port_panel()
+        if panel:
+            panel.trigger_connect()
+
+    def trigger_current_port_disconnect(self) -> None:
+        """현재 탭의 연결 해제 동작을 트리거합니다."""
+        panel = self.get_current_port_panel()
+        if panel:
+            panel.trigger_disconnect()
+
+    def trigger_current_port_clear_log(self) -> None:
+        """현재 탭의 로그 지우기 동작을 트리거합니다."""
+        panel = self.get_current_port_panel()
+        if panel:
+            panel.trigger_clear_log()
 
     # -------------------------------------------------------------------------
     # 데이터 처리 인터페이스

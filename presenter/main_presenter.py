@@ -656,16 +656,17 @@ class MainPresenter(QObject):
         self.view.update_status_bar_time(QDateTime.currentDateTime().toString("HH:mm:ss"))
 
     def on_shortcut_connect(self) -> None:
-        """연결 단축키(F2) 처리."""
-        self.port_presenter.connect_current_port()
+        """연결 단축키(F2) 처리: View에게 Trigger 요청"""
+        # [Trigger 방식] 로직을 직접 수행하지 않고 View에게 위임
+        self.view.port_view.trigger_current_port_connect()
 
     def on_shortcut_disconnect(self) -> None:
-        """연결 해제 단축키(F3) 처리."""
-        self.port_presenter.disconnect_current_port()
+        """연결 해제 단축키(F3) 처리: View에게 Trigger 요청"""
+        self.view.port_view.trigger_current_port_disconnect()
 
     def on_shortcut_clear(self) -> None:
-        """로그 초기화 단축키(F5) 처리."""
-        self.port_presenter.clear_log_current_port()
+        """로그 초기화 단축키(F5) 처리: View에게 Trigger 요청"""
+        self.view.port_view.trigger_current_port_clear_log()
 
     # -------------------------------------------------------------------------
     # Logging Connections

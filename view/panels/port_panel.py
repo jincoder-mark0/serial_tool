@@ -14,6 +14,7 @@ Presenter와 하위 위젯 사이의 인터페이스(Facade) 역할을 수행합
 * PortSettings, PortStats, DataLog 위젯 배치
 * 탭 제목 관리(커스텀 이름) 및 연결 상태 표시
 * 하위 위젯 제어를 위한 Facade 메서드 및 시그널 제공
+* 외부 트리거(단축키)에 의한 동작 수행 메서드 제공
 
 ## HOW
 * QVBoxLayout 사용
@@ -279,6 +280,32 @@ class PortPanel(QWidget):
         # 로그 위젯의 내부 탭 이름 설정 (저장 파일명용)
         self._data_log_widget.set_tab_name(title)
         self.tab_title_changed.emit(title)
+
+    # -------------------------------------------------------------------------
+    # Trigger Actions (For Shortcuts)
+    # -------------------------------------------------------------------------
+    def trigger_connect(self) -> None:
+        """
+        연결 동작을 트리거합니다. (이미 연결되어 있으면 무시)
+        단축키(F2) 등 외부 요청 시 사용됩니다.
+        """
+        if not self.is_connected():
+            self.toggle_connection()
+
+    def trigger_disconnect(self) -> None:
+        """
+        연결 해제 동작을 트리거합니다. (연결되어 있지 않으면 무시)
+        단축키(F3) 등 외부 요청 시 사용됩니다.
+        """
+        if self.is_connected():
+            self.toggle_connection()
+
+    def trigger_clear_log(self) -> None:
+        """
+        로그 지우기 동작을 트리거합니다.
+        단축키(F5) 등 외부 요청 시 사용됩니다.
+        """
+        self.clear_data_log()
 
     # -------------------------------------------------------------------------
     # Internal Slots
