@@ -160,6 +160,7 @@ MAX_PACKET_SIZE: int = 4096
 MIN_SCAN_INTERVAL_MS: int = 1000
 MAX_SCAN_INTERVAL_MS: int = 60000
 DEFAULT_MACRO_INTERVAL_MS: int = 1000
+MIN_MACRO_DELAY_MS: int = 1
 MAX_COMMAND_HISTORY_SIZE: int = 50    # 수동 명령 History 최대 크기
 
 # ==========================================

@@ -675,11 +675,8 @@ class MainPresenter(QObject):
             panel (PortPanel): 추가된 포트 패널.
         """
         self._connect_single_port_logging(panel)
-        # 새 탭에 색상 규칙 주입 (LoD: Panel의 Facade 메서드 사용 권장)
-        # 현재 PortPanel에는 set_color_rules Facade가 없으므로 임시로 직접 접근하되
-        # 추후 리팩토링 시 PortPanel에 set_data_log_color_rules() 추가 권장
-        if hasattr(panel, 'set_data_log_color_rules'):
-            panel.set_data_log_color_rules(color_manager.rules)
+        # 새 탭에 색상 규칙 주입 (LoD: Panel의 Facade 메서드 사용)
+        panel.set_data_log_color_rules(color_manager.rules)
 
     def _connect_single_port_logging(self, panel: PortPanel) -> None:
         """
