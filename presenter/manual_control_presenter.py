@@ -16,7 +16,7 @@
 * 브로드캐스트 모드 지원 (다중 포트 전송)
 
 ## HOW
-* View(Panel)가 제공하는 Getter 메서드(Facade)를 통해 상태 조회 (Widget 직접 접근 제거)
+* View(Panel)가 제공하는 Getter 메서드(Facade)를 통해 상태 조회 (LoD 준수)
 * CommandProcessor를 사용하여 입력 데이터 가공
 * ConnectionController를 통해 데이터 전송 수행
 * Callable 콜백을 통해 MainPresenter(View)에 로컬 에코 데이터 전달
@@ -102,6 +102,7 @@ class ManualControlPresenter(QObject):
         Returns:
             bool: 브로드캐스트 활성화 여부.
         """
+        # Panel의 Facade 메서드 사용
         return self.panel.is_broadcast_enabled()
 
     def on_send_requested(self, _=None) -> None:
@@ -119,16 +120,14 @@ class ManualControlPresenter(QObject):
             _ (Any): 시그널에서 전달되는 인자 (사용하지 않음, View가 DTO를 보내지 않도록 가정).
         """
         # 1. View에서 상태 수집 (Passive View 패턴 강화)
-        # Presenter가 View의 내부 위젯 구조를 알 필요 없이 인터페이스만 호출
+        # Presenter가 View의 내부 위젯 구조를 알 필요 없이 인터페이스만 호출 (LoD 준수)
         try:
             command_text = self.panel.get_input_text()
             hex_mode = self.panel.is_hex_mode()
             prefix_enabled = self.panel.is_prefix_enabled()
             suffix_enabled = self.panel.is_suffix_enabled()
             broadcast_enabled = self.panel.is_broadcast_enabled()
-            # Local Echo는 Presenter가 관리하는 전역 설정 값을 사용 (또는 UI 체크박스 값 사용 가능)
-            # 여기서는 UI 체크박스 값과 전역 설정 중 UI 값을 우선하거나 동기화된 값을 사용
-            # View에 is_local_echo_enabled()가 있다고 가정
+            # Local Echo는 Presenter가 관리하는 전역 설정 값을 사용하거나 UI 값을 사용
             local_echo_enabled = self.panel.is_local_echo_enabled()
         except AttributeError as e:
             logger.error(f"Failed to gather state from ManualControlPanel: {e}")
@@ -217,18 +216,20 @@ class ManualControlPresenter(QObject):
             enabled (bool): 활성화 여부.
         """
         self.local_echo_enabled = enabled
+        # UI 상태 동기화 (선택 사항)
+        if hasattr(self.panel, 'set_local_echo_checked'):
+            self.panel.set_local_echo_checked(enabled)
 
     def get_state(self) -> ManualControlState:
         """
         현재 UI 상태를 DTO로 반환합니다. (설정 저장용)
 
         Logic:
-            - 데이터를 조합하여 DTO 생성
+            - View Facade를 통해 데이터 조회 후 DTO 조립
 
         Returns:
             ManualControlState: 현재 상태 DTO.
         """
-        # View가 아직 초기화되지 않았거나 인터페이스가 없는 경우 방어
         if not self.panel:
             return ManualControlState()
 
@@ -239,7 +240,7 @@ class ManualControlPresenter(QObject):
             suffix_enabled=self.panel.is_suffix_enabled(),
             rts_enabled=self.panel.is_rts_enabled(),
             dtr_enabled=self.panel.is_dtr_enabled(),
-            local_echo_enabled=self.local_echo_enabled, # 전역 설정 사용
+            local_echo_enabled=self.local_echo_enabled, # 전역 설정 또는 현재 상태 사용
             broadcast_enabled=self.panel.is_broadcast_enabled()
         )
 

@@ -1,5 +1,5 @@
 """
-ManualControlWidget 모듈
+수동 제어 위젯 모듈
 
 사용자 Command 입력, 전송 제어 및 포트 신호(RTS/DTR) 설정을 담당합니다.
 
@@ -19,18 +19,22 @@ ManualControlWidget 모듈
 * QVBoxLayout 및 QGridLayout을 사용한 컴팩트 레이아웃 구성
 * QSmartTextEdit로 라인 번호 및 구문 강조 지원
 * PyQt Signal을 통해 사용자 입력 이벤트를 상위로 전달
+* Getter 메서드를 통해 내부 상태 캡슐화 (Facade 패턴 지원)
 """
+from typing import Optional, List, Dict, Any
+
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
     QPushButton, QPlainTextEdit, QLineEdit, QCheckBox
 )
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QSize, Qt
 from PyQt5.QtGui import QKeyEvent
+
 from view.custom_qt.smart_plain_text_edit import QSmartTextEdit
-from typing import Optional, List
 from view.managers.language_manager import language_manager
 from common.dtos import ManualCommand, ManualControlState
 from common.constants import MAX_COMMAND_HISTORY_SIZE
+
 
 class ManualControlWidget(QWidget):
     """
@@ -39,13 +43,19 @@ class ManualControlWidget(QWidget):
     사용자 입력을 받아 시그널을 방출하며, 포트 제어 신호를 설정
     """
 
-    # 시그널 정의
-    send_requested = pyqtSignal(object)  # ManualCommand DTO 전달
+    # -------------------------------------------------------------------------
+    # Signals
+    # -------------------------------------------------------------------------
+    # 전송 요청 시그널 (ManualCommand DTO 전달)
+    send_requested = pyqtSignal(object)
+
+    # 히스토리 탐색 시그널
     history_up_requested = pyqtSignal()
     history_down_requested = pyqtSignal()
 
     # 상태 변경 시그널 (즉시 로직 반영이 필요한 항목들)
-    broadcast_changed = pyqtSignal(bool)  # 브로드캐스트 변경 (전송 버튼 활성화 로직용)
+    # 브로드캐스트 변경 (전송 버튼 활성화 로직용)
+    broadcast_changed = pyqtSignal(bool)
     rts_changed = pyqtSignal(bool)
     dtr_changed = pyqtSignal(bool)
 
@@ -54,7 +64,7 @@ class ManualControlWidget(QWidget):
         ManualControlWidget 초기화
 
         Args:
-            parent (Optional[QWidget]): 부모 위젯
+            parent (Optional[QWidget]): 부모 위젯.
         """
         super().__init__(parent)
 
@@ -73,7 +83,7 @@ class ManualControlWidget(QWidget):
         self.rts_chk: Optional[QCheckBox] = None
         self.dtr_chk: Optional[QCheckBox] = None
 
-        # History State - 저장/복원 안함
+        # History State - 저장/복원 안함 (런타임 메모리)
         self.command_history: List[str] = []
         self.history_index: int = -1
 
@@ -83,14 +93,24 @@ class ManualControlWidget(QWidget):
         language_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self) -> None:
-        """UI 컴포넌트 및 레이아웃 초기화"""
+        """
+        UI 컴포넌트 및 레이아웃을 초기화합니다.
+
+        Logic:
+            - 입력 영역(에디터, 히스토리 버튼, 전송 버튼) 구성
+            - 옵션 영역(체크박스 그리드) 구성
+            - 시그널 연결
+        """
+        # 1. 입력 에디터 설정
         self.command_edit = QSmartTextEdit()  # 라인 번호 지원 에디터
         self.command_edit.setPlaceholderText(language_manager.get_text("manual_control_txt_command_placeholder"))
         self.command_edit.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
         self.command_edit.setMaximumHeight(80)  # 최대 높이 제한
-        # ---------------------------------------------------------
-        # 1. 입력 영역 (Input Area)
-        # ---------------------------------------------------------
+
+        # 키 이벤트 오버라이딩 (Ctrl+Enter 전송 등)
+        self.command_edit.keyPressEvent = self._command_input_key_press_event
+
+        # 2. 버튼 구성
         self.history_up_btn = QPushButton("▲")
         self.history_up_btn.setToolTip(language_manager.get_text("manual_control_btn_history_up_tooltip"))
         self.history_up_btn.setFixedSize(40, 20)
@@ -107,11 +127,10 @@ class ManualControlWidget(QWidget):
         self.send_command_btn.setFixedSize(40, 30) # 높이 조정
         self.send_command_btn.clicked.connect(self.on_send_manual_command_clicked)
 
-
+        # 3. 체크박스 구성
         self.hex_chk = QCheckBox(language_manager.get_text("manual_control_chk_hex"))
         self.hex_chk.setToolTip(language_manager.get_text("manual_control_chk_hex_tooltip"))
         self.hex_chk.toggled.connect(self.on_hex_toggled)
-
 
         self.prefix_chk = QCheckBox(language_manager.get_text("manual_control_chk_prefix"))
         self.suffix_chk = QCheckBox(language_manager.get_text("manual_control_chk_suffix"))
@@ -126,14 +145,14 @@ class ManualControlWidget(QWidget):
 
         self.local_echo_chk = QCheckBox(language_manager.get_text("manual_control_chk_local_echo"))
 
-        # Broadcast 체크박스
         self.broadcast_chk = QCheckBox(language_manager.get_text("manual_control_chk_broadcast"))
         self.broadcast_chk.setToolTip(language_manager.get_text("manual_control_chk_broadcast_tooltip"))
         self.broadcast_chk.stateChanged.connect(
             lambda state: self.broadcast_changed.emit(state == Qt.Checked)
         )
 
-        # 레이아웃 배치
+        # 4. 레이아웃 배치
+        # 버튼 그룹 (우측)
         btn_layout = QVBoxLayout()
         btn_layout.setSpacing(2)
         btn_layout.setContentsMargins(0, 0, 0, 0)
@@ -141,18 +160,19 @@ class ManualControlWidget(QWidget):
         btn_layout.addWidget(self.history_down_btn)
         btn_layout.addWidget(self.send_command_btn)
 
+        # 입력 영역 (좌측 에디터 + 우측 버튼)
         send_layout = QHBoxLayout()
         send_layout.setContentsMargins(0, 0, 0, 0)
         send_layout.setSpacing(5)
         send_layout.addWidget(self.command_edit, 1)
         send_layout.addLayout(btn_layout)
 
-        # 전체 레이아웃
+        # 옵션 영역 (그리드)
         option_layout = QGridLayout()
         option_layout.setContentsMargins(0, 5, 0, 0) # 상단 여백 추가
         option_layout.setSpacing(5) # 간격 조정
 
-        # 1행에 배치
+        # 1행에 배치 (가로 공간 활용)
         option_layout.addWidget(self.hex_chk, 0, 0)
         option_layout.addWidget(self.prefix_chk, 0, 1)
         option_layout.addWidget(self.suffix_chk, 0, 2)
@@ -161,25 +181,22 @@ class ManualControlWidget(QWidget):
         option_layout.addWidget(self.local_echo_chk, 0, 5)
         option_layout.addWidget(self.broadcast_chk, 0, 6)
 
-        # 그리드 배치 (Row, Col)
+        # 전체 레이아웃 조합
         layout = QVBoxLayout()
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(2)
         layout.addLayout(send_layout)
         layout.addLayout(option_layout)
-        layout.addStretch() # 하단 여백 추가
+        layout.addStretch() # 하단 여백 추가 (레이아웃 압축)
 
         self.setLayout(layout)
 
-        # 초기 상태 설정
+        # 초기 상태 설정 (연결 전 비활성화)
         self.set_controls_enabled(False)
-
-        # QTextEdit에 keyPressEvent 연결
-        self.command_edit.keyPressEvent = self._command_input_key_press_event
 
     def retranslate_ui(self) -> None:
         """
-        다국어 텍스트 업데이트
+        언어 변경 시 UI 텍스트를 업데이트합니다.
         """
         self.hex_chk.setText(language_manager.get_text("manual_control_chk_hex"))
         self.prefix_chk.setText(language_manager.get_text("manual_control_chk_prefix"))
@@ -224,14 +241,22 @@ class ManualControlWidget(QWidget):
         """브로드캐스트 체크 여부 반환"""
         return self.broadcast_chk.isChecked()
 
+    def get_input_text(self) -> str:
+        """현재 입력창의 텍스트 반환"""
+        return self.command_edit.toPlainText()
+
+    # -------------------------------------------------------------------------
+    # Setters & Actions (UI 제어 및 동작)
+    # -------------------------------------------------------------------------
     def set_controls_enabled(self, enabled: bool) -> None:
         """
-        컨트롤 활성화 상태 설정
+        컨트롤 활성화 상태를 설정합니다.
 
         Args:
-            enabled (bool): 활성화 여부
+            enabled (bool): 활성화 여부.
         """
         self.send_command_btn.setEnabled(enabled)
+        # 하드웨어 제어 신호는 연결 상태에 따라 활성화
         self.rts_chk.setEnabled(enabled)
         self.dtr_chk.setEnabled(enabled)
 
@@ -243,10 +268,49 @@ class ManualControlWidget(QWidget):
         # self.suffix_chk.setEnabled(True)
         # self.broadcast_chk.setEnabled(True)
 
+    def set_input_text(self, text: str) -> None:
+        """
+        입력창 텍스트를 설정합니다 (Presenter 또는 로직 요청).
+
+        Args:
+            text (str): 설정할 텍스트.
+        """
+        self.command_edit.setPlainText(text)
+        cursor = self.command_edit.textCursor()
+        cursor.movePosition(cursor.End)
+        self.command_edit.setTextCursor(cursor)
+
+    def clear_input(self) -> None:
+        """입력창 내용을 지웁니다."""
+        self.command_edit.clear()
+
+    def set_input_focus(self) -> None:
+        """입력 필드에 포커스를 설정합니다."""
+        self.command_edit.setFocus()
+
+    def set_local_echo_state(self, checked: bool) -> None:
+        """
+        Local Echo 체크박스 상태를 설정합니다.
+
+        Args:
+            checked (bool): 체크 여부.
+        """
+        self.local_echo_chk.setChecked(checked)
+
+    def on_hex_toggled(self, checked: bool) -> None:
+        """
+        HEX 모드 체크박스 토글 핸들러
+
+        Args:
+            checked (bool): 체크 여부.
+        """
+        # 추후 QSmartTextEdit에 HEX 모드 유효성 검사 로직 추가 시 연동
+        # self.command_edit.set_hex_mode(checked)
+        pass
 
     def _command_input_key_press_event(self, event: QKeyEvent) -> None:
         """
-        입력창 키 이벤트 핸들링
+        입력창 키 이벤트 핸들링 (오버라이드용)
 
         Logic:
             - Ctrl+Enter: 전송
@@ -271,34 +335,28 @@ class ManualControlWidget(QWidget):
             # 다른 키는 기본 동작
             QPlainTextEdit.keyPressEvent(self.command_edit, event)
 
-    def on_hex_toggled(self, checked: bool) -> None:
-        """
-        HEX 모드 체크박스 토글 핸들러
-
-        Args:
-            checked (bool): 체크 여부.
-        """
-        # 입력 에디터의 모드 변경 (유효성 검사 적용)
-        # self.command_edit.set_hex_mode(checked)   # TODO: QSmartTextEdit HEX 모드 구현
-        pass
-
     @pyqtSlot()
     def on_send_manual_command_clicked(self) -> None:
         """
         전송 버튼 클릭 슬롯
+
+        Logic:
+            - 입력 텍스트 확인
+            - History에 추가
+            - DTO 생성 후 시그널 발송
         """
         command = self.command_edit.toPlainText()
 
-        # History에 추가
-        if command:
-            self.add_to_history(command)
+        # History에 추가 (입력이 있을 경우)
         if not command:
             return
+
+        self.add_to_history(command)
 
         # 전송 데이터 패키징 (DTO)
         # View(Widget) 내부의 체크박스 상태로 DTO를 완결성 있게 생성합니다.
 
-        # DTO 생성
+        # DTO 생성 (캡슐화된 상태값 사용)
         command_dto = ManualCommand(
             command=command,
             hex_mode=self.is_hex_mode(),
@@ -310,19 +368,9 @@ class ManualControlWidget(QWidget):
 
         self.send_requested.emit(command_dto)
 
-    def set_input_text(self, text: str) -> None:
-        """입력창 텍스트 설정 (Presenter용)"""
-        self.command_edit.setPlainText(text)
-        cursor = self.command_edit.textCursor()
-        cursor.movePosition(cursor.End)
-        self.command_edit.setTextCursor(cursor)
-
-    def get_input_text(self) -> str:
-        return self.command_edit.toPlainText()
-
-    def clear_input(self) -> None:
-        self.command_edit.clear()
-
+    # -------------------------------------------------------------------------
+    # History Management
+    # -------------------------------------------------------------------------
     def add_to_history(self, command: str) -> None:
         """
         Command History 추가
@@ -379,19 +427,9 @@ class ManualControlWidget(QWidget):
             cursor.movePosition(cursor.End)
             self.command_edit.setTextCursor(cursor)
 
-    def set_input_focus(self) -> None:
-        """입력 필드에 포커스를 설정합니다."""
-        self.command_edit.setFocus()
-
-    def set_local_echo_state(self, checked: bool) -> None:
-        """
-        Local Echo 체크박스 상태 설정
-
-        Args:
-            checked (bool): 체크 여부
-        """
-        self.local_echo_chk.setChecked(checked)
-
+    # -------------------------------------------------------------------------
+    # State Persistence
+    # -------------------------------------------------------------------------
     def get_state(self) -> ManualControlState:
         """
         현재 UI 상태를 DTO로 반환합니다. (저장용)

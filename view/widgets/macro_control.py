@@ -53,6 +53,7 @@ class MacroControlWidget(QWidget):
 
     # 브로드캐스트 상태 변경 알림 (전송 버튼 활성화 로직용)
     broadcast_changed = pyqtSignal(bool)
+
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
         MacroControlWidget 초기화
@@ -180,10 +181,6 @@ class MacroControlWidget(QWidget):
         # 초기 상태 설정 (연결 전 비활성화)
         self.set_controls_enabled(False)
 
-    def is_broadcast_enabled(self) -> bool:
-        """브로드캐스트 옵션이 활성화되어 있는지 확인합니다."""
-        return self.broadcast_chk.isChecked()
-
     def retranslate_ui(self) -> None:
         """언어 변경 시 UI 텍스트를 업데이트합니다."""
         self.script_save_btn.setText(language_manager.get_text("macro_control_btn_save_script"))
@@ -205,6 +202,18 @@ class MacroControlWidget(QWidget):
         self.macro_repeat_stop_btn.setText(language_manager.get_text("macro_control_btn_repeat_stop"))
         self.macro_repeat_pause_btn.setText(language_manager.get_text("macro_control_btn_repeat_pause"))
 
+    # -------------------------------------------------------------------------
+    # Getters for Encapsulation (캡슐화를 위한 상태 조회 메서드)
+    # -------------------------------------------------------------------------
+    def is_broadcast_enabled(self) -> bool:
+        """
+        브로드캐스트 체크박스 상태를 반환합니다.
+
+        Returns:
+            bool: 브로드캐스트 활성화 여부.
+        """
+        return self.broadcast_chk.isChecked()
+
     def get_repeat_option(self) -> MacroRepeatOption:
         """
         현재 UI 설정값을 바탕으로 MacroRepeatOption DTO를 생성하여 반환합니다.
@@ -218,7 +227,7 @@ class MacroControlWidget(QWidget):
             interval_ms = DEFAULT_MACRO_INTERVAL_MS
 
         max_runs = self.repeat_max_spin.value()
-        broadcast_enabled = self.broadcast_chk.isChecked()
+        broadcast_enabled = self.is_broadcast_enabled()
 
         # stop_on_error는 현재 UI에 없으므로 기본값(True) 사용
         # 필요 시 UI에 체크박스 추가 가능
@@ -229,6 +238,9 @@ class MacroControlWidget(QWidget):
             stop_on_error=True
         )
 
+    # -------------------------------------------------------------------------
+    # Handlers & Control Logic
+    # -------------------------------------------------------------------------
     def on_macro_repeat_start_clicked(self) -> None:
         """자동 실행 시작 버튼 핸들러"""
         option = self.get_repeat_option()
@@ -313,6 +325,9 @@ class MacroControlWidget(QWidget):
             self.macro_repeat_stop_btn.setEnabled(False)
             self.macro_repeat_pause_btn.setEnabled(False)
 
+    # -------------------------------------------------------------------------
+    # State Persistence
+    # -------------------------------------------------------------------------
     def get_state(self) -> Dict[str, Any]:
         """
         현재 위젯의 상태를 딕셔너리로 반환합니다 (설정 저장용).

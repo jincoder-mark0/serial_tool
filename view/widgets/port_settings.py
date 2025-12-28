@@ -25,8 +25,9 @@ from PyQt5.QtWidgets import (
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from PyQt5.QtGui import QIntValidator
-from view.managers.language_manager import language_manager
 from typing import Optional, List, Dict, Tuple
+
+from view.managers.language_manager import language_manager
 from common.enums import PortState, SerialParity, SerialStopBits, SerialFlowControl
 from common.dtos import PortConfig, PortInfo
 from common.constants import VALID_BAUDRATES, DEFAULT_BAUDRATE
@@ -59,11 +60,12 @@ class PortSettingsWidget(QGroupBox):
     포트 설정 및 연결 제어 위젯
 
     프로토콜 선택에 따라 하단 설정 UI가 동적으로 변경됩니다.
+    상위 패널이 내부 위젯(ComboBox 등)에 직접 접근하지 않도록
+    설정 조회 및 상태 제어 메서드를 제공합니다.
     """
 
     # 사용자 요청 시그널
     connect_requested = pyqtSignal(object)  # PortConfig DTO 전달
-
     disconnect_requested = pyqtSignal()
     port_scan_requested = pyqtSignal()
     port_connection_changed = pyqtSignal(bool)
@@ -314,6 +316,9 @@ class PortSettingsWidget(QGroupBox):
             # 해제 요청 (Request Close)
             self.disconnect_requested.emit()
 
+    # -------------------------------------------------------------------------
+    # Getters for Encapsulation (캡슐화를 위한 상태 조회 메서드)
+    # -------------------------------------------------------------------------
     def get_port_name(self) -> str:
         """
         현재 선택된 포트 이름을 반환합니다.
@@ -333,7 +338,6 @@ class PortSettingsWidget(QGroupBox):
 
         Returns:
             PortConfig: 포트 설정 DTO
-
         Note:
             QComboBox의 currentData를 사용하여 실제 포트 이름을 가져옵니다.
             (화면에는 'COM1 (Description)'이 보이지만 data는 'COM1')
@@ -358,6 +362,9 @@ class PortSettingsWidget(QGroupBox):
 
         return config
 
+    # -------------------------------------------------------------------------
+    # Setters & UI Control (상태 제어)
+    # -------------------------------------------------------------------------
     def set_port_list(self, ports: List[PortInfo]) -> None:
         """
         포트 목록 업데이트
@@ -368,7 +375,6 @@ class PortSettingsWidget(QGroupBox):
             - 목록 갱신 (addItem(description, userData=port))
             - 이전 선택 복구 시도
             - 저장된 포트가 스캔 목록에 없어도 강제로 유지 (Phantom Port Support)
-            - 갱신 후 currentTextChanged 시그널 강제 발생 (탭 제목 동기화용)
 
         Args:
             ports (List[PortInfo]): 포트 정보 리스트
@@ -395,7 +401,7 @@ class PortSettingsWidget(QGroupBox):
             # 목록에 있으면 해당 인덱스 선택
             self.port_combo.setCurrentIndex(index)
         elif current_port_data:
-            # 목록에 없지만 기존 값이 있으면 무시
+            # 목록에 없지만 기존 값이 있으면 무시 (텍스트 유지를 위해)
             pass
 
         # 시그널 차단 해제
@@ -500,6 +506,9 @@ class PortSettingsWidget(QGroupBox):
         self.spi_controls_ui['mode_lbl'].setText(language_manager.get_text("port_lbl_mode"))
         self.spi_controls_ui['mode_combo'].setToolTip(language_manager.get_text("port_combo_mode_tooltip"))
 
+    # -------------------------------------------------------------------------
+    # State Persistence
+    # -------------------------------------------------------------------------
     def get_state(self) -> dict:
         """
         현재 설정을 딕셔너리로 반환

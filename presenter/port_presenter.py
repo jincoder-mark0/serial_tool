@@ -78,7 +78,7 @@ class PortPresenter(QObject):
         settings = SettingsManager()
         max_lines = settings.get(ConfigKeys.RX_MAX_LINES, 2000)
 
-        # LoD 준수: 패널 내부 위젯에 직접 접근하지 않음
+        # LoD 준수: 패널 내부 위젯에 직접 접근하지 않고 Facade 메서드 사용
         if self.current_port_panel:
             self.current_port_panel.set_max_log_lines(max_lines)
 
@@ -86,7 +86,7 @@ class PortPresenter(QObject):
         self.scan_ports()
 
         # 기존 탭들에 대한 시그널 연결 (초기화 시점에 이미 존재하는 탭들)
-        # LoD 준수: View가 제공하는 이터레이터 또는 개수/접근자 사용
+        # LoD 준수: View가 제공하는 접근자 사용
         count = self.left_section.get_port_tabs_count()
         for i in range(count):
             widget = self.left_section.get_port_panel_at(i)
@@ -130,10 +130,9 @@ class PortPresenter(QObject):
         Args:
             panel (PortPanel): 시그널을 연결할 PortPanel 인스턴스.
         """
-        # LoD 준수: Panel이 직접 제공하는 시그널 사용
-        # (SettingsWidget을 직접 꺼내지 않음)
+        # LoD 준수: Panel이 직접 제공하는 중계 시그널 사용
 
-        # 중복 연결 방지
+        # 중복 연결 방지 (안전하게 disconnect 시도)
         try:
             panel.port_scan_requested.disconnect(self.scan_ports)
             panel.connect_requested.disconnect(self.handle_open_request)
@@ -148,7 +147,6 @@ class PortPresenter(QObject):
 
         # Broadcast 체크박스 시그널 연결
         try:
-            # widget 파라미터를 lambda로 캡처하여 어떤 탭인지 식별
             panel.tx_broadcast_allowed_changed.disconnect()
         except TypeError:
             pass
@@ -163,7 +161,7 @@ class PortPresenter(QObject):
         브로드캐스트 허용 상태 변경 핸들러입니다.
 
         Logic:
-            - 위젯에서 포트 이름을 획득
+            - 위젯에서 포트 이름을 획득 (Facade)
             - 컨트롤러를 통해 해당 포트의 브로드캐스트 상태 업데이트
 
         Args:
@@ -197,7 +195,7 @@ class PortPresenter(QObject):
             - View(LeftSection)를 통해 현재 활성 패널 획득 (Facade)
             - current_port_panel 멤버 변수 갱신
         """
-        # LoD 준수: View의 메서드 사용
+        # LoD 준수: View의 Facade 메서드 사용
         self.current_port_panel = self.left_section.get_current_port_panel()
 
     def scan_ports(self) -> None:
@@ -236,7 +234,7 @@ class PortPresenter(QObject):
         port_names = [p.device for p in port_list]
         logger.debug(f"Scan finished. Found ports: {port_names}")
 
-        # LoD 준수: LeftSection을 통해 모든 패널 업데이트
+        # LoD 준수: LeftSection을 통해 모든 패널 업데이트 (순회는 View가 하거나 여기서 getter로 순회)
         count = self.left_section.get_port_tabs_count()
         for i in range(count):
             panel = self.left_section.get_port_panel_at(i)
@@ -266,7 +264,7 @@ class PortPresenter(QObject):
         """
         sender = self.sender()
 
-        # sender가 PortPanel이라고 가정하고 인터페이스 호출
+        # sender가 PortPanel이라고 가정하고 인터페이스 호출 (시그널 중계로 인해 sender는 PortPanel임)
         if sender and hasattr(sender, 'get_port_config'):
             config = sender.get_port_config()
             if config and config.port:
@@ -280,7 +278,7 @@ class PortPresenter(QObject):
             message (str): 로그 메시지.
             level (str): 로그 레벨 (SUCCESS, INFO, ERROR 등).
         """
-        # LoD 준수: View의 로깅 인터페이스 사용
+        # LoD 준수: View(LeftSection)의 로깅 인터페이스 사용
         if hasattr(self.left_section, 'log_system_message'):
             event = SystemLogEvent(message=message, level=level)
             self.left_section.log_system_message(event)
@@ -292,7 +290,6 @@ class PortPresenter(QObject):
         Logic:
             - 해당 포트 이름을 사용하는 탭을 검색
             - UI 연결 상태(버튼 스타일 등)를 'Connected'로 업데이트
-            - 탭 제목에 포트 이름 반영
             - 시스템 로그에 성공 메시지 기록 (SystemLogEvent)
 
         Args:
@@ -306,7 +303,7 @@ class PortPresenter(QObject):
             panel = self.left_section.get_port_panel_at(i)
             if panel and panel.get_port_name() == port_name:
                 panel.set_connected(True)
-                # 탭 제목 업데이트는 Panel 내부 시그널 -> LeftSection -> TabPanel 흐름으로 자동 처리됨
+                # 탭 제목 업데이트는 Panel 내부 시그널 -> LeftSection 흐름으로 자동 처리됨
                 break
 
         # 시스템 로그 기록

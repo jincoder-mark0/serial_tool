@@ -120,7 +120,7 @@ class ColorManager(QObject):
         self._resource_path = resource_path
 
         self._rules: List[ColorRule] = []
-        
+
         # 내부 색상 팔레트 변수 초기화 (기본값: Dark Theme)
         self.apply_theme('dark')
 
@@ -133,7 +133,7 @@ class ColorManager(QObject):
         else:
             # 기본 규칙을 복사해서 사용할 때도 sanitize 과정을 거침
             self._init_default_rules()
-            
+
             # 디렉토리가 없으면 생성 (ResourcePath가 보통 보장하지만 안전장치)
             if not self.config_path.parent.exists():
                 self.config_path.parent.mkdir(parents=True, exist_ok=True)
@@ -150,16 +150,16 @@ class ColorManager(QObject):
     def _ensure_hex(self, color_code: str) -> str:
         """
         색상 코드가 HEX 형식이면 '#'을 보장합니다.
-        
+
         Args:
             color_code (str): 입력 색상 코드 (예: 'FF0000', '#FF0000', 'red')
-            
+
         Returns:
             str: '#'이 포함된 색상 코드
         """
         if not color_code:
             return ""
-        
+
         # 6자리 또는 8자리 16진수 문자열인 경우 '#' 추가
         if not color_code.startswith("#") and len(color_code) in [6, 8]:
             # 모든 문자가 16진수인지 확인 (선택 사항이나 안전을 위해)
@@ -168,7 +168,7 @@ class ColorManager(QObject):
                 return f"#{color_code}"
             except ValueError:
                 pass # HEX가 아닌 이름(red, blue)일 수 있음
-                
+
         return color_code
 
     def _init_default_rules(self) -> None:
@@ -222,7 +222,7 @@ class ColorManager(QObject):
 
         # 1. 키로 조회 시도, 없으면 입력값(HEX) 그대로 사용
         hex_code = color_map.get(color_input.lower(), color_input)
-        
+
         # 2. 안전장치: HEX 보정
         hex_code = self._ensure_hex(hex_code)
 
@@ -232,7 +232,7 @@ class ColorManager(QObject):
             fmt.setForeground(QBrush(QColor(hex_code)))
         else:
             fmt.setForeground(QBrush(QColor(self.COLOR_DEFAULT)))
-            
+
         if bold:
             fmt.setFontWeight(QFont.Bold)
         return fmt
@@ -245,7 +245,7 @@ class ColorManager(QObject):
     def rules(self) -> List[Tuple[str, QTextCharFormat]]:
         """
         Qt View(SyntaxHighlighter)에서 사용하기 위한 (패턴, 포맷) 튜플 리스트를 반환합니다.
-        
+
         Returns:
             List[Tuple[str, QTextCharFormat]]: Qt 호환 규칙 리스트.
         """
@@ -253,15 +253,15 @@ class ColorManager(QObject):
         for rule in self._rules:
             if not rule.enabled:
                 continue
-            
+
             # 색상 결정 (이미 apply_theme에서 동기화됨)
             final_color = rule.color
-            
-            is_bold = getattr(rule, 'bold', False) 
+
+            is_bold = getattr(rule, 'bold', False)
             fmt = self._create_format(final_color, bold=is_bold)
-            
+
             qt_rules.append((rule.pattern, fmt))
-            
+
         return qt_rules
 
     def get_color_for_key(self, key: str) -> QColor:
@@ -275,7 +275,7 @@ class ColorManager(QObject):
             QColor: 색상 객체.
         """
         hex_color = self.get_rule_color(key)
-        
+
         # HEX 보정
         hex_color = self._ensure_hex(hex_color)
 
@@ -285,7 +285,7 @@ class ColorManager(QObject):
 
     def apply_theme(self, theme_name: str) -> None:
         """
-        테마 변경 시 내부 색상 팔레트 변수를 업데이트하고, 
+        테마 변경 시 내부 색상 팔레트 변수를 업데이트하고,
         모든 규칙(self._rules)의 .color 필드를 현재 테마에 맞게 갱신합니다.
 
         Args:
@@ -318,10 +318,10 @@ class ColorManager(QObject):
         # 2. 규칙 리스트 색상 동기화
         for rule in self._rules:
             active_color = rule.light_color if is_light else rule.dark_color
-            
+
             if not active_color:
                 active_color = rule.color
-            
+
             # 여기서 한번 더 HEX 보정하여 객체 상태를 완벽하게 유지
             rule.color = self._ensure_hex(active_color)
 
@@ -356,7 +356,7 @@ class ColorManager(QObject):
         # [중요] 순환 참조 방지
         from view.managers.theme_manager import theme_manager
         is_dark = theme_manager.is_dark_theme()
-        
+
         # ColorService가 rule.color(또는 light/dark)를 참조할 때 #이 붙은 값을 쓰게 됨
         return ColorService.apply_rules(text, self._rules, is_dark)
 
@@ -371,17 +371,17 @@ class ColorManager(QObject):
             regex_enabled (bool): 정규식 사용 여부.
         """
         self.remove_rule(name)
-        
+
         # 입력받은 색상 코드 정규화
         safe_color = self._ensure_hex(color)
-        
+
         new_rule = ColorRule(
-            name=name, 
-            pattern=pattern, 
+            name=name,
+            pattern=pattern,
             color=safe_color,
-            light_color=safe_color, 
-            dark_color=safe_color, 
-            regex_enabled=regex_enabled, 
+            light_color=safe_color,
+            dark_color=safe_color,
+            regex_enabled=regex_enabled,
             enabled=True
         )
         self._rules.append(new_rule)
@@ -416,12 +416,12 @@ class ColorManager(QObject):
         """
         rules_data = [
             {
-                'name': r.name, 
+                'name': r.name,
                 'pattern': r.pattern,
-                'color': r.color, 
-                'light_color': r.light_color, 
+                'color': r.color,
+                'light_color': r.light_color,
                 'dark_color': r.dark_color,
-                'regex_enabled': r.regex_enabled, 
+                'regex_enabled': r.regex_enabled,
                 'enabled': r.enabled
             }
             for r in self._rules
@@ -450,7 +450,7 @@ class ColorManager(QObject):
         try:
             with open(file_path, 'r', encoding='utf-8') as f:
                 data = json.load(f)
-            
+
             # 호환성 처리: "color_rules" 키가 없으면 데이터 자체가 리스트라고 가정
             rules_data = data.get('color_rules', data) if isinstance(data, dict) else data
 
@@ -460,7 +460,7 @@ class ColorManager(QObject):
                 legacy_color = r.get('color', '')
                 light_c = r.get('light_color', '')
                 dark_c = r.get('dark_color', '')
-                
+
                 if not light_c: light_c = legacy_color
                 if not dark_c: dark_c = legacy_color
 
@@ -475,7 +475,7 @@ class ColorManager(QObject):
                     enabled=r.get('enabled', True),
                     bold=r.get('bold', False)
                 ))
-                
+
             logger.debug(f"Loaded {len(self._rules)} color rules.")
         except Exception as e:
             logger.error(f"Failed to load color rules ({file_path}): {e}")

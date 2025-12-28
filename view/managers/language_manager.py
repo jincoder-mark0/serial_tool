@@ -131,7 +131,7 @@ class LanguageManager(QObject):
                 if filename.endswith('.json') and not filename.startswith('template'):
                     language_code = os.path.splitext(filename)[0]
                     file_path = language_dir / filename
-                    
+
                     try:
                         with open(file_path, 'r', encoding='utf-8') as f:
                             self.resources[language_code] = json.load(f)
@@ -177,7 +177,7 @@ class LanguageManager(QObject):
             str: 번역된 텍스트 또는 키.
         """
         target_lang = language_code if language_code else self._current_language
-        
+
         # 1. 대상 언어 딕셔너리 가져오기
         language_dict = self.resources.get(target_lang, {})
         text = language_dict.get(key)
@@ -213,11 +213,11 @@ class LanguageManager(QObject):
             # 메타데이터 키(_meta_lang_name) 확인, 없으면 코드를 대문자로 표시
             name = data.get("_meta_lang_name", code.upper())
             languages[code] = name
-            
+
         # 만약 로드된 언어가 없으면 기본값 반환
         if not languages:
             return {"en": "English"}
-            
+
         return languages
 
     def get_supported_languages(self) -> List[str]:

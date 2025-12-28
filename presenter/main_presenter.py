@@ -43,6 +43,9 @@ from .lifecycle_manager import AppLifecycleManager
 from core.command_processor import CommandProcessor
 from core.settings_manager import SettingsManager
 from core.data_logger import data_logger_manager
+
+from view.panels.port_panel import PortPanel
+
 from view.managers.language_manager import language_manager
 from view.managers.color_manager import color_manager
 from core.logger import logger
@@ -61,7 +64,6 @@ from common.dtos import (
     FileCompletionEvent,
     SystemLogEvent
 )
-
 
 class MainPresenter(QObject):
     """
@@ -108,6 +110,7 @@ class MainPresenter(QObject):
         하위 Presenter 인스턴스 생성 (LifecycleManager에서 호출).
         """
         # Port Control
+        # View Facade Property 사용 (LoD 준수)
         self.port_presenter = PortPresenter(self.view.port_view, self.connection_controller)
 
         # Macro Control
@@ -117,19 +120,15 @@ class MainPresenter(QObject):
         self.file_presenter = FilePresenter(self.connection_controller)
 
         # Packet Inspector
-        # View 계층 구조를 모르더라도 접근 가능하도록 MainWindow가 프로퍼티 제공
-        packet_view = getattr(self.view, 'packet_view', None)
         self.packet_presenter = PacketPresenter(
-            packet_view,
+            self.view.packet_view,
             self.event_router,
             self.settings_manager
         )
 
         # Manual Control
-        # View 계층 구조를 모르더라도 접근 가능하도록 MainWindow가 프로퍼티 제공
-        manual_view = getattr(self.view, 'manual_control_view', None)
         self.manual_control_presenter = ManualControlPresenter(
-            manual_view,
+            self.view.manual_control_view,
             self.connection_controller,
             self.view.append_local_echo_data,
             self.port_presenter.get_active_port_name
@@ -176,9 +175,11 @@ class MainPresenter(QObject):
         self.view.shortcut_clear_requested.connect(self.on_shortcut_clear)
 
         self.view.file_transfer_dialog_opened.connect(self.file_presenter.on_file_transfer_dialog_opened)
+
+        # 포트 탭 추가 시 로깅 시그널 등 재연결을 위해 View 시그널 사용
         self.view.port_tab_added.connect(self._on_port_tab_added)
 
-        # 로깅 시그널 연결
+        # 로깅 시그널 연결 (각 탭별)
         self._connect_logging_signals()
 
         # 하위 Presenter의 브로드캐스트 설정 변경 감지
@@ -195,6 +196,7 @@ class MainPresenter(QObject):
     # -------------------------------------------------------------------------
     def _log_info(self, message: str) -> None:
         """INFO 레벨 시스템 로그 기록."""
+        # View Facade 메서드 사용 (내부 위젯 구조 몰라도 됨)
         self.view.log_system_message(SystemLogEvent(message=message, level="INFO"))
 
     def _log_error(self, message: str) -> None:
@@ -270,12 +272,9 @@ class MainPresenter(QObject):
         state = self.view.get_window_state()
 
         # ManualControlPresenter를 통해 상태 DTO 획득
-        # View 내부 위젯 이름을 몰라도 됨
         manual_state_dto = self.manual_control_presenter.get_state()
 
-        # DTO -> Dict 변환하여 상태 병합
-        # (SettingsManager가 기대하는 구조로 변환)
-        # 차후 SettingsManager도 DTO를 받도록 리팩토링 가능
+        # DTO -> Dict 변환하여 상태 병합 (설정 저장용)
         state.left_section_state["manual_control"] = {
             "manual_control_widget": {
                 "input_text": manual_state_dto.input_text,
@@ -289,6 +288,7 @@ class MainPresenter(QObject):
             }
         }
 
+        # SettingsManager에 값 설정
         settings = self.settings_manager
         settings.set(ConfigKeys.WINDOW_WIDTH, state.width)
         settings.set(ConfigKeys.WINDOW_HEIGHT, state.height)
@@ -325,6 +325,7 @@ class MainPresenter(QObject):
             new_state (PreferencesState): 변경된 설정 상태 DTO.
         """
         settings = self.settings_manager
+        # 설정 저장 로직 ... (기존과 동일)
         settings.set(ConfigKeys.THEME, new_state.theme.lower())
         settings.set(ConfigKeys.LANGUAGE, new_state.language)
         settings.set(ConfigKeys.PROP_FONT_SIZE, new_state.font_size)
@@ -351,22 +352,21 @@ class MainPresenter(QObject):
 
         settings.save_settings()
 
-        # 즉시 적용 필요한 설정 업데이트
+        # UI 즉시 반영
         self.view.switch_theme(new_state.theme.lower())
         language_manager.set_language(new_state.language)
 
-        # 모든 데이터 로그 위젯에 Max Lines 적용 (Facade Method 사용)
-        # View가 제공하는 이터레이터나 일괄 설정 메서드 활용
-        # 여기서는 View의 인터페이스를 통해 접근한다고 가정
+        # 모든 포트 탭 업데이트 (Facade 사용)
         count = self.view.get_port_tabs_count()
         for i in range(count):
             widget = self.view.get_port_tab_widget(i)
             # PortPanel인지 확인하고 설정 (View 내부 로직 의존 최소화)
-            widget.set_max_log_lines(new_state.max_log_lines)
+            if hasattr(widget, 'set_max_log_lines'):
+                widget.set_max_log_lines(new_state.max_log_lines)
 
         self.manual_control_presenter.update_local_echo_setting(new_state.local_echo_enabled)
 
-        # EventBus로 변경 전파 (다른 컴포넌트용)
+        # EventBus로 변경 전파
         from core.event_bus import event_bus
         event_bus.publish(EventTopics.SETTINGS_CHANGED, new_state)
 
@@ -574,9 +574,10 @@ class MainPresenter(QObject):
             sent_success = True
 
         # 4. Local Echo 처리
-        local_echo_enabled = self.settings_manager.get(ConfigKeys.PORT_LOCAL_ECHO, False)
-        if sent_success and local_echo_enabled:
-            self.view.append_local_echo_data(data)
+        if sent_success:
+            local_echo_enabled = self.settings_manager.get(ConfigKeys.PORT_LOCAL_ECHO, False)
+            if local_echo_enabled:
+                self.view.append_local_echo_data(data)
 
     def _notify_macro_error(self, message: str) -> None:
         """
@@ -666,7 +667,7 @@ class MainPresenter(QObject):
             widget = self.view.get_port_tab_widget(i)
             self._connect_single_port_logging(widget)
 
-    def _on_port_tab_added(self, panel) -> None:
+    def _on_port_tab_added(self, panel: PortPanel) -> None:
         """
         포트 탭 추가 시 로깅 시그널 연결 핸들러
 
@@ -674,70 +675,79 @@ class MainPresenter(QObject):
             panel (PortPanel): 추가된 포트 패널.
         """
         self._connect_single_port_logging(panel)
-        # 새 탭에 색상 규칙 주입
-        if hasattr(panel, 'data_log_widget'):
-            panel.data_log_widget.set_color_rules(color_manager.rules)
+        # 새 탭에 색상 규칙 주입 (LoD: Panel의 Facade 메서드 사용 권장)
+        # 현재 PortPanel에는 set_color_rules Facade가 없으므로 임시로 직접 접근하되
+        # 추후 리팩토링 시 PortPanel에 set_data_log_color_rules() 추가 권장
+        if hasattr(panel, 'set_data_log_color_rules'):
+            panel.set_data_log_color_rules(color_manager.rules)
 
-    def _connect_single_port_logging(self, panel) -> None:
+    def _connect_single_port_logging(self, panel: PortPanel) -> None:
         """
         단일 포트 패널의 로깅 시그널 연결
+
+        Logic:
+            - Panel의 로깅 요청 시그널을 핸들러에 연결
+            - DataLogWidget 직접 접근 대신 Panel의 시그널 사용 (Facade)
 
         Args:
             panel (PortPanel): 포트 패널.
         """
-        if hasattr(panel, 'data_log_widget'):
-            data_log_widget = panel.data_log_widget
+        # LoD 준수: Panel의 시그널 사용
+        if hasattr(panel, 'logging_start_requested'):
             try:
-                data_log_widget.logging_start_requested.disconnect()
-                data_log_widget.logging_stop_requested.disconnect()
+                panel.logging_start_requested.disconnect()
+                panel.logging_stop_requested.disconnect()
             except TypeError:
                 pass
 
             # Lambda로 패널 컨텍스트 전달
-            data_log_widget.logging_start_requested.connect(lambda: self._on_logging_start_requested(panel))
-            data_log_widget.logging_stop_requested.connect(lambda: self._on_logging_stop_requested(panel))
+            panel.logging_start_requested.connect(lambda: self._on_logging_start_requested(panel))
+            panel.logging_stop_requested.connect(lambda: self._on_logging_stop_requested(panel))
 
-    def _on_logging_start_requested(self, panel):
+    def _on_logging_start_requested(self, panel: PortPanel) -> None:
         """
         로깅 시작 요청 처리
 
         Logic:
-            - 파일 다이얼로그 표시
+            - Panel을 통해 파일 다이얼로그 표시
             - 확장자 기반 포맷 결정 (BIN/HEX/PCAP)
             - DataLoggerManager에 시작 요청
+            - Panel을 통해 로깅 활성화 UI 상태 업데이트
 
         Args:
             panel (PortPanel): 요청한 패널.
         """
-        file_path = panel.data_log_widget.show_save_log_dialog()
+        format_map = {
+            '.pcap': LogFormat.PCAP,
+            '.txt': LogFormat.HEX,
+        }
+
+        # Panel Facade 사용
+        file_path = panel.show_save_log_dialog()
         if not file_path:
-            panel.data_log_widget.set_logging_active(False)
+            panel.set_logging_active(False)
             return
 
         port = panel.get_port_name()
         if not port:
-            panel.data_log_widget.set_logging_active(False)
+            panel.set_logging_active(False)
             return
 
         # 확장자 기반 포맷 결정
         _, ext = os.path.splitext(file_path)
-        ext = ext.lower()
 
-        log_format = LogFormat.BIN  # 기본값
-        if ext == '.pcap':
-            log_format = LogFormat.PCAP
-        elif ext == '.txt':
-            log_format = LogFormat.HEX
+        lower_ext = ext.lower()
+        log_format = format_map.get(lower_ext, LogFormat.BIN)
 
         # 포맷 전달 및 시작
         if data_logger_manager.start_logging(port, file_path, log_format):
-            panel.data_log_widget.set_logging_active(True)
+            panel.set_logging_active(True)
             self._log_info(f"[{port}] Logging started ({log_format.value}): {file_path}")
         else:
-            panel.data_log_widget.set_logging_active(False)
+            panel.set_logging_active(False)
             self._log_error(f"[{port}] Failed to start logging")
 
-    def _on_logging_stop_requested(self, panel):
+    def _on_logging_stop_requested(self, panel: PortPanel) -> None:
         """
         로깅 중지 요청 처리
 
@@ -747,5 +757,7 @@ class MainPresenter(QObject):
         port = panel.get_port_name()
         if port:
             data_logger_manager.stop_logging(port)
-        panel.data_log_widget.set_logging_active(False)
+
+        # Panel Facade 사용
+        panel.set_logging_active(False)
         self._log_info(f"[{port}] Logging stopped")

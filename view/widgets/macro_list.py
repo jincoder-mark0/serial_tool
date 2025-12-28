@@ -20,11 +20,13 @@
 
 ## HOW
 * QStandardItemModel을 사용하여 데이터 관리
+* IntEnum을 사용하여 컬럼 인덱스 관리 (가독성 향상)
 * setIndexWidget을 사용하여 테이블 셀 내에 전송 버튼 배치
 * 시그널(send_row_requested)을 통해 Presenter에 DTO 전달
 * QItemSelectionModel을 사용하여 실행 중인 행 강조
 """
 from typing import Optional, List, Dict, Any
+from enum import IntEnum
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QTableView, QPushButton,
@@ -36,6 +38,18 @@ from PyQt5.QtCore import Qt, pyqtSignal, QPoint, QItemSelectionModel
 from view.managers.language_manager import language_manager
 from common.dtos import MacroEntry
 
+
+class MacroColumns(IntEnum):
+    """
+    매크로 테이블 컬럼 인덱스 정의
+    """
+    SELECT = 0
+    PREFIX = 1
+    COMMAND = 2
+    SUFFIX = 3
+    HEX_MODE = 4
+    DELAY = 5
+    SEND_BTN = 6
 
 class MacroListWidget(QWidget):
     """
@@ -159,15 +173,15 @@ class MacroListWidget(QWidget):
         self.macro_table.setSelectionBehavior(QTableView.SelectRows)
         self.macro_table.setSelectionMode(QTableView.ExtendedSelection)
 
-        # 컬럼 너비 조정
+        # 컬럼 너비 조정 (Enum 사용)
         header = self.macro_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)  # Select
-        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)  # Prefix
-        header.setSectionResizeMode(2, QHeaderView.Stretch)           # Command
-        header.setSectionResizeMode(3, QHeaderView.ResizeToContents)  # Suffix
-        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)  # HEX
-        header.setSectionResizeMode(5, QHeaderView.ResizeToContents)  # Delay
-        header.setSectionResizeMode(6, QHeaderView.ResizeToContents)  # Send Btn
+        header.setSectionResizeMode(MacroColumns.SELECT, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(MacroColumns.PREFIX, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(MacroColumns.COMMAND, QHeaderView.Stretch)
+        header.setSectionResizeMode(MacroColumns.SUFFIX, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(MacroColumns.HEX_MODE, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(MacroColumns.DELAY, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(MacroColumns.SEND_BTN, QHeaderView.ResizeToContents)
 
         layout.addLayout(header_layout)
         layout.addWidget(self.macro_table)
@@ -180,6 +194,98 @@ class MacroListWidget(QWidget):
         self.macro_table_model.rowsInserted.connect(lambda: self.macro_list_changed.emit())
         self.macro_table_model.rowsRemoved.connect(lambda: self.macro_list_changed.emit())
         self.macro_table_model.rowsMoved.connect(lambda: self.macro_list_changed.emit())
+
+    # -------------------------------------------------------------------------
+    # Getters for Encapsulation (캡슐화를 위한 데이터 접근자)
+    # -------------------------------------------------------------------------
+    def get_macro_entries(self) -> List[MacroEntry]:
+        """
+        현재 리스트에 있는 모든 매크로 항목을 DTO 리스트로 변환하여 반환합니다.
+        (Presenter가 모델 데이터를 필요로 할 때 사용)
+
+        Returns:
+            List[MacroEntry]: 매크로 항목 리스트.
+        """
+        entries = []
+        for row in range(self.macro_table_model.rowCount()):
+            entry = self.get_entry_at(row)
+            if entry:
+                entries.append(entry)
+        return entries
+
+    def get_entry_at(self, row: int) -> Optional[MacroEntry]:
+        """
+        특정 행의 데이터를 안전하게 추출하여 MacroEntry DTO로 반환합니다.
+
+        Logic:
+            1. 행 인덱스 유효성 검사
+            2. 각 컬럼의 아이템(QStandardItem) 획득 및 None 체크
+            3. 데이터 추출 및 타입 변환
+            4. DTO 생성 및 반환
+            5. 변환 오류 시 None 반환 (프로그램 중단 방지)
+
+        Args:
+            row (int): 행 인덱스.
+
+        Returns:
+            Optional[MacroEntry]: 생성된 DTO. 데이터가 불완전하면 None.
+        """
+        if row < 0 or row >= self.macro_table_model.rowCount():
+            return None
+
+        # 각 컬럼의 아이템 가져오기
+        item_select = self.macro_table_model.item(row, MacroColumns.SELECT)
+        item_prefix = self.macro_table_model.item(row, MacroColumns.PREFIX)
+        item_command = self.macro_table_model.item(row, MacroColumns.COMMAND)
+        item_suffix = self.macro_table_model.item(row, MacroColumns.SUFFIX)
+        item_hex_mode = self.macro_table_model.item(row, MacroColumns.HEX_MODE)
+        item_delay = self.macro_table_model.item(row, MacroColumns.DELAY)
+
+        # 필수 아이템이 하나라도 누락되면 None 반환 (방어적 코딩)
+        if not (item_select and item_prefix and item_command and
+                item_suffix and item_hex_mode and item_delay):
+            return None
+
+        try:
+            # 데이터 추출
+            enabled = item_select.checkState() == Qt.Checked
+            prefix_enabled = item_prefix.checkState() == Qt.Checked
+            command = item_command.text()
+            suffix_enabled = item_suffix.checkState() == Qt.Checked
+            hex_mode = item_hex_mode.checkState() == Qt.Checked
+
+            delay_text = item_delay.text()
+
+            try:
+                delay_ms = int(item_delay.text())
+            except (ValueError, TypeError):
+                delay_ms = 0
+
+            return MacroEntry(
+                enabled=enabled,
+                command=command,
+                hex_mode=hex_mode,
+                prefix_enabled=prefix_enabled,
+                suffix_enabled=suffix_enabled,
+                delay_ms=delay_ms
+            )
+        except ValueError:
+            # 지연 시간이 숫자가 아닌 경우 등 변환 오류 처리
+            return None
+
+    def get_selected_indices(self) -> List[int]:
+        """
+        체크박스가 선택된 항목의 인덱스 리스트를 반환합니다.
+
+        Returns:
+            List[int]: 선택된 행 인덱스 리스트.
+        """
+        indices: List[int] = []
+        for row in range(self.macro_table_model.rowCount()):
+            item = self.macro_table_model.item(row, MacroColumns.SELECT)
+            if item and item.checkState() == Qt.Checked:
+                indices.append(row)
+        return indices
 
     # -------------------------------------------------------------------------
     # 실행 추적 및 UI 제어 (Execution Tracking & UI Control)
@@ -198,7 +304,7 @@ class MacroListWidget(QWidget):
         """
         # 사용자 선택과 충돌 방지를 위해 기존 선택 해제
         self.macro_table.clearSelection()
-        
+
         if row >= 0 and row < self.macro_table_model.rowCount():
             index = self.macro_table_model.index(row, 0)
             if index.isValid():
@@ -219,7 +325,7 @@ class MacroListWidget(QWidget):
         """
         self._send_enabled = enabled
         for row in range(self.macro_table_model.rowCount()):
-            index = self.macro_table_model.index(row, 6)
+            index = self.macro_table_model.index(row, MacroColumns.SEND_BTN)
             widget = self.macro_table.indexWidget(index)
             if widget:
                 # widget은 Layout을 가진 컨테이너이므로 그 안의 버튼을 찾아야 함
@@ -232,15 +338,16 @@ class MacroListWidget(QWidget):
     # -------------------------------------------------------------------------
     def update_header_labels(self) -> None:
         """테이블 헤더 라벨을 업데이트합니다."""
-        labels = [
-            "",  # Checkbox
-            language_manager.get_text("macro_list_col_prefix"),
-            language_manager.get_text("macro_list_col_command"),
-            language_manager.get_text("macro_list_col_suffix"),
-            language_manager.get_text("macro_list_col_hex"),
-            language_manager.get_text("macro_list_col_delay"),
-            language_manager.get_text("macro_list_col_send")
-        ]
+        # Enum 순서에 맞춰 라벨 리스트 생성
+        labels = [""] * len(MacroColumns)
+        labels[MacroColumns.SELECT] = ""  # Checkbox
+        labels[MacroColumns.PREFIX] = language_manager.get_text("macro_list_col_prefix")
+        labels[MacroColumns.COMMAND] = language_manager.get_text("macro_list_col_command")
+        labels[MacroColumns.SUFFIX] = language_manager.get_text("macro_list_col_suffix")
+        labels[MacroColumns.HEX_MODE] = language_manager.get_text("macro_list_col_hex")
+        labels[MacroColumns.DELAY] = language_manager.get_text("macro_list_col_delay")
+        labels[MacroColumns.SEND_BTN] = language_manager.get_text("macro_list_col_send")
+
         self.macro_table_model.setHorizontalHeaderLabels(labels)
 
     def retranslate_ui(self) -> None:
@@ -260,7 +367,7 @@ class MacroListWidget(QWidget):
 
         # Send 버튼 텍스트 업데이트 (모든 행 순회)
         for row in range(self.macro_table_model.rowCount()):
-            index = self.macro_table_model.index(row, 6)
+            index = self.macro_table_model.index(row, MacroColumns.SEND_BTN)
             widget = self.macro_table.indexWidget(index)
             if widget:
                 send_btn = widget.findChild(QPushButton)
@@ -307,65 +414,12 @@ class MacroListWidget(QWidget):
         Args:
             item (QStandardItem): 변경된 아이템.
         """
-        if item.column() == 0:  # Select column
+        if item.column() == MacroColumns.SELECT:
             self.update_select_all_state()
 
         # 데이터 변경 시그널 발생 (Select 컬럼 제외)
-        if item.column() != 0:
+        if item.column() != MacroColumns.SELECT:
             self.macro_list_changed.emit()
-
-    def get_macro_entries(self) -> List[MacroEntry]:
-        """
-        모든 행을 MacroEntry DTO 리스트로 변환하여 반환합니다.
-        (Logic Layer 또는 Runner에서 사용)
-
-        Returns:
-            List[MacroEntry]: MacroEntry 객체 리스트.
-        """
-        entries = []
-        for row in range(self.macro_table_model.rowCount()):
-            entry = self.get_entry_at(row)
-            if entry:
-                entries.append(entry)
-        return entries
-
-    def get_entry_at(self, row: int) -> Optional[MacroEntry]:
-        """
-        특정 행의 데이터를 MacroEntry DTO로 반환합니다.
-
-        Args:
-            row (int): 행 인덱스.
-
-        Returns:
-            Optional[MacroEntry]: 생성된 DTO, 실패 시 None.
-        """
-        if row < 0 or row >= self.macro_table_model.rowCount():
-            return None
-
-        # 데이터 안전하게 추출
-        try:
-            enabled = self.macro_table_model.item(row, 0).checkState() == Qt.Checked
-            prefix_enabled = self.macro_table_model.item(row, 1).checkState() == Qt.Checked
-            command = self.macro_table_model.item(row, 2).text()
-            suffix_enabled = self.macro_table_model.item(row, 3).checkState() == Qt.Checked
-            hex_mode = self.macro_table_model.item(row, 4).checkState() == Qt.Checked
-            delay_text = self.macro_table_model.item(row, 5).text()
-
-            # 지연 시간 안전 변환
-            delay_ms = 100
-            if delay_text.isdigit():
-                delay_ms = int(delay_text)
-
-            return MacroEntry(
-                enabled=enabled,
-                command=command,
-                hex_mode=hex_mode,
-                prefix_enabled=prefix_enabled,
-                suffix_enabled=suffix_enabled,
-                delay_ms=delay_ms
-            )
-        except Exception:
-            return None
 
     def export_macros(self) -> List[Dict[str, Any]]:
         """
@@ -449,12 +503,13 @@ class MacroListWidget(QWidget):
 
         if copy_source_row >= 0:
             # 옵션 복사
-            enabled = self.macro_table_model.item(copy_source_row, 0).checkState() == Qt.Checked
-            prefix = self.macro_table_model.item(copy_source_row, 1).checkState() == Qt.Checked
+            # 내부 로직이므로 직접 접근
+            enabled = self.macro_table_model.item(copy_source_row, MacroColumns.SELECT).checkState() == Qt.Checked
+            prefix = self.macro_table_model.item(copy_source_row, MacroColumns.PREFIX).checkState() == Qt.Checked
             command = ""  # Command는 복사하지 않음 (빈 칸)
-            suffix = self.macro_table_model.item(copy_source_row, 3).checkState() == Qt.Checked
-            hex_mode = self.macro_table_model.item(copy_source_row, 4).checkState() == Qt.Checked
-            delay = self.macro_table_model.item(copy_source_row, 5).text()
+            suffix = self.macro_table_model.item(copy_source_row, MacroColumns.SUFFIX).checkState() == Qt.Checked
+            hex_mode = self.macro_table_model.item(copy_source_row, MacroColumns.HEX_MODE).checkState() == Qt.Checked
+            delay = self.macro_table_model.item(copy_source_row, MacroColumns.DELAY).text()
 
         self._insert_row(insert_row_index, command, prefix, hex_mode, suffix, delay, enabled)
 
@@ -474,41 +529,51 @@ class MacroListWidget(QWidget):
             delay (str): 지연 시간.
             enabled (bool): 활성화 여부 (Select).
         """
+        # 리스트 초기화 (None으로 채움)
+        items = [None] * len(MacroColumns)
+
         # 0: Select Checkbox
         item_select = QStandardItem()
         item_select.setCheckable(True)
         item_select.setCheckState(Qt.Checked if enabled else Qt.Unchecked)
         item_select.setEditable(False)
+        items[MacroColumns.SELECT] = item_select
 
         # 1: Prefix Checkbox
         item_prefix = QStandardItem()
         item_prefix.setCheckable(True)
         item_prefix.setCheckState(Qt.Checked if prefix else Qt.Unchecked)
         item_prefix.setEditable(False)
+        items[MacroColumns.PREFIX] = item_prefix
 
         # 2: Command
         item_command = QStandardItem(command)
+        items[MacroColumns.COMMAND] = item_command
 
         # 3: Suffix Checkbox
         item_suffix = QStandardItem()
         item_suffix.setCheckable(True)
         item_suffix.setCheckState(Qt.Checked if suffix else Qt.Unchecked)
         item_suffix.setEditable(False)
+        items[MacroColumns.SUFFIX] = item_suffix
 
         # 4: HEX
         item_hex = QStandardItem()
         item_hex.setCheckable(True)
         item_hex.setCheckState(Qt.Checked if hex_mode else Qt.Unchecked)
         item_hex.setEditable(False)
+        items[MacroColumns.HEX_MODE] = item_hex
 
         # 5: Delay
         item_delay = QStandardItem(delay)
+        items[MacroColumns.DELAY] = item_delay
 
         # 6: Send (Placeholder)
         item_send = QStandardItem("")
         item_send.setEditable(False)
+        items[MacroColumns.SEND_BTN] = item_send
 
-        self.macro_table_model.insertRow(row_index, [item_select, item_prefix, item_command, item_suffix, item_hex, item_delay, item_send])
+        self.macro_table_model.insertRow(row_index, items)
 
         # Send 버튼 설정
         self._set_send_button(row_index)
@@ -553,7 +618,7 @@ class MacroListWidget(QWidget):
 
         layout.addWidget(btn)
 
-        index = self.macro_table_model.index(row, 6)
+        index = self.macro_table_model.index(row, MacroColumns.SEND_BTN)
         self.macro_table.setIndexWidget(index, widget)
 
     def _on_send_clicked(self, row: int) -> None:
@@ -573,7 +638,7 @@ class MacroListWidget(QWidget):
         rows = sorted(set(index.row() for index in self.macro_table.selectionModel().selectedRows()), reverse=True)
         for row in rows:
             self.macro_table_model.removeRow(row)
-        
+
         # 행 삭제 후 인덱스가 당겨지므로 버튼 재설정 필요
         self._refresh_send_buttons()
         self.update_select_all_state()
@@ -631,20 +696,6 @@ class MacroListWidget(QWidget):
         # 2. 새 위치에 삽입
         self.macro_table_model.insertRow(dest_row, items)
 
-    def get_selected_indices(self) -> List[int]:
-        """
-        체크박스가 선택된 항목의 인덱스 리스트를 반환합니다.
-
-        Returns:
-            List[int]: 선택된 행 인덱스 리스트.
-        """
-        indices: List[int] = []
-        for row in range(self.macro_table_model.rowCount()):
-            item = self.macro_table_model.item(row, 0)
-            if item.checkState() == Qt.Checked:
-                indices.append(row)
-        return indices
-
     def on_select_all_changed(self, state: int) -> None:
         """
         Select All 체크박스 상태 변경 핸들러입니다.
@@ -691,8 +742,9 @@ class MacroListWidget(QWidget):
         """
         state = Qt.Checked if checked else Qt.Unchecked
         for row in range(self.macro_table_model.rowCount()):
-            item = self.macro_table_model.item(row, 0)
-            item.setCheckState(state)
+            item = self.macro_table_model.item(row, MacroColumns.SELECT)
+            if item:
+                item.setCheckState(state)
         self.update_select_all_state()
 
     def update_select_all_state(self) -> None:
@@ -704,7 +756,7 @@ class MacroListWidget(QWidget):
 
         checked_count = 0
         for row in range(total):
-            item = self.macro_table_model.item(row, 0)
+            item = self.macro_table_model.item(row, MacroColumns.SELECT)
             if item and item.checkState() == Qt.Checked:
                 checked_count += 1
 

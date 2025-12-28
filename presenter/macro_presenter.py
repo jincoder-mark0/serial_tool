@@ -17,7 +17,7 @@
 * 브로드캐스트 모드 상태 중계
 
 ## HOW
-* View(Panel)가 제공하는 Facade 메서드를 통해 상태 조회 및 UI 제어
+* View(Panel)가 제공하는 Facade 메서드를 통해 상태 조회 및 UI 제어 (LoD 준수)
 * ScriptLoadWorker(QThread)를 통한 비동기 로딩
 * DTO(MacroScriptData, MacroExecutionRequest)를 사용한 데이터 전달
 * Signal/Slot을 이용한 이벤트 처리
@@ -136,7 +136,7 @@ class MacroPresenter(QObject):
         Args:
             enabled (bool): 활성화 여부.
         """
-        # Panel이 내부적으로 ControlWidget과 ListWidget의 활성화를 모두 처리해야 함
+        # Panel Facade 메서드 호출 (내부 위젯 구조 몰라도 됨)
         self.panel.set_controls_enabled(enabled)
 
     def is_broadcast_enabled(self) -> bool:
@@ -147,6 +147,7 @@ class MacroPresenter(QObject):
         Returns:
             bool: 브로드캐스트 활성화 여부.
         """
+        # Panel Facade 메서드 호출
         return self.panel.is_broadcast_enabled()
 
     def on_script_save(self, script_data: MacroScriptData) -> None:
@@ -211,6 +212,7 @@ class MacroPresenter(QObject):
             data (dict): 로드된 스크립트 데이터.
         """
         logger.info("Script loaded successfully.")
+        # Panel Facade 호출
         self.panel.apply_state(data)
         self._load_worker = None
 
@@ -252,6 +254,11 @@ class MacroPresenter(QObject):
 
         for i, entry in enumerate(all_entries):
             if i in indices:
+                # 지연 시간 최소값 보장
+                # 실행 시 안전을 위해 100ms를 기본값으로 설정
+                if entry.delay_ms is None or entry.delay_ms < 100:
+                    entry.delay_ms = 100
+
                 execution_plan.append((i, entry))
 
         if not execution_plan:
@@ -288,8 +295,8 @@ class MacroPresenter(QObject):
             - Runner의 현재 일시정지 상태 확인
             - 상태에 따라 resume() 또는 pause() 호출
         """
-        # Runner의 내부 상태(_is_paused)를 확인하여 토글
-        if self.runner._is_paused:
+        # Runner의 내부 상태(is_paused)를 확인하여 토글
+        if self.runner.is_paused():
             self.runner.resume()
         else:
             self.runner.pause()
@@ -356,6 +363,7 @@ class MacroPresenter(QObject):
             current (int): 현재 반복 횟수.
             total (int): 전체 반복 횟수 (0=무한).
         """
+        # Panel Facade 호출
         self.panel.update_auto_count(current, total)
 
     def on_error(self, event: MacroErrorEvent) -> None:

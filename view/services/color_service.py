@@ -143,7 +143,7 @@ class ColorService:
         # 2. 폴백: 공통 color 필드 사용
         if not target_color and hasattr(rule, 'color') and rule.color:
             raw_color = rule.color
-            
+
             # 색상 코드가 HEX 형식이면 테마에 맞춰 명도 보정 시도
             if raw_color.startswith('#'):
                 target_color = cls._adjust_color_for_theme(raw_color, is_dark_theme)
@@ -161,7 +161,7 @@ class ColorService:
 
         Logic:
             - HEX -> RGB -> HLS 변환
-            - 다크 테마(어두운 배경) -> 명도를 높임 (글자를 밝게) 
+            - 다크 테마(어두운 배경) -> 명도를 높임 (글자를 밝게)
             - 라이트 테마(밝은 배경) -> 명도를 낮춤 (글자를 어둡게)
             - HLS -> RGB -> HEX 변환
 
@@ -197,7 +197,7 @@ class ColorService:
 
             # HLS -> RGB
             r, g, b = colorsys.hls_to_rgb(h, l, s)
-            
+
             # 0~255 정수 변환 및 클램핑(Clamping)
             r = max(0, min(255, int(r * 255)))
             g = max(0, min(255, int(g * 255)))
