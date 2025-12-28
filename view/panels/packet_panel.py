@@ -149,6 +149,8 @@ class PacketPanel(QWidget):
     패킷 분석 뷰 위젯
 
     QTableView와 제어 도구(Toolbar)를 포함합니다.
+    외부(Presenter)에서는 내부 위젯에 직접 접근할 수 없으며,
+    제공된 Facade 메서드를 통해 제어해야 합니다.
     """
 
     # 사용자 액션 시그널
@@ -165,11 +167,12 @@ class PacketPanel(QWidget):
         super().__init__(parent)
 
         # UI 컴포넌트
-        self.packet_table: QTableView = None
-        self.packet_model: PacketModel = None
-        self.autoscroll_chk: QCheckBox = None
-        self.capture_chk: QCheckBox = None
-        self.clear_btn: QPushButton = None
+        self._packet_table: QTableView = None
+        self._packet_model: PacketModel = None
+        self._autoscroll_chk: QCheckBox = None
+        self._capture_chk: QCheckBox = None
+        self._clear_btn: QPushButton = None
+        self._title_lbl: QLabel = None
 
         self._autoscroll_enabled = True
 
@@ -188,58 +191,58 @@ class PacketPanel(QWidget):
         toolbar_layout = QHBoxLayout()
 
         # 타이틀
-        self.title_lbl = QLabel(language_manager.get_text("packet_panel_title", "Packet Inspector"))
-        self.title_lbl.setProperty("class", "section-title")
+        self._title_lbl = QLabel(language_manager.get_text("packet_panel_title", "Packet Inspector"))
+        self._title_lbl.setProperty("class", "section-title")
 
         # 제어 버튼들
-        self.capture_chk = QCheckBox(language_manager.get_text("packet_capture_chk", "Capture"))
-        self.capture_chk.setChecked(True)
-        self.capture_chk.toggled.connect(self.capture_toggled.emit)
+        self._capture_chk = QCheckBox(language_manager.get_text("packet_capture_chk", "Capture"))
+        self._capture_chk.setChecked(True)
+        self._capture_chk.toggled.connect(self.capture_toggled.emit)
 
-        self.autoscroll_chk = QCheckBox(language_manager.get_text("packet_autoscroll_chk", "Auto Scroll"))
-        self.autoscroll_chk.setChecked(True)
-        self.autoscroll_chk.toggled.connect(self._on_autoscroll_toggled)
+        self._autoscroll_chk = QCheckBox(language_manager.get_text("packet_autoscroll_chk", "Auto Scroll"))
+        self._autoscroll_chk.setChecked(True)
+        self._autoscroll_chk.toggled.connect(self._on_autoscroll_toggled)
 
-        self.clear_btn = QPushButton(language_manager.get_text("packet_panel_btn_clear"))
-        self.clear_btn.clicked.connect(self.clear_requested.emit)
+        self._clear_btn = QPushButton(language_manager.get_text("packet_panel_btn_clear"))
+        self._clear_btn.clicked.connect(self.clear_requested.emit)
 
-        toolbar_layout.addWidget(self.title_lbl)
+        toolbar_layout.addWidget(self._title_lbl)
         toolbar_layout.addStretch()
-        toolbar_layout.addWidget(self.capture_chk)
-        toolbar_layout.addWidget(self.autoscroll_chk)
-        toolbar_layout.addWidget(self.clear_btn)
+        toolbar_layout.addWidget(self._capture_chk)
+        toolbar_layout.addWidget(self._autoscroll_chk)
+        toolbar_layout.addWidget(self._clear_btn)
 
         # 2. 패킷 테이블 (Table View)
-        self.packet_table = QTableView()
-        self.packet_model = PacketModel()
-        self.packet_table.setModel(self.packet_model)
+        self._packet_table = QTableView()
+        self._packet_model = PacketModel()
+        self._packet_table.setModel(self._packet_model)
 
         # 테이블 스타일 설정
-        self.packet_table.setSelectionBehavior(QAbstractItemView.SelectRows)
-        self.packet_table.setAlternatingRowColors(True)
-        self.packet_table.verticalHeader().setVisible(False)
-        self.packet_table.setProperty("class", "fixed-font")
+        self._packet_table.setSelectionBehavior(QAbstractItemView.SelectRows)
+        self._packet_table.setAlternatingRowColors(True)
+        self._packet_table.verticalHeader().setVisible(False)
+        self._packet_table.setProperty("class", "fixed-font")
 
         # 컬럼 너비 조정
-        header = self.packet_table.horizontalHeader()
+        header = self._packet_table.horizontalHeader()
         header.setSectionResizeMode(0, QHeaderView.ResizeToContents) # Time
         header.setSectionResizeMode(1, QHeaderView.ResizeToContents) # Type
         header.setSectionResizeMode(2, QHeaderView.Stretch)          # HEX (가변)
         header.setSectionResizeMode(3, QHeaderView.Stretch)          # ASCII (가변)
 
         layout.addLayout(toolbar_layout)
-        layout.addWidget(self.packet_table)
+        layout.addWidget(self._packet_table)
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 텍스트 업데이트"""
-        self.title_lbl.setText(language_manager.get_text("packet_panel_title"))
-        self.clear_btn.setText(language_manager.get_text("packet_panel_btn_clear"))
-        self.capture_chk.setText(language_manager.get_text("packet_panel_chk_capture"))
-        self.autoscroll_chk.setText(language_manager.get_text("packet_panel_chk_autoscroll"))
+        self._title_lbl.setText(language_manager.get_text("packet_panel_title"))
+        self._clear_btn.setText(language_manager.get_text("packet_panel_btn_clear"))
+        self._capture_chk.setText(language_manager.get_text("packet_panel_chk_capture"))
+        self._autoscroll_chk.setText(language_manager.get_text("packet_panel_chk_autoscroll"))
         # 타이틀 라벨 업데이트 로직 필요 시 추가 (객체 참조 저장 필요)
 
     # -------------------------------------------------------------------------
-    # Public Methods (Presenter에서 호출)
+    # Public Methods (Presenter에서 호출 - Facade Interface)
     # -------------------------------------------------------------------------
     def set_buffer_size(self, size: int) -> None:
         """
@@ -248,7 +251,7 @@ class PacketPanel(QWidget):
         Args:
             size (int): 버퍼 크기.
         """
-        self.packet_model.set_buffer_size(size)
+        self._packet_model.set_buffer_size(size)
 
     def set_autoscroll(self, enabled: bool) -> None:
         """
@@ -258,7 +261,7 @@ class PacketPanel(QWidget):
             enabled (bool): 활성화 여부.
         """
         self._autoscroll_enabled = enabled
-        self.autoscroll_chk.setChecked(enabled)
+        self._autoscroll_chk.setChecked(enabled)
 
     def set_capture_state(self, enabled: bool) -> None:
         """
@@ -267,7 +270,7 @@ class PacketPanel(QWidget):
         Args:
             enabled (bool): 활성화 여부.
         """
-        self.capture_chk.setChecked(enabled)
+        self._capture_chk.setChecked(enabled)
 
     def append_packet(self, data: PacketViewData) -> None:
         """
@@ -276,14 +279,14 @@ class PacketPanel(QWidget):
         Args:
             data (PacketViewData): 패킷 데이터 DTO.
         """
-        self.packet_model.append_packet(data)
+        self._packet_model.append_packet(data)
 
         if self._autoscroll_enabled:
-            self.packet_table.scrollToBottom()
+            self._packet_table.scrollToBottom()
 
     def clear_view(self) -> None:
         """테이블 뷰를 초기화합니다."""
-        self.packet_model.clear()
+        self._packet_model.clear()
 
     # -------------------------------------------------------------------------
     # Internal Slots
@@ -297,4 +300,4 @@ class PacketPanel(QWidget):
         """
         self._autoscroll_enabled = checked
         if checked:
-            self.packet_table.scrollToBottom()
+            self._packet_table.scrollToBottom()

@@ -59,7 +59,7 @@ class PacketPresenter(QObject):
         # 1. 초기 설정 적용
         self._apply_initial_settings()
 
-        # 2. View 시그널 연결
+        # 2. View 시그널 연결 (Facade Signal)
         self.panel.clear_requested.connect(self.on_clear_requested)
         self.panel.capture_toggled.connect(self.on_capture_toggled)
 
@@ -73,7 +73,7 @@ class PacketPresenter(QObject):
 
         Logic:
             - 버퍼 크기, 자동 스크롤 여부 로드
-            - View의 설정 메서드 호출
+            - View의 설정 메서드 호출 (Facade)
         """
         buffer_size = self.settings_manager.get(ConfigKeys.PACKET_BUFFER_SIZE, 100)
         autoscroll = self.settings_manager.get(ConfigKeys.PACKET_AUTOSCROLL, True)
@@ -109,7 +109,7 @@ class PacketPresenter(QObject):
 
         # 데이터 변환 (Hex / ASCII)
         # Packet 객체(model.packet_parser.Packet)는 raw_data 속성을 가진다고 가정
-        raw_data = getattr(packet, 'raw_data', b'')
+        raw_data = getattr(packet, 'data', b'') # Packet DTO 속성명 'data'
 
         # Hex 문자열 변환 (예: "01 02 0A")
         data_hex = " ".join(f"{b:02X}" for b in raw_data)
@@ -117,8 +117,10 @@ class PacketPresenter(QObject):
         # ASCII 문자열 변환 (제어 문자는 점으로 표시)
         data_ascii = "".join(chr(b) if 32 <= b < 127 else "." for b in raw_data)
 
-        # 패킷 타입 (클래스 이름 또는 type 속성)
-        packet_type = getattr(packet, 'type_name', 'Unknown')
+        # 패킷 타입 (메타데이터 활용)
+        packet_type = "Raw"
+        if packet.metadata and "type" in packet.metadata:
+             packet_type = packet.metadata["type"]
 
         # View용 DTO 생성
         view_data = PacketViewData(
@@ -128,7 +130,7 @@ class PacketPresenter(QObject):
             data_ascii=data_ascii
         )
 
-        # View 업데이트
+        # View 업데이트 (Facade Method)
         self.panel.append_packet(view_data)
 
     def on_settings_changed(self, state: PreferencesState) -> None:
@@ -142,6 +144,7 @@ class PacketPresenter(QObject):
         Args:
             state (PreferencesState): 변경된 설정 상태 DTO.
         """
+        # View Facade 메서드 사용
         self.panel.set_buffer_size(state.packet_buffer_size)
         self.panel.set_autoscroll(state.packet_autoscroll)
 

@@ -4,6 +4,25 @@
 
 ---
 
+### 아키텍처 리팩토링 및 코드 품질 개선 (2025-12-28)
+
+#### 리팩토링 (Refactoring)
+
+- **MVP 아키텍처 고도화 (Strict MVP & Law of Demeter)**
+  - **디미터 법칙 준수**: Presenter가 View의 깊은 내부 위젯 계층(`Window -> Section -> Panel -> Widget`)을 직접 탐색하지 않도록 수정하여 모듈 간 결합도를 획기적으로 낮췄습니다.
+  - **파사드 패턴(Facade Pattern) 적용**: `ManualControlPanel`, `PortPanel`, `MacroPanel`, `PacketPanel` 등 주요 View 컨테이너에 `get_input_text()`, `is_hex_mode()`와 같은 인터페이스 메서드를 추가하여 내부 구현 상세를 캡슐화했습니다.
+  - **내부 위젯 은닉**: View 내부의 하위 위젯 멤버 변수를 `_` 접두어(예: `_manual_control_widget`)로 변경하여 외부에서의 직접 접근을 구조적으로 차단했습니다.
+
+- **데이터 흐름 및 신호 체계 개선**
+  - **시그널 중계(Signal Relay)**: 하위 위젯의 이벤트를 패널이 받아 상위로 다시 방출(Re-emit)하는 구조를 확립하여, Presenter는 패널의 시그널만 구독하도록 의존성을 단순화했습니다.
+  - **DTO 활용 강화**: `ManualControlPresenter`가 View의 상태를 수집할 때, View가 제공하는 인터페이스를 통해 안전하게 데이터를 조회하고 DTO를 조립하도록 개선했습니다.
+
+- **코드 가독성 및 유지보수성**
+  - **명시적 뷰 접근자**: `MainWindow`에 `macro_view`, `packet_view` 등의 프로퍼티를 추가하여, MainPresenter 초기화 시 UI 계층 구조를 탐색하지 않고 명시적으로 뷰 객체에 접근할 수 있게 했습니다.
+  - **데이터 라우팅 캡슐화**: `PortTabPanel` 내부에 포트 이름 기반의 데이터 주입 로직(`append_rx_data`)을 캡슐화하여, 외부에서 탭 인덱스를 직접 순회하는 로직을 제거했습니다.
+
+---
+
 ### 아키텍처 리팩토링 및 코드 품질 개선 (2025-12-27)
 
 #### 리팩토링 (Refactoring)

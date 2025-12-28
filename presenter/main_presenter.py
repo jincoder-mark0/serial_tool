@@ -23,9 +23,8 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 * DTO를 활용한 데이터 교환 (Type Safety)
 * SettingsManager 주입 및 관리
 """
-import os
 from typing import Optional
-from PyQt5.QtCore import QObject, QTimer, QDateTime, Qt
+from PyQt5.QtCore import QObject, QTimer, QDateTime
 
 from view.main_window import MainWindow
 from model.connection_controller import ConnectionController
@@ -42,12 +41,8 @@ from .lifecycle_manager import AppLifecycleManager
 
 from core.command_processor import CommandProcessor
 from core.settings_manager import SettingsManager
-from core.data_logger import data_logger_manager
-from view.managers.language_manager import language_manager
-from view.managers.color_manager import color_manager
 from core.logger import logger
-from common.constants import ConfigKeys, EventTopics
-from common.enums import LogFormat
+from common.constants import ConfigKeys
 from common.dtos import (
     ManualCommand,
     PortDataEvent,
@@ -57,8 +52,8 @@ from common.dtos import (
     FontConfig,
     PortConnectionEvent,
     MacroErrorEvent,
-    FileErrorEvent,
     FileCompletionEvent,
+    FileErrorEvent,
     SystemLogEvent
 )
 
@@ -108,6 +103,7 @@ class MainPresenter(QObject):
         하위 Presenter 인스턴스 생성 (LifecycleManager에서 호출).
         """
         # Port Control
+        # View Facade Property 사용 (LoD 준수)
         self.port_presenter = PortPresenter(self.view.port_view, self.connection_controller)
 
         # Macro Control
@@ -117,19 +113,15 @@ class MainPresenter(QObject):
         self.file_presenter = FilePresenter(self.connection_controller)
 
         # Packet Inspector
-        # View 계층 구조를 모르더라도 접근 가능하도록 MainWindow가 프로퍼티 제공
-        packet_view = getattr(self.view, 'packet_view', None)
         self.packet_presenter = PacketPresenter(
-            packet_view,
+            self.view.packet_view,
             self.event_router,
             self.settings_manager
         )
 
         # Manual Control
-        # View 계층 구조를 모르더라도 접근 가능하도록 MainWindow가 프로퍼티 제공
-        manual_view = getattr(self.view, 'manual_control_view', None)
         self.manual_control_presenter = ManualControlPresenter(
-            manual_view,
+            self.view.manual_control_view,
             self.connection_controller,
             self.view.append_local_echo_data,
             self.port_presenter.get_active_port_name
@@ -176,9 +168,11 @@ class MainPresenter(QObject):
         self.view.shortcut_clear_requested.connect(self.on_shortcut_clear)
 
         self.view.file_transfer_dialog_opened.connect(self.file_presenter.on_file_transfer_dialog_opened)
+
+        # 포트 탭 추가 시 로깅 시그널 등 재연결을 위해 View 시그널 사용
         self.view.port_tab_added.connect(self._on_port_tab_added)
 
-        # 로깅 시그널 연결
+        # 로깅 시그널 연결 (각 탭별)
         self._connect_logging_signals()
 
         # 하위 Presenter의 브로드캐스트 설정 변경 감지
@@ -195,6 +189,7 @@ class MainPresenter(QObject):
     # -------------------------------------------------------------------------
     def _log_info(self, message: str) -> None:
         """INFO 레벨 시스템 로그 기록."""
+        # View Facade 메서드 사용 (내부 위젯 구조 몰라도 됨)
         self.view.log_system_message(SystemLogEvent(message=message, level="INFO"))
 
     def _log_error(self, message: str) -> None:
@@ -289,6 +284,7 @@ class MainPresenter(QObject):
             }
         }
 
+        # SettingsManager에 값 설정
         settings = self.settings_manager
         settings.set(ConfigKeys.WINDOW_WIDTH, state.width)
         settings.set(ConfigKeys.WINDOW_HEIGHT, state.height)
@@ -325,6 +321,7 @@ class MainPresenter(QObject):
             new_state (PreferencesState): 변경된 설정 상태 DTO.
         """
         settings = self.settings_manager
+        # 설정 저장 로직 ... (기존과 동일)
         settings.set(ConfigKeys.THEME, new_state.theme.lower())
         settings.set(ConfigKeys.LANGUAGE, new_state.language)
         settings.set(ConfigKeys.PROP_FONT_SIZE, new_state.font_size)
@@ -351,11 +348,11 @@ class MainPresenter(QObject):
 
         settings.save_settings()
 
-        # 즉시 적용 필요한 설정 업데이트
+        # UI 즉시 반영
         self.view.switch_theme(new_state.theme.lower())
         language_manager.set_language(new_state.language)
 
-        # 모든 데이터 로그 위젯에 Max Lines 적용 (Facade Method 사용)
+        # 모든 포트 탭 업데이트 (Facade 사용)
         # View가 제공하는 이터레이터나 일괄 설정 메서드 활용
         # 여기서는 View의 인터페이스를 통해 접근한다고 가정
         count = self.view.get_port_tabs_count()
@@ -366,7 +363,7 @@ class MainPresenter(QObject):
 
         self.manual_control_presenter.update_local_echo_setting(new_state.local_echo_enabled)
 
-        # EventBus로 변경 전파 (다른 컴포넌트용)
+        # EventBus로 변경 전파
         from core.event_bus import event_bus
         event_bus.publish(EventTopics.SETTINGS_CHANGED, new_state)
 
@@ -574,9 +571,10 @@ class MainPresenter(QObject):
             sent_success = True
 
         # 4. Local Echo 처리
-        local_echo_enabled = self.settings_manager.get(ConfigKeys.PORT_LOCAL_ECHO, False)
-        if sent_success and local_echo_enabled:
-            self.view.append_local_echo_data(data)
+        if sent_success:
+            local_echo_enabled = self.settings_manager.get(ConfigKeys.PORT_LOCAL_ECHO, False)
+            if local_echo_enabled:
+                self.view.append_local_echo_data(data)
 
     def _notify_macro_error(self, message: str) -> None:
         """
@@ -721,12 +719,10 @@ class MainPresenter(QObject):
 
         # 확장자 기반 포맷 결정
         _, ext = os.path.splitext(file_path)
-        ext = ext.lower()
-
-        log_format = LogFormat.BIN  # 기본값
-        if ext == '.pcap':
+        log_format = LogFormat.BIN
+        if ext.lower() == '.pcap':
             log_format = LogFormat.PCAP
-        elif ext == '.txt':
+        elif ext.lower() == '.txt':
             log_format = LogFormat.HEX
 
         # 포맷 전달 및 시작

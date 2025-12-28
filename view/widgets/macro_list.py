@@ -182,7 +182,77 @@ class MacroListWidget(QWidget):
         self.macro_table_model.rowsMoved.connect(lambda: self.macro_list_changed.emit())
 
     # -------------------------------------------------------------------------
-    # 실행 추적 및 UI 제어 (Execution Tracking & UI Control)
+    # Getters for Encapsulation (캡슐화를 위한 데이터 접근자)
+    # -------------------------------------------------------------------------
+    def get_macro_entries(self) -> List[MacroEntry]:
+        """
+        현재 리스트에 있는 모든 매크로 항목을 DTO 리스트로 변환하여 반환합니다.
+        (Presenter가 모델 데이터를 필요로 할 때 사용)
+
+        Returns:
+            List[MacroEntry]: 매크로 항목 리스트.
+        """
+        entries = []
+        for row in range(self.macro_table_model.rowCount()):
+            entry = self.get_entry_at(row)
+            if entry:
+                entries.append(entry)
+        return entries
+
+    def get_entry_at(self, row: int) -> Optional[MacroEntry]:
+        """
+        특정 행의 데이터를 MacroEntry DTO로 반환합니다.
+
+        Args:
+            row (int): 행 인덱스.
+
+        Returns:
+            Optional[MacroEntry]: 생성된 DTO, 실패 시 None.
+        """
+        if row < 0 or row >= self.macro_table_model.rowCount():
+            return None
+
+        # 데이터 안전하게 추출
+        try:
+            enabled = self.macro_table_model.item(row, 0).checkState() == Qt.Checked
+            prefix_enabled = self.macro_table_model.item(row, 1).checkState() == Qt.Checked
+            command = self.macro_table_model.item(row, 2).text()
+            suffix_enabled = self.macro_table_model.item(row, 3).checkState() == Qt.Checked
+            hex_mode = self.macro_table_model.item(row, 4).checkState() == Qt.Checked
+            delay_text = self.macro_table_model.item(row, 5).text()
+
+            # 지연 시간 안전 변환
+            delay_ms = 100
+            if delay_text.isdigit():
+                delay_ms = int(delay_text)
+
+            return MacroEntry(
+                enabled=enabled,
+                command=command,
+                hex_mode=hex_mode,
+                prefix_enabled=prefix_enabled,
+                suffix_enabled=suffix_enabled,
+                delay_ms=delay_ms
+            )
+        except Exception:
+            return None
+
+    def get_selected_indices(self) -> List[int]:
+        """
+        체크박스가 선택된 항목의 인덱스 리스트를 반환합니다.
+
+        Returns:
+            List[int]: 선택된 행 인덱스 리스트.
+        """
+        indices: List[int] = []
+        for row in range(self.macro_table_model.rowCount()):
+            item = self.macro_table_model.item(row, 0)
+            if item.checkState() == Qt.Checked:
+                indices.append(row)
+        return indices
+
+    # -------------------------------------------------------------------------
+    # UI Control (View 제어)
     # -------------------------------------------------------------------------
     def set_current_row(self, row: int) -> None:
         """
@@ -198,7 +268,7 @@ class MacroListWidget(QWidget):
         """
         # 사용자 선택과 충돌 방지를 위해 기존 선택 해제
         self.macro_table.clearSelection()
-        
+
         if row >= 0 and row < self.macro_table_model.rowCount():
             index = self.macro_table_model.index(row, 0)
             if index.isValid():
@@ -313,59 +383,6 @@ class MacroListWidget(QWidget):
         # 데이터 변경 시그널 발생 (Select 컬럼 제외)
         if item.column() != 0:
             self.macro_list_changed.emit()
-
-    def get_macro_entries(self) -> List[MacroEntry]:
-        """
-        모든 행을 MacroEntry DTO 리스트로 변환하여 반환합니다.
-        (Logic Layer 또는 Runner에서 사용)
-
-        Returns:
-            List[MacroEntry]: MacroEntry 객체 리스트.
-        """
-        entries = []
-        for row in range(self.macro_table_model.rowCount()):
-            entry = self.get_entry_at(row)
-            if entry:
-                entries.append(entry)
-        return entries
-
-    def get_entry_at(self, row: int) -> Optional[MacroEntry]:
-        """
-        특정 행의 데이터를 MacroEntry DTO로 반환합니다.
-
-        Args:
-            row (int): 행 인덱스.
-
-        Returns:
-            Optional[MacroEntry]: 생성된 DTO, 실패 시 None.
-        """
-        if row < 0 or row >= self.macro_table_model.rowCount():
-            return None
-
-        # 데이터 안전하게 추출
-        try:
-            enabled = self.macro_table_model.item(row, 0).checkState() == Qt.Checked
-            prefix_enabled = self.macro_table_model.item(row, 1).checkState() == Qt.Checked
-            command = self.macro_table_model.item(row, 2).text()
-            suffix_enabled = self.macro_table_model.item(row, 3).checkState() == Qt.Checked
-            hex_mode = self.macro_table_model.item(row, 4).checkState() == Qt.Checked
-            delay_text = self.macro_table_model.item(row, 5).text()
-
-            # 지연 시간 안전 변환
-            delay_ms = 100
-            if delay_text.isdigit():
-                delay_ms = int(delay_text)
-
-            return MacroEntry(
-                enabled=enabled,
-                command=command,
-                hex_mode=hex_mode,
-                prefix_enabled=prefix_enabled,
-                suffix_enabled=suffix_enabled,
-                delay_ms=delay_ms
-            )
-        except Exception:
-            return None
 
     def export_macros(self) -> List[Dict[str, Any]]:
         """
@@ -573,7 +590,7 @@ class MacroListWidget(QWidget):
         rows = sorted(set(index.row() for index in self.macro_table.selectionModel().selectedRows()), reverse=True)
         for row in rows:
             self.macro_table_model.removeRow(row)
-        
+
         # 행 삭제 후 인덱스가 당겨지므로 버튼 재설정 필요
         self._refresh_send_buttons()
         self.update_select_all_state()
@@ -630,20 +647,6 @@ class MacroListWidget(QWidget):
 
         # 2. 새 위치에 삽입
         self.macro_table_model.insertRow(dest_row, items)
-
-    def get_selected_indices(self) -> List[int]:
-        """
-        체크박스가 선택된 항목의 인덱스 리스트를 반환합니다.
-
-        Returns:
-            List[int]: 선택된 행 인덱스 리스트.
-        """
-        indices: List[int] = []
-        for row in range(self.macro_table_model.rowCount()):
-            item = self.macro_table_model.item(row, 0)
-            if item.checkState() == Qt.Checked:
-                indices.append(row)
-        return indices
 
     def on_select_all_changed(self, state: int) -> None:
         """
