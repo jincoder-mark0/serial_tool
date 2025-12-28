@@ -348,11 +348,10 @@ class ManualControlWidget(QWidget):
         command = self.command_edit.toPlainText()
 
         # History에 추가 (입력이 있을 경우)
-        if command:
-            self.add_to_history(command)
-
         if not command:
             return
+
+        self.add_to_history(command)
 
         # 전송 데이터 패키징 (DTO)
         # View(Widget) 내부의 체크박스 상태로 DTO를 완결성 있게 생성합니다.

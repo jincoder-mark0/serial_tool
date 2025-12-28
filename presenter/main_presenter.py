@@ -726,9 +726,11 @@ class MainPresenter(QObject):
         # 확장자 기반 포맷 결정
         _, ext = os.path.splitext(file_path)
         log_format = LogFormat.BIN
-        if ext.lower() == '.pcap':
+
+        lower_ext = ext.lower()
+        if lower_ext == '.pcap':
             log_format = LogFormat.PCAP
-        elif ext.lower() == '.txt':
+        elif lower_ext == '.txt':
             log_format = LogFormat.HEX
 
         # 포맷 전달 및 시작
