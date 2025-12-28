@@ -1,59 +1,137 @@
 /* ==================================================================================
    SerialTool Dark Theme
    ==================================================================================
-   [Color Palette Reference]
+   [Color Palette Strict Reference]
+
+   0. Palette (Definitions)
+      [Cyan Family]
+      - Cyan Base:          #00BCD4
+      - Cyan Dark:          #00838F (Button BG)
+      - Cyan Hover:         #0097A7 (Button Hover BG)
+      - Cyan Light:         #26C6DA (Button Hover Border)
+      - Cyan Pressed:       #006064
+      - Cyan Disabled:      #00363A (BG), #005660 (Border), #006064 (Text)
+      - Cyan Selection:     #00838F
+
+      [Green Family]
+      - Green Base:         #4CAF50
+      - Green Dark:         #2E7D32 (Button BG)
+      - Green Hover:        #388E3C (Button Hover BG)
+      - Green Light:        #66BB6A (Button Hover Border)
+      - Green Pressed:      #1B5E20
+      - Green Disabled:     #1B3A20 (BG), #2E5030 (Border), #507050 (Text)
+      - Green Selection:    #2E7D32
+
+      [Orange Family]
+      - Orange Base:        #FF9800
+      - Orange Dark:        #EF6C00 (Button BG)
+      - Orange Hover:       #F57C00 (Button Hover BG)
+      - Orange Light:       #FFB74D (Button Hover Border)
+      - Orange Pressed:     #E65100
+      - Orange Disabled:    #4A2800 (BG), #663800 (Border), #804600 (Text)
+      - Orange Selection:   #EF6C00
+
+      [Pink Family]
+      - Pink Base:          #E91E63
+      - Pink Dark:          #AD1457 (Button BG)
+      - Pink Hover:         #C2185B (Button Hover BG)
+      - Pink Light:         #F06292 (Button Hover Border)
+      - Pink Pressed:       #880E4F
+      - Pink Disabled:      #4A0A25 (BG), #600D30 (Border), #801140 (Text)
+      - Pink Selection:     #AD1457
+
+      [Purple Family]
+      - Purple Base:        #9C27B0
+      - Purple Dark:        #6A1B9A (Button BG)
+      - Purple Hover:       #7B1FA2 (Button Hover BG)
+      - Purple Light:       #BA68C8 (Button Hover Border)
+      - Purple Pressed:     #4A148C
+      - Purple Disabled:    #2A0B3E (BG), #3E105C (Border), #501576 (Text)
+      - Purple Selection:   #6A1B9A
+
+      [Red Family]
+      - Red Base:           #F44336
+      - Red Dark:           #C62828 (Button BG)
+      - Red Hover:          #D32F2F (Button Hover BG)
+      - Red Light:          #EF5350 (Button Hover Border)
+      - Red Pressed:        #B71C1C
+      - Red Disabled:       #4A1B1B (BG), #602525 (Border), #804040 (Text)
+      - Red Selection:      #C62828
+
+      [Yellow Family]
+      - Yellow Base:        #FFEB3B
+      - Yellow Dark:        #F9A825 (Button BG)
+      - Yellow Hover:       #FBC02D (Button Hover BG)
+      - Yellow Light:       #FFF176 (Button Hover Border)
+      - Yellow Pressed:     #F57F17
+      - Yellow Disabled:    #4A4200 (BG), #605600 (Border), #807200 (Text)
+      - Yellow Selection:   #F9A825
+
+      [Blue Family]
+      - Blue Base:          #2196F3
+      - Blue Dark:          #264F78 (Button Checked BG)
+      - Blue Hover:         #3A5F88 (Button Hover BG)
+      - Blue Light:         #64B5F6 (Button Hover Border)
+      - Blue Pressed:       #152A40
+      - Blue Disabled:      #1A2026 (BG), #304050 (Border), #506070 (Text)
+      - Blue Selection:     #264F78
+
+      [Special]
+      - Warning BG:         #FFC107 (Amber)
+      - Warning Border:     #FFD740
+      - Warning Pressed:    #FF6F00
 
    1. Backgrounds
-      - BG Main:            #1e1e1e (Window Base, Inputs)
-      - BG Panel/Alt:       #2b2b2b (Widget, Tab Selected)
+      - BG Main:            #1E1E1E (Window Base, Inputs)
+      - BG Panel/Alt:       #2B2B2B (Widget, Tab Selected)
       - BG Header/Bar:      #333333 (Header, Button Normal, StatusBar)
-      - BG Disabled:        #252525
+      - BG Disabled:        #252525 (Inputs Disabled)
 
    2. Foregrounds (Text)
-      - Text Main:          #e0e0e0
-      - Text Dim/Hint:      #b0b0b0
+      - Text Main:          #E0E0E0
+      - Text Dim/Hint:      #B0B0B0
       - Text Disabled:      #606060
-      - Text Inverted:      #ffffff
+      - Text Inverted:      #FFFFFF
 
    3. Borders & Separators
       - Border Main:        #404040
       - Border Light:       #505050
-      - Border Focus:       #4CAF50 (Green Accent for Focus)
+      - Border Focus:       #4CAF50 (Green Base)
 
    4. Selections
-      - Selection BG:       #264f78 (VS Code Blue)
-      - Selection Text:     #ffffff
+      - Selection BG:       #264F78
+      - Selection Text:     #FFFFFF
 
    5. Accents & States
-      - Primary (Green):    #4CAF50 (Focus, Title, Active Tab Bottom)
-      - Secondary (Blue):   #2196F3 (Checked State)
-      - Danger (Red):       #F44336 (Error, Stop, Delete)
-      - Warning (Yellow):   #FFC107 (Pause)
+      - Primary:            #4CAF50 (Green Base)
+      - Secondary:          #2196F3 (Blue Base)
+      - Danger:             #F44336 (Red Base)
+      - Warning:            #FFC107 (Amber)
 
    6. Component Specific
       - Button Hover:       #454545
-      - Button Pressed:     #2a2a2a
+      - Button Pressed:     #2A2A2A
       - ScrollBar Handle:   #505050
-      - SmartEdit LineNum:  #2b2b2b (BG), #808080 (Text), #2d2d2d (Current)
+      - SmartEdit LineNum:  #2B2B2B (BG), #808080 (Text), #2D2D2D (Current)
    ================================================================================== */
 
 /* Global Settings */
 QWidget {
-    background-color: #2b2b2b;
-    color: #e0e0e0;
-    selection-background-color: #264f78;
-    selection-color: #ffffff;
+    background-color: #2B2B2B;
+    color: #E0E0E0;
+    selection-background-color: #264F78;
+    selection-color: #FFFFFF;
 }
 
 QToolTip {
     background-color: #333333;
-    color: #e0e0e0;
+    color: #E0E0E0;
     border-color: #505050;
 }
 
 /* MainWindow */
 QMainWindow {
-    background-color: #1e1e1e;
+    background-color: #1E1E1E;
 }
 
 QMainWindow::separator {
@@ -67,24 +145,24 @@ QMainWindow::separator:hover {
 /* QTabWidget */
 QTabWidget::pane {
     border-color: #404040;
-    background-color: #2b2b2b;
+    background-color: #2B2B2B;
 }
 
 QTabBar::tab {
     background-color: #333333;
-    color: #b0b0b0;
+    color: #B0B0B0;
     border-color: #404040;
 }
 
 QTabBar::tab:selected {
-    background-color: #2b2b2b;
-    color: #ffffff;
+    background-color: #2B2B2B;
+    color: #FFFFFF;
     border-bottom-color: #4CAF50;
 }
 
 QTabBar::tab:hover {
-    background-color: #3a3a3a;
-    color: #e0e0e0;
+    background-color: #3A3A3A;
+    color: #E0E0E0;
 }
 
 QTabBar::close-button {
@@ -95,11 +173,11 @@ QTabBar::close-button:hover {
     background-color: #505050;
 }
 
-/* QPushButton */
+/* QPushButton (Default) */
 QPushButton {
-    background-color: #3a3a3a;
+    background-color: #3A3A3A;
     border-color: #505050;
-    color: #e0e0e0;
+    color: #E0E0E0;
 }
 
 QPushButton:hover {
@@ -108,14 +186,14 @@ QPushButton:hover {
 }
 
 QPushButton:pressed {
-    background-color: #2a2a2a;
+    background-color: #2A2A2A;
     border-color: #4CAF50;
 }
 
 QPushButton:checked {
-    background-color: #264f78;
+    background-color: #264F78;
     border-color: #2196F3;
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
 QPushButton:disabled {
@@ -134,11 +212,11 @@ QPushButton#data_log_search_next_btn { qproperty-icon: url(resources/icons/dark/
 
 /* Inputs */
 QLineEdit, QTextEdit, QPlainTextEdit, QSmartTextEdit, QSmartListView {
-    background-color: #1e1e1e;
+    background-color: #1E1E1E;
     border-color: #404040;
-    color: #e0e0e0;
-    selection-background-color: #264f78;
-    selection-color: #ffffff;
+    color: #E0E0E0;
+    selection-background-color: #264F78;
+    selection-color: #FFFFFF;
 }
 
 QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QSmartTextEdit:focus, QSmartListView:focus {
@@ -152,16 +230,16 @@ QLineEdit:disabled, QTextEdit:disabled, QPlainTextEdit:disabled, QSmartTextEdit:
 
 /* QSmartTextEdit Properties */
 QSmartTextEdit {
-    qproperty-lineNumberBackgroundColor: #2b2b2b;
+    qproperty-lineNumberBackgroundColor: #2B2B2B;
     qproperty-lineNumberColor: #808080;
-    qproperty-currentLineColor: #2d2d2d;
+    qproperty-currentLineColor: #2D2D2D;
 }
 
 /* QComboBox */
 QComboBox {
-    background-color: #3a3a3a;
+    background-color: #3A3A3A;
     border-color: #505050;
-    color: #e0e0e0;
+    color: #E0E0E0;
 }
 
 QComboBox:hover {
@@ -177,17 +255,17 @@ QComboBox::down-arrow {
 }
 
 QComboBox QAbstractItemView {
-    background-color: #3a3a3a;
+    background-color: #3A3A3A;
     border-color: #505050;
     selection-background-color: #4CAF50;
-    selection-color: #ffffff;
+    selection-color: #FFFFFF;
 }
 
 /* QProgressBar */
 QProgressBar {
-    background-color: #1e1e1e;
+    background-color: #1E1E1E;
     border-color: #404040;
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
 QProgressBar::chunk {
@@ -196,7 +274,7 @@ QProgressBar::chunk {
 
 /* QScrollBar */
 QScrollBar:vertical, QScrollBar:horizontal {
-    background-color: #2b2b2b;
+    background-color: #2B2B2B;
 }
 
 QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
@@ -209,17 +287,17 @@ QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
 
 /* Views */
 QTableView, QListView, QTreeWidget, QSmartListView {
-    background-color: #1e1e1e;
+    background-color: #1E1E1E;
     border-color: #404040;
     gridline-color: #303030;
-    selection-background-color: #264f78;
-    selection-color: #ffffff;
-    color: #e0e0e0;
+    selection-background-color: #264F78;
+    selection-color: #FFFFFF;
+    color: #E0E0E0;
 }
 
 QHeaderView::section {
     background-color: #333333;
-    color: #b0b0b0;
+    color: #B0B0B0;
     border-right-color: #404040;
     border-bottom-color: #404040;
 }
@@ -232,7 +310,7 @@ QTableCornerButton::section {
 /* QCheckBox */
 QCheckBox::indicator {
     border-color: #505050;
-    background-color: #1e1e1e;
+    background-color: #1E1E1E;
 }
 
 QCheckBox::indicator:checked {
@@ -256,27 +334,27 @@ QGroupBox::title, QLabel[class="section-title"] {
 /* QStatusBar */
 QStatusBar {
     background-color: #333333;
-    color: #b0b0b0;
+    color: #B0B0B0;
     border-top-color: #404040;
 }
 
 /* QMenu */
 QMenuBar {
     background-color: #333333;
-    color: #e0e0e0;
+    color: #E0E0E0;
 }
 QMenuBar::item:selected {
     background-color: #404040;
 }
 
 QMenu {
-    background-color: #2b2b2b;
+    background-color: #2B2B2B;
     border-color: #404040;
 }
 
 QMenu::item:selected {
     background-color: #4CAF50;
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
 /* QToolBar */
@@ -290,18 +368,18 @@ QToolBar QToolButton:hover {
 }
 
 QToolBar QToolButton:pressed {
-    background-color: #2a2a2a;
+    background-color: #2A2A2A;
 }
 
 /* ==================================================================================
    Custom Buttons & States (Accent, Danger, Warning, Connected)
    ================================================================================== */
 
-/* Accent - Save, Start */
+/* Accent - Save, Start (Green) */
 QPushButton[class="accent"] {
     background-color: #2E7D32;
     border-color: #4CAF50;
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
 QPushButton[class="accent"]:hover {
@@ -314,16 +392,16 @@ QPushButton[class="accent"]:pressed {
 }
 
 QPushButton[class="accent"]:disabled {
-    background-color: #1b3a20;
-    border-color: #2e5030;
+    background-color: #1B3A20;
+    border-color: #2E5030;
     color: #507050;
 }
 
-/* Danger - Stop, Delete */
+/* Danger - Stop, Delete (Red) */
 QPushButton[class="danger"] {
     background-color: #C62828;
     border-color: #F44336;
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
 QPushButton[class="danger"]:hover {
@@ -336,16 +414,16 @@ QPushButton[class="danger"]:pressed {
 }
 
 QPushButton[class="danger"]:disabled {
-    background-color: #4a1b1b;
+    background-color: #4A1B1B;
     border-color: #602525;
     color: #804040;
 }
 
-/* Warning - Pause */
+/* Warning - Pause (Orange/Amber) */
 QPushButton[class="warning"] {
     background-color: #FFC107;
     border-color: #FFD740;
-    color: #2b2b2b;
+    color: #2B2B2B;
 }
 
 QPushButton[class="warning"]:hover {
@@ -358,7 +436,7 @@ QPushButton[class="warning"]:pressed {
 }
 
 QPushButton[class="warning"]:disabled {
-    background-color: #4a3b00;
+    background-color: #4A3B00;
     border-color: #605000;
     color: #806000;
 }
@@ -367,7 +445,7 @@ QPushButton[class="warning"]:disabled {
 QPushButton[state="connected"] {
     background-color: #2E7D32;
     border-color: #4CAF50;
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
 QPushButton[state="connected"]:hover {
@@ -376,15 +454,15 @@ QPushButton[state="connected"]:hover {
 }
 
 QPushButton[state="disconnected"] {
-    background-color: #3a3a3a;
+    background-color: #3A3A3A;
     border-color: #505050;
-    color: #e0e0e0;
+    color: #E0E0E0;
 }
 
 QPushButton[state="error"] {
     background-color: #C62828;
     border-color: #F44336;
-    color: #ffffff;
+    color: #FFFFFF;
 }
 
 QPushButton[state="error"]:hover {

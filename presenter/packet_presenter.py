@@ -1,7 +1,8 @@
 """
 패킷 프레젠터 모듈
 
-패킷 분석 뷰(PacketPanel)와 데이터 소스(EventRouter)를 연결하고 관리합니다.
+패킷 분석 뷰(View)와 데이터 소스(EventRouter)를 연결하고 관리합니다.
+구체적인 Panel 클래스 대신 인터페이스(IPacketView)를 사용하여 의존성을 격리합니다.
 
 ## WHY
 * 실시간 패킷 데이터의 UI 업데이트 로직 분리 (MVP 패턴)
@@ -9,20 +10,20 @@
 * 대량 패킷 수신 시 UI 버퍼링 및 설정 동기화 관리
 
 ## WHAT
-* PacketPanel(View)과 EventRouter(Model Interface) 연결
+* IPacketView(View Interface)와 EventRouter(Model Interface) 연결
 * 패킷 수신 이벤트(PacketEvent) 처리 및 View 데이터(PacketViewData) 변환
 * 설정 변경(버퍼 크기, 색상 등)에 따른 View 업데이트
 * 캡처 시작/정지 및 초기화 제어
 
 ## HOW
 * EventRouter의 시그널을 구독하여 패킷 수신
-* DTO 변환 후 View의 append_packet 메서드 호출
+* DTO 변환 후 View Interface의 append_packet 메서드 호출
 * SettingsManager를 통해 초기 설정 로드 및 변경 사항 반영
 """
 from typing import Optional
 from PyQt5.QtCore import QObject, QDateTime
 
-from view.panels.packet_panel import PacketPanel
+from view.interfaces import IPacketView
 from presenter.event_router import EventRouter
 from core.settings_manager import SettingsManager
 from core.logger import logger
@@ -39,17 +40,17 @@ class PacketPresenter(QObject):
     패킷 분석 화면의 로직을 담당하는 Presenter 클래스
     """
 
-    def __init__(self, panel: PacketPanel, event_router: EventRouter, settings_manager: SettingsManager) -> None:
+    def __init__(self, view: IPacketView, event_router: EventRouter, settings_manager: SettingsManager) -> None:
         """
         PacketPresenter 초기화
 
         Args:
-            panel (PacketPanel): 패킷 뷰 인스턴스.
+            view (IPacketView): 패킷 뷰 인터페이스.
             event_router (EventRouter): 이벤트 라우터 (패킷 수신용).
             settings_manager (SettingsManager): 설정 관리자.
         """
         super().__init__()
-        self.panel = panel
+        self.view = view
         self.event_router = event_router
         self.settings_manager = settings_manager
 
@@ -59,9 +60,9 @@ class PacketPresenter(QObject):
         # 1. 초기 설정 적용
         self._apply_initial_settings()
 
-        # 2. View 시그널 연결 (Facade Signal)
-        self.panel.clear_requested.connect(self.on_clear_requested)
-        self.panel.capture_toggled.connect(self.on_capture_toggled)
+        # 2. View 시그널 연결 (Interface Signal)
+        self.view.clear_requested.connect(self.on_clear_requested)
+        self.view.capture_toggled.connect(self.on_capture_toggled)
 
         # 3. EventRouter 시그널 연결
         self.event_router.packet_received.connect(self.on_packet_received)
@@ -73,16 +74,16 @@ class PacketPresenter(QObject):
 
         Logic:
             - 버퍼 크기, 자동 스크롤 여부 로드
-            - View의 설정 메서드 호출 (Facade)
+            - View Interface의 설정 메서드 호출
         """
         buffer_size = self.settings_manager.get(ConfigKeys.PACKET_BUFFER_SIZE, 100)
         autoscroll = self.settings_manager.get(ConfigKeys.PACKET_AUTOSCROLL, True)
         realtime = self.settings_manager.get(ConfigKeys.PACKET_REALTIME, True)
 
-        self.panel.set_buffer_size(buffer_size)
-        self.panel.set_autoscroll(autoscroll)
+        self.view.set_buffer_size(buffer_size)
+        self.view.set_autoscroll(autoscroll)
         self._is_capturing = realtime
-        self.panel.set_capture_state(realtime)
+        self.view.set_capture_state(realtime)
 
     def on_packet_received(self, event: PacketEvent) -> None:
         """
@@ -130,8 +131,8 @@ class PacketPresenter(QObject):
             data_ascii=data_ascii
         )
 
-        # View 업데이트 (Facade Method)
-        self.panel.append_packet(view_data)
+        # View 업데이트 (Interface Method)
+        self.view.append_packet(view_data)
 
     def on_settings_changed(self, state: PreferencesState) -> None:
         """
@@ -144,20 +145,20 @@ class PacketPresenter(QObject):
         Args:
             state (PreferencesState): 변경된 설정 상태 DTO.
         """
-        # View Facade 메서드 사용
-        self.panel.set_buffer_size(state.packet_buffer_size)
-        self.panel.set_autoscroll(state.packet_autoscroll)
+        # View Interface 메서드 사용
+        self.view.set_buffer_size(state.packet_buffer_size)
+        self.view.set_autoscroll(state.packet_autoscroll)
 
         # 캡처 상태가 외부 설정에 의해 변경된 경우 반영
         if self._is_capturing != state.packet_realtime:
             self._is_capturing = state.packet_realtime
-            self.panel.set_capture_state(state.packet_realtime)
+            self.view.set_capture_state(state.packet_realtime)
 
     def on_clear_requested(self) -> None:
         """
         View의 Clear 버튼 클릭 요청 처리
         """
-        self.panel.clear_view()
+        self.view.clear_view()
         logger.debug("Packet view cleared by user.")
 
     def on_capture_toggled(self, enabled: bool) -> None:

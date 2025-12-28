@@ -4,6 +4,29 @@
 
 ---
 
+### Strict MVP 아키텍처 완성 및 인터페이스 기반 리팩토링 (2025-12-28)
+
+#### 리팩토링 (Refactoring)
+
+- **View 계층 추상화 (Protocol-based Interface)**
+  - **인터페이스 정의**: `view/interfaces.py`에 `typing.Protocol`을 사용하여 `IMainView`, `IPortView`, `IManualControlView` 등 주요 View 컴포넌트의 계약(Contract)을 명시했습니다.
+  - **의존성 역전 (DIP)**: 모든 Presenter(`Main`, `Port`, `Macro`, `Packet`, `ManualControl`)가 구체적인 UI 클래스(`Panel`, `Widget`) 대신 추상 인터페이스(`Protocol`)에 의존하도록 수정하여 결합도를 최소화했습니다.
+  - **Type Safety 강화**: Presenter의 생성자 및 메서드 시그니처에 인터페이스 타입을 명시하여 정적 분석 및 테스트 용이성을 확보했습니다.
+
+- **단방향 데이터 흐름 도입 (Unidirectional Data Flow)**
+  - **Push 모델 전환**: `ManualControlPresenter`에서 View의 상태를 일일이 조회(Pull)하던 로직을 제거하고, View가 시그널에 실어 보낸 `ManualCommand` DTO를 직접 처리하는 방식(Push)으로 변경했습니다.
+  - **DTO 중계 로직 보완**: `ManualControlPanel`에서 위젯의 상태를 수집하여 DTO를 생성하고 상위로 전달하는 로직을 강화하여 데이터 흐름의 신뢰성을 높였습니다.
+
+- **사용자 액션 통합 (Trigger Pattern)**
+  - **단축키 로직 통일**: `MainPresenter`가 단축키(F2, F3 등) 입력 시 직접 로직을 수행하던 방식을 제거하고, View에게 "버튼 클릭 행동(Trigger)"을 위임하는 방식으로 변경했습니다.
+  - **인터페이스 확장**: `IPortView` 및 `IPortContainerView`에 `trigger_connect`, `trigger_disconnect` 등의 메서드를 추가하여 외부에서의 UI 조작을 표준화했습니다.
+
+- **구조적 개선**
+  - **Wiring 로직 위임**: `MainPresenter`에서 하위 뷰 객체를 직접 순회하며 시그널을 연결하던 코드를 인터페이스 기반의 순회 로직으로 리팩토링했습니다.
+  - **Import 정리**: Presenter 계층에서 View 구현체(`view.panels.*`)에 대한 Import를 제거하여 모듈 간 순환 참조 가능성을 원천 차단했습니다.
+
+---
+
 ### 아키텍처 리팩토링 및 코드 품질 개선 (2025-12-28)
 
 #### 리팩토링 (Refactoring)

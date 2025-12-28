@@ -2,23 +2,25 @@
 수동 제어 패널 모듈
 
 수동 제어 위젯(ManualControlWidget)을 포함하는 컨테이너 패널입니다.
-Presenter와 Widget 사이의 인터페이스(Facade) 역할을 수행합니다.
+Presenter와 Widget 사이의 인터페이스(Facade) 역할을 수행하며,
+사용자 입력을 DTO로 변환하여 상위로 전달하는 Push 모델을 구현합니다.
 
 ## WHY
 * UI 계층 구조(Section -> Panel -> Widget) 준수
 * 레이아웃 관리 및 확장성 확보
-* Presenter가 구체적인 위젯 구현(Checkbox 이름 등)을 알지 못하게 하여 결합도 감소 (LoD 준수)
+* Presenter가 구체적인 위젯 구현을 알지 못하게 하여 결합도 감소 (LoD 준수)
+* 사용자 의도를 DTO로 캡슐화하여 전달 (Data Push)
 
 ## WHAT
 * ManualControlWidget 배치 및 레이아웃 구성
 * 시그널 중계 (Widget -> Panel -> Presenter)
 * 하위 위젯의 상태를 조회하거나 설정하는 Facade 메서드 제공
-* 상태 복원 메서드(apply_state) 제공
+* 전송 요청 시 ManualCommand DTO 생성 및 발송
 
 ## HOW
 * QVBoxLayout을 사용하여 위젯 배치
 * Presenter가 호출할 수 있는 Getter/Setter 메서드 정의
-* 시그널을 재발행(Re-emit)하여 계층 간 통신
+* _on_send_requested에서 위젯 상태를 수집하여 DTO 생성
 """
 from typing import Optional, Dict, Any
 
@@ -42,7 +44,8 @@ class ManualControlPanel(QWidget):
     # Signals
     # -------------------------------------------------------------------------
     # 시그널 정의 (Widget -> Presenter 중계)
-    send_requested = pyqtSignal(object)  # ManualCommand DTO (혹은 None)
+    # DTO를 실어 보내므로 object 타입 사용
+    send_requested = pyqtSignal(object)  # ManualCommand DTO
 
     broadcast_changed = pyqtSignal(bool)
     dtr_changed = pyqtSignal(bool)
@@ -80,11 +83,12 @@ class ManualControlPanel(QWidget):
         # 내부 변수명에 밑줄(_)을 붙여 외부 직접 접근을 지양함 (캡슐화 의도)
         self._manual_control_widget = ManualControlWidget()
 
-        # 시그널 연결 (Widget -> Panel Signal Relay)
-        # 위젯의 시그널을 패널의 시그널로 바로 연결하여 중계
-        # self.manual_control_widget.send_requested.connect(self._on_send_requested)
-        self._manual_control_widget.send_requested.connect(self.send_requested.emit)
+        # 시그널 연결
+        # 1. 전송 요청은 Panel이 가로채서 DTO를 확인하거나 로직을 추가할 수 있도록 내부 핸들러 연결
+        # (혹은 위젯이 이미 DTO를 보낸다면 바로 중계해도 되지만, 여기서는 Panel이 DTO 생성을 보장)
+        self._manual_control_widget.send_requested.connect(self._on_send_requested_relay)
 
+        # 2. 상태 변경 시그널은 바로 중계
         self._manual_control_widget.broadcast_changed.connect(self.broadcast_changed.emit)
         self._manual_control_widget.dtr_changed.connect(self.dtr_changed.emit)
         self._manual_control_widget.rts_changed.connect(self.rts_changed.emit)
@@ -171,33 +175,35 @@ class ManualControlPanel(QWidget):
         """입력창에 포커스를 설정합니다."""
         self._manual_control_widget.set_input_focus()
 
-    def _on_send_requested(self) -> None:
+    def _on_send_requested_relay(self, command_dto: ManualCommand) -> None:
         """
-        위젯의 전송 요청 처리 핸들러
+        위젯의 전송 요청 시그널을 중계합니다.
 
         Logic:
-            1. 위젯의 현재 상태(입력값, 체크박스 등)를 조회
-            2. ManualCommand DTO 생성
-            3. send_requested 시그널을 통해 Presenter로 DTO 전달
+            - ManualControlWidget이 이미 ManualCommand DTO를 생성해서 보냅니다.
+            - Panel은 이를 받아서 그대로 상위로 emit 합니다.
+            - 만약 위젯이 DTO를 안 보냈다면(None), 여기서 생성해서 보낼 수도 있습니다(안전장치).
+
+        Args:
+            command_dto (ManualCommand): 전송할 명령어 정보.
         """
-        widget = self.manual_control_widget
+        if command_dto and isinstance(command_dto, ManualCommand):
+             self.send_requested.emit(command_dto)
+        else:
+             # 위젯이 DTO를 제대로 안 만들었을 경우를 대비한 Fallback (또는 위젯이 구형일 경우)
+             # 현재 구조상 위젯이 DTO를 만들도록 되어 있으므로 이 로직은 방어 코드임
+             new_dto = ManualCommand(
+                command=self.get_input_text(),
+                hex_mode=self.is_hex_mode(),
+                prefix_enabled=self.is_prefix_enabled(),
+                suffix_enabled=self.is_suffix_enabled(),
+                local_echo_enabled=self.is_local_echo_enabled(),
+                broadcast_enabled=self.is_broadcast_enabled()
+             )
+             self.send_requested.emit(new_dto)
 
-        # DTO 생성
-        command_dto = ManualCommand(
-            command=widget.input_edit.text(),
-            hex_mode=widget.hex_chk.isChecked(),
-            prefix_enabled=widget.prefix_chk.isChecked(),
-            suffix_enabled=widget.suffix_chk.isChecked(),
-            broadcast_enabled=widget.broadcast_chk.isChecked(),
-            local_echo_enabled=True # 로컬 에코는 기본적으로 활성화 (Presenter 설정에 따름)
-        )
-
-        # Presenter로 전달
-        self.send_requested.emit(command_dto)
-
-        # 편의성: 전송 후 포커스 유지 및 텍스트 선택 (입력 편의성)
-        widget.input_edit.selectAll()
-        widget.input_edit.setFocus()
+        # 편의성: 전송 후 포커스 유지 (Widget 내부에서 처리하기도 하지만 확실히 하기 위함)
+        self.set_input_focus()
 
     # -------------------------------------------------------------------------
     # State Persistence
