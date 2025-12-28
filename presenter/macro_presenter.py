@@ -290,7 +290,7 @@ class MacroPresenter(QObject):
             - Runner의 현재 일시정지 상태 확인
             - 상태에 따라 resume() 또는 pause() 호출
         """
-        # Runner의 내부 상태(_is_paused)를 확인하여 토글
+        # Runner의 내부 상태(is_paused)를 확인하여 토글
         if self.runner.is_paused():
             self.runner.resume()
         else:

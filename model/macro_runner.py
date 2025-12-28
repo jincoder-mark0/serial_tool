@@ -72,7 +72,7 @@ class MacroRunner(QThread):
             - EventBus 구독 설정 (데이터 수신 감지용)
         """
         super().__init__()
-        
+
         # (Row Index, Entry DTO) 튜플 리스트로 관리하여 UI 위치 추적 보장
         self._entries: List[Tuple[int, MacroEntry]] = []
 
@@ -84,7 +84,7 @@ class MacroRunner(QThread):
         # 실행 제어 플래그
         self._is_running = False
         self._is_paused = False
-        
+
         # 실행 옵션
         self._loop_count = 0
         self._loop_interval_ms = 0
@@ -108,7 +108,7 @@ class MacroRunner(QThread):
         """
         self._entries = entries
 
-    def start(self, loop_count: int = 1, interval_ms: int = 0, 
+    def start(self, loop_count: int = 1, interval_ms: int = 0,
               broadcast_enabled: bool = False, stop_on_error: bool = True) -> None:
         """
         매크로 실행을 시작합니다.
@@ -156,7 +156,7 @@ class MacroRunner(QThread):
             4. 종료 이벤트 발행
         """
         self._stop_internal(reason="User stopped macro")
-        
+
         # 스레드 종료 대기 (블로킹)
         self.wait()
 
@@ -188,6 +188,18 @@ class MacroRunner(QThread):
         if self._is_running:
             self._is_paused = True
         self._mutex.unlock()
+
+    def is_paused(self) -> bool:
+        """
+        일시정지 상태인지 확인합니다. (Thread-safe)
+
+        Returns:
+            bool: 일시정지 상태이면 True.
+        """
+        self._mutex.lock()
+        paused = self._is_paused
+        self._mutex.unlock()
+        return paused
 
     def resume(self) -> None:
         """
@@ -295,7 +307,7 @@ class MacroRunner(QThread):
                         suffix_enabled=entry.suffix_enabled,
                         broadcast_enabled=self.broadcast_enabled
                     )
-                    
+
                     # 2-1. 명령 전송 요청 (Signal)
                     self.send_requested.emit(manual_command)
 
@@ -353,7 +365,7 @@ class MacroRunner(QThread):
 
         # 실행 종료 처리
         self._stop_internal()
-        
+
         # 완료 시그널 방출
         self.macro_finished.emit()
 
