@@ -17,6 +17,7 @@
 * 브로드캐스트 모드 상태 중계
 
 ## HOW
+* View(Panel)가 제공하는 Facade 메서드를 통해 상태 조회 및 UI 제어
 * ScriptLoadWorker(QThread)를 통한 비동기 로딩
 * DTO(MacroScriptData, MacroExecutionRequest)를 사용한 데이터 전달
 * Signal/Slot을 이용한 이벤트 처리
@@ -102,6 +103,7 @@ class MacroPresenter(QObject):
         # ---------------------------------------------------------
         # 1. View -> Presenter 연결
         # ---------------------------------------------------------
+        # View는 단순히 요청 시그널만 보내고, 로직은 Presenter가 처리
         self.panel.repeat_start_requested.connect(self.on_repeat_start)
         self.panel.repeat_stop_requested.connect(self.on_repeat_stop)
         self.panel.repeat_pause_requested.connect(self.on_repeat_pause)
@@ -110,13 +112,11 @@ class MacroPresenter(QObject):
         self.panel.script_save_requested.connect(self.on_script_save)
         self.panel.script_load_requested.connect(self.on_script_load)
 
-        # MacroListWidget의 개별 전송 버튼 (DTO 수신)
-        self.panel.macro_list.send_row_requested.connect(self.on_single_send_requested)
+        # 개별 전송 버튼 (DTO 수신) - Panel이 중계
+        self.panel.send_row_requested.connect(self.on_single_send_requested)
 
         # 브로드캐스트 체크박스 변경 감지 (Relay)
-        # MacroPanel -> MacroControlWidget -> Checkbox Signal
-        if hasattr(self.panel, 'macro_control') and hasattr(self.panel.macro_control, 'broadcast_changed'):
-             self.panel.macro_control.broadcast_changed.connect(self.broadcast_changed.emit)
+        self.panel.broadcast_changed.connect(self.broadcast_changed.emit)
 
         # ---------------------------------------------------------
         # 2. Model -> Presenter -> View 연결
@@ -125,7 +125,7 @@ class MacroPresenter(QObject):
         self.runner.step_completed.connect(self.on_step_completed)
         self.runner.macro_finished.connect(self.on_macro_finished)
         self.runner.error_occurred.connect(self.on_error)
-        
+
         # 반복 횟수 업데이트 연결
         self.runner.loop_progress.connect(self.on_loop_progress)
 
@@ -136,9 +136,8 @@ class MacroPresenter(QObject):
         Args:
             enabled (bool): 활성화 여부.
         """
-        self.panel.macro_control.set_controls_enabled(enabled)
-        # 리스트의 전송 버튼들도 제어
-        self.panel.macro_list.set_send_enabled(enabled)
+        # Panel이 내부적으로 ControlWidget과 ListWidget의 활성화를 모두 처리해야 함
+        self.panel.set_controls_enabled(enabled)
 
     def is_broadcast_enabled(self) -> bool:
         """
@@ -148,9 +147,7 @@ class MacroPresenter(QObject):
         Returns:
             bool: 브로드캐스트 활성화 여부.
         """
-        if hasattr(self.panel, 'macro_control'):
-            return self.panel.macro_control.broadcast_chk.isChecked()
-        return False
+        return self.panel.is_broadcast_enabled()
 
     def on_script_save(self, script_data: MacroScriptData) -> None:
         """
@@ -246,13 +243,13 @@ class MacroPresenter(QObject):
         if not indices:
             return
 
-        # View에서 전체 데이터 조회
-        all_entries = self.panel.macro_list.get_macro_entries()
-        
+        # View에서 전체 데이터 조회 (Facade Method 사용)
+        all_entries = self.panel.get_macro_entries()
+
         # 실행 계획 생성: (원본 행 번호, 매크로 항목) 튜플의 리스트
         # 이를 통해 Runner가 실행 중인 항목의 원본 위치를 알 수 있음
         execution_plan: List[Tuple[int, MacroEntry]] = []
-        
+
         for i, entry in enumerate(all_entries):
             if i in indices:
                 execution_plan.append((i, entry))
@@ -265,7 +262,7 @@ class MacroPresenter(QObject):
 
         # Runner 설정 및 시작
         self.runner.load_macro(execution_plan)
-        
+
         self.runner.start(
             loop_count=option.max_runs,
             interval_ms=option.interval_ms,
@@ -273,7 +270,7 @@ class MacroPresenter(QObject):
             stop_on_error=option.stop_on_error
         )
 
-        # [Fix] 반복 모드임을 명시 (is_repeat=True)
+        # 반복 모드임을 명시 (is_repeat=True)
         # 이를 통해 UI의 Stop/Pause 버튼이 올바르게 활성화됨
         self.panel.set_running_state(True, is_repeat=True)
 
@@ -326,12 +323,12 @@ class MacroPresenter(QObject):
 
         Logic:
             - Model에서 전달된 `event.index`는 원본 테이블의 행 번호임
-            - View의 `set_current_row`를 호출하여 해당 행 강조 및 스크롤 이동
+            - View의 `set_current_row`를 호출하여 해당 행 강조 및 스크롤 이동 (Facade)
 
         Args:
             event (MacroStepEvent): 스텝 이벤트 DTO.
         """
-        self.panel.macro_list.set_current_row(event.index)
+        self.panel.set_current_row(event.index)
 
     def on_step_completed(self, event: MacroStepEvent) -> None:
         """
@@ -349,7 +346,7 @@ class MacroPresenter(QObject):
         """
         # 종료 시에는 running=False이므로 is_repeat 인자는 기본값(False) 사용
         self.panel.set_running_state(False)
-        self.panel.macro_list.set_current_row(-1) # 하이라이트 제거
+        self.panel.set_current_row(-1) # 하이라이트 제거
 
     def on_loop_progress(self, current: int, total: int) -> None:
         """
@@ -359,7 +356,7 @@ class MacroPresenter(QObject):
             current (int): 현재 반복 횟수.
             total (int): 전체 반복 횟수 (0=무한).
         """
-        self.panel.macro_control.update_auto_count(current, total)
+        self.panel.update_auto_count(current, total)
 
     def on_error(self, event: MacroErrorEvent) -> None:
         """
@@ -370,4 +367,4 @@ class MacroPresenter(QObject):
         """
         logger.error(f"Macro Error: {event.message}")
         self.panel.set_running_state(False)
-        self.panel.macro_list.set_current_row(-1)
+        self.panel.set_current_row(-1)

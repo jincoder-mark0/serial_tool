@@ -425,7 +425,7 @@ class QSmartListView(QListView):
 
     def _execute_filter_update(self) -> None:
         """
-        [Slot] 디바운스 타이머 종료 후 실제 필터링을 수행합니다.
+        디바운스 타이머 종료 후 실제 필터링을 수행합니다.
         QSortFilterProxyModel의 필터를 업데이트하여 뷰를 갱신합니다.
         """
         if self._filter_enabled and self._current_pattern:
