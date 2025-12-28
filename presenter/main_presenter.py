@@ -713,6 +713,11 @@ class MainPresenter(QObject):
         Args:
             panel (PortPanel): 요청한 패널.
         """
+        format_map = {
+            '.pcap': LogFormat.PCAP,
+            '.txt': LogFormat.HEX,
+        }
+
         file_path = panel.data_log_widget.show_save_log_dialog()
         if not file_path:
             panel.data_log_widget.set_logging_active(False)
@@ -725,13 +730,9 @@ class MainPresenter(QObject):
 
         # 확장자 기반 포맷 결정
         _, ext = os.path.splitext(file_path)
-        log_format = LogFormat.BIN
 
         lower_ext = ext.lower()
-        if lower_ext == '.pcap':
-            log_format = LogFormat.PCAP
-        elif lower_ext == '.txt':
-            log_format = LogFormat.HEX
+        log_format = format_map.get(lower_ext, LogFormat.BIN)
 
         # 포맷 전달 및 시작
         if data_logger_manager.start_logging(port, file_path, log_format):

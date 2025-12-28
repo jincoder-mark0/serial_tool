@@ -254,6 +254,11 @@ class MacroPresenter(QObject):
 
         for i, entry in enumerate(all_entries):
             if i in indices:
+                # 지연 시간 최소값 보장
+                # 실행 시 안전을 위해 100ms를 기본값으로 설정
+                if entry.delay_ms is None or entry.delay_ms < 100:
+                    entry.delay_ms = 100
+
                 execution_plan.append((i, entry))
 
         if not execution_plan:
