@@ -120,7 +120,7 @@ class PacketPresenter(QObject):
         # 패킷 타입 (메타데이터 활용)
         packet_type = "Raw"
         if packet.metadata and "type" in packet.metadata:
-             packet_type = packet.metadata["type"]
+            packet_type = packet.metadata["type"]
 
         # View용 DTO 생성
         view_data = PacketViewData(

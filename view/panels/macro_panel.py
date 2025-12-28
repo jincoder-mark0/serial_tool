@@ -151,7 +151,7 @@ class MacroPanel(QWidget):
         """
         # 하위 위젯의 인터페이스 호출
         if self._macro_control:
-             return self._macro_control.is_broadcast_enabled()
+            return self._macro_control.is_broadcast_enabled()
         return False
 
     def get_macro_entries(self) -> List[MacroEntry]:

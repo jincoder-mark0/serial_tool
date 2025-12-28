@@ -242,7 +242,8 @@ class MainLeftSection(QWidget):
         현재 활성 탭의 로그를 지웁니다.
         """
         panel = self.get_current_port_panel()
-        panel.clear_data_log()
+        if panel:
+            panel.clear_data_log()
 
     # -------------------------------------------------------------------------
     # 포트 및 탭 제어 인터페이스
@@ -311,7 +312,8 @@ class MainLeftSection(QWidget):
             data (bytes): 추가할 데이터.
         """
         current_widget = self.get_current_port_panel()
-        current_widget.append_log_data(data)
+        if current_widget:
+            current_widget.append_log_data(data)
 
     def append_rx_data(self, batch: LogDataBatch) -> None:
         """

@@ -292,9 +292,9 @@ class MacroPresenter(QObject):
         """
         # Runner의 내부 상태(_is_paused)를 확인하여 토글
         if self.runner.is_paused():
-             self.runner.resume()
+            self.runner.resume()
         else:
-             self.runner.pause()
+            self.runner.pause()
 
     def on_single_send_requested(self, row_index: int, entry: MacroEntry) -> None:
         """

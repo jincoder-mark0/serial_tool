@@ -23,6 +23,7 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 * DTO를 활용한 데이터 교환 (Type Safety)
 * SettingsManager 주입 및 관리
 """
+import os
 from typing import Optional
 from PyQt5.QtCore import QObject, QTimer, QDateTime
 
@@ -41,8 +42,14 @@ from .lifecycle_manager import AppLifecycleManager
 
 from core.command_processor import CommandProcessor
 from core.settings_manager import SettingsManager
+from core.data_logger import data_logger_manager
 from core.logger import logger
-from common.constants import ConfigKeys
+
+from view.managers.language_manager import language_manager
+from view.managers.color_manager import color_manager
+
+from common.enums import LogFormat
+from common.constants import ConfigKeys, EventTopics
 from common.dtos import (
     ManualCommand,
     PortDataEvent,
@@ -56,7 +63,6 @@ from common.dtos import (
     FileErrorEvent,
     SystemLogEvent
 )
-
 
 class MainPresenter(QObject):
     """
