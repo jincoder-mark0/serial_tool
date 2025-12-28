@@ -42,6 +42,7 @@ from common.dtos import (
     MacroErrorEvent
 )
 from core.logger import logger
+from common.constants import MIN_MACRO_DELAY_MS
 
 
 class ScriptLoadWorker(QThread):
@@ -255,9 +256,9 @@ class MacroPresenter(QObject):
         for i, entry in enumerate(all_entries):
             if i in indices:
                 # 지연 시간 최소값 보장
-                # 실행 시 안전을 위해 100ms를 기본값으로 설정
-                if entry.delay_ms is None or entry.delay_ms < 100:
-                    entry.delay_ms = 100
+                # 실행 시 안전을 위해 MIN_MACRO_DELAY_MS 기본값으로 설정
+                if entry.delay_ms is None or entry.delay_ms < MIN_MACRO_DELAY_MS:
+                    entry.delay_ms = MIN_MACRO_DELAY_MS
 
                 execution_plan.append((i, entry))
 

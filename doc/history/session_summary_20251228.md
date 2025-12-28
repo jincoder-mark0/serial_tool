@@ -2,8 +2,8 @@
 
 ## 1. 개요 (Overview)
 
-금일 세션은 애플리케이션의 **유지보수성(Maintainability)**과 **아키텍처 건전성(Architectural Health)**을 극대화하기 위한 대규모 구조 리팩토링에 집중했습니다.
-Presenter 계층이 View 계층의 세부 구현 사항을 지나치게 많이 알고 있는 **강한 결합(Tight Coupling)** 문제를 해결하기 위해, **디미터 법칙(Law of Demeter)**을 엄격히 적용하고 **파사드 패턴(Facade Pattern)**을 도입하여 캡슐화를 강화했습니다.
+금일 세션은 애플리케이션의 **아키텍처 건전성(Architectural Health)**을 확보하기 위한 구조 리팩토링과 **초기화 성능 최적화(Startup Optimization)**에 집중했습니다.
+View와 Presenter 간의 **강한 결합(Tight Coupling)** 문제를 해결하기 위해 **디미터 법칙(Law of Demeter)**을 엄격히 적용하고 **파사드 패턴(Facade Pattern)**을 도입했습니다. 또한, 앱 구동 시퀀스를 정밀하게 분석하여 중복 로직을 제거하고 로그 가독성을 개선했습니다.
 
 ## 2. 주요 변경 사항 (Key Changes)
 
@@ -30,6 +30,15 @@ Presenter 계층이 View 계층의 세부 구현 사항을 지나치게 많이 �
 - **명시적 뷰 접근자 (Explicit View Accessors)**:
   - `MainWindow`에 `macro_view`, `packet_view` 등 명시적인 프로퍼티를 추가하여, MainPresenter 초기화 시 복잡한 UI 탐색 없이 안전하게 뷰 객체를 획득할 수 있게 개선했습니다.
 
+### 2.3 초기화 및 성능 최적화 (Initialization & Optimization)
+
+- **앱 구동 시퀀스 정제 (Startup Sequence Refinement)**:
+  - `main.py`와 `LifecycleManager`에서 중복 실행되던 테마 적용 로직을 정리하여, 앱 실행 시 테마가 3번 로드되는 비효율을 제거했습니다.
+  - 초기화 완료 로그의 중복 출력을 방지하고, 로그 레벨을 조정(`INFO` → `DEBUG`)하여 로그 가독성을 높였습니다.
+
+- **로깅 설정 강화**:
+  - `ResourcePath` 생성 직후 로거 설정을 명시적으로 호출하여, 개발 및 배포 환경 모두에서 로그 경로가 즉시 올바르게 설정되도록 보장했습니다.
+
 ## 3. 파일 변경 목록 (File Changes)
 
 ### 수정 (Modified)
@@ -46,6 +55,10 @@ Presenter 계층이 View 계층의 세부 구현 사항을 지나치게 많이 �
   - `presenter/macro_presenter.py`: 매크로 리스트 및 제어 위젯 접근 방식을 캡슐화된 메서드로 변경.
   - `presenter/packet_presenter.py`: 패킷 뷰 제어 로직을 인터페이스 호출로 변경.
   - `presenter/main_presenter.py`: 초기화 및 로그 기록 시 UI 깊은 탐색 로직 제거.
+  - `presenter/lifecycle_manager.py`: 테마 중복 로딩 제거 및 로그 레벨 조정.
+
+- **Entry Point**:
+  - `main.py`: 로거 설정 순서 변경 및 중복 로그 제거.
 
 ## 4. 향후 계획 (Next Steps)
 

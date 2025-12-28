@@ -125,7 +125,6 @@ def main() -> None:
 
     window.show()
 
-    logging.info("Application initialized")
     sys.exit(app.exec_())
 
 if __name__ == "__main__":

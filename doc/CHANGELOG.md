@@ -21,6 +21,14 @@
   - **명시적 뷰 접근자**: `MainWindow`에 `macro_view`, `packet_view` 등의 프로퍼티를 추가하여, MainPresenter 초기화 시 UI 계층 구조를 탐색하지 않고 명시적으로 뷰 객체에 접근할 수 있게 했습니다.
   - **데이터 라우팅 캡슐화**: `PortTabPanel` 내부에 포트 이름 기반의 데이터 주입 로직(`append_rx_data`)을 캡슐화하여, 외부에서 탭 인덱스를 직접 순회하는 로직을 제거했습니다.
 
+- **앱 초기화 시퀀스 최적화 (Startup Optimization)**
+  - **테마 중복 로딩 제거**: `AppLifecycleManager`에서 `switch_theme`를 불필요하게 호출하던 코드를 제거했습니다. `main.py`의 초기 부팅 단계와 `apply_state` 내부의 폰트/테마 갱신 과정만 유지하여, 앱 시작 시 테마가 3번 중복 로드되는 비효율을 개선했습니다.
+  - **로그 노이즈 감소**: "Application initialized" 로그가 `main.py`와 `LifecycleManager`에서 이중으로 출력되던 문제를 해결했습니다. `main.py`의 중복 로그를 제거하고, `LifecycleManager`의 완료 로그 레벨을 `INFO`에서 `DEBUG`로 조정하여 로그 가독성을 높였습니다.
+
+#### 수정 사항 (Fixed)
+
+- **로거 설정 강화**: `main.py` 진입점에서 `ResourcePath` 생성 직후 `logger.configure(resource_path)`를 명시적으로 호출하도록 수정하여, 로그 파일 경로가 개발 및 배포 환경(PyInstaller) 모두에서 즉시 올바르게 설정되도록 보장했습니다.
+
 ---
 
 ### 아키텍처 리팩토링 및 코드 품질 개선 (2025-12-27)

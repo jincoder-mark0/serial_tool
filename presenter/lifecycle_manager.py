@@ -32,7 +32,7 @@ from common.dtos import (
     FontConfig,
     ManualControlState,
     PreferencesState,
-    SystemLogEvent  # [수정] DTO 추가
+    SystemLogEvent
 )
 
 # Circular Import 방지를 위해 TYPE_CHECKING 사용
@@ -98,7 +98,8 @@ class AppLifecycleManager:
         # 7. 서비스 시작
         self._start_services()
 
-        logger.info("Application initialization completed.")
+        # 초기화 완료 로그 (Debug 레벨로 변경하여 main.py 로그와 중복 방지)
+        logger.debug("Application initialization sequence completed.")
 
     def _init_settings_and_view(self) -> None:
         """
@@ -129,11 +130,8 @@ class AppLifecycleManager:
         window_state, font_config = self._create_initial_states(all_settings)
 
         # View에 설정 주입하여 초기 상태 복원
+        # (MainWindow.apply_state 내부에서 폰트 설정과 함께 테마 리프레시가 수행됨)
         self.view.apply_state(window_state, font_config)
-
-        # 테마 적용
-        theme = self.settings_manager.get(ConfigKeys.THEME, 'dark')
-        self.view.switch_theme(theme)
 
     def _restore_sub_presenter_states(self) -> None:
         """
