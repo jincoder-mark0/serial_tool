@@ -28,8 +28,12 @@ from PyQt5.QtCore import pyqtSignal
 from view.widgets.port_settings import PortSettingsWidget
 from view.widgets.data_log import DataLogWidget
 from view.widgets.port_stats import PortStatsWidget
-from common.dtos import PortConfig, PortInfo, PortStatistics
-
+from common.dtos import (
+    PortConfig,
+    PortInfo,
+    PortStatistics,
+    ColorRule
+)
 
 class PortPanel(QWidget):
     """
@@ -53,6 +57,8 @@ class PortPanel(QWidget):
 
     # 로그 위젯 중계 시그널
     tx_broadcast_allowed_changed = pyqtSignal(bool)
+    logging_start_requested = pyqtSignal()
+    logging_stop_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -104,6 +110,8 @@ class PortPanel(QWidget):
 
         # Data Log
         self._data_log_widget.tx_broadcast_allowed_changed.connect(self.tx_broadcast_allowed_changed.emit)
+        self._data_log_widget.logging_start_requested.connect(self.logging_start_requested.emit)
+        self._data_log_widget.logging_stop_requested.connect(self.logging_stop_requested.emit)
 
         # 3. 레이아웃 구성
         layout.addWidget(self._port_settings_widget)
@@ -204,6 +212,33 @@ class PortPanel(QWidget):
             stats (PortStatistics): 통계 정보 DTO.
         """
         self._port_stats_widget.update_statistics(stats)
+
+    def set_logging_active(self, active: bool) -> None:
+        """
+        로깅 활성화 상태를 설정합니다 (UI 업데이트).
+
+        Args:
+            active (bool): 활성화 여부.
+        """
+        self._data_log_widget.set_logging_active(active)
+
+    def show_save_log_dialog(self) -> str:
+        """
+        로그 저장 파일 대화상자를 표시합니다.
+
+        Returns:
+            str: 선택된 파일 경로. (취소 시 빈 문자열)
+        """
+        return self._data_log_widget.show_save_log_dialog()
+
+    def set_data_log_color_rules(self, rules: List[ColorRule]) -> None:
+        """
+        로그 뷰어에 색상 규칙을 설정합니다.
+
+        Args:
+            rules (List[ColorRule]): 색상 규칙 리스트.
+        """
+        self._data_log_widget.set_color_rules(rules)
 
     # --- Tab Management ---
 
