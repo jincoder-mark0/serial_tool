@@ -447,7 +447,7 @@ class IMainView(Protocol):
         """현재 열려있는 포트 탭의 개수를 반환합니다."""
         ...
 
-    def get_port_tab_widget(self, index: int) -> Any:
+    def get_port_tab_widget(self, index: int) -> Optional[IPortView]:
         """
         인덱스에 해당하는 포트 탭 위젯(IPortView 구현체)을 반환합니다.
         (초기화/Wiring 단계에서 사용)

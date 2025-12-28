@@ -358,11 +358,8 @@ class PortPresenter(QObject):
                 panel.set_connected(False)
                 break
 
-        # View를 통해 에러 메시지 표시
-        # Runtime에서 self.view는 QWidget을 상속받은 객체(MainLeftSection)일 것이므로 cast 사용
-        # Protocol 자체는 QWidget이 아니므로 정적 분석기는 경고를 줄 수 있음
-        parent_widget = cast(QWidget, self.view)
-        QMessageBox.critical(parent_widget, "Error", f"Port Error ({event.port}): {event.message}")
+        # View 인터페이스를 통해 에러 메시지 표시
+        self.view.show_error("Error", f"Port Error ({event.port}): {event.message}")
 
         # 시스템 로그 기록
         self._log_event(f"[{event.port}] Error: {event.message}", "ERROR")
