@@ -25,6 +25,7 @@ from PyQt5.QtCore import QObject, pyqtSignal
 
 from model.connection_worker import ConnectionWorker
 from core.transport.serial_transport import SerialTransport
+from core.transport.loopback_transport import LoopbackTransport
 from model.packet_parser import ParserFactory, PacketParser
 from common.enums import ParserType
 from common.dtos import (
@@ -34,7 +35,7 @@ from common.dtos import (
     PacketEvent,
     PortConnectionEvent
 )
-from common.constants import EventTopics
+from common.constants import EventTopics, LOOPBACK_PORT_NAME
 from core.event_bus import event_bus
 from core.logger import logger
 
@@ -236,8 +237,11 @@ class ConnectionController(QObject):
             self._emit_error(name, "Connection is already open.")
             return False
 
-        # DTO를 직접 SerialTransport에 전달
-        transport = SerialTransport(config)
+        # DTO를 직접 Transport에 전달 (provider 분기는 이 한 곳뿐 — S-033)
+        if config.port == LOOPBACK_PORT_NAME:
+            transport = LoopbackTransport(config)
+        else:
+            transport = SerialTransport(config)
 
         # Worker에 Transport 주입
         worker = ConnectionWorker(transport, name)

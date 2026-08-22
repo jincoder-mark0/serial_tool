@@ -18,7 +18,7 @@ Steps 그대로 수행할 수 있는 수준**으로 상세화한 문서 모음.
 ```powershell
 Set-Location e:\Python\serial_tool
 $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
-.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 122개)
+.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 130개)
 ```
 
 ## 태스크 목록 (의존 순서)
@@ -50,7 +50,8 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-009](S-009-plugin-system.md) | 플러그인 인프라 | **상위 전용** (설계 선행) | — | TODO |
 | [S-026](S-026-minimum-window-width.md) | 최소 창 크기 완화 (1471→1093px) | 상위 설계 + 하위 수행 | S-019, S-024 | DONE |
 | [S-032](S-032-min-height-and-macro-header.md) | 최소 높이 마무리 + 매크로 헤더 잘림 | **하위 가능** | S-026 | DONE (높이 잔여는 보류 판정) |
-| [S-033](S-033-loopback-dummy-port.md) | 루프백 더미 포트 (디버깅용) | **하위 가능** | — | TODO |
+| [S-033](S-033-loopback-dummy-port.md) | 루프백 더미 포트 (디버깅용) | **하위 가능** | — | DONE |
+| [S-037](S-037-send-before-open-race.md) | 연결 직후 send 침묵 실패 레이스 | **하위 가능** | S-033 | TODO |
 | [S-034](S-034-remove-scan-button.md) | 중복 검색 버튼 제거 (팝업 자동 스캔 존재) | **하위 가능** | — | DONE |
 | [S-035](S-035-spacing-grouping-polish.md) | 마진·구획 정비 (테두리 대비·제목 간격·그루핑) | **하위 가능** | S-033, S-034 | TODO |
 | [S-036](S-036-fixed-font-routing-and-i18n.md) | 고정폭 폰트 설정 미반영 수정 + 언어팩 잔여 | **하위 가능** | S-035 | TODO |

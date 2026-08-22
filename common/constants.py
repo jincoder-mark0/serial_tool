@@ -130,6 +130,10 @@ DEFAULT_BAUDRATE: int = 115200
 DEFAULT_PORT_TIMEOUT: float = 0.0  # Non-blocking I/O
 DEFAULT_READ_CHUNK_SIZE: int = 4096  # 한 번에 읽을 바이트 수
 
+# 더미 포트 예약명 (S-033) — 실기기 없이 송수신 경로를 디버깅하기 위한 루프백 에코 포트.
+# 실제 장치명(COMx 등)과 충돌하지 않는 이름으로 고정.
+LOOPBACK_PORT_NAME: str = "LOOPBACK"
+
 # ==========================================
 # Buffer & Performance Constants
 # ==========================================

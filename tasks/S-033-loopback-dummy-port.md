@@ -1,6 +1,10 @@
 # S-033 — 루프백 더미 포트 (하드웨어 없는 디버깅)
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. LoopbackTransport(BaseTransport,
+  락 보호 에코 버퍼)·controller 단일 분기·스캐너 상시 노출(PortInfo 재사용). 테스트 8건
+  (단위 6+통합 2, 3회 연속 통과) → 기준선 130. 캡처: 콤보에 LOOPBACK 표시·min 크기 불변.
+  **중요 발견**: 연결 직후 send 침묵 실패 레이스(기존 결함, isRunning vs transport.is_open
+  간극) → S-037 등재. S-034 리뷰 중 관찰된 1회 타임아웃의 원인도 이것)
 - Recommended model: **하위(Sonnet) 가능** (확정 설계 기준)
 - 선행: 없음 (사용자 제안 2026-08-22)
 - Skills to load: task-done, lang-keys(툴팁 추가 시)

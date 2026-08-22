@@ -21,6 +21,7 @@ from PyQt5.QtCore import QThread, pyqtSignal
 from typing import List, Tuple
 from core.logger import logger
 from common.dtos import PortInfo
+from common.constants import LOOPBACK_PORT_NAME
 
 class PortScanWorker(QThread):
     """
@@ -63,10 +64,17 @@ class PortScanWorker(QThread):
                 for item in temp_list
             ]
 
+            # 4. 루프백 더미 포트 상시 추가 (S-033 — 실기기 없는 디버깅용)
+            port_list.append(
+                PortInfo(device=LOOPBACK_PORT_NAME, description="Loopback (debug echo)")
+            )
+
             # 결과 전달
             self.ports_found.emit(port_list)
 
         except Exception as e:
             logger.error(f"Port scan failed: {e}")
-            # 실패 시 빈 리스트 전달
-            self.ports_found.emit([])
+            # 실패 시에도 루프백 항목만은 상시 제공
+            self.ports_found.emit(
+                [PortInfo(device=LOOPBACK_PORT_NAME, description="Loopback (debug echo)")]
+            )
