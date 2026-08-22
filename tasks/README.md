@@ -18,7 +18,7 @@ Steps 그대로 수행할 수 있는 수준**으로 상세화한 문서 모음.
 ```powershell
 Set-Location e:\Python\serial_tool
 $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
-.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 393개)
+.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 397개)
 ```
 
 ## 태스크 목록 (의존 순서)
@@ -105,6 +105,13 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-068](S-068-right-section-min-width.md) | 우측 패널 최소 폭 지정 (매크로 가로 스크롤 방지) | UX | DONE |
 | [S-069](S-069-port-tab-close-hard-crash.md) | **포트 탭 닫기·재연결 시 프로세스 하드 크래시** (20% 재현) | P0 | TODO |
 | [S-070](S-070-mock-spec-interface-drift.md) | Presenter→View 인터페이스 드리프트를 Mock이 삼킴 | P1 | TODO |
+
+### 프로토콜 분석 확장 (2026-08-23, WireScope 참고 — 개념만, AGPL 코드 복사 금지)
+
+| ID | 제목 | 우선 | 상태 |
+|---|---|---|---|
+| [S-071](S-071-checksum-validation.md) | 패킷 체크섬 검증 (XOR/SUM/CRC 7종) | 기능 | TODO |
+| [S-072](S-072-framing-length-field-and-gap.md) | 프레이밍 확장 — 길이 필드 파서 + 갭 기반 파서 | 기능 | TODO |
 
 - **하위 가능**: Steps가 자족적으로 작성됨. Steps 밖 판단이 필요해지면 즉시 중단·보고.
 - **상위 전용/권장**: 설계·판단이 본체인 태스크. 하위 모델은 시작하지 않는다.
