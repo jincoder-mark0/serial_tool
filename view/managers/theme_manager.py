@@ -186,11 +186,14 @@ class ThemeManager(QObject):
             QIcon: 로드된 아이콘 객체.
         """
         # 테마 접미사 결정을 위한 타겟 테마 확인
+        # 실제 테마명을 그대로 사용 (dark/light/dracula 각각의 아이콘 디렉토리 존재)
         target_theme = self._current_theme.lower()
-        if target_theme in [ThemeType.DRACULA.value, ThemeType.DARK.value]:
-            theme_suffix = ThemeType.DARK.value
+        valid_suffixes = {ThemeType.DARK.value, ThemeType.LIGHT.value, ThemeType.DRACULA.value}
+        if target_theme in valid_suffixes:
+            theme_suffix = target_theme
         else:
-            theme_suffix = ThemeType.LIGHT.value
+            # 미확인 테마는 dark로 폴백
+            theme_suffix = ThemeType.DARK.value
 
         # 1. 테마별 아이콘 시도 (ResourcePath 활용)
         icon_path = self._resource_path.get_icon_path(icon_name, theme_suffix)
@@ -266,18 +269,23 @@ class ThemeManager(QObject):
         if not self._theme_dir.exists():
             return None
 
+        theme_key = theme_name.lower()
         # 파일명 규칙: {theme_name}_theme.qss (소문자 기준)
-        filename = f"{theme_name.lower()}_theme.qss"
+        filename = f"{theme_key}_theme.qss"
 
-        # ResourcePath를 통해 경로 획득 시도
-        path_obj = self._resource_path.get_theme_path(filename)
+        # ResourcePath 딕셔너리 조회 (테마 키 기준 - 정상 경로)
+        path_obj = self._resource_path.get_theme_path(theme_key)
 
-        if path_obj:
+        if path_obj and path_obj.exists():
             return str(path_obj)
 
-        # 직접 경로 조합 (Fallback)
+        # 직접 경로 조합 (Fallback) - ResourcePath.theme_files에 미등록된 테마
         full_path = self._theme_dir / filename
         if full_path.exists():
+            logger.warning(
+                f"Theme '{theme_key}' not registered in ResourcePath.theme_files; "
+                f"using direct path fallback: {full_path}"
+            )
             return str(full_path)
 
         return None
@@ -551,6 +559,13 @@ class ThemeManager(QObject):
         full_stylesheet = stylesheet + "\n" + font_qss
 
         app.setStyleSheet(full_stylesheet)
+
+        # 5. ColorManager 업데이트 (로그 강조 색상 팔레트 동기화)
+        # NOTE: main_window.switch_theme()에서도 별도로 color_manager.apply_theme()를
+        # 호출하므로 동일 theme_name으로 중복 호출될 수 있음. ColorManager.apply_theme은
+        # theme_name과 규칙의 light_color/dark_color(불변)만으로 상태를 재계산하고
+        # 시그널을 발행하지 않아 idempotent함 (2026-08-22 확인) - 중복 호출해도 안전.
+        color_manager.apply_theme(theme_name)
 
         # 로그 출력 제어
         if previous_theme != theme_name:

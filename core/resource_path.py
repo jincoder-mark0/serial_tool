@@ -75,7 +75,8 @@ class ResourcePath:
         self.theme_files: Dict[str, Path] = {
             'common': self.themes_dir / 'common.qss',
             'dark': self.themes_dir / 'dark_theme.qss',
-            'light': self.themes_dir / 'light_theme.qss'
+            'light': self.themes_dir / 'light_theme.qss',
+            'dracula': self.themes_dir / 'dracula_theme.qss'
         }
 
         # 아이콘 경로

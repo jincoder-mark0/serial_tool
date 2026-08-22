@@ -103,11 +103,18 @@ class PreferencesDialog(QDialog):
         ui_layout = QFormLayout()
 
         # 테마 목록 동적 로드
+        # 표시는 번역 텍스트(main_menu_theme_{name})로 하되, 저장 값은 원문 테마명을
+        # itemData로 유지한다 (main_menu_bar.py의 테마 메뉴와 동일한 표시 규칙).
         self.theme_combo = QComboBox()
         themes = theme_manager.get_available_themes()
         if not themes:
             themes = [ThemeType.DARK.value.capitalize(), ThemeType.LIGHT.value.capitalize()]
-        self.theme_combo.addItems(themes)
+        for theme_name in themes:
+            lang_key = f"main_menu_theme_{theme_name.lower()}"
+            display_name = language_manager.get_text(lang_key)
+            if display_name == lang_key:  # 번역 키가 없으면 원문 그대로 사용
+                display_name = theme_name
+            self.theme_combo.addItem(display_name, theme_name)
 
         # 언어 목록 동적 로드
         self.language_combo = QComboBox()
@@ -396,8 +403,13 @@ class PreferencesDialog(QDialog):
         DTO 상태를 UI에 반영합니다.
         """
         # General
+        # 콤보 표시 텍스트는 번역되어 있으므로 itemData(원문 테마명)로 매칭한다.
         # 대소문자 무시하고 매칭 (Dark vs dark)
-        index = self.theme_combo.findText(self.state.theme, Qt.MatchFixedString)
+        index = -1
+        for i in range(self.theme_combo.count()):
+            if str(self.theme_combo.itemData(i)).lower() == str(self.state.theme).lower():
+                index = i
+                break
         if index != -1:
             self.theme_combo.setCurrentIndex(index)
         else:
@@ -455,7 +467,7 @@ class PreferencesDialog(QDialog):
             baud_val = 115200
 
         new_state = PreferencesState(
-            theme=self.theme_combo.currentText(),
+            theme=self.theme_combo.currentData(),
             language=self.language_combo.currentData(),
             font_size=self.proportional_font_size_spin.value(),
             max_log_lines=self.max_lines_spin.value(),

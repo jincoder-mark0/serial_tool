@@ -47,7 +47,7 @@
 | [S-020](tasks/S-020-langpack-broken-keys.md) | 언어팩 결함 수정 (깨진 키·오타·용어 통일) | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 캡처 8조합 키 노출 0건. packet.py dead code 발견(보고만) |
 | [S-021](tasks/S-021-hardcoded-messages-i18n.md) | 하드코딩 사용자 메시지 언어팩 전환 | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 키 32개 신설, 상태바·통계 retranslate 연동 |
 | [S-022](tasks/S-022-theme-contrast-hardcoded-colors.md) | 테마 대비 미달·하드코딩 색 수정 | UX | ⏸ 대기 | REC/연결 표시 WCAG 미달, 라이트 테마 다크 잔존 |
-| [S-023](tasks/S-023-theme-system-structural.md) | 테마 시스템 구조 결함 (죽은 경로·dracula 라우팅) | UX | ⏸ 대기 | 폴백 의존 로딩·동기화 누락 |
+| [S-023](tasks/S-023-theme-system-structural.md) | 테마 시스템 구조 결함 (죽은 경로·dracula 라우팅) | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 3테마 정상 경로 로드, 동기화·번역 정합 |
 | [S-024](tasks/S-024-text-clipping-fixed-sizes.md) | 텍스트 잘림·고정 크기 수정 (영문 버튼 등) | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 고정→최소 크기 5곳, 캡처 8조합+16pt 검증 |
 | [S-025](tasks/S-025-ui-consistency.md) | UI 일관성 정비 (툴팁·상수·다이얼로그·니모닉) | UX | ⏸ 대기 | 선행: S-019 |
 | [S-026](tasks/S-026-minimum-window-width.md) | 최소 창 크기 과대 완화 (실측 1435px) | UX | ⏸ 대기 | 1366×768 노트북 사용 불가. 상위 설계 필요 |

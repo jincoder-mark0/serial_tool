@@ -1,6 +1,10 @@
 # S-023 — 테마 시스템 구조 결함 수정
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. 테마 딕셔너리 키 조회 정합
+  (dracula 등록 포함, 3테마 폴백 경고 0건 확인), apply_theme→color_manager 동기화
+  (idempotent 사전 확인 완료 — 시그널 없음·순수 재계산), dracula 아이콘 실제 테마명 라우팅,
+  "+" 탭 아이콘 switch_theme 재호출, dracula 번역 키, Preferences 콤보 표시 번역(저장값은
+  itemData 원문 유지). pytest 85 passed, check_language_keys SUCCESS)
 - Recommended model: **하위(Sonnet) 가능** (수정 방향 확정됨)
 - 선행: 없음 (근거: doc/ux_audit_20260822.md 중간 — 테마 구조 4건 + 번역 2건)
 - Skills to load: task-done, lang-keys

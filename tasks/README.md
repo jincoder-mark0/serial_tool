@@ -29,7 +29,7 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-020](S-020-langpack-broken-keys.md) | 언어팩 결함 수정 (깨진 키·오타·용어) | **하위 가능** | — | DONE |
 | [S-022](S-022-theme-contrast-hardcoded-colors.md) | 테마 대비·하드코딩 색 수정 | **하위 가능** | — | TODO |
 | [S-024](S-024-text-clipping-fixed-sizes.md) | 텍스트 잘림·고정 크기 수정 | **하위 가능** | — | DONE |
-| [S-023](S-023-theme-system-structural.md) | 테마 시스템 구조 결함 수정 | **하위 가능** | — | TODO |
+| [S-023](S-023-theme-system-structural.md) | 테마 시스템 구조 결함 수정 | **하위 가능** | — | DONE |
 | [S-021](S-021-hardcoded-messages-i18n.md) | 하드코딩 메시지 언어팩 전환 | **하위 가능** | S-020 권장 | DONE |
 | [S-025](S-025-ui-consistency.md) | UI 일관성 정비 (툴팁·상수·니모닉) | **하위 가능** | S-019 | TODO |
 | [S-017](S-017-ui-refresh-constant.md) | UI 갱신 주기 리터럴 30 상수화 | **하위 가능** | — | DONE |

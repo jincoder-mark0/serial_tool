@@ -483,6 +483,10 @@ class MainWindow(QMainWindow):
         self.theme_manager.apply_theme(theme_name)
         self.color_manager.apply_theme(theme_name)
 
+        # '+' 탭 아이콘 테마 전환 갱신 (dark/light/dracula 아이콘 동기화)
+        if hasattr(self.left_section, 'port_tab_panel') and self.left_section.port_tab_panel:
+            self.left_section.port_tab_panel.update_plus_tab_icon()
+
         # 메뉴바의 테마 체크 표시 업데이트
         if hasattr(self, 'menu_bar'):
             self.menu_bar.set_current_theme(theme_name)
