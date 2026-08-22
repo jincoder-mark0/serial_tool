@@ -1,6 +1,8 @@
 # S-019 — DataLogWidget init_ui 중복 생성 블록 제거
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. 중복 블록 26줄 삭제 —
+  첫 블록이 connect 포함 완전 초기화임을 확인. pytest 85 passed, 캡처 검증 완료.
+  후속 발견: 검색창이 툴바 공간 부족으로 35px까지 축소되는 별개 이슈 → S-026에 등재)
 - Recommended model: **하위(Sonnet) 가능**
 - 선행: 없음 (UX 점검 최우선 결함 — 2026-08-22, doc/ux_audit_20260822.md #L1)
 - Skills to load: task-done

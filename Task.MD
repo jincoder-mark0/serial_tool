@@ -43,7 +43,7 @@
 | [S-016](tasks/S-016-settings-namespace.md) | 설정 키 네임스페이스 이중화 해소 (`settings.*` vs `global.*`) | 유지보수 | ⏸ 대기 | 2026-08-22 발견 결함. 상위 결정 필요 |
 | [S-017](tasks/S-017-ui-refresh-constant.md) | UI 갱신 주기 리터럴 30 상수화 | 유지보수 | ✅ 완료 | 하위 모델 수행 (2026-08-22). pytest 85 passed |
 | [S-018](tasks/S-018-meipass-detection-fix.md) | PyInstaller 감지 버그 수정 (`os._MEIPASS`→`sys`) | 유지보수 | ⏸ 대기 | 2026-08-22 발견. 하위 모델 가능. S-012/013 선행 조건 |
-| [S-019](tasks/S-019-datalog-duplicate-init.md) | DataLogWidget init_ui 중복 생성 블록 제거 | UX | ⏸ 대기 | UX 점검 최우선 결함 — 툴바 설정 전체 무효화 |
+| [S-019](tasks/S-019-datalog-duplicate-init.md) | DataLogWidget init_ui 중복 생성 블록 제거 | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 26줄 삭제, pytest 85+캡처 검증. 검색창 축소 별건은 S-026로 |
 | [S-020](tasks/S-020-langpack-broken-keys.md) | 언어팩 결함 수정 (깨진 키·오타·용어 통일) | UX | ⏸ 대기 | 키 원문 노출 2건 + 용어 혼재 |
 | [S-021](tasks/S-021-hardcoded-messages-i18n.md) | 하드코딩 사용자 메시지 언어팩 전환 | UX | ⏸ 대기 | 상태바·오류 메시지 12건+ 상시 영어 |
 | [S-022](tasks/S-022-theme-contrast-hardcoded-colors.md) | 테마 대비 미달·하드코딩 색 수정 | UX | ⏸ 대기 | REC/연결 표시 WCAG 미달, 라이트 테마 다크 잔존 |
