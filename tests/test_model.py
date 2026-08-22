@@ -76,8 +76,8 @@ class TestPacketParser:
 
         # THEN: 하나의 패킷으로 반환되어야 하며 데이터가 일치해야 함
         assert len(packets) == 1
-        assert packets[0].raw_data == input_data
-        assert packets[0].type_name == "RAW"
+        assert packets[0].data == input_data
+        assert packets[0].metadata is None
 
 
 # =============================================================================
@@ -121,6 +121,7 @@ class TestConnectionController:
 
         # 시그널 발생 확인 (정확한 타이밍 이슈로 인해 worker 내부 동작에 따라 다를 수 있음)
         # 여기서는 Controller 로직상 Worker 생성 성공 여부를 주로 봅니다.
+        controller.close_connection(sample_port_config.port)
 
     def test_open_connection_duplicate_fail(self, mock_serial_port, sample_port_config):
         """
@@ -134,6 +135,10 @@ class TestConnectionController:
         # GIVEN: 이미 연결된 상태
         controller = ConnectionController()
         controller.open_connection(sample_port_config)
+        for _ in range(50):
+            if controller.workers[sample_port_config.port].is_running():
+                break
+            time.sleep(0.01)
 
         error_spy = MagicMock()
         controller.error_occurred.connect(error_spy)
@@ -146,6 +151,7 @@ class TestConnectionController:
         error_spy.assert_called_once()
         args, _ = error_spy.call_args
         assert args[0].port == sample_port_config.port  # PortErrorEvent 검증
+        controller.close_connection(sample_port_config.port)
 
     def test_send_data(self, mock_serial_port, sample_port_config):
         """
@@ -160,6 +166,10 @@ class TestConnectionController:
         # GIVEN: 연결된 컨트롤러
         controller = ConnectionController()
         controller.open_connection(sample_port_config)
+        for _ in range(50):
+            if controller.workers[sample_port_config.port].is_running():
+                break
+            time.sleep(0.01)
 
         data_sent_spy = MagicMock()
         controller.data_sent.connect(data_sent_spy)
@@ -177,6 +187,7 @@ class TestConnectionController:
         event = data_sent_spy.call_args[0][0]
         assert event.port == sample_port_config.port
         assert event.data == test_data
+        controller.close_connection(sample_port_config.port)
 
     def test_close_connection(self, mock_serial_port, sample_port_config, qapp):
         """
@@ -239,7 +250,7 @@ class TestMacroRunner:
 
         # THEN: 저장 확인
         assert len(runner._entries) == 2
-        assert runner._entries[0].command == "CMD1"
+        assert runner._entries[0][1].command == "CMD1"
 
     def test_macro_start_and_signal(self, qapp, sample_macro_entry):
         """
@@ -276,6 +287,7 @@ class TestMacroRunner:
         if send_spy.call_count == 0:
             # CI/CD 환경 등 느린 환경 대비 추가 대기
             time.sleep(0.2)
+            qapp.processEvents()
 
         assert send_spy.called
         cmd_arg = send_spy.call_args[0][0]

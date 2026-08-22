@@ -36,6 +36,7 @@ from PyQt5.QtWidgets import QApplication
 from common.dtos import PortConfig, ManualCommand, MacroEntry
 from common.enums import SerialParity, SerialStopBits, SerialFlowControl
 from core.event_bus import event_bus
+from core.resource_path import ResourcePath
 
 
 # -----------------------------------------------------------------------------
@@ -79,7 +80,9 @@ def mock_serial_port():
         mock_instance = mock_cls.return_value
 
         # 기본 동작 설정
-        mock_instance.is_open = False
+        # serial.Serial(...) opens the configured port during construction.
+        mock_instance.is_open = True
+        mock_instance.in_waiting = 0
 
         # open() 호출 시 is_open을 True로 변경하는 사이드 이펙트
         def open_side_effect():
@@ -112,18 +115,17 @@ def mock_settings_manager(tmp_path):
     Yields:
         SettingsManager: 임시 경로로 초기화된 설정 관리자.
     """
-    # SettingsManager가 싱글톤일 경우를 대비해 초기화 로직을 우회하거나
-    # 파일 경로를 패치해야 합니다. 여기서는 파일 경로를 패치한다고 가정합니다.
-    config_path = tmp_path / "test_config.json"
+    from core.settings_manager import SettingsManager
 
-    with patch("core.settings_manager.CONFIG_FILE_PATH", str(config_path)):
-        from core.settings_manager import SettingsManager
-        # 싱글톤 인스턴스 리셋 (테스트 격리)
-        SettingsManager._instance = None
-        manager = SettingsManager()
-        yield manager
-        # 테스트 후 정리
-        SettingsManager._instance = None
+    resource_path = ResourcePath(tmp_path)
+    resource_path.config_dir.mkdir(parents=True)
+
+    SettingsManager._instance = None
+    SettingsManager._initialized = False
+    manager = SettingsManager(resource_path)
+    yield manager
+    SettingsManager._instance = None
+    SettingsManager._initialized = False
 
 
 @pytest.fixture(autouse=True)

@@ -7,8 +7,8 @@
 ### 1. color_rules.json
 ReceivedArea에서 수신된 텍스트에 자동으로 색상을 적용하는 규칙을 정의합니다.
 
-### 2. default_settings.json
-애플리케이션의 기본 설정 값을 정의합니다. (포트 설정, UI 설정 등)
+### 2. settings.json
+애플리케이션 설정과 저장된 UI 상태를 정의합니다. 설정이 유효하지 않으면 `SettingsManager`가 fallback 값을 사용합니다.
 
 ---
 
@@ -17,7 +17,7 @@ ReceivedArea에서 수신된 텍스트에 자동으로 색상을 적용하는 �
 이 파일은 ReceivedArea에서 수신된 텍스트에 자동으로 색상을 적용하는 규칙을 정의합니다.
 
 ## 파일 위치
-`config/color_rules.json`
+`resources/configs/color_rules.json`
 
 ## 형식
 

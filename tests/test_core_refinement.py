@@ -120,8 +120,8 @@ class TestCommandProcessor:
         """
         # GIVEN
         cmd = "FF 00"
-        prefix = "A"
-        suffix = "B"
+        prefix = "41"
+        suffix = "42"
 
         # WHEN
         result = CommandProcessor.process_command(
@@ -309,19 +309,19 @@ class TestSettingsManager:
 
         SettingsManager._instance = None
 
-        # CONFIG_FILE_PATH 패치
-        with patch("core.settings_manager.CONFIG_FILE_PATH", str(test_file)):
-            manager = SettingsManager()
+        from core.resource_path import ResourcePath
 
-            # WHEN: 설정 변경 및 저장 (자동 저장 여부에 따라 save 호출)
-            manager.set("test_key", 12345)
-            manager.save_settings()
+        resource_path = ResourcePath(tmp_path)
+        resource_path.config_dir.mkdir(parents=True)
+        resource_path.settings_file = test_file
+        manager = SettingsManager(resource_path)
 
-            # THEN: 파일 생성 확인
-            assert test_file.exists()
+        manager.set("test_key", 12345)
+        manager.save_settings()
 
-            # THEN: 내용 검증
-            import json
-            with open(test_file, 'r') as f:
-                data = json.load(f)
-                assert data["test_key"] == 12345
+        assert test_file.exists()
+
+        import json
+        with open(test_file, 'r') as f:
+            data = json.load(f)
+            assert data["test_key"] == 12345

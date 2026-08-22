@@ -4,7 +4,9 @@
 
 ## 목표 (Goal)
 
-`Implementation_Specification.md`에 정의된 **SerialTool v1.0**을 **Python 3.10+** 및 **PyQt5**를 사용하여 구현합니다. **MVP (Model-View-Presenter)** 아키텍처와 **Worker Thread** 모델을 적용하여 **고성능**, **안정성**, **확장성**을 확보하는 것이 목표입니다.
+> 이 문서는 초기 설계 목표와 단계별 계획을 보존한 계획 문서입니다. 현재 구현 상태는 `doc/00_overview.md`와 `doc/task.md`, 실제 변경 내역은 `doc/CHANGELOG.md`를 기준으로 확인합니다. 처리량 수치는 아직 검증되지 않은 목표값입니다.
+
+**SerialTool v1.0**을 **Python 3.10+** 및 **PyQt5**로 구현하며, **MVP (Model-View-Presenter)** 아키텍처와 **Worker Thread** 모델을 적용해 안정성과 확장성을 확보하는 것이 목표입니다.
 
 ### 핵심 목표
 

@@ -108,7 +108,7 @@
   - [x] Port Connect 버튼 Error 상태 QSS 추가 (테마 파일 확인 완료)
 - [x] **Main StatusBar 동적 업데이트 연동**
   - [x] RX/TX 속도, 버퍼 상태, 에러 카운트 표시 구현
-  - [x] `PortController` -> `MainPresenter` -> `MainStatusBar` 데이터 흐름 연결
+  - [x] `ConnectionController` -> `MainPresenter` -> `MainStatusBar` 데이터 흐름 연결
 - [x] **사용성 개선**
   - [x] 전역 단축키 시스템 구현 (F2: Connect, F3: Disconnect, F5: Clear)
   - [x] MacroList 컨텍스트 메뉴 추가
@@ -145,14 +145,14 @@
 - [x] `ConnectionWorker` 구현 (Transport 주입, QThread 루프)
   - [x] `ITransport` 주입 구조 적용
   - [x] QThread 기반 Loop 구현
-- [x] `PortController` 구현 (`model/port_controller.py`)
+- [x] `ConnectionController` 구현 (`model/connection_controller.py`)
   - [x] Transport 생성 및 Worker 주입 로직 구현
   - [x] 상태 머신 구현
   - [x] 멀티포트 지원 (다중 Worker 관리)
 - [x] `SerialManager` (PortRegistry) 구현
   - [x] `model/serial_manager.py` 생성
   - [x] 포트 레지스트리 및 수명 주기 관리 구현
-- [x] `PortController` 통합
+- [x] `ConnectionController` 통합
   - [x] Worker 생성 및 Transport 주입 로직
   - [x] PacketParser 통합 (Raw Data -> Packet 변환)
   - [x] EventBus 발행 (`port.rx_data`, `port.status` 등)
@@ -167,30 +167,43 @@
   - [x] `IPacketParser` 인터페이스 및 `RxPacket` 데이터 클래스 정의
   - [x] `ATParser` 구현 (AT Command 파싱)
   - [x] `DelimiterParser`, `FixedLengthParser` 구현
-- [x] `FileTransferEngine` 구현 (`model/file_transfer.py`)
+- [x] `FileTransferService` 구현 (`model/file_transfer_service.py`)
   - [x] `QRunnable` 기반 전송 엔진
   - [x] 청크 기반 전송 (적응형 크기)
   - [x] 진행률 계산 및 취소 지원
 - [x] **Refinement & Hardening (보완)**
   - [x] `GlobalErrorHandler` 스레드 안전성 확보
   - [x] `ExpectMatcher` 버퍼 제한 구현
-  - [x] `PortController` 캡슐화 (`send_data_to_port`)
+  - [x] `ConnectionController` 캡슐화 (`send_data_to_connection`)
   - [x] `PacketParser` 상수화 (`ParserType`)
 
-## Phase 5: Presenter 계층 (아키텍처 개선)
+## Phase 5: Presenter 계층 (완료)
 
-- [ ] **Presenter 계층 세분화**
+- [x] **Presenter 계층 세분화**
   - [x] `MainPresenter`: 앱 생명주기 및 하위 Presenter 조율
   - [x] `PortPresenter`: 포트 연결/해제/설정 제어 (완성)
   - [x] `MacroPresenter`: 매크로 로드/저장/실행 제어 (신규)
   - [x] `FilePresenter`: 파일 전송 로직 제어 (신규)
   - [x] `PacketPresenter`: (신규)
   - [x] `ManualControlPresenter`: (신규)
-- [ ] **EventRouter 구현**
-  - [ ] `EventRouter` 구현 (View-Model 분리)
-  - [ ] EventBus 구독 및 View 업데이트 라우팅
-- [ ] **설정 관리 통합**
-  - [ ] View의 `save_state`/`load_state`와 SettingsManager 연동
+- [x] **EventRouter 구현**
+  - [x] `EventRouter` 구현 (View-Model 분리)
+  - [x] EventBus 구독 및 View 업데이트 라우팅
+- [x] **설정 관리 통합**
+  - [x] View의 상태 DTO와 SettingsManager 저장/복원 연동
+
+## Phase 5.5: 안정화 및 테스트 기준선 (완료)
+
+- [x] Broadcast 상태 속성/메서드 충돌 수정
+- [x] Worker 시작/종료 경합 및 종료 대기 교착 수정
+- [x] Worker 종료 시 남은 RX 배치 flush
+- [x] TX Queue 등록 결과와 송신 이벤트 일치
+- [x] 연결 종료 시 Controller 레지스트리 동기 정리
+- [x] MacroRunner 입력 형식 정규화
+- [x] 패킷 파서 설정값 유효성 검증
+- [x] 번역 문자열 fallback API 정리
+- [x] `tests/conftest.py` 공용 Fixture 복구
+- [x] 현재 API 기준 테스트 갱신 (85개 통과)
 
 ## Phase 6: 자동화 및 고급 기능 (계획됨)
 
@@ -212,10 +225,10 @@
 
 - [ ] 테스트 환경 설정
   - [ ] 가상 시리얼 포트 설정 (com0com/socat)
-  - [ ] Mock Serial 클래스 생성
-- [ ] 자동화 테스트
-  - [ ] 단위 테스트 (Core/Model)
-  - [ ] 통합 테스트 (Serial I/O)
+  - [x] Mock Serial Fixture 구성
+- [x] 자동화 테스트
+  - [x] 단위 테스트 (Core/Model/Presenter/View)
+  - [x] Mock Serial 기반 통합 테스트
   - [ ] 성능 벤치마크 (Rx 처리량, UI 렌더링)
 - [ ] 패키징 및 배포
   - [ ] `pyinstaller.spec` 생성

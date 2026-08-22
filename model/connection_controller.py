@@ -287,6 +287,7 @@ class ConnectionController(QObject):
             worker = self.workers.get(name)
             if worker:
                 worker.stop()
+                self.on_worker_closed(name)
         else:
             # 전체 닫기 (재귀 호출)
             for port_name in list(self.workers.keys()):
@@ -303,14 +304,16 @@ class ConnectionController(QObject):
         Args:
             name (str): 종료된 포트 이름.
         """
-        if name in self.workers:
+        was_registered = name in self.workers
+        if was_registered:
             del self.workers[name]
         if name in self.parsers:
             del self.parsers[name]
         if name in self.connection_configs:
             del self.connection_configs[name]
 
-        self.connection_closed.emit(PortConnectionEvent(port=name, state="closed"))
+        if was_registered:
+            self.connection_closed.emit(PortConnectionEvent(port=name, state="closed"))
 
     def _emit_error(self, port: str, message: str) -> None:
         """
@@ -425,11 +428,10 @@ class ConnectionController(QObject):
         """
         worker = self.workers.get(name)
         if worker and worker.isRunning():
-            worker.send_data(data)
-
-            # 송신 데이터 이벤트 발행
-            self.data_sent.emit(PortDataEvent(port=name, data=data))
-            return True
+            if worker.send_data(data):
+                # 송신 데이터 이벤트 발행
+                self.data_sent.emit(PortDataEvent(port=name, data=data))
+                return True
         return False
 
     # -------------------------------------------------------------------------

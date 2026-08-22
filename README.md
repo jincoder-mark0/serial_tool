@@ -1,10 +1,10 @@
 # SerialTool v1.0
 
-**최종 업데이트**: 2025-12-18
+**최종 업데이트**: 2026-08-22
 
 **SerialTool**은 Python과 PyQt5로 개발된 고성능 통신 유틸리티입니다.
 **Strict MVP (Model-View-Presenter)** 아키텍처를 기반으로 설계되어 유지보수성과 확장성이 뛰어나며,
- **Fast Path**와 **EventBus**를 결합하여 2MB/s 이상의 고속 데이터 환경에서도 안정적인 성능을 제공합니다.
+ **Fast Path**와 **EventBus**를 결합하여 수신 처리와 상태 이벤트를 분리합니다.
 
 ---
 
@@ -12,11 +12,11 @@
 
 ### 1.1 핵심 기능
 
-* **멀티 프로토콜(시리얼, SPI, I2C) 지원**: 탭 인터페이스로 여러 프로토콜(시리얼, SPI, I2C) 포트 동시 제어 (최대 16개)
+* **멀티포트 시리얼 지원**: 탭 인터페이스로 여러 시리얼 포트를 동시에 제어
 * **고성능 데이터 처리**:
   * **Fast Path 아키텍처**: 대량의 수신 데이터를 EventBus를 거치지 않고 직접 전달하여 오버헤드 최소화
   * **UI Throttling**: 30ms 주기로 UI 업데이트를 배칭(Batching)하여 CPU 점유율 최적화
-  * **고속 I/O**: RingBuffer 및 Non-blocking I/O 적용
+  * **고속 I/O**: Non-blocking Serial I/O와 Worker 배치 처리 적용
 * **데이터 무결성 및 안정성**:
   * **설정 검증 및 마이그레이션**: JSON Schema를 통한 무결성 검사 및 버전 관리를 통한 설정 자동 마이그레이션 지원
   * **경합 조건 방지**: 파일 전송 중 포트 강제 종료 시 스레드 안전 종료 보장
@@ -59,7 +59,14 @@
 ### 1.3 다국어 지원
 
 * **한국어/영어** 실시간 전환
-* CommentJSON 기반 번역 관리 및 언어 키 자동 추출 도구 제공
+* JSON 기반 번역 리소스와 영어 fallback 제공
+
+### 1.4 현재 구현 범위
+
+* 실제 통신 Transport는 `SerialTransport`만 구현되어 있습니다.
+* SPI/I2C, 플러그인 시스템, 독립 실행 파일 패키징은 향후 작업입니다.
+* 처리량 수치는 자동 벤치마크가 도입되기 전까지 보장하지 않습니다.
+* 현재 자동화 테스트 기준선은 85개 테스트 통과입니다.
 
 ---
 
@@ -249,7 +256,7 @@ serial_tool/
 │                                    MODEL LAYER                         │                │
 │                                                                        │                │
 │  ┌──────────────────┐   ┌──────────────────┐   ┌───────────────────┐   │                │
-│  │  PortController  │   │   MacroRunner    │   │FileTransferService│   │                │
+│  │ConnectionController│ │   MacroRunner    │   │FileTransferService│   │                │
 │  │ (Manages Ports)  │   │    (QThread)     │   │   (QRunnable)     │   │                │
 │  └─────────┬────────┘   └────────┬─────────┘   └─────────┬─────────┘   │                │
 │            │ (Owns)              │ (Publish)             │ (Publish)   │                │
@@ -347,9 +354,9 @@ graph TD
 > **핵심**: `Fast Path`와 `UI Throttling`을 통한 고성능 처리
 
 1. **User**: `PortSettingsWidget`에서 'Connect' 버튼 클릭.
-2. **View**: `port_open_requested(config)` 시그널 발생 (DTO 사용).
-3. **Presenter**: `PortPresenter`가 시그널을 수신하고 `PortController.open_connection(config)` 호출.
-4. **Model**: `PortController`가 `SerialTransport`와 `ConnectionWorker` 생성 및 시작.
+2. **View**: `connect_requested(config)` 시그널 발생 (DTO 사용).
+3. **Presenter**: `PortPresenter`가 시그널을 수신하고 `ConnectionController.open_connection(config)` 호출.
+4. **Model**: `ConnectionController`가 `SerialTransport`와 `ConnectionWorker` 생성 및 시작.
 5. **Worker**: 백그라운드 스레드에서 Non-blocking 읽기 수행.
 6. **Fast Path**: 데이터 수신 시 `ConnectionController` -> `MainPresenter`로 직접 시그널(`data_received`) 전달 (EventBus 우회).
 7. **Throttling**: `MainPresenter`는 데이터를 내부 버퍼(`_rx_buffer`)에 쌓고, `QTimer`에 의해 30ms마다 `DataLogWidget`으로 일괄 전송.
@@ -360,9 +367,9 @@ graph TD
 > **핵심**: Presenter에서의 비즈니스 로직(Prefix/Suffix) 처리
 
 1. **User**: `ManualCtrlWidget`에서 Command 입력 후 'Send' 클릭.
-2. **View**: `send_requested` 시그널 발생 (DTO `ManualCommand` 전달).
-3. **Presenter**: `ManualControlPresenter`가 `SettingsManager`를 조회하여 Prefix/Suffix 및 Hex 변환 수행.
-4. **Model**: `PortController.send_data()` 호출.
+2. **View**: `send_requested` 시그널 발생.
+3. **Presenter**: `ManualControlPresenter`가 View Facade에서 상태를 수집하고 Prefix/Suffix 및 Hex 변환 수행.
+4. **Model**: `ConnectionController.send_data()` 또는 `send_broadcast_data()` 호출.
 5. **Feedback**: 전송된 데이터는 `Local Echo` 옵션에 따라 View에 표시됨.
 
 ### C. 매크로 자동화 및 브로드캐스트 (Automation Flow)
@@ -373,7 +380,7 @@ graph TD
 2. **Presenter**: `MacroPresenter`가 `MacroRunner`에 `MacroEntry` 리스트 로드 및 시작 명령.
 3. **Model (`MacroRunner`)**:
     * `QThread` 내부 루프 시작.
-    * **Broadcast**: `is_broadcast` 플래그가 켜져 있으면 `PortController.send_data_to_broadcasting()` 호출.
+    * **Broadcast**: Broadcast 플래그가 켜져 있으면 `ConnectionController.send_broadcast_data()` 호출.
     * **Delay**: 정밀 타이밍을 위해 `QWaitCondition.wait()` 사용.
 4. **Completion**: 루프 종료 시 `macro_finished` 이벤트 발생.
 
@@ -381,7 +388,7 @@ graph TD
 >
 > **핵심**: `Backpressure` 제어 및 스레드 풀 사용
 
-1. **User**: `ManualCtrlWidget` 파일 탭에서 'Send File' 클릭.
+1. **User**: Tools 메뉴에서 File Transfer 대화상자 실행.
 2. **Presenter**: `FilePresenter`가 `FileTransferService`(`QRunnable`)을 생성하고 `QThreadPool`에서 실행.
 3. **Model (`FileTransferService`)**:
     * 파일을 Chunk 단위로 읽음.
@@ -397,14 +404,12 @@ graph TD
 
 | 문서 | 목적 | 위치 |
 |------|------|------|
-| Implementation Specification | 전체 설계 및 명세 | `doc/Implementation_Specification.md` |
-| View 구현 계획 | View 계층 구현 가이드 | `view/doc/implementation_plan.md` |
-| 코딩 규칙 | 코드 스타일 | `guide/code_style_guide.md` |
-| 명명 규칙 | 코드/언어 키 네이밍 | `guide/naming_convention.md` |
-| 주석 가이드 | 주석/Docstring 작성법 | `guide/comment_guide.md` |
-| Git 가이드 | 커밋/PR/이슈 규칙 | `guide/git_guide.md` |
-| 변경 이력 | 세션별 변경 사항 | `doc/changelog.md` |
-| 세션 요약 | 2025-12-18 작업 요약 | `doc/session_summary_20251218.md` |
+| 프로젝트 개요 | 아키텍처와 모듈 요약 | `doc/00_overview.md` |
+| 구현 계획 | 단계별 구현 계획 | `doc/implementation_plan.md` |
+| 작업 목록 | 현재 완료 및 미완료 항목 | `doc/task.md` |
+| 변경 이력 | 주요 변경 사항 | `doc/CHANGELOG.md` |
+| 과거 세션 | 세션별 작업 기록 | `doc/history/` |
+| 테스트 가이드 | 테스트 실행 및 결과 해석 | `tests/README.md` |
 
 ### 6.2 코딩 컨벤션
 
@@ -428,19 +433,26 @@ graph TD
 
 ### 6.5 설정 관리
 
-* 설정 파일은 `config/settings.json`에 저장됩니다.
+* 설정 파일은 현재 `resources/configs/settings.json`에 저장됩니다.
 * `SettingsManager`는 로드 시 `jsonschema`를 통해 무결성을 검증하며, 실패 시 안전한 기본값(Fallback)으로 복구합니다.
+* 배포 시 사용자별 설정 디렉터리로 분리하는 작업은 아직 필요합니다.
 
 #### 설정 구조
 
-**논리적 그룹 기반** (`config/settings.json`):
+**논리적 그룹 기반** (`resources/configs/settings.json`):
 
 ```json
 {
-  "serial": { "baudrate": 115200, ... },
-  "command": { "prefix": "AT", "suffix": "\r\n" },
-  "logging": { "log_path": "logs/", ... },
-  "ui": { "theme": "dark", "font": {...} }
+  "settings": {
+    "theme": "dark",
+    "language": "ko",
+    "port_baudrate": 115200,
+    "command_prefix": "AT",
+    "command_suffix": "\r\n"
+  },
+  "ui": { "window_width": 1400, "window_height": 900 },
+  "packet": { "parser_type": 0, "buffer_size": 100 },
+  "ports": { "tabs": [] }
 }
 ```
 
@@ -472,25 +484,17 @@ Style: 스타일 변경
 
 ## 7. 도구 및 테스트 (Tools & Tests)
 
-### 7.1 유틸리티 도구
-
-```bash
-# 소스 코드에서 언어 키 추출 및 JSON 업데이트
-python tools/manage_lang_keys.py extract
-
-# 누락되거나 사용되지 않는 언어 키 검사
-python tools/manage_lang_keys.py check
-```
-
-### 7.2 테스트 실행
+### 7.1 테스트 실행
 
 ```bash
 # 전체 테스트 실행
-pytest
+python -m pytest -q
 
 # 특정 모듈 테스트
-pytest tests/test_model.py
+python -m pytest tests/test_model.py
 
 # 상세 출력 모드
-pytest -v -s
+python -m pytest -v -s
 ```
+
+Windows의 GUI 없는 환경에서는 실행 전에 `QT_QPA_PLATFORM=offscreen`을 설정합니다.

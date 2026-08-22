@@ -152,7 +152,7 @@ class TestMainPresenterInit:
             mock_main_window.settings_save_requested.connect.assert_called()
 
             # THEN: 탭 변경 시그널 연결 확인 (UI 동기화용)
-            mock_main_window.left_section.port_tab_panel.currentChanged.connect.assert_called()
+            mock_main_window.connect_port_tab_changed.assert_called()
 
     def test_data_handler_init(self, mock_main_window, mock_settings_manager):
         """

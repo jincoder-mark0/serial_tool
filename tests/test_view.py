@@ -105,19 +105,20 @@ class TestManualControlPanel:
         panel = ManualControlPanel()
         qtbot.addWidget(panel)
         panel.show()
+        panel.set_controls_enabled(True)
 
         # 내부 위젯 참조
-        widget = panel.manual_control_widget
+        widget = panel._manual_control_widget
 
         # 텍스트 입력
-        qtbot.keyClicks(widget.input_edit, "TEST_CMD")
+        qtbot.keyClicks(widget.command_edit, "TEST_CMD")
 
         # 옵션 설정 (예: Local Echo 체크)
-        widget.chk_local_echo.setChecked(True)
+        widget.local_echo_chk.setChecked(True)
 
         # WHEN: 전송 버튼 클릭 (SignalSpy 사용)
         with qtbot.waitSignal(panel.send_requested, timeout=1000) as blocker:
-            qtbot.mouseClick(widget.btn_send, Qt.LeftButton)
+            qtbot.mouseClick(widget.send_command_btn, Qt.LeftButton)
 
         # THEN: 시그널 발생 확인 및 DTO 검증
         assert blocker.signal_triggered
@@ -144,16 +145,16 @@ class TestManualControlPanel:
         qtbot.addWidget(panel)
         panel.show()
 
-        widget = panel.manual_control_widget
+        widget = panel._manual_control_widget
 
         # WHEN & THEN: RTS 토글
         with qtbot.waitSignal(panel.rts_changed) as blocker:
-            widget.chk_rts.setChecked(True)
+            widget.rts_chk.setChecked(True)
         assert blocker.args[0] is True
 
         # WHEN & THEN: DTR 토글
         with qtbot.waitSignal(panel.dtr_changed) as blocker:
-            widget.chk_dtr.setChecked(True)
+            widget.dtr_chk.setChecked(True)
         assert blocker.args[0] is True
 
 
@@ -187,7 +188,7 @@ class TestPacketPanel:
         panel.append_packet(view_data)
 
         # THEN: 모델 업데이트 확인
-        model = panel.packet_model
+        model = panel._packet_model
         assert model.rowCount() == 1
 
         # 데이터 검증 (Column 2: HEX)
@@ -208,13 +209,13 @@ class TestPacketPanel:
         qtbot.addWidget(panel)
 
         panel.append_packet(PacketViewData("T", "T", "H", "A"))
-        assert panel.packet_model.rowCount() == 1
+        assert panel._packet_model.rowCount() == 1
 
         # WHEN: Clear 수행
         panel.clear_view()
 
         # THEN: 모델 초기화 확인
-        assert panel.packet_model.rowCount() == 0
+        assert panel._packet_model.rowCount() == 0
 
 
 class TestPortPanel:
@@ -234,42 +235,27 @@ class TestPortPanel:
         """
         # GIVEN: 패널 생성 (mocking 없이 직접 생성)
         # PortPanel 생성자는 보통 parent와 port_name을 받음
-        panel = PortPanel(port_name="COM1")
+        panel = PortPanel()
         qtbot.addWidget(panel)
         panel.show()
 
-        # 내부 UI 컴포넌트 참조 (PortPanel 구현에 의존)
-        # btn_open_close가 존재한다고 가정
-        if hasattr(panel, 'btn_open_close'):
-            btn = panel.btn_open_close
-
-            # GIVEN: 초기 상태 (Disconnected)
-            assert not panel.is_connected()
-
-            # WHEN: 연결 상태로 변경
-            panel.set_connected_state(True)
-
-            # THEN: 내부 상태 플래그 변경 확인
-            assert panel.is_connected()
-
-            # UI 텍스트 변경 확인 (예: "Open" -> "Close")
-            # 언어 설정에 따라 다르겠지만, 상태 변경 시 텍스트가 바뀌어야 함
-            assert btn.text() != "Open"
+        assert not panel.is_connected()
+        panel.set_connected(True)
+        assert panel.is_connected()
 
     def test_open_close_signal(self, qtbot):
         """
         연결 버튼 클릭 시 시그널 방출 테스트
         """
-        panel = PortPanel(port_name="COM1")
+        panel = PortPanel()
         qtbot.addWidget(panel)
         panel.show()
 
-        if hasattr(panel, 'connect_requested'):
-            # WHEN: 버튼 클릭
-            with qtbot.waitSignal(panel.connect_requested) as blocker:
-                # Disconnected 상태이므로 클릭하면 연결 요청
-                qtbot.mouseClick(panel.btn_open_close, Qt.LeftButton)
+        panel._port_settings_widget.port_combo.addItem("COM1")
+        panel._port_settings_widget.port_combo.setCurrentText("COM1")
 
-            # THEN: 시그널 발생 확인
-            assert blocker.signal_triggered
-            assert blocker.args[0] == "COM1"
+        with qtbot.waitSignal(panel.connect_requested) as blocker:
+            panel.toggle_connection()
+
+        assert blocker.signal_triggered
+        assert blocker.args[0].port == "COM1"

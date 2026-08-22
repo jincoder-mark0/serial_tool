@@ -134,6 +134,11 @@ class DelimiterParser(PacketParser):
             delimiter: 패킷 구분자
             max_buffer_size: 최대 버퍼 크기
         """
+        if not delimiter:
+            raise ValueError("delimiter must not be empty")
+        if max_buffer_size <= 0:
+            raise ValueError("max_buffer_size must be greater than zero")
+
         self._delimiter = delimiter
         self._buffer = b""
         self._max_buffer_size = max_buffer_size
@@ -168,6 +173,11 @@ class FixedLengthParser(PacketParser):
             length: 패킷 길이 (bytes)
             max_buffer_size: 최대 버퍼 크기
         """
+        if length <= 0:
+            raise ValueError("length must be greater than zero")
+        if max_buffer_size <= 0:
+            raise ValueError("max_buffer_size must be greater than zero")
+
         self._length = length
         self._buffer = b""
         self._max_buffer_size = max_buffer_size

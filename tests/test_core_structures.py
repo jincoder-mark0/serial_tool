@@ -20,7 +20,6 @@
 
 pytest tests/test_core_structures.py -v
 """
-import pytest
 from dataclasses import asdict
 
 from common.dtos import (
@@ -34,12 +33,16 @@ from common.dtos import (
 from common.enums import (
     SerialParity,
     SerialStopBits,
-    SerialByteSize,
     SerialFlowControl,
     LogFormat,
     ParserType
 )
-from common.constants import ConfigKeys, EventTopics, Defaults
+from common.constants import (
+    ConfigKeys,
+    EventTopics,
+    DEFAULT_BAUDRATE,
+    DEFAULT_LOG_MAX_LINES,
+)
 
 
 class TestDTOs:
@@ -151,9 +154,8 @@ class TestEnums:
         assert SerialStopBits.ONE.value == 1
         assert SerialStopBits.TWO.value == 2
 
-        # ByteSize Check (5, 6, 7, 8)
-        assert SerialByteSize.EIGHT.value == 8
-        assert SerialByteSize.SEVEN.value == 7
+        assert SerialFlowControl.NONE.value == "None"
+        assert SerialFlowControl.RTS_CTS.value == "RTS/CTS"
 
     def test_log_format_types(self):
         """
@@ -162,7 +164,7 @@ class TestEnums:
         Logic:
             - 지원하는 로그 포맷(TXT, HEX, CSV, PCAP) 존재 확인
         """
-        assert LogFormat.TXT is not None
+        assert LogFormat.BIN.value == "bin"
         assert LogFormat.HEX is not None
         assert LogFormat.PCAP is not None
 
@@ -173,10 +175,10 @@ class TestEnums:
         Logic:
             - 파서 타입 ID가 설정 파일의 정수값과 매핑되므로 값 변경 주의
         """
-        # 값 변경 시 호환성 문제가 생기므로 고정값 확인
-        assert ParserType.RAW.value == 0
-        assert ParserType.ASCII.value == 1
-        assert ParserType.HEX.value == 2
+        assert ParserType.RAW == "Raw"
+        assert ParserType.AT == "AT"
+        assert ParserType.DELIMITER == "Delimiter"
+        assert ParserType.FIXED_LENGTH == "FixedLength"
 
 
 class TestConstants:
@@ -192,9 +194,9 @@ class TestConstants:
             - 설정 파일(JSON)의 키로 사용되는 상수들이 누락되지 않았는지 확인
         """
         # 주요 키 존재 확인
-        assert ConfigKeys.PORT_BAUDRATE == "port.baudrate"
+        assert ConfigKeys.PORT_BAUDRATE == "settings.port_baudrate"
         assert ConfigKeys.WINDOW_WIDTH == "ui.window_width"
-        assert ConfigKeys.COMMAND_PREFIX == "cmd.prefix"
+        assert ConfigKeys.COMMAND_PREFIX == "settings.command_prefix"
 
         # 오타 방지를 위해 문자열 타입인지 재확인
         assert isinstance(ConfigKeys.THEME, str)
@@ -206,9 +208,9 @@ class TestConstants:
         Logic:
             - EventBus에서 사용되는 토픽 문자열 확인
         """
-        assert EventTopics.PORT_DATA_RECEIVED == "port.data.received"
+        assert EventTopics.PORT_DATA_RECEIVED == "port.data_received"
         assert EventTopics.MACRO_STARTED == "macro.started"
-        assert EventTopics.SETTINGS_CHANGED == "sys.settings.changed"
+        assert EventTopics.SETTINGS_CHANGED == "system.settings_changed"
 
     def test_default_values(self):
         """
@@ -218,7 +220,5 @@ class TestConstants:
             - 애플리케이션의 기본 설정값이 합리적인 범위인지 확인
         """
         # Baudrate 기본값은 보통 115200 또는 9600
-        assert Defaults.BAUDRATE in [9600, 115200]
-        # 윈도우 기본 크기
-        assert Defaults.WINDOW_WIDTH > 0
-        assert Defaults.WINDOW_HEIGHT > 0
+        assert DEFAULT_BAUDRATE in [9600, 115200]
+        assert DEFAULT_LOG_MAX_LINES > 0

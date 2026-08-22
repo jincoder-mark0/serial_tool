@@ -19,11 +19,11 @@
 ### 1.2 데이터 흐름
 1.  **View -> Presenter**: 사용자 액션(버튼 클릭 등)을 시그널로 전달.
 2.  **Presenter -> Model**: 비즈니스 메서드 호출 (예: `open_connection`).
-3.  **Model -> EventBus**: 상태 변경이나 데이터 수신 시 이벤트 발행 (Publish).
+3.  **Model -> EventBus**: 상태 변경, 패킷 및 데이터 이벤트 발행 (Publish).
 4.  **EventBus -> Router -> Presenter**: 이벤트를 라우팅하여 Presenter에게 전달.
 5.  **Presenter -> View**: DTO를 통해 UI 업데이트 (`apply_state`).
 
-> **예외 (Fast Path)**: 고속 시리얼 데이터 수신 시 오버헤드를 줄이기 위해 `ConnectionController` -> `MainPresenter` -> `DataLogWidget`으로 직접 연결되는 최적화 경로가 존재합니다.
+> **예외 (Fast Path)**: 시리얼 데이터 수신 시 `ConnectionController` -> `DataTrafficHandler` -> `MainWindow`로 직접 연결하고, 30ms 단위로 UI를 갱신합니다. 같은 데이터의 EventBus 경로는 매크로 Expect와 패킷 처리 등에 사용됩니다.
 
 ---
 
@@ -34,7 +34,7 @@
 | **Port Management** | 다중 포트 연결 및 설정 관리 | `PortPresenter`, `ConnectionController`, `PortSettingsWidget` |
 | **Data Visualization** | 대량 로그 데이터 고속 렌더링 | `DataLogWidget`, `QSmartListView` |
 | **Macro Automation** | 커맨드 리스트 순차/반복 실행 | `MacroPresenter`, `MacroRunner`, `MacroPanel` |
-| **File Transfer** | 대용량 파일 전송 및 진행률 표시 | `FilePresenter`, `FileTransferEngine` |
+| **File Transfer** | 청크 기반 파일 전송 및 진행률 표시 | `FilePresenter`, `FileTransferService` |
 | **Packet Inspection** | 수신 데이터 파싱 및 구조화 | `PacketPresenter`, `PacketParser` |
 
 ---
@@ -45,9 +45,17 @@
 * **상태 관리**: View의 상태는 `get_state()`와 `apply_state()` 메서드로 관리하며, 영구 저장은 `SettingsManager`가 담당합니다.
 * **테스트**: `tests/conftest.py`의 공용 Fixture를 활용하여 단위/통합 테스트를 작성합니다.
 
+## 4. 현재 상태와 제약
+
+* 통신 구현은 `SerialTransport`만 제공하며 SPI/I2C Transport는 없습니다.
+* 패킷 설정 UI는 존재하지만 연결 생성 시 현재 `RawParser`가 기본으로 사용됩니다.
+* 설정은 현재 프로젝트의 `resources/configs/settings.json`에 저장되므로 배포 전 사용자 데이터 경로 분리가 필요합니다.
+* 자동화 테스트는 Core, Model, Presenter, View 및 주요 통합 흐름 85개를 검증합니다.
+* 성능 벤치마크, 실제 가상 시리얼 포트 검증, 패키징 및 CI는 후속 작업입니다.
+
 ---
 
-## 4. 문서 구조
+## 5. 문서 구조
 
 * `doc/00_overview.md`: 본 문서.
 * `doc/history/`: 과거 세션 요약 및 변경 이력.

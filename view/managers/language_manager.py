@@ -160,7 +160,12 @@ class LanguageManager(QObject):
         elif language_code not in self.resources:
             logger.warning(f"Attempted to switch to unknown language: {language_code}")
 
-    def get_text(self, key: str, language_code: Optional[str] = None) -> str:
+    def get_text(
+        self,
+        key: str,
+        default: Optional[str] = None,
+        language_code: Optional[str] = None,
+    ) -> str:
         """
         키(Key)에 해당하는 번역된 텍스트를 반환합니다.
 
@@ -171,6 +176,7 @@ class LanguageManager(QObject):
 
         Args:
             key (str): 번역 키 (예: 'menu_file_open').
+            default (Optional[str]): 번역 키가 없을 때 반환할 기본 텍스트.
             language_code (Optional[str]): 강제 조회할 언어 코드. None이면 현재 언어 사용.
 
         Returns:
@@ -188,7 +194,7 @@ class LanguageManager(QObject):
             text = fallback_dict.get(key)
 
         # 3. 최후의 수단: 키 반환
-        return text if text is not None else key
+        return text if text is not None else (default if default is not None else key)
 
     def get_current_language(self) -> str:
         """
@@ -245,7 +251,7 @@ class LanguageManager(QObject):
             bool: 일치하면 True.
         """
         for language_code in self.get_supported_languages():
-            if text == self.get_text(key, language_code):
+            if text == self.get_text(key, language_code=language_code):
                 return True
         return False
 

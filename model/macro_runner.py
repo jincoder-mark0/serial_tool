@@ -99,14 +99,17 @@ class MacroRunner(QThread):
         # 데이터 수신 이벤트 구독 (Expect 매칭용)
         self.event_bus.subscribe(EventTopics.PORT_DATA_RECEIVED, self._on_data_received)
 
-    def load_macro(self, entries: List[Tuple[int, MacroEntry]]) -> None:
+    def load_macro(self, entries: List[Tuple[int, MacroEntry] | MacroEntry]) -> None:
         """
         실행할 매크로 리스트를 로드합니다.
 
         Args:
             entries: (원본 행 번호, 매크로 항목) 튜플의 리스트.
         """
-        self._entries = entries
+        self._entries = [
+            item if isinstance(item, tuple) else (index, item)
+            for index, item in enumerate(entries)
+        ]
 
     def start(self, loop_count: int = 1, interval_ms: int = 0,
               broadcast_enabled: bool = False, stop_on_error: bool = True) -> None:

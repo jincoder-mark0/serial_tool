@@ -27,6 +27,7 @@ from unittest.mock import MagicMock, call
 from presenter.packet_presenter import PacketPresenter
 from common.dtos import PacketEvent, PreferencesState, PacketViewData
 from common.constants import ConfigKeys
+from model.packet_parser import Packet
 
 
 @pytest.fixture
@@ -107,11 +108,13 @@ class TestPacketPresenter:
             - 뷰에 추가된 PacketViewData의 포맷(Hex, ASCII) 검증
         """
         # GIVEN: 테스트용 패킷 데이터
-        mock_packet = MagicMock()
-        mock_packet.raw_data = b'\x41\x42\x00\xff'  # 'AB' + NULL + Non-printable
-        mock_packet.type_name = "TEST_TYPE"
+        packet = Packet(
+            data=b'\x41\x42\x00\xff',
+            timestamp=0,
+            metadata={"type": "TEST_TYPE"},
+        )
 
-        event = PacketEvent(packet=mock_packet)
+        event = PacketEvent(port="COM1", packet=packet)
 
         # WHEN: 패킷 수신 이벤트 처리
         presenter.on_packet_received(event)
@@ -141,9 +144,7 @@ class TestPacketPresenter:
         # GIVEN: 캡처 중지
         presenter.on_capture_toggled(False)
 
-        mock_packet = MagicMock()
-        mock_packet.raw_data = b'\x00'
-        event = PacketEvent(packet=mock_packet)
+        event = PacketEvent(port="COM1", packet=Packet(b'\x00', 0))
 
         # WHEN: 패킷 수신
         presenter.on_packet_received(event)
@@ -177,8 +178,7 @@ class TestPacketPresenter:
         mock_panel.set_capture_state.assert_called_with(False)
 
         # 내부 상태 변경 확인 (캡처 플래그가 꺼졌으므로 패킷 무시 확인)
-        mock_packet = MagicMock()
-        presenter.on_packet_received(PacketEvent(packet=mock_packet))
+        presenter.on_packet_received(PacketEvent(port="COM1", packet=Packet(b'\x00', 0)))
         mock_panel.append_packet.assert_not_called()
 
     def test_clear_view(self, presenter, mock_panel):
@@ -207,14 +207,12 @@ class TestPacketPresenter:
         presenter.on_capture_toggled(False)
 
         # Check logic: Packet ignored
-        presenter.on_packet_received(PacketEvent(packet=MagicMock()))
+        presenter.on_packet_received(PacketEvent(port="COM1", packet=Packet(b'\x00', 0)))
         mock_panel.append_packet.assert_not_called()
 
         # GIVEN: 캡처 켜기
         presenter.on_capture_toggled(True)
 
         # Check logic: Packet processed
-        mock_packet = MagicMock()
-        mock_packet.raw_data = b'\x01'
-        presenter.on_packet_received(PacketEvent(packet=mock_packet))
+        presenter.on_packet_received(PacketEvent(port="COM1", packet=Packet(b'\x01', 0)))
         mock_panel.append_packet.assert_called()

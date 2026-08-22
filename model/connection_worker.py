@@ -57,7 +57,8 @@ class ConnectionWorker(QThread):
         self.connection_name = connection_name
 
         self._is_running = False
-        self.broadcast_enabled = False
+        self._stop_requested = False
+        self._broadcast_enabled = False
 
         self._mutex = QMutex()
         self._write_queue = ThreadSafeQueue() # 비동기 전송용 Queue
@@ -73,16 +74,18 @@ class ConnectionWorker(QThread):
             - CPU 부하 최소화 (Sleep 조절)
             - 에러 발생 시 안전한 종료 처리
         """
+        batch_buffer = bytearray()
+
         try:
             # 1. Transport 열기
             if self.transport.open():
                 with QMutexLocker(self._mutex):
-                    self._is_running = True
+                    self._is_running = not self._stop_requested
 
-                self.connection_opened.emit(self.connection_name)
+                if self.is_running():
+                    self.connection_opened.emit(self.connection_name)
 
                 # Batch 처리용 버퍼 및 타이머
-                batch_buffer = bytearray()
                 last_emit_time = time.monotonic() * 1000 # ms 단위
 
                 while self.is_running():
@@ -127,6 +130,8 @@ class ConnectionWorker(QThread):
         except Exception as e:
             self.error_occurred.emit(f"Connection Error: {str(e)}")
         finally:
+            if batch_buffer:
+                self.data_received.emit(bytes(batch_buffer))
             self.close_connection()
 
     def is_running(self) -> bool:
@@ -142,6 +147,7 @@ class ConnectionWorker(QThread):
     def stop(self) -> None:
         """Thread 중지 요청 및 대기"""
         with QMutexLocker(self._mutex):
+            self._stop_requested = True
             self._is_running = False
         self.wait()
 
@@ -217,7 +223,7 @@ class ConnectionWorker(QThread):
         Args:
             state: True면 broadcasting ON, False면 broadcasting OFF
         """
-        self.broadcast_enabled = state
+        self._broadcast_enabled = state
         self.transport.set_broadcast(state)
 
     def broadcast_enabled(self) -> bool:
@@ -227,4 +233,4 @@ class ConnectionWorker(QThread):
         Returns:
             bool: 브로드캐스팅 허용 여부
         """
-        return self.broadcast_enabled
+        return self._broadcast_enabled

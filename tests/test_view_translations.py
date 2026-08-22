@@ -34,22 +34,27 @@ def reset_language_manager():
     Singleton 객체이므로 테스트 간 상태 공유를 방지해야 합니다.
     """
     # 초기 상태(영어)로 설정
-    language_manager.set_language('en')
-
     # 테스트용 번역 데이터 주입 (파일 I/O 의존성 제거)
     # 실제 구현에서는 JSON 파일에서 로드하지만, 테스트의 결정성을 위해 직접 주입
-    language_manager._translations = {
+    language_manager.resources = {
         "en": {
-            "manual_send_command_btn": "Send",
+            "manual_control_btn_send": "Send",
             "manual_panel_title": "Manual Control",
-            "packet_btn_clear": "Clear"
+            "packet_panel_btn_clear": "Clear",
+            "packet_panel_title": "Packet Inspector",
+            "packet_panel_chk_capture": "Capture",
+            "packet_panel_chk_autoscroll": "Auto Scroll"
         },
         "ko": {
-            "manual_send_command_btn": "전송",
+            "manual_control_btn_send": "전송",
             "manual_panel_title": "수동 제어",
-            "packet_btn_clear": "지우기"
+            "packet_panel_btn_clear": "지우기",
+            "packet_panel_title": "패킷 검사기",
+            "packet_panel_chk_capture": "캡처",
+            "packet_panel_chk_autoscroll": "자동 스크롤"
         }
     }
+    language_manager._current_language = 'en'
 
     yield
 
@@ -95,13 +100,13 @@ class TestLanguageManager:
         language_manager.set_language('en')
 
         # WHEN & THEN
-        assert language_manager.get_text("manual_send_command_btn") == "Send"
+        assert language_manager.get_text("manual_control_btn_send") == "Send"
 
         # WHEN: 한국어 모드 변경
         language_manager.set_language('ko')
 
         # THEN
-        assert language_manager.get_text("manual_send_command_btn") == "전송"
+        assert language_manager.get_text("manual_control_btn_send") == "전송"
 
     def test_get_text_fallback(self):
         """
@@ -143,7 +148,7 @@ class TestViewRetranslation:
 
         # 초기 상태(영어) 확인
         # ManualControlPanel -> ManualControlWidget -> send_command_btn
-        send_command_btn = panel.manual_control_widget.send_command_btn
+        send_command_btn = panel._manual_control_widget.send_command_btn
         title_lbl = panel.title_lbl
 
         assert send_command_btn.text() == "Send"
@@ -170,7 +175,7 @@ class TestViewRetranslation:
         panel = PacketPanel()
         qtbot.addWidget(panel)
 
-        btn_clear = panel.btn_clear
+        btn_clear = panel._clear_btn
 
         # 초기 상태(영어)
         assert btn_clear.text() == "Clear"
@@ -193,7 +198,7 @@ class TestViewRetranslation:
         # GIVEN
         panel = ManualControlPanel()
         qtbot.addWidget(panel)
-        btn = panel.manual_control_widget.send_command_btn
+        btn = panel._manual_control_widget.send_command_btn
 
         # 1. En -> Ko
         language_manager.set_language('ko')
