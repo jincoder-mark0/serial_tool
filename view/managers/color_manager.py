@@ -2,7 +2,8 @@
 색상 규칙 관리자 (Color Manager)
 
 애플리케이션 전반의 구문 강조(Syntax Highlighting) 및 색상 규칙을 중앙에서 관리합니다.
-데이터 관리(DTO/JSON)와 UI 렌더링 지원(Qt Format)을 동시에 수행하는 하이브리드 클래스입니다.
+규칙 데이터 관리(JSON 영속화·CRUD)는 `ColorRuleRepository`(S-054, Qt 의존 0)에
+위임하고, 이 클래스는 Qt 어댑터(서식 생성·테마 팔레트 동기화)만 담당합니다.
 
 ## WHY
 * 색상 규칙의 영속성(JSON 저장/로드) 관리 및 사용자 설정 유지
@@ -10,80 +11,47 @@
 * 로직(Service)과 뷰(Widget) 사이의 데이터 브리지 역할 (SSOT)
 
 ## WHAT
-* 규칙 리스트 관리 (추가/삭제/토글) 및 파일 입출력
-* ColorRule DTO를 Qt TextFormat으로 변환하여 반환
+* 규칙 리스트 관리(추가/삭제/토글) 및 파일 입출력 — `ColorRuleRepository`에 위임.
+* ColorRule DTO를 Qt TextFormat으로 변환하여 반환 (Qt 접촉면, 이 클래스의 책임).
 * 텍스트 기반의 HTML 태그 생성 위임 (ColorService)
 * 테마(Dark/Light) 변경에 따른 내부 색상 팔레트 및 규칙 색상 동기화
 
 ## HOW
 * Singleton 패턴으로 전역 접근 보장
-* 내부적으로 ColorRule DTO 리스트를 유지하며, 요청 시 Qt 객체로 변환하여 제공
+* 규칙 데이터(`_rules`)는 내부 `ColorRuleRepository` 인스턴스가 소유하며, 이 클래스는
+  `_rules` 프로퍼티로 위임해 기존 공개 계약(속성 직접 접근·CRUD 메서드 시그니처)을
+  그대로 유지한다(S-054, `tests/test_theme_color_managers.py` 무수정 통과가 계약).
 * 현재 테마가 dark 계열인지는 ThemeManager를 직접 참조하지 않고 공유 리프 모듈
   `theme_state`를 통해 조회 (ThemeManager<->ColorManager 순환 참조 해소, S-050)
 """
-import json
 from typing import List, Optional, Tuple
 from pathlib import Path
 
 from PyQt5.QtCore import QObject
 from PyQt5.QtGui import QColor, QTextCharFormat, QBrush, QFont
 
-from core.logger import logger
 from core.resource_path import ResourcePath
 from common.dtos import ColorRule
 from view.services.color_service import ColorService
 from view.managers import theme_state
+from view.managers.color_rule_repository import ColorRuleRepository
 from common.constants import (
     LOG_COLOR_DARK_TIMESTAMP, LOG_COLOR_DARK_INFO, LOG_COLOR_DARK_ERROR,
-    LOG_COLOR_DARK_WARN, LOG_COLOR_DARK_PROMPT, LOG_COLOR_DARK_SUCCESS,
+    LOG_COLOR_DARK_WARN,
     LOG_COLOR_LIGHT_TIMESTAMP, LOG_COLOR_LIGHT_INFO, LOG_COLOR_LIGHT_ERROR,
-    LOG_COLOR_LIGHT_WARN, LOG_COLOR_LIGHT_PROMPT, LOG_COLOR_LIGHT_SUCCESS,
+    LOG_COLOR_LIGHT_WARN,
 )
 
 
 class ColorManager(QObject):
     """
     색상 규칙 관리자 클래스 (Singleton).
-    설정 파일 관리, 규칙 로드/저장, Qt 서식 생성을 담당합니다.
+    설정 파일 관리·규칙 CRUD는 `ColorRuleRepository`에 위임하고, Qt 서식 생성 및
+    테마 팔레트 동기화를 담당합니다.
     """
 
     _instance = None
     _initialized = False
-
-    # -------------------------------------------------------------------------
-    # 기본 규칙 정의 (Default Rules)
-    # -------------------------------------------------------------------------
-    DEFAULT_COLOR_RULES = [
-        ColorRule("AT_OK", r'\bOK\b',
-                  light_color=LOG_COLOR_LIGHT_SUCCESS,
-                  dark_color=LOG_COLOR_DARK_SUCCESS),
-        ColorRule("AT_ERROR", r'\bERROR\b',
-                  light_color=LOG_COLOR_LIGHT_ERROR,
-                  dark_color=LOG_COLOR_DARK_ERROR),
-        ColorRule("URC", r'(\+\w+:)',
-                  light_color=LOG_COLOR_LIGHT_WARN,
-                  dark_color=LOG_COLOR_DARK_WARN),
-        ColorRule("PROMPT", r'^>',
-                  light_color=LOG_COLOR_LIGHT_PROMPT,
-                  dark_color=LOG_COLOR_DARK_PROMPT),
-        # 시스템 로그 규칙
-        ColorRule("SYS_INFO", r'\[INFO\]',
-                  light_color=LOG_COLOR_LIGHT_INFO,
-                  dark_color=LOG_COLOR_DARK_INFO),
-        ColorRule("SYS_ERROR", r'\[ERROR\]',
-                  light_color=LOG_COLOR_LIGHT_ERROR,
-                  dark_color=LOG_COLOR_DARK_ERROR),
-        ColorRule("SYS_WARN", r'\[WARN\]',
-                  light_color=LOG_COLOR_LIGHT_WARN,
-                  dark_color=LOG_COLOR_DARK_WARN),
-        ColorRule("SYS_SUCCESS", r'\[SUCCESS\]',
-                  light_color=LOG_COLOR_LIGHT_SUCCESS,
-                  dark_color=LOG_COLOR_DARK_SUCCESS),
-        # 타임스탬프 규칙
-        ColorRule("TIMESTAMP", r'\[\d{2}:\d{2}:\d{2}\]',
-                  light_color=LOG_COLOR_LIGHT_TIMESTAMP,
-                  dark_color=LOG_COLOR_DARK_TIMESTAMP),
-    ]
 
     def __new__(cls, *args, **kwargs):
         """
@@ -120,7 +88,8 @@ class ColorManager(QObject):
             resource_path = ResourcePath()
         self._resource_path = resource_path
 
-        self._rules: List[ColorRule] = []
+        # 규칙 데이터·영속화 담당 저장소 (Qt 의존 0, S-054)
+        self._repo = ColorRuleRepository()
 
         # 내부 색상 팔레트 변수 초기화 (기본값: Dark Theme)
         self.apply_theme('dark')
@@ -133,7 +102,7 @@ class ColorManager(QObject):
             self.load_rules(str(self.config_path))
         else:
             # 기본 규칙을 복사해서 사용할 때도 sanitize 과정을 거침
-            self._init_default_rules()
+            self._repo.init_default_rules()
 
             # 디렉토리가 없으면 생성 (ResourcePath가 보통 보장하지만 안전장치)
             if not self.config_path.parent.exists():
@@ -146,11 +115,28 @@ class ColorManager(QObject):
         self._initialized = True
 
     # -------------------------------------------------------------------------
-    # Helper Methods
+    # Rule Data Access (ColorRuleRepository 위임)
     # -------------------------------------------------------------------------
+    @property
+    def _rules(self) -> List[ColorRule]:
+        """
+        규칙 리스트 접근자. 실제 데이터는 `ColorRuleRepository`가 소유하며, 이 프로퍼티는
+        기존 코드/테스트의 `color_manager._rules` 직접 접근 계약을 그대로 유지하기 위한
+        위임 통로다 (S-054). 리스트 재할당(`color_manager._rules = [...]`)도 setter를
+        통해 repository에 반영된다.
+
+        Returns:
+            List[ColorRule]: 현재 규칙 리스트 (repository가 소유한 실제 객체).
+        """
+        return self._repo._rules
+
+    @_rules.setter
+    def _rules(self, value: List[ColorRule]) -> None:
+        self._repo._rules = value
+
     def _ensure_hex(self, color_code: str) -> str:
         """
-        색상 코드가 HEX 형식이면 '#'을 보장합니다.
+        색상 코드가 HEX 형식이면 '#'을 보장합니다. (ColorRuleRepository 위임)
 
         Args:
             color_code (str): 입력 색상 코드 (예: 'FF0000', '#FF0000', 'red')
@@ -158,36 +144,7 @@ class ColorManager(QObject):
         Returns:
             str: '#'이 포함된 색상 코드
         """
-        if not color_code:
-            return ""
-
-        # 6자리 또는 8자리 16진수 문자열인 경우 '#' 추가
-        if not color_code.startswith("#") and len(color_code) in [6, 8]:
-            # 모든 문자가 16진수인지 확인 (선택 사항이나 안전을 위해)
-            try:
-                int(color_code, 16)
-                return f"#{color_code}"
-            except ValueError:
-                pass # HEX가 아닌 이름(red, blue)일 수 있음
-
-        return color_code
-
-    def _init_default_rules(self) -> None:
-        """기본 규칙을 로드하고 색상 코드를 정규화합니다."""
-        self._rules = []
-        for rule in self.DEFAULT_COLOR_RULES:
-            # DTO 복제 및 색상 정규화
-            new_rule = ColorRule(
-                name=rule.name,
-                pattern=rule.pattern,
-                color=self._ensure_hex(rule.color),
-                light_color=self._ensure_hex(rule.light_color),
-                dark_color=self._ensure_hex(rule.dark_color),
-                regex_enabled=rule.regex_enabled,
-                enabled=rule.enabled,
-                bold=getattr(rule, 'bold', False)
-            )
-            self._rules.append(new_rule)
+        return self._repo._ensure_hex(color_code)
 
     # -------------------------------------------------------------------------
     # Qt Specific Methods (View Support)
@@ -327,11 +284,11 @@ class ColorManager(QObject):
             rule.color = self._ensure_hex(active_color)
 
     # -------------------------------------------------------------------------
-    # Logic & Management Methods
+    # Logic & Management Methods (ColorRuleRepository 위임)
     # -------------------------------------------------------------------------
     def get_rule_color(self, rule_name: str) -> str:
         """
-        특정 규칙의 현재 테마에 맞는 HEX 색상 코드를 반환합니다.
+        특정 규칙의 현재 테마에 맞는 HEX 색상 코드를 반환합니다. (ColorRuleRepository 위임)
 
         Args:
             rule_name (str): 규칙 이름.
@@ -339,10 +296,7 @@ class ColorManager(QObject):
         Returns:
             str: HEX 색상 코드.
         """
-        for rule in self._rules:
-            if rule.name == rule_name:
-                return rule.color # 이미 갱신된 값 사용
-        return "#000000"
+        return self._repo.get_rule_color(rule_name)
 
     def apply_rules(self, text: str) -> str:
         """
@@ -363,7 +317,7 @@ class ColorManager(QObject):
 
     def add_custom_rule(self, name: str, pattern: str, color: str, regex_enabled: bool = True) -> None:
         """
-        사용자 정의 색상 규칙을 추가합니다.
+        사용자 정의 색상 규칙을 추가합니다. (ColorRuleRepository 위임)
 
         Args:
             name (str): 규칙 이름.
@@ -371,118 +325,43 @@ class ColorManager(QObject):
             color (str): 색상 코드.
             regex_enabled (bool): 정규식 사용 여부.
         """
-        self.remove_rule(name)
-
-        # 입력받은 색상 코드 정규화
-        safe_color = self._ensure_hex(color)
-
-        new_rule = ColorRule(
-            name=name,
-            pattern=pattern,
-            color=safe_color,
-            light_color=safe_color,
-            dark_color=safe_color,
-            regex_enabled=regex_enabled,
-            enabled=True
-        )
-        self._rules.append(new_rule)
+        self._repo.add_custom_rule(name, pattern, color, regex_enabled)
 
     def remove_rule(self, name: str) -> None:
         """
-        규칙을 삭제합니다.
+        규칙을 삭제합니다. (ColorRuleRepository 위임)
 
         Args:
             name (str): 삭제할 규칙 이름.
         """
-        self._rules = [r for r in self._rules if r.name != name]
+        self._repo.remove_rule(name)
 
     def toggle_rule(self, name: str) -> None:
         """
-        규칙의 활성/비활성 상태를 토글합니다.
+        규칙의 활성/비활성 상태를 토글합니다. (ColorRuleRepository 위임)
 
         Args:
             name (str): 대상 규칙 이름.
         """
-        for rule in self._rules:
-            if rule.name == name:
-                rule.enabled = not rule.enabled
-                break
+        self._repo.toggle_rule(name)
 
     def save_rules(self, file_path: str) -> None:
         """
-        규칙 리스트를 JSON 파일로 저장합니다.
+        규칙 리스트를 JSON 파일로 저장합니다. (ColorRuleRepository 위임)
 
         Args:
             file_path (str): 저장할 파일 경로.
         """
-        rules_data = [
-            {
-                'name': r.name,
-                'pattern': r.pattern,
-                'color': r.color,
-                'light_color': r.light_color,
-                'dark_color': r.dark_color,
-                'regex_enabled': r.regex_enabled,
-                'enabled': r.enabled
-            }
-            for r in self._rules
-        ]
-        data = {'color_rules': rules_data}
-        try:
-            with open(file_path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=2, ensure_ascii=False)
-            logger.info(f"Color rules saved to {file_path}")
-        except IOError as e:
-            logger.error(f"Error saving color rules: {e}")
+        self._repo.save_rules(file_path)
 
     def load_rules(self, file_path: str) -> None:
         """
-        JSON 파일에서 규칙을 로드합니다.
-        파일을 읽을 때 색상 코드에 '#'이 없으면 자동으로 붙여서 메모리에 적재합니다.
-
-        Logic:
-            - 파일 읽기 및 JSON 파싱
-            - DTO 변환 시 _ensure_hex 적용 (이 부분이 핵심 Fix)
-            - 실패 시 기본 규칙 사용
+        JSON 파일에서 규칙을 로드합니다. (ColorRuleRepository 위임)
 
         Args:
             file_path (str): 읽을 파일 경로.
         """
-        try:
-            with open(file_path, 'r', encoding='utf-8') as f:
-                data = json.load(f)
-
-            # 호환성 처리: "color_rules" 키가 없으면 데이터 자체가 리스트라고 가정
-            rules_data = data.get('color_rules', data) if isinstance(data, dict) else data
-
-            self._rules = []
-            for r in rules_data:
-                # 레거시 데이터 호환성 처리
-                legacy_color = r.get('color', '')
-                light_c = r.get('light_color', '')
-                dark_c = r.get('dark_color', '')
-
-                if not light_c:
-                    light_c = legacy_color
-                if not dark_c:
-                    dark_c = legacy_color
-
-                # [핵심] 로드 시점에 모든 색상 데이터 정규화 (# 붙이기)
-                self._rules.append(ColorRule(
-                    name=r.get('name', 'Unknown'),
-                    pattern=r.get('pattern', ''),
-                    color=self._ensure_hex(legacy_color),
-                    light_color=self._ensure_hex(light_c),
-                    dark_color=self._ensure_hex(dark_c),
-                    regex_enabled=r.get('regex_enabled', True),
-                    enabled=r.get('enabled', True),
-                    bold=r.get('bold', False)
-                ))
-
-            logger.debug(f"Loaded {len(self._rules)} color rules.")
-        except Exception as e:
-            logger.error(f"Failed to load color rules ({file_path}): {e}")
-            self._init_default_rules()
+        self._repo.load_rules(file_path)
 
     @staticmethod
     def _get_config_path() -> Path:

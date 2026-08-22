@@ -48,6 +48,11 @@ class MainLeftSection(QWidget):
     port_tab_added = pyqtSignal(object)  # 생성된 PortPanel 객체 전달
     current_tab_changed = pyqtSignal()   # 탭 변경 알림 (Presenter 동기화용)
 
+    # 시스템 로그 REC 토글 요청 (S-052: SystemLogWidget 시그널을 그대로 재발행 —
+    # PortPanel이 DataLogWidget의 logging_start/stop_requested를 재발행하는 것과 동일 패턴)
+    sys_logging_start_requested = pyqtSignal()
+    sys_logging_stop_requested = pyqtSignal()
+
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
         MainLeftSection을 초기화합니다.
@@ -106,6 +111,14 @@ class MainLeftSection(QWidget):
         # 3. 시스템 로그 (System Log)
         # ---------------------------------------------------------
         self._system_log_widget = SystemLogWidget()
+        # 로깅 요청 시그널 재발행 (S-052: PortPanel이 DataLogWidget 시그널을
+        # 재발행하는 것과 동일한 Facade 패턴 — Presenter는 위젯 내부 구조를 모른다)
+        self._system_log_widget.sys_logging_start_requested.connect(
+            self.sys_logging_start_requested.emit
+        )
+        self._system_log_widget.sys_logging_stop_requested.connect(
+            self.sys_logging_stop_requested.emit
+        )
 
         # 레이아웃 배치
         # 포트 탭 패널이 남은 공간을 모두 차지하도록 설정 (Stretch 1)
@@ -231,6 +244,27 @@ class MainLeftSection(QWidget):
             rules (List[ColorRule]): 색상 규칙 리스트.
         """
         self._system_log_widget.set_color_rules(rules)
+
+    def show_save_log_dialog(self) -> str:
+        """
+        시스템 로그 저장 파일 다이얼로그를 표시합니다 (Presenter가 호출, S-052).
+
+        PortPanel.show_save_log_dialog()과 동일한 Facade 패턴 — Presenter는
+        SystemLogWidget 내부 구조를 몰라도 파일 경로를 얻을 수 있다.
+
+        Returns:
+            str: 선택된 파일 경로 (취소 시 빈 문자열).
+        """
+        return self._system_log_widget.show_save_log_dialog()
+
+    def set_logging_active(self, active: bool) -> None:
+        """
+        시스템 로그 REC 상태를 설정합니다 (Presenter가 호출, S-052).
+
+        Args:
+            active (bool): 로깅 활성화 여부.
+        """
+        self._system_log_widget.set_logging_active(active)
 
     def trigger_current_port_log_save(self) -> None:
         """

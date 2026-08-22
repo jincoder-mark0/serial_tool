@@ -688,11 +688,27 @@ class MainPresenter(QObject):
     # Logging Connections
     # -------------------------------------------------------------------------
     def _connect_logging_signals(self) -> None:
-        """기존 모든 포트 탭에 로깅 시그널을 연결합니다."""
+        """기존 모든 포트 탭 + 시스템 로그의 로깅 시그널을 연결합니다."""
         count = self.view.get_port_tabs_count()
         for i in range(count):
             widget = self.view.get_port_tab_widget(i)
             self._connect_single_port_logging(widget)
+
+        # 시스템 로그는 포트 탭과 달리 앱 생명주기 동안 단일 인스턴스이므로 1회만 연결 (S-052)
+        self._connect_system_logging_signals()
+
+    def _connect_system_logging_signals(self) -> None:
+        """
+        시스템 로그(SystemLogWidget)의 로깅 요청 시그널을 연결합니다.
+
+        Logic:
+            - S-052: SystemLogWidget도 DataLogWidget과 동일한 Presenter 권위
+              제어 흐름을 쓰므로, DataLog와 대칭인 요청 시그널을 동일하게 연결한다.
+            - View Facade(port_view = MainLeftSection)의 시그널만 사용 (LoD 준수).
+        """
+        left_view = self.view.port_view
+        left_view.sys_logging_start_requested.connect(self._on_sys_logging_start_requested)
+        left_view.sys_logging_stop_requested.connect(self._on_sys_logging_stop_requested)
 
     def _on_port_tab_added(self, panel: PortPanel) -> None:
         """
@@ -728,6 +744,27 @@ class MainPresenter(QObject):
             panel.logging_start_requested.connect(lambda: self._on_logging_start_requested(panel))
             panel.logging_stop_requested.connect(lambda: self._on_logging_stop_requested(panel))
 
+    def _start_log_capture_dialog(self, widget) -> Optional[str]:
+        """
+        로깅 시작 요청의 공통부: 파일 저장 다이얼로그 표시 + 취소 처리.
+
+        DataLog(PortPanel)/SystemLog(MainLeftSection) 양쪽이 동일하게 필요로 하는
+        "다이얼로그를 띄우고, 취소되면 위젯을 비활성 상태로 되돌린다" 절차만 묶는다
+        (S-052 — 로그 종류별 차이인 파일 확장자 기본값·대상 위젯은 호출부가 담당).
+
+        Args:
+            widget: `show_save_log_dialog()`/`set_logging_active()`를 제공하는
+                View Facade(PortPanel 또는 MainLeftSection).
+
+        Returns:
+            Optional[str]: 선택된 파일 경로. 취소 시 None(위젯은 비활성 상태로 복귀됨).
+        """
+        file_path = widget.show_save_log_dialog()
+        if not file_path:
+            widget.set_logging_active(False)
+            return None
+        return file_path
+
     def _on_logging_start_requested(self, panel: PortPanel) -> None:
         """
         로깅 시작 요청 처리
@@ -746,10 +783,8 @@ class MainPresenter(QObject):
             '.txt': LogFormat.HEX,
         }
 
-        # Panel Facade 사용
-        file_path = panel.show_save_log_dialog()
-        if not file_path:
-            panel.set_logging_active(False)
+        file_path = self._start_log_capture_dialog(panel)
+        if file_path is None:
             return
 
         port = panel.get_port_name()
@@ -785,3 +820,28 @@ class MainPresenter(QObject):
         # Panel Facade 사용
         panel.set_logging_active(False)
         self._log_info(f"[{port}] Logging stopped")
+
+    def _on_sys_logging_start_requested(self) -> None:
+        """
+        시스템 로그 REC 시작 요청 처리 (S-052).
+
+        Logic:
+            - View Facade(MainLeftSection)를 통해 파일 다이얼로그 표시
+            - DataLog와 달리 포트에 종속되지 않는 단일 로그이므로 별도의
+              DataLoggerManager 연동 없이(기존 SystemLog 자기 권위 구현도 동일하게
+              파일 시스템에 실제로 기록하지 않았다 — 사전 존재 기능 격차, 이번
+              태스크 범위 밖) 다이얼로그 결과에 따라 REC UI 상태만 갱신한다.
+        """
+        left_view = self.view.port_view
+        file_path = self._start_log_capture_dialog(left_view)
+        if file_path is None:
+            return
+
+        left_view.set_logging_active(True)
+        self._log_info(f"System log recording enabled: {file_path}")
+
+    def _on_sys_logging_stop_requested(self) -> None:
+        """시스템 로그 REC 중지 요청 처리 (S-052)."""
+        left_view = self.view.port_view
+        left_view.set_logging_active(False)
+        self._log_info("System log recording stopped")

@@ -15,10 +15,12 @@
   이 모듈은 QWidget을 상속하지 않는 순수 팩토리 함수 + 얇은 컨트롤러 클래스만
   제공하고, 실제 레이아웃 배치(`addWidget` 순서, 행 구성)는 각 위젯의 `init_ui`가
   그대로 소유한다 — 캡처 회귀(레이아웃 변경) 위험을 최소화하는 선택.
-* 시그널 계약(`logging_start_requested` vs `sys_logging_started(str)`)과
-  제어 흐름(Presenter 권위 vs 자기 권위)이 서로 달라 이 모듈은 그 차이에
-  관여하지 않는다 — 각 위젯이 자신의 토글 핸들러에서 이 모듈의 헬퍼를 호출할
-  시점과 방식을 스스로 결정한다.
+* 시그널 계약과 제어 흐름은 S-052에서 Presenter 권위로 통일되었다 —
+  `logging_start_requested`/`sys_logging_start_requested` 등 두 위젯 모두
+  인자 없는 요청 시그널만 emit하고, 파일 다이얼로그(`show_save_log_dialog()`)와
+  REC 스타일 전환(`set_logging_active()`)은 Presenter가 호출할 때만 일어난다.
+  이 모듈 자체는 여전히 그 계약·흐름에 관여하지 않는다 — 각 위젯이 자신의
+  토글 핸들러에서 이 모듈의 헬퍼를 호출할 시점과 방식을 스스로 결정한다.
 
 ## WHAT
 * `create_search_bar()` — 검색 QLineEdit + 이전/다음 QPushButton 3종 생성

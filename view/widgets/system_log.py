@@ -49,9 +49,9 @@ class SystemLogWidget(QWidget):
     검색 및 필터링 기능을 제공합니다.
     """
 
-    # 로깅 제어 시그널
-    sys_logging_started = pyqtSignal(str)  # 파일 경로 전달
-    sys_logging_stopped = pyqtSignal()
+    # 로깅 제어 시그널 (S-052: DataLogWidget과 대칭 — 인자 없는 요청 시그널)
+    sys_logging_start_requested = pyqtSignal()
+    sys_logging_stop_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -271,51 +271,68 @@ class SystemLogWidget(QWidget):
         로깅 시작/중단 토글 핸들러입니다.
 
         Logic:
-            - 체크(True): 파일 저장 다이얼로그 표시 -> 성공 시 시그널 발행 및 UI 변경
-            - 체크 해제(False): 로깅 중단 시그널 발행 및 UI 복구
+            - UI 상태 변경 없이 오직 요청 시그널만 발행한다.
+            - 실제 파일 다이얼로그 표시(`show_save_log_dialog()`)와 REC 스타일
+              전환(`set_logging_active()`)은 Presenter가 호출할 때만 일어난다.
 
-        Note (S-049, 통일하지 않고 기록만 남김):
-            이 위젯은 "자기 권위" 제어 흐름이다 — 토글 즉시 위젯 스스로 파일
-            다이얼로그를 띄우고 REC 스타일을 전환한다. 반면 `DataLogWidget`은
-            "Presenter 권위"로, 버튼 토글은 의도(시그널)만 내보내고 실제 스타일
-            전환은 Presenter가 `set_logging_active()`를 호출해야 일어난다
-            (`data_log.py`의 `on_data_log_logging_toggled` 참고). 같은 개념(REC
-            토글)을 반대 방향으로 구현한 기존 불일치이며, 이번 태스크의 범위는
-            중복 제거이지 흐름 통일이 아니므로 그대로 둔다. (Presenter가 파일명을
-            모른 채로 시작하는 게 MVP 원칙상 더 맞지만, 이 위젯은 파일명을 스스로
-            선택하므로 대안 검토가 필요 — 별도 판단 대상.)
+        Note (S-052, 통일 완료):
+            S-049에서는 이 위젯이 "자기 권위" 제어 흐름이었다 — 토글 즉시 위젯
+            스스로 QFileDialog를 띄우고 REC 스타일도 직접 바꿨다. `DataLogWidget`
+            ("Presenter 권위": 토글은 의도만 내보내고 스타일 전환은 Presenter의
+            `set_logging_active()` 호출로만 일어남)과 반대 방향이던 불일치를
+            이번 태스크에서 DataLog 패턴으로 통일했다 — 이제 두 위젯 모두 토글
+            시 인자 없는 요청 시그널만 emit하고, 파일 선택과 스타일 전환은
+            Presenter가 `show_save_log_dialog()`/`set_logging_active()`를 통해
+            수행한다(`data_log.py`의 `on_data_log_logging_toggled` 참고).
 
         Args:
             checked (bool): 버튼 체크 상태.
         """
-        inactive_text = language_manager.get_text("sys_log_btn_toggle_logging")
-
         if checked:
-            # 파일 저장 다이얼로그
-            title = inactive_text
-            if self.tab_name:
-                title = f"{self.tab_name}::{title}"
-
-            filename, _ = QFileDialog.getSaveFileName(
-                self,
-                title,
-                "",
-                "Binary Files (*.bin);;All Files (*)"
-            )
-
-            if filename:
-                # 로깅 시작 시그널 발행
-                self.sys_logging_started.emit(filename)
-                # 버튼 스타일 변경 (자기 권위 — 외부 호출 없이 즉시 전환)
-                apply_recording_style(self.sys_log_toggle_logging_btn, True, inactive_text)
-            else:
-                # 취소 시 버튼 복구
-                self.sys_log_toggle_logging_btn.setChecked(False)
+            self.sys_logging_start_requested.emit()
         else:
-            # 로깅 중단 시그널 발행
-            self.sys_logging_stopped.emit()
-            # 버튼 스타일 복구
-            apply_recording_style(self.sys_log_toggle_logging_btn, False, inactive_text)
+            self.sys_logging_stop_requested.emit()
+
+    def set_logging_active(self, active: bool) -> None:
+        """
+        외부(Presenter)에서 로깅 상태를 설정합니다.
+        성공적으로 시작/중지되었을 때 호출됩니다(DataLogWidget과 동일 계약, S-052).
+
+        Args:
+            active (bool): 로깅 활성화 여부.
+        """
+        self.sys_log_toggle_logging_btn.blockSignals(True)
+        self.sys_log_toggle_logging_btn.setChecked(active)
+        self.sys_log_toggle_logging_btn.blockSignals(False)
+
+        apply_recording_style(
+            self.sys_log_toggle_logging_btn,
+            active,
+            inactive_text=language_manager.get_text("sys_log_btn_toggle_logging"),
+        )
+
+    def show_save_log_dialog(self) -> str:
+        """
+        파일 저장 다이얼로그 표시 (Presenter가 호출).
+
+        DataLogWidget.show_save_log_dialog()과 동일한 패턴(S-052) — 위젯은
+        토글 시 스스로 다이얼로그를 열지 않고, Presenter가 이 메서드를 명시적으로
+        호출했을 때만 QFileDialog가 뜬다.
+
+        Returns:
+            str: 선택된 파일 경로 (취소 시 빈 문자열).
+        """
+        title = language_manager.get_text("sys_log_btn_toggle_logging")
+        if self.tab_name:
+            title = f"{self.tab_name}::{title}"
+
+        filename, _ = QFileDialog.getSaveFileName(
+            self,
+            title,
+            "",
+            "Binary Files (*.bin);;All Files (*)"
+        )
+        return filename
 
     @pyqtSlot(int)
     def on_sys_log_filter_changed(self, state: int) -> None:

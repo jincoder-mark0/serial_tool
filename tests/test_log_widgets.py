@@ -8,19 +8,20 @@
   REC 토글/상태 저장 동작은 아무 테스트도 덮지 않았다).
 * 공통화 리팩토링이 동작을 바꾸지 않았음을 보장하려면 리팩토링 *전* 동작을
   먼저 고정해야 한다 — 이 파일이 그 특성화(characterization) 테스트다.
-* 절대 조건: 시그널 이름/시그니처(`logging_start_requested()`,
-  `logging_stop_requested()`, `sys_logging_started(str)`, `sys_logging_stopped()`)와
-  `get_state()`/`apply_state()`의 저장 키 문자열은 리팩토링 후에도 동일해야 한다
-  (Presenter 배선, 사용자 설정 호환) — 이를 회귀 감지 가능한 형태로 고정한다.
+* 절대 조건: `get_state()`/`apply_state()`의 저장 키 문자열은 리팩토링 후에도
+  동일해야 한다(사용자 설정 호환) — 이를 회귀 감지 가능한 형태로 고정한다.
+* S-052(제어 흐름 통일)에서 SystemLog의 시그널 계약이 변경되었다:
+  `sys_logging_started(str)`/`sys_logging_stopped()` → 인자 없는 요청 시그널
+  `sys_logging_start_requested()`/`sys_logging_stop_requested()`로 DataLog와
+  대칭이 되도록 정리(계약 변경은 이번 태스크에서 명시적으로 허용됨).
 
 ## WHAT
 * 검색 다음/이전 이동 (wrap-around 포함)
 * 필터 체크박스 토글 시 QSmartListView 표시 행 수 변화
-* REC 스타일 전환의 두 가지 상반된 제어 흐름:
-  - DataLog = "Presenter 권위": 버튼 토글은 시그널만 내보내고, 실제 스타일 전환은
-    외부에서 `set_logging_active()`를 호출해야 일어난다.
-  - SystemLog = "자기 권위": 버튼 토글 즉시 위젯 스스로 파일 다이얼로그를 띄우고
-    스타일을 전환한다 (QFileDialog는 monkeypatch로 대체).
+* REC 스타일 전환 — 두 위젯 모두 "Presenter 권위"로 통일됨(S-052):
+  버튼 토글은 요청 시그널만 내보내고, 실제 파일 다이얼로그 표시와 스타일 전환은
+  외부에서 `show_save_log_dialog()`/`set_logging_active()`를 호출해야 일어난다.
+  SystemLog가 토글 시 QFileDialog를 직접 호출하지 않음을 monkeypatch 감시로 고정.
 * `get_state()`/`apply_state()` 왕복 및 저장 키 문자열 고정.
 
 ## HOW
@@ -192,51 +193,82 @@ class TestDataLogRecordingIsPresenterAuthority:
         assert widget.data_log_toggle_logging_btn.isChecked() is False
 
 
-class TestSystemLogRecordingIsSelfAuthority:
+class TestSystemLogRecordingIsPresenterAuthority:
     """
-    SystemLog: 버튼 토글 즉시 위젯 스스로 파일 다이얼로그를 띄우고
-    (승인 시) 스타일을 자체 전환한다 — 외부 호출이 필요 없다.
+    SystemLog: DataLog와 동일한 "Presenter 권위" 제어 흐름으로 통일됨(S-052).
+    버튼 토글은 요청 시그널만 내보내고, 실제 파일 다이얼로그 표시와 스타일
+    전환은 외부(Presenter)가 `show_save_log_dialog()`/`set_logging_active()`를
+    호출해야 일어난다.
     """
 
-    def test_toggle_on_shows_dialog_and_self_applies_style(self, qapp, monkeypatch):
+    def test_toggle_emits_signal_without_changing_style(self, qapp, qtbot):
+        widget = SystemLogWidget()
+        original_text = widget.sys_log_toggle_logging_btn.text()
+
+        with qtbot.waitSignal(widget.sys_logging_start_requested, timeout=1000, raising=True):
+            widget.sys_log_toggle_logging_btn.setChecked(True)
+
+        # 시그널만 나갔을 뿐 버튼 스타일/텍스트는 아직 그대로다 (Presenter 응답 전).
+        assert widget.sys_log_toggle_logging_btn.property("state") != "recording"
+        assert widget.sys_log_toggle_logging_btn.text() == original_text
+
+    def test_stop_toggle_emits_signal(self, qapp, qtbot):
+        widget = SystemLogWidget()
+        widget.sys_log_toggle_logging_btn.setChecked(True)
+
+        with qtbot.waitSignal(widget.sys_logging_stop_requested, timeout=1000, raising=True):
+            widget.sys_log_toggle_logging_btn.setChecked(False)
+
+    def test_set_logging_active_true_then_false_changes_style(self, qapp):
         widget = SystemLogWidget()
         inactive_text = widget.sys_log_toggle_logging_btn.text()
+
+        widget.set_logging_active(True)
+        assert widget.sys_log_toggle_logging_btn.property("state") == "recording"
+        assert widget.sys_log_toggle_logging_btn.text() == "\u25cf REC"
+        assert widget.sys_log_toggle_logging_btn.isChecked() is True
+
+        widget.set_logging_active(False)
+        assert widget.sys_log_toggle_logging_btn.property("state") is None
+        assert widget.sys_log_toggle_logging_btn.text() == inactive_text
+        assert widget.sys_log_toggle_logging_btn.isChecked() is False
+
+    def test_show_save_log_dialog_delegates_to_qfiledialog(self, qapp, monkeypatch):
+        """Presenter가 명시적으로 호출하는 `show_save_log_dialog()`는 여전히
+        QFileDialog를 사용한다 — 자기 권위였던 기존 동작을 메서드로 옮겼을 뿐,
+        기능 자체(파일 선택 UI)는 사라지지 않았음을 확인한다."""
+        widget = SystemLogWidget()
 
         monkeypatch.setattr(
             QFileDialog, "getSaveFileName",
             staticmethod(lambda *a, **k: ("C:/tmp/fake.bin", "")),
         )
 
-        received = []
-        widget.sys_logging_started.connect(received.append)
+        assert widget.show_save_log_dialog() == "C:/tmp/fake.bin"
 
-        widget.sys_log_toggle_logging_btn.setChecked(True)
-
-        assert received == ["C:/tmp/fake.bin"]
-        # Presenter 개입 없이 위젯 스스로 스타일을 바꾼다 (자기 권위).
-        assert widget.sys_log_toggle_logging_btn.property("state") == "recording"
-        assert widget.sys_log_toggle_logging_btn.text() == "\u25cf REC"
-
-        widget.sys_log_toggle_logging_btn.setChecked(False)
-        assert widget.sys_log_toggle_logging_btn.property("state") is None
-        assert widget.sys_log_toggle_logging_btn.text() == inactive_text
-
-    def test_toggle_on_cancelled_dialog_reverts_without_signal(self, qapp, monkeypatch):
+    def test_toggle_does_not_call_qfiledialog_directly(self, qapp, monkeypatch):
+        """
+        신규(S-052): 위젯이 토글 시 QFileDialog를 직접 호출하지 않음을 고정한다.
+        DataLog와 동일하게, 다이얼로그는 오직 Presenter가 `show_save_log_dialog()`를
+        명시적으로 호출했을 때만 열려야 한다.
+        """
         widget = SystemLogWidget()
+
+        call_count = {"n": 0}
+
+        def _spy_get_save_file_name(*a, **k):
+            call_count["n"] += 1
+            return ("C:/tmp/fake.bin", "")
 
         monkeypatch.setattr(
             QFileDialog, "getSaveFileName",
-            staticmethod(lambda *a, **k: ("", "")),
+            staticmethod(_spy_get_save_file_name),
         )
 
-        received = []
-        widget.sys_logging_started.connect(received.append)
-
         widget.sys_log_toggle_logging_btn.setChecked(True)
+        widget.sys_log_toggle_logging_btn.setChecked(False)
 
-        assert received == []
-        assert widget.sys_log_toggle_logging_btn.isChecked() is False
-        assert widget.sys_log_toggle_logging_btn.property("state") != "recording"
+        assert call_count["n"] == 0
 
 
 # -----------------------------------------------------------------------------

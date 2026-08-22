@@ -370,13 +370,14 @@ class DataLogWidget(QWidget):
             - UI 상태 변경 없이 오직 시그널만 발행
             - 실제 UI 변경은 Presenter가 set_logging_active를 호출할 때 수행
 
-        Note (S-049, 통일하지 않고 기록만 남김):
+        Note (S-052, 통일 완료):
             이 위젯은 "Presenter 권위" 제어 흐름이다 — REC 스타일 전환은
-            `set_logging_active()`를 통해서만 일어난다. 반면 `SystemLogWidget`은
-            "자기 권위"로, 토글 즉시 위젯 스스로 파일 다이얼로그를 띄우고 스타일을
-            전환한다(`system_log.py`의 `on_sys_log_logging_toggled` 참고). 같은
-            개념(REC 토글)을 반대 방향으로 구현한 기존 불일치이며, 이번 태스크의
-            범위는 중복 제거이지 흐름 통일이 아니므로 그대로 둔다.
+            `set_logging_active()`를 통해서만 일어난다. S-049에서는
+            `SystemLogWidget`이 "자기 권위"로 반대 방향의 제어 흐름(토글 즉시
+            위젯 스스로 파일 다이얼로그를 띄우고 스타일을 전환)을 가진 기존
+            불일치가 기록되었으나, 이번 태스크에서 SystemLogWidget도 동일한
+            Presenter 권위 패턴을 따르도록 통일했다(`system_log.py`의
+            `on_sys_log_logging_toggled` 참고).
         """
         if checked:
             self.logging_start_requested.emit()
