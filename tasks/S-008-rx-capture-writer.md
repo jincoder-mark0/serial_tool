@@ -1,6 +1,12 @@
 # S-008 — RxCaptureWriter 필요성 판정
 
-- Status: TODO
+- Status: DONE — **폐기 결정** (2026-08-22, 상위 판정)
+- 판정: RxCaptureWriter는 만들지 않는다. DataLogger(+DataLoggerManager)가 이미 포트별
+  BIN/HEX/PCAP 기록·논블로킹 큐·전이중(RX+TX) 기록을 제공해 차별 기능이 없다.
+  계획(doc/implementation_plan.md)은 DataLogger가 지금 형태로 자라기 전에 세운 항목이다.
+  잠재 차별점 검토 결과: ① RX만 분리 기록 — 필요해지면 DataLogger에 방향 필터 옵션 추가로
+  흡수(새 클래스 불요), ② 자동 파일명/세션 자동 시작 — 로깅 UX 개선이지 별도 Writer의
+  근거가 아님(요구가 생기면 별도 태스크로). doc/task.md Phase 6 항목에는 폐기 주석을 남긴다.
 - Recommended model: **상위 전용** (중복 여부 판정) — 하위 모델 시작 금지
 - 선행: 없음
 - Skills to load: task-done

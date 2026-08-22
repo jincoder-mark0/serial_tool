@@ -1,6 +1,8 @@
 # S-014 — GitHub Actions CI (pytest + 언어 키 검사)
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. windows pytest + ubuntu 언어 키
+  2-job 구성. YAML은 육안 검토(PyYAML 부재, 설치 금지 준수), 동일 명령 로컬 통과.
+  **러너 실검증 미확인 — 사용자 push 후 Actions 결과 확인 필요**)
 - Recommended model: **하위(Sonnet) 가능**
 - 선행: 없음
 - Skills to load: task-done

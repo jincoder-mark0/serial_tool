@@ -32,15 +32,16 @@
 | S-005 | 안정화·테스트 기준선 85개 | 5.5 | ✅ 완료 | 경합·교착 수정, conftest 복구 |
 | [S-006](tasks/S-006-auto-tx-scheduler.md) | `AutoTxScheduler` (주기적 자동 전송) | 6 | ⏸ 대기 | 설계 확정됨 — 하위 모델 수행 가능 |
 | [S-007](tasks/S-007-performance-optimization.md) | 성능 최적화 (Rx 경로·렌더링) | 6 | ⏸ 대기 | 벤치마크(S-011) 선행 필수 — 측정 없는 최적화 금지 |
-| [S-008](tasks/S-008-rx-capture-writer.md) | Rx 파일 캡처 (`RxCaptureWriter`) 필요성 판정 | 6 | ⏸ 대기 | DataLogger와 중복 의심 — 폐기 여부 상위 판단 |
+| [S-008](tasks/S-008-rx-capture-writer.md) | Rx 파일 캡처 (`RxCaptureWriter`) 필요성 판정 | 6 | ✅ 완료 | **폐기 결정** (2026-08-22) — DataLogger가 전이중·3포맷 기록 이미 제공 |
 | [S-009](tasks/S-009-plugin-system.md) | 플러그인 인프라 (base/loader/Example) | 7 | ⏸ 대기 | 인터페이스 설계 선행 (상위 전용) |
 | [S-010](tasks/S-010-virtual-serial-env.md) | 가상 시리얼 포트 실환경 검증 (com0com) | 8 | ⏸ 대기 | 사용자 설치 개입 필요. 실기기 미검증 해소 기반 |
 | [S-011](tasks/S-011-benchmark.md) | 성능 벤치마크 도구 | 8 | ⏸ 대기 | 하위 모델 수행 가능. 통과 후 README 수치 보장 전환 |
 | [S-012](tasks/S-012-packaging.md) | 패키징 (pyinstaller spec, 독립 실행 파일) | 8 | ⏸ 대기 | 선행: S-013, S-018 |
 | [S-013](tasks/S-013-user-config-dir.md) | 설정 파일 사용자 디렉터리 분리 | 8 | ⏸ 대기 | 선행: S-018. 배포 시 필수 |
-| [S-014](tasks/S-014-github-actions-ci.md) | GitHub Actions CI (pytest + 언어 키 검사) | 8 | ⏸ 대기 | 하위 모델 수행 가능 |
+| [S-014](tasks/S-014-github-actions-ci.md) | GitHub Actions CI (pytest + 언어 키 검사) | 8 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 러너 실검증은 push 후 확인 필요 |
 | [S-015](tasks/S-015-spi-i2c-transport.md) | SPI/I2C Transport 확장 | 후속 | ⛔ 보류 | 요구 미확정 (대상 하드웨어·유스케이스) |
-| [S-016](tasks/S-016-settings-namespace.md) | 설정 키 네임스페이스 이중화 해소 (`settings.*` vs `global.*`) | 유지보수 | ⏸ 대기 | 2026-08-22 발견 결함. 상위 결정 필요 |
+| [S-016](tasks/S-016-settings-namespace.md) | 설정 키 네임스페이스 이중화 해소 (`settings.*` vs `global.*`) | 유지보수 | ✅ 완료 | **결정**: `settings.*` 정본 (2026-08-22). 구현은 S-027 |
+| [S-027](tasks/S-027-settings-namespace-migration.md) | 설정 네임스페이스 마이그레이션 구현 (1.0→1.1) | 유지보수 | ⏸ 대기 | 선행: S-013. 하위 모델 가능 |
 | [S-017](tasks/S-017-ui-refresh-constant.md) | UI 갱신 주기 리터럴 30 상수화 | 유지보수 | ✅ 완료 | 하위 모델 수행 (2026-08-22). pytest 85 passed |
 | [S-018](tasks/S-018-meipass-detection-fix.md) | PyInstaller 감지 버그 수정 (`os._MEIPASS`→`sys`) | 유지보수 | ✅ 완료 | 하위 모델 수행 (2026-08-22). S-012/013 선행 해소 |
 | [S-019](tasks/S-019-datalog-duplicate-init.md) | DataLogWidget init_ui 중복 생성 블록 제거 | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 26줄 삭제, pytest 85+캡처 검증. 검색창 축소 별건은 S-026로 |

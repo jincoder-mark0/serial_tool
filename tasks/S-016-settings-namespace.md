@@ -1,6 +1,14 @@
 # S-016 — 설정 키 네임스페이스 이중화 해소
 
-- Status: TODO
+- Status: DONE — **결정 완료** (2026-08-22, 상위). 구현은 [S-027](S-027-settings-namespace-migration.md)로 분할.
+- **결정**: 정본은 `settings.*` (ConfigKeys — 코드 전체가 이미 사용, 변경 범위 최소).
+  ① `CURRENT_VERSION` "1.0"→"1.1", `_migrate_settings`에 `global.*`→`settings.*` 이관
+  (settings에 이미 있는 키는 실사용 값이므로 유지, global은 이관 후 블록 삭제) +
+  `ui.proportional_font_size` 등 죽은 ui 폰트 키 4종 제거.
+  ② 스키마는 required ["version","settings"] + settings.theme/language required로 재작성
+  (theme enum: dark/light/dracula — S-023에서 dracula가 정식 등록됨). ui 블록은 느슨하게 유지.
+  ③ defaults의 `global` 블록을 `settings` 블록으로 교체.
+  ④ 배포본 settings.json은 마이그레이션 로직으로 자연 정리(값은 사용자 선호 유지, 수동 편집 최소).
 - Recommended model: **상위 전용** (정본 결정 + 마이그레이션 설계) — 하위 모델 시작 금지
 - 선행: 없음 (S-013보다 먼저 결정하는 것이 이상적)
 - Skills to load: task-done

@@ -212,7 +212,7 @@
   - [ ] RxLogView를 위한 `BatchRenderer` 구현
   - [ ] `RingBuffer` 최적화 (bytearray)
   - [ ] 논블로킹 I/O 루프 최적화
-- [ ] Rx 파일 캡처 (`RxCaptureWriter`)
+- [ ] ~~Rx 파일 캡처 (`RxCaptureWriter`)~~ → 폐기 (2026-08-22, S-008 판정: DataLogger가 전이중·3포맷 기록을 이미 제공 — 중복)
 
 ## Phase 7: 플러그인 시스템 (계획됨)
 
