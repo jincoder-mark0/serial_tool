@@ -32,7 +32,7 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-023](S-023-theme-system-structural.md) | 테마 시스템 구조 결함 수정 | **하위 가능** | — | TODO |
 | [S-021](S-021-hardcoded-messages-i18n.md) | 하드코딩 메시지 언어팩 전환 | **하위 가능** | S-020 권장 | TODO |
 | [S-025](S-025-ui-consistency.md) | UI 일관성 정비 (툴팁·상수·니모닉) | **하위 가능** | S-019 | TODO |
-| [S-017](S-017-ui-refresh-constant.md) | UI 갱신 주기 리터럴 30 상수화 | **하위 가능** | — | TODO |
+| [S-017](S-017-ui-refresh-constant.md) | UI 갱신 주기 리터럴 30 상수화 | **하위 가능** | — | DONE |
 | [S-018](S-018-meipass-detection-fix.md) | PyInstaller 감지 버그 수정 (`os._MEIPASS`→`sys`) | **하위 가능** | — | TODO |
 | [S-006](S-006-auto-tx-scheduler.md) | AutoTxScheduler (주기적 자동 전송) | **하위 가능** | — | TODO |
 | [S-011](S-011-benchmark.md) | 성능 벤치마크 도구 | **하위 가능** | — | TODO |

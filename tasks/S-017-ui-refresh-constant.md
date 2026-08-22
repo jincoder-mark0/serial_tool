@@ -1,6 +1,6 @@
 # S-017 — UI 갱신 주기 리터럴 30 상수화
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. pytest 85 passed, 잔여 리터럴 0건)
 - Recommended model: **하위(Sonnet) 가능**
 - 선행: 없음
 - Skills to load: task-done

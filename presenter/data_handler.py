@@ -23,6 +23,7 @@ from PyQt5.QtCore import QObject, QTimer
 
 from core.data_logger import data_logger_manager
 from view.main_window import MainWindow
+from common.constants import UI_REFRESH_INTERVAL_MS
 from common.dtos import PortDataEvent, LogDataBatch
 
 
@@ -53,7 +54,7 @@ class DataTrafficHandler(QObject):
 
         # UI 업데이트 타이머 (Throttling)
         self._ui_refresh_timer = QTimer()
-        self._ui_refresh_timer.setInterval(30)  # 30ms (약 33 FPS)
+        self._ui_refresh_timer.setInterval(UI_REFRESH_INTERVAL_MS)  # 약 33 FPS
         self._ui_refresh_timer.timeout.connect(self._flush_rx_buffer_to_ui)
         self._ui_refresh_timer.start()
 
