@@ -170,10 +170,12 @@ class ThemeType(Enum):
         DARK: 어두운 테마
         LIGHT: 밝은 테마
         DRACULA: 드라큘라 테마
+        CLASSIC: 클래식(전통 Windows) 테마 (S-060) - 밝은 계열
     """
     DARK = "dark"
     LIGHT = "light"
     DRACULA = "dracula"
+    CLASSIC = "classic"
 
 class FileStatus(Enum):
     """

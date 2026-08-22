@@ -118,6 +118,7 @@
     "main_menu_save_data_log": "Save Log",
     "main_menu_save_data_log_tooltip": "Save received data log to file",
     "main_menu_theme": "Theme",
+    "main_menu_theme_classic": "Classic",
     "main_menu_theme_dark": "Dark",
     "main_menu_theme_dracula": "Dracula",
     "main_menu_theme_light": "Light",

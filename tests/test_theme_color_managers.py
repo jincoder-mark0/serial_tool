@@ -62,6 +62,7 @@ _THEME_BG_FINGERPRINT = {
     "dark": "#2b2b2b",
     "light": "#f5f5f5",
     "dracula": "#282a36",
+    "classic": "#d4d0c8",
 }
 
 
@@ -69,7 +70,7 @@ _THEME_BG_FINGERPRINT = {
 # 1. apply_theme() - 테마 파일 로드 및 _current_theme 상태 계약
 # -----------------------------------------------------------------------------
 
-@pytest.mark.parametrize("theme_name", ["dark", "light", "dracula"])
+@pytest.mark.parametrize("theme_name", ["dark", "light", "dracula", "classic"])
 def test_apply_theme_loads_correct_qss_file_and_updates_current_theme(qapp, theme_name):
     """apply_theme() 후 QApplication 스타일시트에 해당 테마 파일 내용이 실제로 들어있어야 한다."""
     theme_manager.apply_theme(theme_name)
@@ -86,10 +87,11 @@ def test_apply_theme_loads_correct_qss_file_and_updates_current_theme(qapp, them
 
 @pytest.mark.parametrize(
     "theme_name,expect_dark",
-    [("dark", True), ("light", False), ("dracula", True)],
+    [("dark", True), ("light", False), ("dracula", True), ("classic", False)],
 )
 def test_is_dark_theme_classification(qapp, theme_name, expect_dark):
-    """dark/dracula는 dark 계열, light는 아니다 (is_dark_theme 팔레트 선택 계약)."""
+    """dark/dracula는 dark 계열, light/classic은 아니다 (is_dark_theme 팔레트 선택 계약,
+    classic은 S-060에서 밝은 계열로 추가됨)."""
     theme_manager.apply_theme(theme_name)
     assert theme_manager.is_dark_theme() is expect_dark
 
@@ -144,6 +146,23 @@ def test_get_icon_unknown_name_returns_null_icon(qapp):
     theme_manager.apply_theme("dark")
     icon = theme_manager.get_icon("__definitely_not_a_real_icon__")
     assert icon.isNull()
+
+
+def test_get_icon_classic_theme_falls_back_to_light_icon_directory(qapp):
+    """
+    S-060: classic 전용 아이콘 디렉터리(resources/icons/classic/)가 아직 없으므로,
+    get_icon()은 classic 접미사 시도가 실패하면 light 아이콘으로 폴백해야 한다
+    (classic은 밝은 계열이라 light 아이콘이 배경과 어울린다 - 확정 설계 4번 (b)).
+    classic 디렉터리가 나중에 생기면 그쪽이 먼저 시도된다(코드 순서상 우선).
+    """
+    theme_manager.apply_theme("classic")
+
+    # 전제 확인: classic 아이콘 디렉터리는 아직 없다 (있다면 이 테스트의 전제가 깨진 것).
+    assert not theme_manager._resource_path.get_icon_path("add", "classic").exists()
+    assert theme_manager._resource_path.get_icon_path("add", "light").exists()
+
+    icon = theme_manager.get_icon("add")
+    assert not icon.isNull(), "classic 테마는 light 아이콘으로 폴백해 아이콘을 로드해야 한다"
 
 
 # -----------------------------------------------------------------------------

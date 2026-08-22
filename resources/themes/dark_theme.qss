@@ -311,7 +311,10 @@ QToolBar QToolButton:pressed {
    Custom Buttons & States (Accent, Danger, Warning, Connected)
    ================================================================================== */
 
-/* Accent - Save, Start */
+/* Accent - Save, Start
+   S-063: normal/pressed는 이미 기준 충족(5.13/7.87). hover(#388E3C)만 흰 글씨
+   대비 미달(4.12)이라 배경을 더 낮춤(#256029, 7.54). disabled 글씨도 대비
+   미달(2.26)이라 밝게 조정(#7fbf8a, 5.81). */
 QPushButton[class="accent"] {
     background-color: #2E7D32;
     border-color: #4CAF50;
@@ -319,7 +322,7 @@ QPushButton[class="accent"] {
 }
 
 QPushButton[class="accent"]:hover {
-    background-color: #388E3C;
+    background-color: #256029;
     border-color: #66BB6A;
 }
 
@@ -330,10 +333,12 @@ QPushButton[class="accent"]:pressed {
 QPushButton[class="accent"]:disabled {
     background-color: #1b3a20;
     border-color: #2e5030;
-    color: #507050;
+    color: #7fbf8a;
 }
 
-/* Danger - Stop, Delete */
+/* Danger - Stop, Delete
+   S-063: normal/hover/pressed는 이미 기준 충족(5.62/4.98/6.57). disabled만
+   미달(1.86)이라 글씨를 밝게 조정(#d99999, 6.13). */
 QPushButton[class="danger"] {
     background-color: #C62828;
     border-color: #F44336;
@@ -352,10 +357,12 @@ QPushButton[class="danger"]:pressed {
 QPushButton[class="danger"]:disabled {
     background-color: #4a1b1b;
     border-color: #602525;
-    color: #804040;
+    color: #d99999;
 }
 
-/* Warning - Pause */
+/* Warning - Pause
+   S-063: normal/hover/pressed는 이미 기준 충족(8.69/10.14/5.07). disabled만
+   미달(1.87)이라 글씨를 밝게 조정(#e0be5c, 6.10). */
 QPushButton[class="warning"] {
     background-color: #FFC107;
     border-color: #FFD740;
@@ -374,7 +381,7 @@ QPushButton[class="warning"]:pressed {
 QPushButton[class="warning"]:disabled {
     background-color: #4a3b00;
     border-color: #605000;
-    color: #806000;
+    color: #e0be5c;
 }
 
 /* Port States */

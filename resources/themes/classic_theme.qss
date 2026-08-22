@@ -1,0 +1,484 @@
+/* ==================================================================================
+   SerialTool Classic Theme (S-060)
+   ==================================================================================
+   [Color Palette Reference]
+
+   1. Backgrounds
+      - BG Panel/Main:      #d4d0c8 (Window, Widget, Tab Selected, Button face)
+      - BG Input/Base:      #ffffff (Text inputs, lists, tables)
+      - BG Hover:           #c8c4bc (Button/Tab hover - darker face)
+      - BG Pressed:         #b8b4ac (Button/Menu pressed)
+      - BG Disabled:        #cac6be
+
+   2. Foregrounds (Text)
+      - Text Main:          #000000
+      - Text Dim/Hint:      #505050
+      - Text Disabled:      #6d6d6d
+      - Text Inverted:      #ffffff
+
+   3. Borders & Separators
+      - Border Main:        #707070
+      - Border Disabled:    #a8a4a0
+      - Border Focus:       #000080 (Navy Accent)
+
+   4. Selections
+      - Selection BG:       #000080 (Navy)
+      - Selection Text:     #ffffff
+
+   5. Accents & States
+      - Primary (Navy):     #000080 (Focus, Active Tab, Links, Section Title)
+      - Success (Green):    #4CAF50 (Connect, Start) - shared with light theme family
+      - Danger  (Red):      #F44336 (Error, Stop, Delete) - shared with light theme family
+      - Warning (Orange):   #FFC107 (Pause, Warning) - shared with light theme family
+
+   6. Component Specific
+      - Hover Overlay:      Darken panel by ~8% (#c8c4bc)
+      - Pressed Overlay:    Darken panel by ~16% (#b8b4ac)
+      - Tooltip:            #ffffe1 bg (classic pale-yellow), #000000 text, #707070 border
+
+   [Contrast verification — 2026-08-22, S-060, WCAG relative-luminance formula
+    (script pattern: tasks/S-022-theme-contrast-hardcoded-colors.md)]
+      #000000 on #d4d0c8 (body text / panel)      = 13.656 : 1  (>= 4.5 required)
+      #000000 on #ffffff (body text / input)      = 21.000 : 1  (>= 4.5 required)
+      #505050 on #d4d0c8 (hint/dim text / panel)  =  5.243 : 1  (>= 4.5 required)
+      #505050 on #ffffff (hint/dim text / input)  =  8.063 : 1  (>= 4.5 required)
+      #6d6d6d on #d4d0c8 (disabled text / panel)  =  3.365 : 1  (>= 3.0 required)
+      #6d6d6d on #ffffff (disabled text / input)  =  5.174 : 1  (>= 3.0 required)
+      #707070 on #d4d0c8 (border / panel)         =  3.220 : 1  (>= 3.0 required)
+      #707070 on #ffffff (border / input)         =  4.952 : 1  (>= 3.0 required)
+      #ffffff on #000080 (selection text / navy)  = 16.010 : 1  (>= 4.5 required)
+      #000080 on #d4d0c8 (accent text / panel)    = 10.411 : 1  (>= 4.5 required)
+      #1b5e20 on #d4d0c8 (connected status label) =  5.117 : 1  (>= 4.5 required)
+      #616161 on #d4d0c8 (disconnected status)    =  4.027 : 1  (>= 4.5 required)
+      #b71c1c on #ffcdd2 (recording text/bg)      =  4.666 : 1  (>= 4.5 required)
+    NOTE: 지침 초안의 테두리 색 #808080은 #d4d0c8 배경에서 2.568:1로 3:1 미달이라
+    #707070로 상향했다 (하위 모델 조정, S-035 선례와 동일 절차). 3D 베벨 장식색
+    (#ffffff/#404040 느낌의 밝은/어두운 면)은 이 파일에서 텍스트/의미 전달 목적이
+    아니므로 별도 대비 기준을 적용하지 않았다 - 별도 베벨 규칙은 도입하지 않음
+    (기존 3테마에도 3D 베벨 셀렉터가 없어 대칭 유지를 위해 생략).
+   ================================================================================== */
+
+/* Global Settings */
+QWidget {
+    background-color: #d4d0c8;
+    color: #000000;
+    selection-background-color: #000080;
+    selection-color: #ffffff;
+}
+
+QToolTip {
+    background-color: #ffffe1;
+    color: #000000;
+    border-color: #707070;
+}
+
+/* MainWindow */
+QMainWindow {
+    background-color: #d4d0c8;
+}
+
+QMainWindow::separator {
+    background-color: #707070;
+}
+
+QMainWindow::separator:hover {
+    background-color: #505050;
+}
+
+/* QTabWidget */
+QTabWidget::pane {
+    border-color: #707070;
+    background-color: #d4d0c8;
+}
+
+QTabBar::tab {
+    background-color: #d4d0c8;
+    color: #505050;
+    border-color: #707070;
+}
+
+QTabBar::tab:selected {
+    background-color: #d4d0c8;
+    color: #000000;
+    border-bottom-color: #000080;
+}
+
+QTabBar::tab:hover {
+    background-color: #c8c4bc;
+    color: #000000;
+}
+
+QTabBar::close-button {
+    image: url(resources/icons/light/close_light.svg);
+}
+
+QTabBar::close-button:hover {
+    background-color: #b8b4ac;
+}
+
+/* QPushButton */
+QPushButton {
+    background-color: #d4d0c8;
+    border-color: #707070;
+    color: #000000;
+}
+
+QPushButton:hover {
+    background-color: #c8c4bc;
+    border-color: #505050;
+}
+
+QPushButton:pressed {
+    background-color: #b8b4ac;
+    color: #000000;
+}
+
+QPushButton:checked {
+    background-color: #000080;
+    border-color: #000080;
+    color: #ffffff;
+}
+
+QPushButton:disabled {
+    background-color: #cac6be;
+    color: #6d6d6d;
+    border-color: #a8a4a0;
+}
+
+/* Icons (classic 아이콘 디렉터리 없음 - light 아이콘 재사용, ThemeResourceLoader.get_icon()도
+   동일하게 classic -> light 폴백한다) */
+QPushButton#add_row_btn { qproperty-icon: url(resources/icons/light/add_light.svg); }
+QPushButton#remove_row_btn { qproperty-icon: url(resources/icons/light/delete_light.svg); }
+QPushButton#up_row_btn { qproperty-icon: url(resources/icons/light/up_light.svg); }
+QPushButton#down_row_btn { qproperty-icon: url(resources/icons/light/down_light.svg); }
+QPushButton#data_log_search_prev_btn { qproperty-icon: url(resources/icons/light/find_prev_light.svg); }
+QPushButton#data_log_search_next_btn { qproperty-icon: url(resources/icons/light/find_next_light.svg); }
+
+/* Inputs */
+QLineEdit, QTextEdit, QPlainTextEdit, QSmartTextEdit, QSmartListView {
+    background-color: #ffffff;
+    border-color: #707070;
+    color: #000000;
+    selection-background-color: #000080;
+    selection-color: #ffffff;
+}
+
+QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QSmartTextEdit:focus, QSmartListView:focus {
+    border-color: #000080;
+}
+
+QLineEdit:disabled, QTextEdit:disabled, QPlainTextEdit:disabled, QSmartTextEdit:disabled, QSmartListView:disabled {
+    background-color: #cac6be;
+    color: #6d6d6d;
+}
+
+/* QSmartTextEdit Properties */
+QSmartTextEdit {
+    qproperty-lineNumberBackgroundColor: #cac6be;
+    qproperty-lineNumberColor: #505050;
+    qproperty-currentLineColor: #e4e0d8;
+}
+
+/* QComboBox */
+QComboBox {
+    background-color: #ffffff;
+    border-color: #707070;
+    color: #000000;
+}
+
+QComboBox:hover {
+    background-color: #f0f0e8;
+}
+
+QComboBox:on {
+    border-color: #000080;
+}
+
+QComboBox::down-arrow {
+    image: url(resources/icons/light/arrow_down_light.svg);
+}
+
+QComboBox QAbstractItemView {
+    background-color: #ffffff;
+    border-color: #707070;
+    selection-background-color: #000080;
+    selection-color: #ffffff;
+}
+
+/* QProgressBar */
+QProgressBar {
+    background-color: #ffffff;
+    border-color: #707070;
+    color: #000000;
+}
+
+QProgressBar::chunk {
+    background-color: #000080;
+}
+
+/* QScrollBar */
+QScrollBar:vertical, QScrollBar:horizontal {
+    background-color: #cac6be;
+}
+
+QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
+    background-color: #707070;
+}
+
+QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
+    background-color: #505050;
+}
+
+/* Views */
+QTableView, QListView, QTreeWidget, QSmartListView {
+    background-color: #ffffff;
+    border-color: #707070;
+    gridline-color: #c0bcb4;
+    selection-background-color: #000080;
+    selection-color: #ffffff;
+    color: #000000;
+}
+
+QHeaderView::section {
+    background-color: #d4d0c8;
+    color: #000000;
+    border-right-color: #707070;
+    border-bottom-color: #707070;
+}
+
+QTableCornerButton::section {
+    background-color: #d4d0c8;
+    border-color: #707070;
+}
+
+/* QCheckBox */
+QCheckBox::indicator {
+    border-color: #707070;
+    background-color: #ffffff;
+}
+
+QCheckBox::indicator:checked {
+    background-color: #000080;
+    border-color: #000080;
+}
+
+QCheckBox::indicator:hover {
+    border-color: #000080;
+}
+
+/* QGroupBox */
+/* border-color #707070 (지침 초안 #808080에서 상향): 배경 #d4d0c8 대비 2.568:1 -> 3.220:1
+   (계산: tasks/S-022 스크립트 패턴, 실측값은 이 파일 상단 대비 표 참고). */
+QGroupBox {
+    border-color: #707070;
+}
+
+QGroupBox::title, QLabel[class="section-title"] {
+    color: #000080;
+}
+
+QLabel[class="hint-text"],
+QLabel[class="about-version"],
+QLabel[class="about-copyright"] {
+    color: #505050;
+}
+
+QLabel[class="file-path-box"] {
+    color: #505050;
+    border-color: #707070;
+    background-color: #ffffff;
+}
+
+/* QStatusBar */
+QStatusBar {
+    background-color: #d4d0c8;
+    color: #000000;
+    border-top-color: #707070;
+}
+
+/* QMenu */
+QMenuBar {
+    background-color: #d4d0c8;
+    color: #000000;
+}
+QMenuBar::item:selected {
+    background-color: #000080;
+    color: #ffffff;
+}
+
+QMenu {
+    background-color: #d4d0c8;
+    border-color: #707070;
+}
+
+QMenu::item:selected {
+    background-color: #000080;
+    color: #ffffff;
+}
+
+/* QToolBar */
+QToolBar {
+    background-color: #d4d0c8;
+    border-bottom-color: #707070;
+}
+
+QToolBar QToolButton:hover {
+    background-color: #c8c4bc;
+}
+
+QToolBar QToolButton:pressed {
+    background-color: #b8b4ac;
+}
+
+/* ==================================================================================
+   Custom Buttons & States (Accent, Danger, Warning, Connected)
+   ================================================================================== */
+
+/* Accent - Save, Start (색 값은 light 테마 계열과 공유 - 의미 인식 일관성)
+   S-063: 흰 글씨가 밝은 녹 배경(#4CAF50/#66BB6A)에서 대비 미달(2.78/2.36)이라
+   어두운 글씨(#1b1b1b)로 전환. pressed는 배경을 #1B5E20으로 낮춰 흰 글씨 유지
+   (어두운 배경엔 밝은 글씨가 자연스럽다 - dracula 사례와 동일 원칙). disabled
+   글씨는 이 파일 팔레트에 이미 있는 "connected status label" 색 #1b5e20 재사용. */
+QPushButton[class="accent"] {
+    background-color: #4CAF50;
+    border-color: #388E3C;
+    color: #1b1b1b;
+}
+
+QPushButton[class="accent"]:hover {
+    background-color: #66BB6A;
+    border-color: #2E7D32;
+}
+
+QPushButton[class="accent"]:pressed {
+    background-color: #1B5E20;
+    color: #ffffff;
+}
+
+QPushButton[class="accent"]:disabled {
+    background-color: #A5D6A7;
+    border-color: #81C784;
+    color: #1b5e20;
+}
+
+/* Danger - Stop, Delete
+   S-063: 흰 글씨 배경 대비가 미달(normal 3.68/hover 3.49)이라 배경을 한 단계씩
+   낮춤(normal→#C62828, hover→#D32F2F, pressed→#B71C1C). 글씨는 흰색 유지. */
+QPushButton[class="danger"] {
+    background-color: #C62828;
+    border-color: #D32F2F;
+    color: #ffffff;
+}
+
+QPushButton[class="danger"]:hover {
+    background-color: #D32F2F;
+    border-color: #C62828;
+}
+
+QPushButton[class="danger"]:pressed {
+    background-color: #B71C1C;
+}
+
+QPushButton[class="danger"]:disabled {
+    background-color: #EF9A9A;
+    border-color: #E57373;
+    color: #7f0000;
+}
+
+/* Warning - Pause
+   S-063: pressed 배경이 실수로 danger 톤(#B71C1C)이었던 것을 warning 계열 어두운
+   주황(#FF6F00)으로 교정 - 기존 검정 글씨(#000000)로 대비 확보(7.53). disabled도
+   글씨색 교체(1.22→16.24). normal/hover(#000000)는 이미 기준 충족이라 유지. */
+QPushButton[class="warning"] {
+    background-color: #FFC107;
+    border-color: #FFD740;
+    color: #000000;
+}
+
+QPushButton[class="warning"]:hover {
+    background-color: #FFD740;
+    border-color: #FFEA00;
+}
+
+QPushButton[class="warning"]:pressed {
+    background-color: #FF6F00;
+}
+
+QPushButton[class="warning"]:disabled {
+    background-color: #FFE082;
+    border-color: #FFD54F;
+    color: #000000;
+}
+
+/* Port States */
+QPushButton[state="connected"] {
+    background-color: #4CAF50;
+    border-color: #388E3C;
+    color: #ffffff;
+}
+
+QPushButton[state="connected"]:hover {
+    background-color: #66BB6A;
+    border-color: #2E7D32;
+}
+
+QPushButton[state="disconnected"] {
+    background-color: #d4d0c8;
+    border-color: #707070;
+    color: #000000;
+}
+
+QPushButton[state="disconnected"]:hover {
+    background-color: #c8c4bc;
+    border-color: #505050;
+}
+
+QPushButton[state="error"] {
+    background-color: #F44336;
+    border-color: #D32F2F;
+    color: #ffffff;
+}
+
+QPushButton[state="error"]:hover {
+    background-color: #EF5350;
+    border-color: #C62828;
+}
+
+/* Recording (REC) State */
+QPushButton[state="recording"]:checked {
+    background-color: #ffcdd2;
+    color: #b71c1c;
+}
+
+/* Port Status Dot (StatusBar) */
+QLabel[state="connected"] {
+    color: #1b5e20;
+    font-weight: bold;
+}
+
+QLabel[state="disconnected"] {
+    color: #616161;
+    font-weight: bold;
+}
+
+/* Danger Progress (Buffer Overflow / Transfer Failure) */
+QProgressBar[state="danger"]::chunk {
+    background-color: #F44336;
+}
+
+/* Disabled States */
+QComboBox:disabled {
+    background-color: #cac6be;
+    color: #6d6d6d;
+    border-color: #a8a4a0;
+}
+
+QCheckBox::indicator:disabled {
+    background-color: #cac6be;
+    border-color: #a8a4a0;
+}
+
+QTabBar::tab:disabled {
+    background-color: #cac6be;
+    color: #6d6d6d;
+}

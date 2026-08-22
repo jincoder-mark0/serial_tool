@@ -40,7 +40,7 @@ os.chdir(PROJECT)
 def main() -> None:
     """조합 1건을 캡처한다."""
     ap = argparse.ArgumentParser(description="SerialTool UX 스크린샷 캡처")
-    ap.add_argument("--theme", required=True, choices=["dark", "light"])
+    ap.add_argument("--theme", required=True, choices=["dark", "light", "classic", "dracula"])
     ap.add_argument("--lang", required=True, choices=["ko", "en"])
     ap.add_argument("--out", required=True, help="PNG 저장 디렉터리")
     args = ap.parse_args()

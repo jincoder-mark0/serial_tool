@@ -114,8 +114,11 @@ class ThemeResourceLoader:
 
         Logic:
             1. 테마별 아이콘({name}_{theme}.svg) 우선 검색
-            2. 실패 시 기본 아이콘({name}.svg/png) 검색
-            3. 확장자가 없으면 .png를 기본으로 시도
+            2. classic 테마이고 classic 전용 아이콘이 없으면 light 아이콘으로 폴백
+               (classic은 밝은 계열이라 light 아이콘이 배경과 어울린다 - S-060.
+               classic 전용 아이콘 디렉터리가 나중에 생기면 그쪽이 먼저 시도된다).
+            3. 그래도 실패 시 기본 아이콘({name}.svg/png) 검색
+            4. 확장자가 없으면 .png를 기본으로 시도
 
         Args:
             icon_name (str): 아이콘 파일명 (예: 'add', 'settings.png').
@@ -125,9 +128,14 @@ class ThemeResourceLoader:
             QIcon: 로드된 아이콘 객체.
         """
         # 테마 접미사 결정을 위한 타겟 테마 확인
-        # 실제 테마명을 그대로 사용 (dark/light/dracula 각각의 아이콘 디렉토리 존재)
+        # 실제 테마명을 그대로 사용 (dark/light/dracula/classic 각각의 아이콘 디렉토리 존재 가능)
         target_theme = current_theme.lower()
-        valid_suffixes = {ThemeType.DARK.value, ThemeType.LIGHT.value, ThemeType.DRACULA.value}
+        valid_suffixes = {
+            ThemeType.DARK.value,
+            ThemeType.LIGHT.value,
+            ThemeType.DRACULA.value,
+            ThemeType.CLASSIC.value,
+        }
         if target_theme in valid_suffixes:
             theme_suffix = target_theme
         else:
@@ -136,6 +144,10 @@ class ThemeResourceLoader:
 
         # 1. 테마별 아이콘 시도 (ResourcePath 활용)
         icon_path = self.resource_path.get_icon_path(icon_name, theme_suffix)
+
+        if theme_suffix == ThemeType.CLASSIC.value and not icon_path.exists():
+            # classic 전용 아이콘 디렉터리/파일이 없으면 light로 폴백
+            icon_path = self.resource_path.get_icon_path(icon_name, ThemeType.LIGHT.value)
 
         if not icon_path.exists():
             # 2. 폴백: 테마 접미사 없이 시도

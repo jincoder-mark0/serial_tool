@@ -310,11 +310,14 @@ QToolBar QToolButton:pressed {
    Custom Buttons & States (Accent, Danger, Warning, Connected)
    ================================================================================== */
 
-/* Accent - Save, Start */
+/* Accent - Save, Start
+   S-063: 흰 글씨가 밝은 녹 배경(#4CAF50/#66BB6A)에서 대비 미달(2.78/2.36)이라
+   어두운 글씨(#1b1b1b)로 전환. pressed는 배경을 #1B5E20으로 낮춰 흰 글씨 유지
+   (어두운 배경엔 밝은 글씨가 자연스럽다 - dracula 사례와 동일 원칙). */
 QPushButton[class="accent"] {
     background-color: #4CAF50;
     border-color: #388E3C;
-    color: #ffffff;
+    color: #1b1b1b;
 }
 
 QPushButton[class="accent"]:hover {
@@ -323,38 +326,44 @@ QPushButton[class="accent"]:hover {
 }
 
 QPushButton[class="accent"]:pressed {
-    background-color: #388E3C;
+    background-color: #1B5E20;
+    color: #ffffff;
 }
 
 QPushButton[class="accent"]:disabled {
     background-color: #A5D6A7;
     border-color: #81C784;
-    color: #E8F5E9;
+    color: #1b5e20;
 }
 
-/* Danger - Stop, Delete */
+/* Danger - Stop, Delete
+   S-063: 흰 글씨 배경 대비가 미달(normal 3.68/hover 3.49)이라 배경을 한 단계씩
+   낮춤(normal→#C62828, hover→#D32F2F, pressed→#B71C1C). 글씨는 흰색 유지. */
 QPushButton[class="danger"] {
-    background-color: #F44336;
+    background-color: #C62828;
     border-color: #D32F2F;
     color: #ffffff;
 }
 
 QPushButton[class="danger"]:hover {
-    background-color: #EF5350;
+    background-color: #D32F2F;
     border-color: #C62828;
 }
 
 QPushButton[class="danger"]:pressed {
-    background-color: #D32F2F;
+    background-color: #B71C1C;
 }
 
 QPushButton[class="danger"]:disabled {
     background-color: #EF9A9A;
     border-color: #E57373;
-    color: #FFEBEE;
+    color: #7f0000;
 }
 
-/* Warning - Pause */
+/* Warning - Pause
+   S-063: pressed 배경이 실수로 danger 톤(#B71C1C)이었던 것을 warning 계열 어두운
+   주황(#FF6F00)으로 교정 - 어두운 글씨(#1b1b1b)로 대비 확보(6.17). disabled도
+   글씨색 교체(1.22→9.77). normal/hover(#333333)는 이미 기준 충족이라 유지. */
 QPushButton[class="warning"] {
     background-color: #FFC107;
     border-color: #FFD740;
@@ -367,13 +376,14 @@ QPushButton[class="warning"]:hover {
 }
 
 QPushButton[class="warning"]:pressed {
-    background-color: #B71C1C;
+    background-color: #FF6F00;
+    color: #1b1b1b;
 }
 
 QPushButton[class="warning"]:disabled {
     background-color: #FFE082;
     border-color: #FFD54F;
-    color: #FFF8E1;
+    color: #1b1b1b;
 }
 
 /* Port States */

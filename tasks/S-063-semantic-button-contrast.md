@@ -1,6 +1,14 @@
 # S-063 — 의미색 버튼(accent/danger/warning) 텍스트 대비 미달
 
-- Status: DOING (2026-08-22 — 하위 모델 수행 중)
+- Status: DONE (2026-08-22 — 하위 모델 수행. 실측 재확인 결과 이 파일 상단의 감사
+  수치 일부가 실제 QSS 값과 달랐음(예: light/classic warning은 이미 `#333333`/`#000000`
+  어두운 글씨였고 dark warning normal/hover/pressed도 이미 기준 충족 — 재계산 후 실제
+  결함만 수정). 4테마 × accent/danger/warning × 4상태(normal/hover/pressed/disabled)
+  총 48개 조합 전부 WCAG 기준(활성 ≥4.5, disabled ≥3.0) 충족을 계산으로 확인·첨부.
+  light/classic warning:pressed 배경이 실수로 danger 톤(#B71C1C)이던 기존 버그도
+  warning 계열(#FF6F00)로 교정. `tools/ux_capture.py` choices에 dracula 추가.
+  캡처(4테마 × 기본/disabled 상태 + 강제 enabled 상태) 육안 확인 — 4테마 모두
+  전송·반복 버튼 텍스트 명확히 읽힘. pytest 382 passed, ruff 0건.)
 - Recommended model: **하위(Sonnet) 가능** (목표값 확정 — 벗어나면 중단·보고)
 - 선행: S-060 (클래식 테마 추가 시 드러남)
 - Skills to load: task-done
@@ -58,7 +66,7 @@ dracula accent         #282a36 on #50fa7b: 10.38  OK   ← 어두운 글씨가 �
 
 ## Acceptance criteria (DoD)
 
-- [ ] 4테마의 의미색 버튼 텍스트가 모든 상태에서 대비 기준을 만족한다(계산 첨부).
-- [ ] 캡처에서 버튼 글씨가 명확히 읽힌다(육안 확인 보고).
-- [ ] 의미색(녹/빨/주황)의 인지가 유지된다 — 색상 자체를 크게 바꾸지 않았음을 보고.
-- [ ] 전체 pytest·ruff 통과.
+- [x] 4테마의 의미색 버튼 텍스트가 모든 상태에서 대비 기준을 만족한다(계산 첨부).
+- [x] 캡처에서 버튼 글씨가 명확히 읽힌다(육안 확인 보고).
+- [x] 의미색(녹/빨/주황)의 인지가 유지된다 — 색상 자체를 크게 바꾸지 않았음을 보고.
+- [x] 전체 pytest·ruff 통과.

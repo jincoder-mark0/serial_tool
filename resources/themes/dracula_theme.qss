@@ -349,8 +349,12 @@ QPushButton[class="danger"]:hover {
     border-color: #ff6e6e;
 }
 
+/* S-063: 어두운 글씨(#282a36)가 pressed의 어두운 배경(#cc4444)에서 대비
+   미달(3.04)이라, 배경을 danger normal 계열(#C62828)로 바꾸고 밝은 글씨
+   (#f8f8f2)로 전환 - 밝은 배경엔 어두운 글씨, 어두운 배경엔 밝은 글씨 원칙. */
 QPushButton[class="danger"]:pressed {
-    background-color: #cc4444;
+    background-color: #C62828;
+    color: #f8f8f2;
 }
 
 QPushButton[class="danger"]:disabled {
