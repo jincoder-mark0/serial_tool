@@ -16,15 +16,15 @@
 * 상태 변경 시그널 발신 (Start, Stop, Pause, Broadcast, Script I/O)
 
 ## HOW
-* QGridLayout을 사용하여 설정 및 제어 버튼 배치
+* QHBoxLayout 3행(설정값 / 스크립트 I·O / 실행 제어)으로 실행 그룹 배치 (S-026 — 가로 폭 압박 해소)
 * 사용자 입력을 `MacroRepeatOption` DTO로 변환하여 시그널 발생
 * set_running_state 메서드를 통해 실행 상태에 따른 버튼 활성화 제어
 """
 from typing import Optional, Dict, Any
 
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QPushButton,
-    QLabel, QLineEdit, QSpinBox, QGroupBox, QGridLayout, QCheckBox
+    QWidget, QVBoxLayout, QHBoxLayout, QPushButton,
+    QLabel, QLineEdit, QSpinBox, QGroupBox, QCheckBox
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 
@@ -152,25 +152,37 @@ class MacroControlWidget(QWidget):
         self.macro_repeat_count_lbl.setAlignment(Qt.AlignCenter)
 
 
-        execution_layout = QGridLayout()
+        # 3행 구성 (S-026): 1행 설정값 / 2행 스크립트 I·O / 3행 실행 제어
+        # 기존 QGridLayout(1행 7열)이 가로 폭을 지배(592px)하던 문제를 세로로 풀어 해소.
+        execution_layout = QVBoxLayout()
         execution_layout.setContentsMargins(2, 2, 2, 2)  # 그룹박스 내부 촘촘한 여백 (기존 값, 상수 목록에 없음)
         execution_layout.setSpacing(LAYOUT_SPACING_DEFAULT)
 
-        # Row 0 배치
-        execution_layout.addWidget(self.interval_lbl, 0, 0)
-        execution_layout.addWidget(self.repeat_interval_ms_edit, 0, 1)
-        execution_layout.addWidget(self.repeat_max_lbl, 0, 2)
-        execution_layout.addWidget(self.repeat_max_spin, 0, 3)
-        execution_layout.addWidget(self.broadcast_chk, 0, 4)
-        execution_layout.addWidget(self.script_save_btn, 0, 5)
-        execution_layout.addWidget(self.script_load_btn, 0, 6)
+        # Row 0: 간격(ms) + 반복 횟수 + 브로드캐스트
+        row0_layout = QHBoxLayout()
+        row0_layout.addWidget(self.interval_lbl)
+        row0_layout.addWidget(self.repeat_interval_ms_edit)
+        row0_layout.addWidget(self.repeat_max_lbl)
+        row0_layout.addWidget(self.repeat_max_spin)
+        row0_layout.addWidget(self.broadcast_chk)
+        row0_layout.addStretch()
 
-        # Row 1 배치
-        # Span을 사용하여 버튼 크기 조절
-        execution_layout.addWidget(self.macro_repeat_start_btn, 1, 0, 1, 3) # Span 3
-        execution_layout.addWidget(self.macro_repeat_stop_btn, 1, 3, 1, 2)  # Span 2
-        execution_layout.addWidget(self.macro_repeat_pause_btn, 1, 5)
-        execution_layout.addWidget(self.macro_repeat_count_lbl, 1, 6)
+        # Row 1: 스크립트 저장/불러오기
+        row1_layout = QHBoxLayout()
+        row1_layout.addWidget(self.script_save_btn)
+        row1_layout.addWidget(self.script_load_btn)
+        row1_layout.addStretch()
+
+        # Row 2: 실행 제어 (시작/정지/일시정지 + 진행 카운터)
+        row2_layout = QHBoxLayout()
+        row2_layout.addWidget(self.macro_repeat_start_btn)
+        row2_layout.addWidget(self.macro_repeat_stop_btn)
+        row2_layout.addWidget(self.macro_repeat_pause_btn)
+        row2_layout.addWidget(self.macro_repeat_count_lbl)
+
+        execution_layout.addLayout(row0_layout)
+        execution_layout.addLayout(row1_layout)
+        execution_layout.addLayout(row2_layout)
 
         # 자동 실행 설정 그룹 (Execution Group)
         self.execution_settings_grp = QGroupBox(language_manager.get_text("macro_control_grp_execution"))
