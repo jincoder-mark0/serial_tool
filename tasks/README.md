@@ -76,9 +76,14 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-049](S-049-log-widget-commonization.md) | 로그 위젯 중복 공통화 | P3 | DONE |
 | [S-050](S-050-theme-manager-safety-net.md) | 테마/색 매니저 안전망 + 순환 참조 해소 | P3 | DONE |
 | [S-051](S-051-datalog-broadcast-init-mismatch.md) | DataLog 브로드캐스트 초기값 불일치 | — | DONE |
+| [S-052](S-052-log-control-flow-unify.md) | 로그 위젯 제어 흐름 통일 (Presenter 권위) | 후속 | DONE |
+| [S-053](S-053-theme-manager-decompose.md) | ThemeManager 분해 (FontManager + ResourceLoader) | 후속 | DONE |
+| [S-054](S-054-color-manager-decompose.md) | ColorManager 분해 (Qt 비의존 Repository) | 후속 | DONE |
+| [S-055](S-055-system-log-persistence-missing.md) | 시스템 로그 저장이 동작하지 않음 | 후속 | TODO (상위 결정) |
 
-후속(미작성): God object 실제 분해(후보는 S-050 보고에 정리됨), 로그 위젯 제어 흐름
-불일치 통일 여부, ruff 잔여 44건 정리.
+**진행 중**: [S-036](S-036-fixed-font-routing-and-i18n.md) — 고정폭 폰트 미반영
+(2026-08-22 실측으로 미해결 확정: D2Coding 16pt로 바꿔도 Consolas 9pt로 렌더).
+**남은 후속**: MainPresenter 분해, ruff 잔여 44건, 패킷 뷰 스로틀(측정 선행).
 
 - **하위 가능**: Steps가 자족적으로 작성됨. Steps 밖 판단이 필요해지면 즉시 중단·보고.
 - **상위 전용/권장**: 설계·판단이 본체인 태스크. 하위 모델은 시작하지 않는다.

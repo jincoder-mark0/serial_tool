@@ -1,8 +1,31 @@
 # S-036 — 고정폭 폰트 설정 미반영 수정 + 언어팩 잔여 4건
 
-- Status: TODO
+- Status: TODO — **미해결 확정 (2026-08-22 실측)**
 - Recommended model: **하위(Sonnet) 가능** (확정 설계 기준)
-- 선행: **S-035 커밋 후** (common.qss·manual_control.py 충돌 회피 — 순차)
+- 선행: S-035·S-053 커밋 완료 (충돌 없음)
+
+## ⚠ 실측 증거 (2026-08-22, 상위 모델 직접 측정)
+
+`QSmartListView`에 `class="fixed-font"`를 주고 `ThemeManager.set_fixed_font()`로 폰트를
+바꾼 뒤 `QFontInfo(widget.font())`로 실제 적용 폰트를 확인:
+
+```
+설정: Consolas 9pt      →  실제: Consolas 9pt
+설정: D2Coding 16pt     →  실제: Consolas 9pt   ← 반영 안 됨
+설정: Courier New 20pt  →  실제: Consolas 9pt   ← 반영 안 됨
+
+common.qss 정적 규칙 위치: 5246, 동적 규칙 위치: 15632 (동적이 뒤에 있음)
+```
+
+**동적 규칙이 스타일시트 뒤에 붙어 있는데도 정적 규칙이 이긴다** — Qt QSS는 특이도를
+먼저 보고 순서는 특이도가 같을 때만 따지기 때문이다(`QSmartListView.fixed-font` = type+class
+vs `.fixed-font` = class 단독).
+
+### 함께 고칠 것: S-050의 폰트 계약 테스트가 잘못된 것을 고정하고 있다
+
+`tests/test_theme_color_managers.py`의 폰트 관련 테스트는 "동적 폰트 블록이 문자열상
+**뒤에 위치**한다"를 검증한다. 위 실측대로 **순서는 무의미**하므로, 이 테스트는 통과하면서도
+실제 반영 실패를 잡지 못한다. **실제 위젯의 `QFontInfo`로 검증하도록 고쳐야 한다.**
 - Skills to load: task-done, lang-keys
 
 ## 목적 (Why) — 사용자 보고 "폰트 구분 부정확" + "언어팩 누락" (2026-08-22 점검 판정)

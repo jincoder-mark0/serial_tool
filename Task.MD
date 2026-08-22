@@ -46,8 +46,22 @@
 | [S-050](tasks/S-050-theme-manager-safety-net.md) | 테마/색 매니저 안전망 + 순환 참조 해소 | P3 | ✅ 완료 |
 | [S-051](tasks/S-051-datalog-broadcast-init-mismatch.md) | DataLog 브로드캐스트 초기값 불일치 | — | ✅ 완료 |
 
-**후속 후보**: God object 실제 분해(분해 후보는 S-050 보고에 정리 — 이제 특성화 테스트가
-있어 착수 가능), 로그 위젯 제어 흐름 불일치 통일 여부, ruff 잔여 44건, 패킷 뷰 무스로틀.
+### 후속 처리 (2026-08-22, 사용자 지시 "후속후보 진행, 불일치는 통일")
+
+| ID | 제목 | 상태 |
+|---|---|---|
+| [S-052](tasks/S-052-log-control-flow-unify.md) | 로그 위젯 제어 흐름 **Presenter 권위로 통일** | ✅ 완료 |
+| [S-053](tasks/S-053-theme-manager-decompose.md) | ThemeManager(833줄) → FontManager + ThemeResourceLoader + 오케스트레이터 | ✅ 완료 |
+| [S-054](tasks/S-054-color-manager-decompose.md) | ColorManager(511줄) → Qt 비의존 ColorRuleRepository + 어댑터 | ✅ 완료 |
+| [S-036](tasks/S-036-fixed-font-routing-and-i18n.md) | **고정폭 폰트 설정 미반영** + 언어팩 잔여 4건 | ▶ 진행 |
+| [S-055](tasks/S-055-system-log-persistence-missing.md) | 시스템 로그 저장이 동작하지 않음(구독자 0건) | ⏸ 상위 결정 필요 |
+
+- S-052~S-054는 **S-050 특성화 테스트 무수정 통과**를 안전 판정 기준으로 삼아 검증됐다.
+- **S-036은 2026-08-22 실측으로 미해결이 확정됐다**: `class="fixed-font"` 위젯에
+  D2Coding 16pt를 설정해도 실제 렌더는 Consolas 9pt다. common.qss의 폰트 하드코딩이
+  QSS 특이도로 동적 규칙을 이기며, **동적 규칙이 문자열상 뒤에 있어도 마찬가지**다.
+
+**남은 후속**: MainPresenter 분해, ruff 잔여 44건, 패킷 뷰 스로틀(측정 선행).
 
 | ID | 제목 | Phase | 상태 | 비고 |
 |---|---|---|---|---|
