@@ -16,7 +16,9 @@ $env:QT_QPA_PLATFORM="offscreen"; .venv\Scripts\python -m pytest -q   # 전체 �
 - Python 3.10+, 의존성: PyQt5, pyserial, commentjson, jsonschema (`requirements.txt`).
 - 테스트는 실제 시리얼 장비 없이 전부 실행 가능 (Mock Transport / offscreen).
 
-작업 현황은 **[Task.MD](Task.MD)** (작업 보드)로 관리한다. 태스크 시작·완료 시 반드시 갱신한다.
+작업 현황은 **[Task.MD](Task.MD)** (작업 보드) + **`tasks/S-0xx-*.md`** (세부 절차 —
+하위 모델용 자족적 문서, 시작 방법은 `tasks/README.md`)로 관리한다.
+태스크 시작·완료 시 반드시 갱신한다. 모델 분담(상위=Task 작성·판단 / 하위=Steps 수행)은 RULES.md §8.
 과거 Phase별 완료 체크리스트는 `doc/task.md`(이력 문서 — 추가만, 재구성 금지).
 
 ## 절대 규칙 (아키텍처 불변식)
@@ -71,6 +73,7 @@ $env:QT_QPA_PLATFORM="offscreen"; .venv\Scripts\python -m pytest -q   # 전체 �
 |---|---|
 | `README.md` | 사용자용 개요·설치·아키텍처 (기능 변경 시 현행화) |
 | `Task.MD` | **작업 보드** (현재 상태·우선순위·잔여 작업) |
+| `tasks/` | 태스크별 세부 절차 (하위 모델용 자족 문서, `tasks/README.md`부터) |
 | `doc/00_overview.md` | 아키텍처·모듈 요약 |
 | `doc/implementation_plan.md` | 단계별 구현 계획 |
 | `doc/task.md` | Phase별 완료 체크리스트 (이력) |
