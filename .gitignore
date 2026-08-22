@@ -151,6 +151,9 @@ Thumbs.db
 # Chat logs (로컬 대화 기록 — 커밋하지 않음)
 chatlog/
 
+# 참고자료
+reference/
+
 # ETC
 *.bak
 *복사본*
