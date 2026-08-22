@@ -18,7 +18,7 @@ Steps 그대로 수행할 수 있는 수준**으로 상세화한 문서 모음.
 ```powershell
 Set-Location e:\Python\serial_tool
 $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
-.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 367개)
+.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 382개)
 ```
 
 ## 태스크 목록 (의존 순서)
@@ -93,6 +93,9 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-061](S-061-packet-view-throttle.md) | 패킷 뷰 스로틀 (측정 선행 후 판단) | 성능 | DONE |
 | [S-062](S-062-scanner-cleanup-and-filter-dedup.md) | PortScanWorker 종료 정리 + 필터 판정 중복 해소 | 안정성 | DONE |
 | [S-063](S-063-semantic-button-contrast.md) | 의미색 버튼 텍스트 대비 미달 (전송·반복 버튼) | UX | DONE |
+| [S-064](S-064-parser-buffer-truncation-loss.md) | 파서 버퍼 잘라내기로 완결 패킷 유실 | P1 | TODO |
+| [S-065](S-065-qss-contrast-regression-test.md) | QSS 대비 회귀 테스트 + 포트 상태 색 점검 | UX | TODO |
+| [S-066](S-066-flaky-shutdown-datalogger-test.md) | 종료 시 DataLogger 테스트 간헐 실패 조사 | 안정성 | TODO |
 
 - **하위 가능**: Steps가 자족적으로 작성됨. Steps 밖 판단이 필요해지면 즉시 중단·보고.
 - **상위 전용/권장**: 설계·판단이 본체인 태스크. 하위 모델은 시작하지 않는다.

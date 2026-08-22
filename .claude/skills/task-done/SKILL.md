@@ -14,7 +14,7 @@ description: SerialTool 태스크 완료 판정·마감 절차 — 검증 3단�
 # ① 변경과 가장 가까운 테스트
 $env:QT_QPA_PLATFORM="offscreen"; .venv\Scripts\python -m pytest tests/test_<관련>.py -q
 
-# ② 전체 테스트 (기준선 367개 — 늘었으면 RULES.md·README §1.4·tests/README·이 파일 숫자 갱신)
+# ② 전체 테스트 (기준선 382개 — 늘었으면 RULES.md·README §1.4·tests/README·이 파일 숫자 갱신)
 $env:QT_QPA_PLATFORM="offscreen"; .venv\Scripts\python -m pytest -q
 
 # ③ UI 문자열을 건드렸다면 (아니면 생략)
