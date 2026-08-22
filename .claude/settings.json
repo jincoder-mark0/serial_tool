@@ -1,0 +1,40 @@
+{
+  "hooks": {
+    "SessionStart": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"e:/Python/serial_tool/tools/chatlog.py\" init",
+            "timeout": 15,
+            "statusMessage": "chatlog init"
+          }
+        ]
+      }
+    ],
+    "UserPromptSubmit": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"e:/Python/serial_tool/tools/chatlog.py\" log-user",
+            "timeout": 15,
+            "statusMessage": "chatlog user turn"
+          }
+        ]
+      }
+    ],
+    "Stop": [
+      {
+        "hooks": [
+          {
+            "type": "command",
+            "command": "python \"e:/Python/serial_tool/tools/chatlog.py\" log-agent",
+            "timeout": 20,
+            "statusMessage": "chatlog agent turn"
+          }
+        ]
+      }
+    ]
+  }
+}
