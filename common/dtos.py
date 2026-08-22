@@ -675,6 +675,8 @@ class ManualControlState:
         dtr_enabled (bool): DTR 체크 상태.
         local_echo_enabled (bool): 로컬 에코 체크 상태.
         broadcast_enabled (bool): 브로드캐스트 체크 상태.
+        auto_tx_enabled (bool): Auto Tx(주기적 자동 전송) 체크 상태.
+        auto_tx_interval_ms (int): Auto Tx 반복 전송 간격 (ms).
     """
     input_text: str = ""
     hex_mode: bool = False
@@ -684,6 +686,8 @@ class ManualControlState:
     dtr_enabled: bool = False
     local_echo_enabled: bool = False
     broadcast_enabled: bool = False
+    auto_tx_enabled: bool = False
+    auto_tx_interval_ms: int = DEFAULT_MACRO_INTERVAL_MS
 
 @dataclass
 class ErrorContext:

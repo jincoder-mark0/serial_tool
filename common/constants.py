@@ -161,6 +161,7 @@ MIN_SCAN_INTERVAL_MS: int = 1000
 MAX_SCAN_INTERVAL_MS: int = 60000
 DEFAULT_MACRO_INTERVAL_MS: int = 1000
 MIN_MACRO_DELAY_MS: int = 1
+MIN_AUTO_TX_INTERVAL_MS: int = 50  # 과도한 폴링으로 인한 TX 큐 포화 방지 (S-006)
 MAX_COMMAND_HISTORY_SIZE: int = 50    # 수동 명령 History 최대 크기
 
 # ==========================================

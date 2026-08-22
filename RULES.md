@@ -1,4 +1,4 @@
-# RULES.md — SerialTool 운영 규칙 (자가 진화 문서)
+﻿# RULES.md — SerialTool 운영 규칙 (자가 진화 문서)
 
 이 문서는 살아있는 규칙집이다. 모든 세션은 작업 시작 전 이 파일을 읽는다 (CLAUDE.md가 지시).
 아키텍처 불변식은 CLAUDE.md에, 코딩 표준은 `.agent/rules/`에 있다 — 여기는 **작업·검증·커밋의
@@ -16,7 +16,7 @@
 
 ## 2. 검증 규율 (Verification)
 
-- **완료 선언 조건**: ① 변경과 가장 가까운 테스트 통과 → ② 전체 pytest 통과(현재 기준선 95개)
+- **완료 선언 조건**: ① 변경과 가장 가까운 테스트 통과 → ② 전체 pytest 통과(현재 기준선 109개)
   → ③ UI 문자열을 건드렸으면 `tools/check_language_keys.py` 통과. 셋 중 실행한 것과 결과를
   명시해야 "완료"라고 쓸 수 있다.
 - 테스트는 `QT_QPA_PLATFORM=offscreen` 환경에서 실행한다 (GUI 없는 환경/CI 공통).

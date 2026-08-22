@@ -1,4 +1,4 @@
-# 테스트 가이드 (Testing Guide)
+﻿# 테스트 가이드 (Testing Guide)
 
 이 문서는 `pytest`를 이용한 프로젝트 테스트 실행과 결과 해석 방법을 설명합니다.
 
@@ -36,7 +36,7 @@ source .venv/bin/activate
 
 Windows의 GUI 없는 환경에서는 먼저 `$env:QT_QPA_PLATFORM='offscreen'`을 설정합니다.
 
-현재 기준선은 **95 tests passed**입니다.
+현재 기준선은 **109 tests passed**입니다.
 
 ### 1.3 자주 사용하는 Pytest 옵션 (Arguments)
 

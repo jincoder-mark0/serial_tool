@@ -1,6 +1,10 @@
 # S-006 — AutoTxScheduler (주기적 자동 전송)
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. model/auto_tx.py(QTimer,
+  View 무의존), 수동 전송 가공 로직을 _process_and_send로 추출해 공유(중복 0), Auto UI+
+  언어 키 3종, 상태 저장/복원 배선. 테스트 9건 → 기준선 109. 에스컬레이션 2건 승인:
+  패널 facade 릴레이(형제 기능과 동일 LoD 패턴), main_presenter/lifecycle의 상태 직렬화
+  필드 추가(재시작 복원 DoD에 필수). 실기기 전송은 미검증)
 - Recommended model: **하위(Sonnet) 가능** (Steps에 설계가 확정되어 있음 — 벗어나면 중단·보고)
 - 선행: 없음
 - Skills to load: task-done, lang-keys

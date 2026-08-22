@@ -27,7 +27,7 @@ from core.settings_manager import SettingsManager
 from core.logger import logger
 from view.managers.color_manager import color_manager
 from view.managers.language_manager import language_manager
-from common.constants import ConfigKeys
+from common.constants import ConfigKeys, DEFAULT_MACRO_INTERVAL_MS
 from common.dtos import (
     MainWindowState,
     FontConfig,
@@ -155,7 +155,9 @@ class AppLifecycleManager:
             rts_enabled=manual_settings.get("rts_enabled", False),
             dtr_enabled=manual_settings.get("dtr_enabled", False),
             local_echo_enabled=manual_settings.get("local_echo_enabled", False),
-            broadcast_enabled=manual_settings.get("broadcast_enabled", False)
+            broadcast_enabled=manual_settings.get("broadcast_enabled", False),
+            auto_tx_enabled=manual_settings.get("auto_tx_enabled", False),
+            auto_tx_interval_ms=manual_settings.get("auto_tx_interval_ms", DEFAULT_MACRO_INTERVAL_MS)
         )
 
         # Presenter에 상태 주입

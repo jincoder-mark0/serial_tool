@@ -1,4 +1,4 @@
-# tasks/ — 세부 태스크 문서
+﻿# tasks/ — 세부 태스크 문서
 
 루트 [Task.MD](../Task.MD)(작업 보드)의 각 항목을 **하위 모델이 프로젝트 전체 파악 없이
 Steps 그대로 수행할 수 있는 수준**으로 상세화한 문서 모음.
@@ -18,7 +18,7 @@ Steps 그대로 수행할 수 있는 수준**으로 상세화한 문서 모음.
 ```powershell
 Set-Location e:\Python\serial_tool
 $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
-.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 95개)
+.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 109개)
 ```
 
 ## 태스크 목록 (의존 순서)
@@ -34,7 +34,7 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-025](S-025-ui-consistency.md) | UI 일관성 정비 (툴팁·상수·니모닉) | **하위 가능** | S-019 | DONE |
 | [S-017](S-017-ui-refresh-constant.md) | UI 갱신 주기 리터럴 30 상수화 | **하위 가능** | — | DONE |
 | [S-018](S-018-meipass-detection-fix.md) | PyInstaller 감지 버그 수정 (`os._MEIPASS`→`sys`) | **하위 가능** | — | DONE |
-| [S-006](S-006-auto-tx-scheduler.md) | AutoTxScheduler (주기적 자동 전송) | **하위 가능** | — | TODO |
+| [S-006](S-006-auto-tx-scheduler.md) | AutoTxScheduler (주기적 자동 전송) | **하위 가능** | — | DONE |
 | [S-011](S-011-benchmark.md) | 성능 벤치마크 도구 | **하위 가능** | — | DONE |
 | [S-013](S-013-user-config-dir.md) | 설정 파일 사용자 디렉터리 분리 | **하위 가능** | S-018 | DONE |
 | [S-014](S-014-github-actions-ci.md) | GitHub Actions CI | **하위 가능** | — | DONE (러너 확인 대기) |

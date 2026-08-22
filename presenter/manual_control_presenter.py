@@ -8,18 +8,21 @@
 * 16진수/ASCII 변환 및 접두사/접미사 처리 로직 캡슐화
 * RTS/DTR 등의 하드웨어 제어 신호 중계
 * 브로드캐스트 상태 변경을 상위 Presenter에 알림 (UI 동기화용)
+* Command를 일정 주기로 반복 전송하는 Auto Tx 기능 지원 (S-006)
 
 ## WHAT
 * View의 전송 요청(Signal)을 받아 상태를 직접 수집하여 DTO 생성 후 Controller로 전달
 * DTR/RTS 제어 요청 처리
 * 전송 성공 시 로컬 에코(Local Echo) 처리
 * 브로드캐스트 모드 지원 (다중 포트 전송)
+* AutoTxScheduler 배선 — 토글 시 시작/정지, 포트 전체 종료 시 자동 정지
 
 ## HOW
 * View(Panel)가 제공하는 Getter 메서드(Facade)를 통해 상태 조회 (LoD 준수)
 * CommandProcessor를 사용하여 입력 데이터 가공
 * ConnectionController를 통해 데이터 전송 수행
 * Callable 콜백을 통해 MainPresenter(View)에 로컬 에코 데이터 전달
+* 수동 전송과 Auto Tx가 동일한 가공/전송 헬퍼(`_process_and_send`)를 공유하여 중복 제거
 """
 from typing import Optional, Callable
 
@@ -27,6 +30,7 @@ from PyQt5.QtCore import QObject, pyqtSignal
 
 from view.panels.manual_control_panel import ManualControlPanel
 from model.connection_controller import ConnectionController
+from model.auto_tx import AutoTxScheduler
 from core.command_processor import CommandProcessor
 from core.settings_manager import SettingsManager
 from core.logger import logger
@@ -68,6 +72,10 @@ class ManualControlPresenter(QObject):
         self.get_active_port_callback = get_active_port_callback
         self.settings_manager = SettingsManager()
 
+        # Auto Tx(주기적 자동 전송) 스케줄러 (UI 스레드 상주 QTimer, S-006)
+        self.auto_tx_scheduler = AutoTxScheduler()
+        self.auto_tx_scheduler.send_requested.connect(self._process_and_send)
+
         # View -> Presenter 시그널 연결
         # View는 단순한 시그널만 보내고, 데이터 수집은 Presenter가 수행함 (Passive View)
         self.panel.send_requested.connect(self.on_send_requested)
@@ -77,6 +85,14 @@ class ManualControlPresenter(QObject):
         # View의 브로드캐스트 변경 시그널을 Presenter 시그널로 중계 (Relay)
         if hasattr(self.panel, 'broadcast_changed'):
             self.panel.broadcast_changed.connect(self.broadcast_changed.emit)
+
+        # Auto Tx 토글 시그널 연결
+        if hasattr(self.panel, 'auto_tx_toggled'):
+            self.panel.auto_tx_toggled.connect(self.on_auto_tx_toggled)
+
+        # 포트가 모두 닫히면 Auto Tx를 자동으로 정지 (확정 설계)
+        if hasattr(self.connection_controller, 'connection_closed'):
+            self.connection_controller.connection_closed.connect(self._on_connection_closed)
 
         # 초기 설정 로드
         self._load_initial_settings()
@@ -112,15 +128,27 @@ class ManualControlPresenter(QObject):
         Logic:
             1. View(Panel)의 Getter 메서드를 통해 현재 UI 상태(입력값, 옵션)를 직접 수집
             2. ManualCommand DTO 생성
-            3. 설정된 Prefix/Suffix 조회 및 데이터 가공
-            4. 단일/브로드캐스트 모드에 따라 전송 수행
-            5. 성공 시 로컬 에코 출력
+            3. 공용 가공/전송 헬퍼(`_process_and_send`)에 위임
 
         Args:
             _ (Any): 시그널에서 전달되는 인자 (사용하지 않음, View가 DTO를 보내지 않도록 가정).
         """
-        # 1. View에서 상태 수집 (Passive View 패턴 강화)
-        # Presenter가 View의 내부 위젯 구조를 알 필요 없이 인터페이스만 호출 (LoD 준수)
+        command = self._build_command_from_panel()
+        if command is None:
+            return
+
+        self._process_and_send(command)
+
+    def _build_command_from_panel(self) -> Optional[ManualCommand]:
+        """
+        View(Panel)의 Getter 메서드를 통해 현재 UI 상태를 수집하여 ManualCommand DTO를 만듭니다.
+
+        Logic:
+            - Presenter가 View의 내부 위젯 구조를 알 필요 없이 인터페이스만 호출 (LoD 준수)
+
+        Returns:
+            Optional[ManualCommand]: 생성된 DTO. Panel Facade 조회 실패 시 None.
+        """
         try:
             command_text = self.panel.get_input_text()
             hex_mode = self.panel.is_hex_mode()
@@ -131,10 +159,9 @@ class ManualControlPresenter(QObject):
             local_echo_enabled = self.panel.is_local_echo_enabled()
         except AttributeError as e:
             logger.error(f"Failed to gather state from ManualControlPanel: {e}")
-            return
+            return None
 
-        # DTO 생성
-        command = ManualCommand(
+        return ManualCommand(
             command=command_text,
             hex_mode=hex_mode,
             prefix_enabled=prefix_enabled,
@@ -143,11 +170,29 @@ class ManualControlPresenter(QObject):
             broadcast_enabled=broadcast_enabled
         )
 
-        # 2. 설정값 조회 (Prefix/Suffix)
+    def _process_and_send(self, command: ManualCommand) -> bool:
+        """
+        Command DTO를 가공(Prefix/Suffix/HEX)하여 전송하는 공용 헬퍼
+
+        수동 전송(`on_send_requested`)과 Auto Tx(`AutoTxScheduler.send_requested`)가
+        이 메서드를 공유하여 가공/전송 로직 중복을 제거합니다.
+
+        Logic:
+            1. 설정된 Prefix/Suffix 조회 및 데이터 가공
+            2. 단일/브로드캐스트 모드에 따라 전송 수행
+            3. 성공 시 로컬 에코 출력
+
+        Args:
+            command (ManualCommand): 전송할 명령어 DTO.
+
+        Returns:
+            bool: 전송 성공 여부.
+        """
+        # 1. 설정값 조회 (Prefix/Suffix)
         prefix = self.settings_manager.get(ConfigKeys.COMMAND_PREFIX) if command.prefix_enabled else None
         suffix = self.settings_manager.get(ConfigKeys.COMMAND_SUFFIX) if command.suffix_enabled else None
 
-        # 3. 데이터 가공
+        # 2. 데이터 가공
         try:
             data = CommandProcessor.process_command(
                 command.command,
@@ -158,14 +203,14 @@ class ManualControlPresenter(QObject):
         except ValueError as e:
             logger.error(f"Command processing error: {e}")
             # View에 에러 알림 필요 시 추가 구현
-            return
+            return False
 
         if not data:
-            return
+            return False
 
         sent_success = False
 
-        # 4. 전송 수행
+        # 3. 전송 수행
         if command.broadcast_enabled:
             # 브로드캐스트 모드: 활성 포트가 하나라도 있는지 확인 (Gatekeeping)
             if self.connection_controller.has_active_broadcast_ports():
@@ -182,10 +227,49 @@ class ManualControlPresenter(QObject):
             else:
                 logger.warning(f"Port '{active_port}' is not open.")
 
-        # 5. 로컬 에코 처리
+        # 4. 로컬 에코 처리
         # 전송 성공하고 로컬 에코가 활성화되어 있으면 콜백 호출
         if sent_success and self.local_echo_enabled:
             self.local_echo_callback(data)
+
+        return sent_success
+
+    def on_auto_tx_toggled(self, enabled: bool) -> None:
+        """
+        Auto Tx(주기적 자동 전송) 체크박스 토글 처리 핸들러 (S-006)
+
+        Logic:
+            - 활성화: 현재 UI 상태로 ManualCommand를 스냅샷하고, 간격(ms)을 조회하여
+              AutoTxScheduler를 시작 (가공 실패 시 체크박스를 다시 해제하여 UI 동기화)
+            - 비활성화: AutoTxScheduler 정지
+
+        Args:
+            enabled (bool): Auto Tx 활성화 여부.
+        """
+        if enabled:
+            command = self._build_command_from_panel()
+            if command is None:
+                self.panel.set_auto_tx_checked(False)
+                return
+
+            interval_ms = self.panel.get_auto_tx_interval_ms()
+            self.auto_tx_scheduler.start(command, interval_ms=interval_ms)
+        else:
+            self.auto_tx_scheduler.stop()
+
+    def _on_connection_closed(self, _event=None) -> None:
+        """
+        포트 연결 종료 이벤트 처리 핸들러
+
+        활성 연결이 하나도 남지 않으면 Auto Tx를 자동으로 정지하고
+        체크박스 상태를 UI에 동기화합니다.
+
+        Args:
+            _event (Any): PortConnectionEvent (사용하지 않음).
+        """
+        if not self.connection_controller.has_active_connection:
+            self.auto_tx_scheduler.stop()
+            self.panel.set_auto_tx_checked(False)
 
     def on_dtr_changed(self, state: bool) -> None:
         """

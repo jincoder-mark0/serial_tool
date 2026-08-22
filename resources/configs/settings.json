@@ -18,7 +18,7 @@
   "ui": {
     "max_log_lines": 2000,
     "window_width": 1471,
-    "window_height": 751,
+    "window_height": 786,
     "window_x": 72,
     "window_y": 93,
     "splitter_state": "AAAA/wAAAAEAAAACAAADVwAAAowB/////wEAAAABAA==",
@@ -77,7 +77,9 @@
       "rts_enabled": false,
       "dtr_enabled": false,
       "local_echo_enabled": false,
-      "broadcast_enabled": true
+      "broadcast_enabled": true,
+      "auto_tx_enabled": false,
+      "auto_tx_interval_ms": 1000
     }
   },
   "macro_list": {

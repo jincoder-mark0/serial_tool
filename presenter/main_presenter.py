@@ -284,7 +284,9 @@ class MainPresenter(QObject):
                 "rts_enabled": manual_state_dto.rts_enabled,
                 "dtr_enabled": manual_state_dto.dtr_enabled,
                 "local_echo_enabled": manual_state_dto.local_echo_enabled,
-                "broadcast_enabled": manual_state_dto.broadcast_enabled
+                "broadcast_enabled": manual_state_dto.broadcast_enabled,
+                "auto_tx_enabled": manual_state_dto.auto_tx_enabled,
+                "auto_tx_interval_ms": manual_state_dto.auto_tx_interval_ms
             }
         }
 

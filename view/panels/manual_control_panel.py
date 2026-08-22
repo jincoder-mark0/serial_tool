@@ -48,6 +48,7 @@ class ManualControlPanel(QWidget):
     broadcast_changed = pyqtSignal(bool)
     dtr_changed = pyqtSignal(bool)
     rts_changed = pyqtSignal(bool)
+    auto_tx_toggled = pyqtSignal(bool)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -90,6 +91,7 @@ class ManualControlPanel(QWidget):
         self._manual_control_widget.broadcast_changed.connect(self.broadcast_changed.emit)
         self._manual_control_widget.dtr_changed.connect(self.dtr_changed.emit)
         self._manual_control_widget.rts_changed.connect(self.rts_changed.emit)
+        self._manual_control_widget.auto_tx_toggled.connect(self.auto_tx_toggled.emit)
 
         layout.addWidget(self.title_lbl)
         layout.addWidget(self._manual_control_widget)
@@ -168,6 +170,23 @@ class ManualControlPanel(QWidget):
     def is_broadcast_enabled(self) -> bool:
         """Broadcast 체크 여부를 반환합니다."""
         return self._manual_control_widget.is_broadcast_enabled()
+
+    def is_auto_tx_enabled(self) -> bool:
+        """Auto Tx(주기적 자동 전송) 체크 여부를 반환합니다."""
+        return self._manual_control_widget.is_auto_tx_enabled()
+
+    def get_auto_tx_interval_ms(self) -> int:
+        """Auto Tx 반복 전송 간격(ms)을 반환합니다."""
+        return self._manual_control_widget.get_auto_tx_interval_ms()
+
+    def set_auto_tx_checked(self, checked: bool) -> None:
+        """
+        Auto Tx 체크박스 상태를 설정합니다. (자동 정지 시 UI 동기화용)
+
+        Args:
+            checked (bool): 체크 여부.
+        """
+        self._manual_control_widget.set_auto_tx_checked(checked)
 
     def set_input_focus(self) -> None:
         """입력창에 포커스를 설정합니다."""

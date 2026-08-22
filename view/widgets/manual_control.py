@@ -14,6 +14,7 @@
 * Broadcast 체크박스 추가
 * 하드웨어 흐름 제어(RTS, DTR) 체크박스 및 시그널 발생
 * Command History(MRU) 관리
+* Auto Tx(주기적 자동 전송) 토글 체크박스 및 간격(ms) 입력 (S-006, 로직은 Presenter/AutoTxScheduler)
 
 ## HOW
 * QVBoxLayout 및 QGridLayout을 사용한 컴팩트 레이아웃 구성
@@ -31,10 +32,11 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, QSize, Qt
 from PyQt5.QtGui import QKeyEvent
 
 from view.custom_qt.smart_plain_text_edit import QSmartTextEdit
+from view.custom_qt.smart_number_edit import SmartNumberEdit
 from view.managers.language_manager import language_manager
 from common.dtos import ManualCommand, ManualControlState
 from common.constants import (
-    MAX_COMMAND_HISTORY_SIZE,
+    MAX_COMMAND_HISTORY_SIZE, DEFAULT_MACRO_INTERVAL_MS, MIN_AUTO_TX_INTERVAL_MS,
     LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_DEFAULT,
     LAYOUT_SPACING_TIGHT, LAYOUT_SPACING_DEFAULT, ICON_BUTTON_SIZE
 )
@@ -63,6 +65,9 @@ class ManualControlWidget(QWidget):
     rts_changed = pyqtSignal(bool)
     dtr_changed = pyqtSignal(bool)
 
+    # Auto Tx(주기적 자동 전송) 토글 변경 (Presenter가 AutoTxScheduler 시작/정지에 사용)
+    auto_tx_toggled = pyqtSignal(bool)
+
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
         ManualControlWidget 초기화
@@ -86,6 +91,8 @@ class ManualControlWidget(QWidget):
         self.broadcast_chk: Optional[QCheckBox] = None
         self.rts_chk: Optional[QCheckBox] = None
         self.dtr_chk: Optional[QCheckBox] = None
+        self.auto_tx_chk: Optional[QCheckBox] = None
+        self.auto_tx_interval_edit: Optional[SmartNumberEdit] = None
 
         # History State - 저장/복원 안함 (런타임 메모리)
         self.command_history: List[str] = []
@@ -160,6 +167,25 @@ class ManualControlWidget(QWidget):
             lambda state: self.broadcast_changed.emit(state == Qt.Checked)
         )
 
+        # Auto Tx: 체크박스 + 간격(ms) 입력 (SmartNumberEdit 재사용, S-006)
+        self.auto_tx_chk = QCheckBox(language_manager.get_text("manual_control_chk_auto_tx"))
+        self.auto_tx_chk.setToolTip(language_manager.get_text("manual_control_chk_auto_tx_tooltip"))
+        self.auto_tx_chk.stateChanged.connect(
+            lambda state: self.auto_tx_toggled.emit(state == Qt.Checked)
+        )
+
+        self.auto_tx_interval_edit = SmartNumberEdit()
+        self.auto_tx_interval_edit.setPlainText(str(DEFAULT_MACRO_INTERVAL_MS))
+        self.auto_tx_interval_edit.setToolTip(
+            language_manager.get_text("manual_control_edit_auto_tx_interval_tooltip")
+        )
+        self.auto_tx_interval_edit.setProperty("class", "fixed-font")
+        # 한 줄 높이로 압축 (SmartNumberEdit는 QPlainTextEdit 기반이라 기본 높이가 큼)
+        self.auto_tx_interval_edit.setFixedHeight(ICON_BUTTON_SIZE)
+        # 5자리(최대 99999ms) 기준 폰트 메트릭으로 최소 폭 계산 (S-025 관례)
+        min_interval_width = self.auto_tx_interval_edit.fontMetrics().horizontalAdvance("0" * 5) + 12
+        self.auto_tx_interval_edit.setMinimumWidth(min_interval_width)
+
         # 4. 레이아웃 배치
         # 버튼 그룹 (우측)
         btn_layout = QVBoxLayout()
@@ -193,6 +219,10 @@ class ManualControlWidget(QWidget):
         option_layout.addWidget(self.local_echo_chk, 0, 5)
         option_layout.addWidget(self.broadcast_chk, 0, 6)
 
+        # 2행: Auto Tx (체크박스 + 간격 입력) — 1행이 이미 7칸으로 가득 차 별도 행에 배치
+        option_layout.addWidget(self.auto_tx_chk, 1, 0)
+        option_layout.addWidget(self.auto_tx_interval_edit, 1, 1)
+
         # 전체 레이아웃 조합
         layout = QVBoxLayout()
         layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
@@ -221,6 +251,11 @@ class ManualControlWidget(QWidget):
         self.local_echo_chk.setText(language_manager.get_text("manual_control_chk_local_echo"))
         self.local_echo_chk.setToolTip(language_manager.get_text("manual_control_chk_local_echo_tooltip"))
         self.broadcast_chk.setText(language_manager.get_text("manual_control_chk_broadcast"))
+        self.auto_tx_chk.setText(language_manager.get_text("manual_control_chk_auto_tx"))
+        self.auto_tx_chk.setToolTip(language_manager.get_text("manual_control_chk_auto_tx_tooltip"))
+        self.auto_tx_interval_edit.setToolTip(
+            language_manager.get_text("manual_control_edit_auto_tx_interval_tooltip")
+        )
         self.send_command_btn.setText(language_manager.get_text("manual_control_btn_send"))
         self.history_up_btn.setToolTip(language_manager.get_text("manual_control_btn_history_up_tooltip"))
         self.history_down_btn.setToolTip(language_manager.get_text("manual_control_btn_history_down_tooltip"))
@@ -256,6 +291,26 @@ class ManualControlWidget(QWidget):
     def is_broadcast_enabled(self) -> bool:
         """브로드캐스트 체크 여부 반환"""
         return self.broadcast_chk.isChecked()
+
+    def is_auto_tx_enabled(self) -> bool:
+        """Auto Tx(주기적 자동 전송) 체크 여부 반환"""
+        return self.auto_tx_chk.isChecked()
+
+    def get_auto_tx_interval_ms(self) -> int:
+        """
+        Auto Tx 반복 전송 간격(ms)을 반환합니다.
+
+        입력값이 숫자가 아니면 기본값(DEFAULT_MACRO_INTERVAL_MS)을 사용하며,
+        최소값(MIN_AUTO_TX_INTERVAL_MS) 미만이면 clamp합니다.
+
+        Returns:
+            int: 전송 간격 (ms).
+        """
+        try:
+            interval_ms = int(self.auto_tx_interval_edit.toPlainText().strip())
+        except ValueError:
+            interval_ms = DEFAULT_MACRO_INTERVAL_MS
+        return max(interval_ms, MIN_AUTO_TX_INTERVAL_MS)
 
     def get_input_text(self) -> str:
         """현재 입력창의 텍스트 반환"""
@@ -312,6 +367,15 @@ class ManualControlWidget(QWidget):
             checked (bool): 체크 여부.
         """
         self.local_echo_chk.setChecked(checked)
+
+    def set_auto_tx_checked(self, checked: bool) -> None:
+        """
+        Auto Tx 체크박스 상태를 설정합니다. (자동 정지 시 외부 동기화용)
+
+        Args:
+            checked (bool): 체크 여부.
+        """
+        self.auto_tx_chk.setChecked(checked)
 
     def on_hex_toggled(self, checked: bool) -> None:
         """
@@ -461,7 +525,9 @@ class ManualControlWidget(QWidget):
             rts_enabled=self.is_rts_enabled(),
             dtr_enabled=self.is_dtr_enabled(),
             local_echo_enabled=self.is_local_echo_enabled(),
-            broadcast_enabled=self.is_broadcast_enabled()
+            broadcast_enabled=self.is_broadcast_enabled(),
+            auto_tx_enabled=self.is_auto_tx_enabled(),
+            auto_tx_interval_ms=self.get_auto_tx_interval_ms()
         )
 
     def apply_state(self, state: ManualControlState) -> None:
@@ -487,5 +553,7 @@ class ManualControlWidget(QWidget):
             self.dtr_chk.setChecked(state.dtr_enabled)
             self.local_echo_chk.setChecked(state.local_echo_enabled)
             self.broadcast_chk.setChecked(state.broadcast_enabled)
+            self.auto_tx_chk.setChecked(state.auto_tx_enabled)
+            self.auto_tx_interval_edit.setPlainText(str(state.auto_tx_interval_ms))
         finally:
             self.blockSignals(False)
