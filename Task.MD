@@ -53,15 +53,24 @@
 | [S-052](tasks/S-052-log-control-flow-unify.md) | 로그 위젯 제어 흐름 **Presenter 권위로 통일** | ✅ 완료 |
 | [S-053](tasks/S-053-theme-manager-decompose.md) | ThemeManager(833줄) → FontManager + ThemeResourceLoader + 오케스트레이터 | ✅ 완료 |
 | [S-054](tasks/S-054-color-manager-decompose.md) | ColorManager(511줄) → Qt 비의존 ColorRuleRepository + 어댑터 | ✅ 완료 |
-| [S-036](tasks/S-036-fixed-font-routing-and-i18n.md) | **고정폭 폰트 설정 미반영** + 언어팩 잔여 4건 | ▶ 진행 |
-| [S-055](tasks/S-055-system-log-persistence-missing.md) | 시스템 로그 저장이 동작하지 않음(구독자 0건) | ⏸ 상위 결정 필요 |
+| [S-036](tasks/S-036-fixed-font-routing-and-i18n.md) | **고정폭 폰트 설정 미반영** + 언어팩 잔여 4건 | ✅ 완료 (실측 전후 증명) |
+| [S-055](tasks/S-055-system-log-persistence-missing.md) | 시스템 로그 저장이 동작하지 않음(구독자 0건) | ✅ 완료 (구현 판정) |
+| [S-056](tasks/S-056-error-handler-layer-violation.md) | 크래시 다이얼로그 계층 역전 + **계층 의존 자동 검사** | ✅ 완료 |
+| [S-057](tasks/S-057-ruff-cleanup-and-ci-gate.md) | ruff 잔여 정리 → **0건·CI 게이트 전환** | ✅ 완료 |
+| [S-058](tasks/S-058-main-presenter-decompose.md) | MainPresenter 분해(설정·종료·포맷 결정) | ✅ 완료 |
+| [S-059](tasks/S-059-datalogger-not-stopped-on-exit.md) | **종료 시 RX 로거 미정리 유실**(stop_all 호출처 0건) | ✅ 완료 |
 
 - S-052~S-054는 **S-050 특성화 테스트 무수정 통과**를 안전 판정 기준으로 삼아 검증됐다.
 - **S-036은 2026-08-22 실측으로 미해결이 확정됐다**: `class="fixed-font"` 위젯에
   D2Coding 16pt를 설정해도 실제 렌더는 Consolas 9pt다. common.qss의 폰트 하드코딩이
   QSS 특이도로 동적 규칙을 이기며, **동적 규칙이 문자열상 뒤에 있어도 마찬가지**다.
 
-**남은 후속**: MainPresenter 분해, ruff 잔여 44건, 패킷 뷰 스로틀(측정 선행).
+**후속 처리 중 새로 드러난 결함 3건**(모두 수정 완료): 시스템 로그 저장 미배선(S-055),
+`stop_all()` 미호출로 종료 시 데이터 유실(S-059 — S-045에서 고친 안전장치가 정작 호출되지
+않고 있었다), DataLog 브로드캐스트 초기값 불일치(S-051).
+
+**남은 것**(근거 있는 보류): 패킷 뷰 스로틀(측정 선행 — S-007 원칙), PortScanWorker 종료
+미정리(저위험), 로그 필터 판정 로직 중복. 상세는 `doc/refactor_audit_20260822.md`.
 
 | ID | 제목 | Phase | 상태 | 비고 |
 |---|---|---|---|---|
