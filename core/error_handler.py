@@ -151,11 +151,25 @@ class GlobalErrorHandler(QObject):
         Args:
             context (ErrorContext): 에러 정보 DTO
         """
+        # 다이얼로그 문구는 언어 키(S-036)를 우선 쓰되, 이 핸들러는 "손상된 상태"에서도
+        # 떠야 하는 최후의 안전망이라 view 계층(language_manager) 의존을 지연 import +
+        # try/except로 격리한다 - core는 원래 view를 참조하지 않지만, 이 다이얼로그가
+        # 뜨는 시점 자체가 이미 비정상 상태이므로 언어 리소스 로드 실패(깨진 JSON,
+        # 초기화 전 호출 등) 시 조용히 아래 except의 영어 하드코딩 폴백으로 떨어진다.
+        title = "Critical Error"
+        text = f"An unexpected error occurred: {context.error_type}"
+        try:
+            from view.managers.language_manager import language_manager
+            title = language_manager.get_text("error_title_critical")
+            text = language_manager.get_text("error_msg_unexpected").format(context.error_type)
+        except Exception:
+            pass  # 언어 리소스 로드 실패 - 위에서 이미 설정한 영어 폴백을 그대로 사용
+
         try:
             msg_box = QMessageBox()
             msg_box.setIcon(QMessageBox.Critical)
-            msg_box.setWindowTitle("Critical Error")
-            msg_box.setText(f"An unexpected error occurred: {context.error_type}")
+            msg_box.setWindowTitle(title)
+            msg_box.setText(text)
             msg_box.setInformativeText(context.message)
             msg_box.setDetailedText(context.traceback)
             msg_box.setStandardButtons(QMessageBox.Ok)

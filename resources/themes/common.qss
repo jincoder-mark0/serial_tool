@@ -268,22 +268,9 @@ QToolBar QToolButton {
     padding: 4px;
 }
 
-/* Fonts (Dynamic) */
-.proportional-font {
-    font-family: "Segoe UI", "Ubuntu", "Arial", sans-serif;
-    font-size: 9pt;
-}
-
-.fixed-font {
-    font-family: "Consolas", "Monospace", "Courier New", monospace;
-    font-size: 9pt;
-}
-
-QTextEdit.fixed-font,
-QPlainTextEdit.fixed-font,
-QLineEdit.fixed-font,
-QSmartListView.fixed-font,
-QSmartTextEdit.fixed-font {
-    font-family: "Consolas", "Monospace", "Courier New", monospace;
-    font-size: 9pt;
-}
+/* Fonts: 폰트 패밀리/크기는 여기서 선언하지 않는다 (S-036).
+   유일한 원천은 ThemeManager._generate_font_stylesheet()의 동적 스타일시트다 -
+   여기 있던 .proportional-font/.fixed-font 하드코딩(9pt 고정)이 QSS 특이도
+   (type+class=2)로 동적 규칙(class 또는 type 단독=1)을 항상 이겨 설정 폰트가
+   위젯에 반영되지 않는 회귀를 냈다 (실측: D2Coding/Courier New로 바꿔도 Consolas
+   9pt 고정). 폰트 외 속성이 필요해지면 이 규칙을 부활시키지 말고 별도 선택자로 추가한다. */

@@ -28,6 +28,7 @@ from PyQt5.QtCore import pyqtSignal
 from view.widgets.port_settings import PortSettingsWidget
 from view.widgets.data_log import DataLogWidget
 from view.widgets.port_stats import PortStatsWidget
+from view.managers.language_manager import language_manager
 from common.dtos import (
     PortConfig,
     PortInfo,
@@ -75,7 +76,7 @@ class PortPanel(QWidget):
         self._port_stats_widget: Optional[PortStatsWidget] = None
         self._port_settings_widget: Optional[PortSettingsWidget] = None
 
-        self.custom_name = "Port"  # 커스텀 이름 (기본값)
+        self.custom_name = language_manager.get_text("port_tab_default_name")  # 커스텀 이름 (기본값)
 
         self.init_ui()
 
@@ -315,7 +316,7 @@ class PortPanel(QWidget):
         if not state:
             return
 
-        self.custom_name = state.get("custom_name", "Port")
+        self.custom_name = state.get("custom_name", language_manager.get_text("port_tab_default_name"))
 
         # 하위 위젯 상태 복원
         self._port_settings_widget.apply_state(state.get("port_settings_widget", {}))

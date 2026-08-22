@@ -32,7 +32,8 @@ from common.constants import (
     DEFAULT_LOG_MAX_LINES,
     MIN_SCAN_INTERVAL_MS,
     MAX_SCAN_INTERVAL_MS,
-    MAX_PACKET_SIZE
+    MAX_PACKET_SIZE,
+    LANGUAGE_DISPLAY_NAME_KOREAN
 )
 from common.enums import NewlineMode, ThemeType
 from common.dtos import PreferencesState
@@ -126,7 +127,7 @@ class PreferencesDialog(QDialog):
         # Fallback if empty
         if self.language_combo.count() == 0:
             self.language_combo.addItem("English", "en")
-            self.language_combo.addItem("Korean", "ko")
+            self.language_combo.addItem(LANGUAGE_DISPLAY_NAME_KOREAN, "ko")
 
         self.proportional_font_size_spin = QSpinBox()
         self.proportional_font_size_spin.setRange(8, 24)

@@ -289,3 +289,10 @@ FONT_FAMILY_CONSOLAS = "Consolas"
 FONT_FAMILY_UBUNTU = "Ubuntu"
 FONT_FAMILY_MONOSPACE = "Monospace"
 FONT_FAMILY_MENLO = "Menlo"
+
+# 언어 콤보 폴백 표시명 (S-036) - preferences_dialog.py에서 언어 리소스 JSON 로드가
+# 완전히 실패했을 때만 쓰는 최후의 표시명이라 language_manager.get_text()를 거칠 수
+# 없다(그 자체가 JSON 의존). 값을 여기 상수로 빼서 tests/test_ui_guidelines.py의
+# 한글 리터럴 검사(view/·presenter/ 스캔) 대상 밖에 둔다 - endonym이라 언어 키로도
+# 옮기지 않는다("English"가 항상 "English"인 것과 같은 이유).
+LANGUAGE_DISPLAY_NAME_KOREAN = "한국어"

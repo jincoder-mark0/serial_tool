@@ -9,11 +9,24 @@ ThemeManager / ColorManager 특성화(Characterization) 테스트 모듈 (S-050)
 ## WHY
 * 감사(`doc/refactor_audit_20260822.md` C-7)가 God object 분해를 권고했지만,
   테스트 없이 쪼개면 그 변경이 옳은지 검증할 수단이 없다.
-* 특히 폰트 계약(테마 재적용 시 `_generate_font_stylesheet()`가 최종
-  스타일시트 뒤쪽에 병합되어 `common.qss`의 죽은 하드코딩(S-036 이전 잔재,
-  `.proportional-font`/`.fixed-font` 클래스 규칙)을 항상 이겨야 한다)이 깨지면
-  로그 뷰 폰트 설정이 UI에 반영되지 않는 회귀가 재발한다 - 이 계약을 최우선으로
-  고정한다.
+* 특히 폰트 계약이 깨지면 로그 뷰 폰트 설정이 UI에 반영되지 않는 회귀가
+  재발한다 - 이 계약을 최우선으로 고정한다. **S-036 실측 교훈**: 이 계약을
+  "동적 폰트 QSS 블록이 최종 스타일시트 문자열상 뒤에 온다"는 것만으로
+  검증하면 안 된다 - Qt QSS는 순서보다 선택자 특이도(specificity)를 먼저
+  본다. `common.qss`에 `QSmartListView.fixed-font`(type+class, 특이도 2)
+  같은 하드코딩이 남아있으면 뒤에 붙는 동적 규칙(`.fixed-font`나 bare
+  type, 특이도 1)이 있어도 하드코딩이 이겨 설정이 무시된다(실측: 설정을
+  D2Coding 16pt로 바꿔도 위젯은 Consolas 9pt 그대로) - 이전 버전의 이
+  테스트가 바로 이 실패를 "통과"시키고 있었다. 그래서 아래 폰트 계약
+  테스트는 **문자열 위치가 아니라 실제 위젯의 `.font()`(적용된 QFont)**로
+  검증한다. 참고: `QFontInfo`가 반환하는 실제 매칭 폰트는 시스템 폰트
+  데이터베이스가 필요해 오프스크린 플랫폼(이 프로젝트 pytest 표준
+  `QT_QPA_PLATFORM=offscreen`)에서는 폰트가 0개 등록되어 있어 가족명/
+  크기가 전부 빈 값/-1로 나온다(실측 확인) - 그래서 자동화 테스트는
+  `widget.font()`(스타일 엔진이 실제로 위젯에 배정한 QFont, 특이도/캐스케이드
+  버그를 그대로 드러낸다)를 쓰고, `QFontInfo`를 통한 실제 렌더 폰트 확인은
+  네이티브 Qt 플랫폼에서 수동 실측 스크립트로 한다(`tasks/S-036-*.md` 실측
+  절차 참고).
 
 ## HOW
 * `tests/conftest.py::reset_ui_manager_state`(S-048, autouse)가 `ThemeManager.
@@ -31,6 +44,7 @@ ThemeManager / ColorManager 특성화(Characterization) 테스트 모듈 (S-050)
 pytest tests/test_theme_color_managers.py -v
 """
 import pytest
+from PyQt5.QtWidgets import QLineEdit
 from PyQt5.QtGui import QTextCharFormat
 
 from core.resource_path import ResourcePath
@@ -38,6 +52,7 @@ from common.constants import ConfigKeys
 from view.managers.theme_manager import theme_manager
 from view.managers.color_manager import color_manager
 from view.managers import theme_state
+from view.custom_qt.smart_list_view import QSmartListView
 
 
 # 각 테마 QSS 파일의 `QWidget { background-color: ... }` 값 - 실제로 그 테마 파일이
@@ -189,14 +204,50 @@ def test_set_fixed_font_propagates_to_live_application_stylesheet(qapp):
         theme_manager.set_fixed_font(*orig_fixed)
 
 
-def test_font_stylesheet_is_appended_after_theme_qss_for_cascade_priority(qapp):
+def test_fixed_font_setting_is_actually_applied_to_real_widget(qapp):
     """
-    Qt 스타일시트는 동일 특이도에서 나중에 선언된 규칙이 이긴다. `common.qss`에는
-    `.fixed-font`/`.proportional-font`에 대한 하드코딩된 죽은 규칙(S-036 이전 잔재,
-    9pt 고정)이 여전히 남아있다 - `apply_theme()`가 폰트 규칙을 테마 QSS *뒤에*
-    이어붙이는 순서를 지켜야만 ThemeManager가 실질적인 유일한 폰트 원천으로 남는다.
-    이 순서가 깨지면(폰트 규칙이 앞으로 가면) 로그 뷰 폰트 설정이 다시 안 먹는
-    회귀가 재발한다.
+    S-036 회귀 재현 테스트: 문자열(스타일시트 텍스트)이 아니라 **실제 위젯에 배정된
+    QFont**로 검증한다. 이전 버전(`test_font_stylesheet_is_appended_after_theme_qss_
+    for_cascade_priority`)은 "동적 QSS 블록이 문자열상 뒤에 있다"만 확인했는데, Qt
+    QSS는 순서가 아니라 선택자 특이도로 승자를 가리므로 이 검증은 실제 반영 실패를
+    잡지 못했다(실측: `common.qss`의 `QSmartListView.fixed-font` 등 type+class
+    하드코딩이 특이도 2로, 동적 규칙의 `.fixed-font`/bare type 특이도 1을 항상 이겨
+    D2Coding 16pt로 바꿔도 위젯은 Consolas 9pt로 남았다).
+
+    `QFontInfo`(실제 매칭 폰트)는 오프스크린 플랫폼에서 폰트 데이터베이스가 비어
+    있어 쓸 수 없으므로(실측: family=''/size=-1), 스타일 엔진이 위젯에 배정한
+    `widget.font()`로 대신한다 - 캐스케이드/특이도 버그는 이 값에도 그대로 드러난다
+    (수동 실측 시에는 `QFontInfo(widget.font())`로 실제 렌더 폰트까지 확인한다).
+    """
+    theme_manager.apply_theme("dark")
+    orig_fixed = theme_manager.get_fixed_font_info()
+    try:
+        # QSmartListView(RX/시스템 로그) - 생성자가 setProperty("class", "fixed-font")
+        list_view = QSmartListView()
+        list_view.ensurePolished()
+
+        # QLineEdit + class=fixed-font (manual_control.py command_txt 등과 동일 패턴)
+        line_edit = QLineEdit()
+        line_edit.setProperty("class", "fixed-font")
+        line_edit.ensurePolished()
+
+        theme_manager.set_fixed_font("D2Coding", 16)
+        list_view.ensurePolished()
+        line_edit.ensurePolished()
+
+        assert list_view.font().family() == "D2Coding"
+        assert list_view.font().pointSize() == 16
+        assert line_edit.font().family() == "D2Coding"
+        assert line_edit.font().pointSize() == 16
+    finally:
+        theme_manager.set_fixed_font(*orig_fixed)
+
+
+def test_proportional_font_setting_is_appended_after_theme_qss_for_cascade_priority(qapp):
+    """
+    가변폭 폰트는 전역(`*`) 선택자만 쓰므로(경쟁하는 하드코딩이 없음) 문자열 순서
+    검증으로도 충분하다 - 순서 자체가 카스케이드에 영향을 주는 유일한 경우(동일
+    특이도)이기 때문. `common.qss`의 다른 규칙(테마 파일)보다 뒤에 붙어야 우선한다.
     """
     theme_manager.apply_theme("dark")
     orig_prop = theme_manager.get_proportional_font_info()

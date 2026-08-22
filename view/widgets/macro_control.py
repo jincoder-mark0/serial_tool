@@ -98,6 +98,9 @@ class MacroControlWidget(QWidget):
         # Interval
         self.interval_lbl = QLabel(language_manager.get_text("macro_control_lbl_repeat_interval"))
         self.repeat_interval_ms_input = QLineEdit(str(DEFAULT_MACRO_INTERVAL_MS))
+        # Auto 간격 입력(manual_control.py auto_tx_interval_txt)과 같은 성격의 ms 숫자
+        # 입력이므로 고정폭 폰트 클래스를 동일하게 부여한다 (S-036).
+        self.repeat_interval_ms_input.setProperty("class", "fixed-font")
         # 고정폭(50px)이 16pt 폰트에서 "1000"을 ")00"으로 잘랐음(S-024 실측, S-025 조치).
         # 5자리(최대 99999ms) 기준 폰트 메트릭으로 최소 폭을 계산해 폰트 확대에도 안전하게 함.
         min_width = self.repeat_interval_ms_input.fontMetrics().horizontalAdvance("0" * 5) + 12
