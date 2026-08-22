@@ -1,6 +1,6 @@
 # S-052 — 로그 위젯 제어 흐름 통일 (Presenter 권위로)
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인·커밋 완료)
 - Recommended model: **하위(Sonnet) 가능** (방향 확정 — 벗어나면 중단·보고)
 - 선행: S-049 (공통화 완료)
 - Skills to load: task-done, lang-keys

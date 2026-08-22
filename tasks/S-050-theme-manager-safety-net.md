@@ -1,6 +1,6 @@
 # S-050 — [P3] 테마/색 매니저 안전망 + 순환 참조 해소
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인·커밋 완료)
 - Recommended model: **하위(Sonnet) 가능**
 - 선행: S-048(싱글톤 격리 픽스처 — 이미 완료)
 - Skills to load: task-done

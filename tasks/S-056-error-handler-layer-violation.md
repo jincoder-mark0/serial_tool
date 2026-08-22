@@ -1,6 +1,6 @@
 # S-056 — 크래시 다이얼로그 번역이 만든 계층 역전 정리
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인·커밋 완료)
 - Recommended model: **하위(Sonnet) 가능** (설계 확정)
 - 선행: S-036 (도입 경위)
 - Skills to load: task-done

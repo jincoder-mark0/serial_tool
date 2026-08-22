@@ -31,6 +31,19 @@ jobs:
       - name: Check language key integrity
         run: python tools/check_language_keys.py
 
+  task-boards:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      # 태스크 상태가 태스크 파일·Task.MD·tasks/README.md 세 곳에 기록된다.
+      # 손으로 맞추다 실제로 어긋나 다음 세션이 끝난 일을 다시 하거나 남은 일을
+      # 끝난 것으로 착각할 위험이 있어(2026-08-22 실측 30건) 기계로 고정한다.
+      - name: Check task board consistency
+        run: python tools/check_task_boards.py
+
   lint:
     runs-on: ubuntu-latest
     steps:

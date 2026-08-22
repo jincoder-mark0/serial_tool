@@ -12,6 +12,7 @@ SPI/I2C Transport·플러그인은 미착수 (Task.MD 참조).
 $env:QT_QPA_PLATFORM="offscreen"; .venv\Scripts\python -m pytest -q   # 전체 테스트 (GUI 불필요)
 .venv\Scripts\python -m pytest tests/test_model.py            # 부분 테스트
 .venv\Scripts\python tools\check_language_keys.py             # 언어 키 무결성 검사 (en↔ko, [TODO] 스캔)
+.venv\Scripts\python tools\check_task_boards.py               # 작업 보드 상태 정합 (파일/Task.MD/README 3중)
 ```
 
 - Python 3.10+, 의존성: PyQt5, pyserial, commentjson, jsonschema (`requirements.txt`).
@@ -101,5 +102,6 @@ $env:QT_QPA_PLATFORM="offscreen"; .venv\Scripts\python -m pytest -q   # 전체 �
 - `view/` — Passive View: `main_window.py`, `panels/`, `sections/`, `widgets/`, `dialogs/`,
   `custom_qt/`, `managers/`(Theme/Language/Color), `services/`
 - `resources/` — `languages/`(en/ko JSON), `themes/`(QSS), `icons/`(SVG), `configs/`(settings.json 기본값)
-- `tools/` — `chatlog.py`(대화 로그), `check_language_keys.py`(CI 검사), `manage_language_keys.py`(키 동기화)
+- `tools/` — `chatlog.py`(대화 로그), `check_language_keys.py`·`check_task_boards.py`(CI 검사),
+  `manage_language_keys.py`(키 동기화), `ux_capture.py`(실행 화면 캡처), `benchmark.py`(성능 측정)
 - 진입점: `main.py` (Manager 초기화 순서가 곧 조립 순서 — Settings → Language/Theme/Color → MainWindow → MainPresenter)

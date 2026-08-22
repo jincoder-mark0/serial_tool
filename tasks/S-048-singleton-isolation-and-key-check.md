@@ -1,6 +1,6 @@
 # S-048 — [P3] 싱글톤 테스트 격리 + 언어 키 사용처 검증 도구
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인·커밋 완료)
 - Recommended model: **하위(Sonnet) 가능**
 - 선행: 없음 (tests/·tools/ 중심 — 다른 P3와 병렬 안전)
 - Skills to load: task-done

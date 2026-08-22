@@ -54,7 +54,7 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-037](S-037-send-before-open-race.md) | 연결 직후 send 침묵 실패 레이스 | **하위 가능** | S-033 | DONE |
 | [S-034](S-034-remove-scan-button.md) | 중복 검색 버튼 제거 (팝업 자동 스캔 존재) | **하위 가능** | — | DONE |
 | [S-035](S-035-spacing-grouping-polish.md) | 마진·구획 정비 (테두리 대비·제목 간격·그루핑) | **하위 가능** | S-033, S-034 | DONE |
-| [S-036](S-036-fixed-font-routing-and-i18n.md) | 고정폭 폰트 설정 미반영 수정 + 언어팩 잔여 | **하위 가능** | S-035 | TODO |
+| [S-036](S-036-fixed-font-routing-and-i18n.md) | 고정폭 폰트 설정 미반영 수정 + 언어팩 잔여 | **하위 가능** | S-035 | DONE |
 | [S-010](S-010-virtual-serial-env.md) | 가상 시리얼 포트 실환경 검증 | 사용자 개입 필요 (com0com 설치) | — | TODO |
 | [S-015](S-015-spi-i2c-transport.md) | SPI/I2C Transport 확장 | **상위 전용** (요구 미확정) | — | ⛔ 보류 |
 
@@ -79,11 +79,20 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-052](S-052-log-control-flow-unify.md) | 로그 위젯 제어 흐름 통일 (Presenter 권위) | 후속 | DONE |
 | [S-053](S-053-theme-manager-decompose.md) | ThemeManager 분해 (FontManager + ResourceLoader) | 후속 | DONE |
 | [S-054](S-054-color-manager-decompose.md) | ColorManager 분해 (Qt 비의존 Repository) | 후속 | DONE |
-| [S-055](S-055-system-log-persistence-missing.md) | 시스템 로그 저장이 동작하지 않음 | 후속 | TODO (상위 결정) |
+| [S-055](S-055-system-log-persistence-missing.md) | 시스템 로그 저장이 동작하지 않음 | 후속 | DONE |
+| [S-056](S-056-error-handler-layer-violation.md) | 크래시 다이얼로그 계층 역전 + 계층 의존 자동 검사 | 후속 | DONE |
+| [S-057](S-057-ruff-cleanup-and-ci-gate.md) | ruff 잔여 정리 → 0건·CI 게이트 전환 | 후속 | DONE |
+| [S-058](S-058-main-presenter-decompose.md) | MainPresenter 분해 (설정·종료·포맷 결정) | 후속 | DONE |
+| [S-059](S-059-datalogger-not-stopped-on-exit.md) | 종료 시 RX 로거 미정리 유실 (stop_all 미호출) | 후속 | DONE |
 
-**진행 중**: [S-036](S-036-fixed-font-routing-and-i18n.md) — 고정폭 폰트 미반영
-(2026-08-22 실측으로 미해결 확정: D2Coding 16pt로 바꿔도 Consolas 9pt로 렌더).
-**남은 후속**: MainPresenter 분해, ruff 잔여 44건, 패킷 뷰 스로틀(측정 선행).
+### 결함 해결·테마 확장 (2026-08-22, 사용자 지시 "결함을 해결합시다. 클래식 테마도")
+
+| ID | 제목 | 우선 | 상태 |
+|---|---|---|---|
+| [S-060](S-060-classic-theme.md) | 클래식 테마 추가 (4번째 테마) | 기능 | DONE |
+| [S-061](S-061-packet-view-throttle.md) | 패킷 뷰 스로틀 (측정 선행 후 판단) | 성능 | DOING |
+| [S-062](S-062-scanner-cleanup-and-filter-dedup.md) | PortScanWorker 종료 정리 + 필터 판정 중복 해소 | 안정성 | DONE |
+| [S-063](S-063-semantic-button-contrast.md) | 의미색 버튼 텍스트 대비 미달 (전송·반복 버튼) | UX | DOING |
 
 - **하위 가능**: Steps가 자족적으로 작성됨. Steps 밖 판단이 필요해지면 즉시 중단·보고.
 - **상위 전용/권장**: 설계·판단이 본체인 태스크. 하위 모델은 시작하지 않는다.

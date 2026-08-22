@@ -1,6 +1,6 @@
 # S-059 — 앱 종료 시 RX 데이터 로거가 정리되지 않음
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인·커밋 완료)
 - Recommended model: **하위(Sonnet) 가능**
 - 선행: S-055 (발견 경위)
 - Skills to load: task-done

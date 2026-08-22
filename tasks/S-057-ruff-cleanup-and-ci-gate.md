@@ -1,6 +1,6 @@
 # S-057 — ruff 잔여 위반 정리 + CI lint 차단 전환
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인·커밋 완료)
 - Recommended model: **하위(Sonnet) 가능**
 - 선행: S-055, S-056 커밋 후 (여러 파일을 건드리므로 마지막에)
 - Skills to load: task-done

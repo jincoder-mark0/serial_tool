@@ -1,6 +1,6 @@
 # S-046 — [P2] 문서·규칙 정합 일괄 + EventBus 규칙 정밀화
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인·커밋 완료)
 - Recommended model: **하위(Sonnet) 가능** (판정은 이미 확정 — 문서 반영만)
 - 선행: 없음 (문서만 수정 — 다른 태스크와 병렬 안전)
 - Skills to load: task-done

@@ -1,6 +1,6 @@
 # S-049 — [P3] 로그 위젯 중복 공통화 (DataLog ↔ SystemLog)
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인·커밋 완료)
 - Recommended model: **하위(Sonnet) 가능** (단, 시그널·제어 흐름 보존이 까다로움 — 벗어나면 중단·보고)
 - 선행: S-047 (명명 개명 완료 후 — 겹치는 파일)
 - Skills to load: task-done

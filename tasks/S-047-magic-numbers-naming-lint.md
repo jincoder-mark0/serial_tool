@@ -1,6 +1,6 @@
 # S-047 — [P3] 매직 넘버 상수화 + 명명 규칙 정리 + lint 도입
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인·커밋 완료)
 - Recommended model: **하위(Sonnet) 가능**
 - 선행: 없음 (S-049와는 파일이 겹치므로 **S-049보다 먼저** 수행)
 - Skills to load: task-done, lang-keys

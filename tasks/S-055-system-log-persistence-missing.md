@@ -1,6 +1,6 @@
 # S-055 — 시스템 로그 저장이 실제로 동작하지 않음
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인·커밋 완료)
 - Recommended model: **상위 판단 후 하위 가능** (기능 요구 확인 필요)
 - 선행: S-052 (발견 경위)
 - Skills to load: task-done

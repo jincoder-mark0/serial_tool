@@ -1,6 +1,6 @@
 # S-042 — [P1] 조용한 실패 2건 (수동 전송 실패 무통보 + 매크로 종료 알림 뒤바뀜)
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인·커밋 완료)
 - Recommended model: **하위(Sonnet) 가능** (설계 확정 — 벗어나면 중단·보고)
 - 선행: S-039, S-040 커밋 후
 - Skills to load: task-done, lang-keys

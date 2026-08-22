@@ -1,6 +1,6 @@
 # S-041 — [P1] 파서 설정 무효 + SPI 선택이 조용히 시리얼로 연결됨
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인·커밋 완료)
 - Recommended model: **하위(Sonnet) 가능** (설계 확정 — 벗어나면 중단·보고)
 - 선행: S-039, S-040 (같은 파일 충돌 회피 — 커밋 후 착수)
 - Skills to load: task-done, lang-keys
