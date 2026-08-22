@@ -42,6 +42,7 @@ class ConnectionWorker(QThread):
     error_occurred = pyqtSignal(str)
     connection_opened = pyqtSignal(str)
     connection_closed = pyqtSignal(str)
+    worker_terminated = pyqtSignal(str)  # 스레드 종료 통지(성공/실패 무관, 레지스트리 정리용, S-040)
 
     def __init__(self, transport: BaseTransport, connection_name: str, parent: Optional[QObject] = None) -> None:
         """
@@ -132,7 +133,55 @@ class ConnectionWorker(QThread):
         finally:
             if batch_buffer:
                 self.data_received.emit(bytes(batch_buffer))
+            # close() 이전에 TX 큐를 마지막으로 드레인 (S-039)
+            # while 루프는 최상단에서만 is_running()을 확인하므로, msleep(1) 중에
+            # stop()이 플래그를 내리면 L112-115의 큐 처리 블록을 한 번도 통과하지
+            # 못한 채 여기로 온다 — 여기서 마저 내보내지 않으면 큐잉 성공(True) 응답을
+            # 받은 데이터가 조용히 유실된다.
+            self._drain_write_queue_on_exit()
             self.close_connection()
+
+    def _drain_write_queue_on_exit(self) -> None:
+        """
+        종료(run() 루프 탈출) 시 TX 큐에 남은 데이터를 마지막으로 내보냅니다 (S-039).
+
+        Logic:
+            - 큐가 비어있으면 아무 것도 하지 않는다.
+            - transport가 열려있지 않으면 드레인이 불가능하다 — 남은 항목을
+              조용히 버리지 않고 개수를 error_occurred로 표면화한 뒤 큐를 비운다.
+            - transport가 열려있으면 큐가 빌 때까지 write()를 반복한다.
+            - write() 중 예외(예: write_timeout에 의한 SerialTimeoutException)가
+              발생하면 무한 재시도하지 않고, 이미 내보낸 개수/남은 개수와 함께
+              error_occurred로 보고한 뒤 큐를 비운다.
+        """
+        remaining = self._write_queue.qsize()
+        if remaining == 0:
+            return
+
+        if not self.transport.is_open():
+            self._write_queue.clear()
+            self.error_occurred.emit(
+                f"TX queue drain skipped on close: transport already closed, "
+                f"{remaining} pending chunk(s) discarded"
+            )
+            return
+
+        drained = 0
+        try:
+            while not self._write_queue.is_empty():
+                data = self._write_queue.dequeue()
+                if data:
+                    self.transport.write(data)  # 실패 시 여기서 raise (data는 이미 dequeue됨)
+                    drained += 1
+        except Exception as e:
+            # write()가 실패한 청크는 이미 dequeue되어 큐에서 빠진 뒤이므로
+            # qsize()에 잡히지 않는다 — 누락 없이 세려면 +1(그 청크 자신)을 더한다.
+            failed_and_left = self._write_queue.qsize() + 1
+            self._write_queue.clear()
+            self.error_occurred.emit(
+                f"TX queue drain failed on close after {drained} chunk(s) sent, "
+                f"{failed_and_left} chunk(s) discarded: {str(e)}"
+            )
 
     def is_running(self) -> bool:
         """
@@ -156,9 +205,15 @@ class ConnectionWorker(QThread):
         연결 종료 및 리소스 정리
 
         Logic:
-            - Transport가 열려있으면 닫기
-            - connection_closed Signal 발행
+            - Transport가 열려있으면 닫고 connection_closed Signal 발행 (정상 연결 종료를
+              의미 — 이 시그널의 의미를 흐리지 않기 위해 실제로 열렸던 경우에만 발행)
             - 에러 발생 시 error_occurred Signal 발행
+            - transport가 한 번도 열리지 못한 경우(open() 실패, B-3)에도
+              worker_terminated는 항상 발행한다 — 그래야 Controller가 레지스트리
+              (workers/parsers/connection_configs)에서 죽은 Worker를 즉시 제거할 수
+              있다. 이 경로에서는 connection_closed를 발행하지 않는다: open 실패는
+              이미 run()에서 error_occurred로 통지되었으므로, 연결된 적도 없는
+              포트에 대해 "Port closed"라는 오인 메시지가 중복 표시되는 것을 막는다.
         """
         if self.transport.is_open():
             try:
@@ -166,6 +221,9 @@ class ConnectionWorker(QThread):
                 self.connection_closed.emit(self.connection_name)
             except Exception as e:
                 self.error_occurred.emit(f"Close Error: {str(e)}")
+
+        # 성공/실패와 무관하게 항상 발행 (레지스트리 정리 전용 신호, S-040/B-3)
+        self.worker_terminated.emit(self.connection_name)
 
     def send_data(self, data: bytes) -> bool:
         """

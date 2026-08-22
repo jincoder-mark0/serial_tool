@@ -179,6 +179,19 @@ class FileTransferService(QRunnable):
 
                 self.event_bus.publish(EventTopics.FILE_COMPLETED, comp_event)
             else:
+                # 완료 이벤트 발행 전 TX 큐가 실제로 비워질 때까지 대기 (S-039)
+                # 마지막 청크가 "큐에 들어간 시점"에 success=True를 발행하면,
+                # 전송 직후 포트를 닫는 운용에서 그 청크가 아직 전송되지 않은
+                # 채로 완료 보고가 먼저 나갈 수 있다. ConnectionWorker가 이미
+                # 제공하는 get_write_queue_size()로 폴링해 큐가 빌 때까지 대기한다.
+                # (포트가 이미 닫혀 워커가 사라진 경우 get_write_queue_size는 0을
+                # 반환해 대기가 즉시 끝난다 — 그 경로의 데이터 보존/표면화는
+                # ConnectionWorker._drain_write_queue_on_exit가 담당.)
+                while self.connection_controller.get_write_queue_size(self.port_name) > 0:
+                    if self._is_cancelled:
+                        break
+                    time.sleep(0.01)
+
                 # 완료 이벤트 (성공)
                 comp_event = FileCompletionEvent(success=True, message="Transfer successful", file_path=self.file_path)
                 self.signals.transfer_completed.emit(comp_event)

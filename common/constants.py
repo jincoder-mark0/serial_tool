@@ -130,6 +130,17 @@ DEFAULT_BAUDRATE: int = 115200
 DEFAULT_PORT_TIMEOUT: float = 0.0  # Non-blocking I/O
 DEFAULT_READ_CHUNK_SIZE: int = 4096  # 한 번에 읽을 바이트 수
 
+# 쓰기(write) 완료 확인 타임아웃(초) — S-039
+# write_timeout=0은 pyserial 3.5의 Windows 구현(serialwin32.py)에서 쓰기 완료를
+# 확인하지 않은 채(GetOverlappedResult 생략) 성공을 보고해 데이터 유실을 놓칠 수 있다.
+# 0이 아닌 값을 주면 완료를 확인하고, 실패 시 SerialTimeoutException을 올려
+# 상위(ConnectionWorker)가 유실을 인지하게 한다.
+# 1.0초는 잠정값: 너무 작으면 저속 보드레이트/큰 청크에서 정상 전송도 타임아웃으로
+# 오판하고, 너무 크면 close() 시 드레인·종료가 그만큼 지연된다. ConnectionWorker는
+# 별도 QThread이므로 이 지연이 UI를 멈추지는 않는다. 실제 시리얼 타이밍(저속
+# 보드레이트, 대용량 청크)에서의 적정값 재검증은 S-010(가상 포트)/실기기 대상.
+WRITE_TIMEOUT_S: float = 1.0
+
 # 더미 포트 예약명 (S-033) — 실기기 없이 송수신 경로를 디버깅하기 위한 루프백 에코 포트.
 # 실제 장치명(COMx 등)과 충돌하지 않는 이름으로 고정.
 LOOPBACK_PORT_NAME: str = "LOOPBACK"

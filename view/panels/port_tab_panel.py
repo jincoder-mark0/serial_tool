@@ -40,6 +40,7 @@ class PortTabPanel(QTabWidget):
 
     # 시그널 정의
     port_tab_added = pyqtSignal(object)  # 새 탭이 추가되었을 때 (PortPanel 객체 전달)
+    port_tab_closed = pyqtSignal(str)  # 탭이 닫혔을 때 (닫힌 탭의 포트 이름 전달, S-040)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -193,7 +194,10 @@ class PortTabPanel(QTabWidget):
         Logic:
             - 마지막 탭(플러스 탭)은 닫을 수 없음
             - 최소 1개의 포트 탭은 유지 (플러스 탭 제외 count <= 2)
+            - 제거 전 해당 탭의 포트 이름을 확보 (제거 후에는 위젯 조회 불가)
             - 시그널 차단 후 탭 제거 및 포커스 이동
+            - 연결 정리는 View의 책임이 아니므로, 여기서는 port_tab_closed 시그널만
+              emit한다 — Presenter가 구독해 ConnectionController를 호출한다 (MVP, S-040)
 
         Args:
             index (int): 닫을 탭의 인덱스.
@@ -207,8 +211,13 @@ class PortTabPanel(QTabWidget):
         if self.count() <= 2:
             return
 
+        # 탭 제거 전에 포트 이름 확보 (removeTab 이후에는 위젯을 조회할 수 없음)
+        widget = self.widget(index)
+        port_name = widget.get_port_name() if isinstance(widget, PortPanel) else ""
+
         # 시그널 차단하여 탭 삭제 시 on_tab_changed가 호출되지 않도록 함
-        # (의도치 않은 새 탭 생성 방지)
+        # (의도치 않은 새 탭 생성 방지). port_tab_closed는 이 블록 밖에서 emit해야
+        # blockSignals(True)에 의해 함께 억제되지 않는다.
         self.blockSignals(True)
         try:
             self.removeTab(index)
@@ -221,6 +230,10 @@ class PortTabPanel(QTabWidget):
                 self.setCurrentIndex(new_index)
         finally:
             self.blockSignals(False)
+
+        # 연결 정리 요청 (포트가 선택되지 않은 빈 탭이면 emit하지 않음)
+        if port_name:
+            self.port_tab_closed.emit(port_name)
 
     def on_tab_changed(self, index: int) -> None:
         """

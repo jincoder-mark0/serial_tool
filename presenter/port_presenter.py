@@ -100,6 +100,13 @@ class PortPresenter(QObject):
         # 탭 변경 시 현재 패널 업데이트 (View의 시그널 사용)
         self.left_section.current_tab_changed.connect(self.update_current_port_panel)
 
+        # 탭 닫기 시 연결 정리 (좀비 연결 방지, S-040)
+        # MainLeftSection에는 아직 전용 중계 시그널이 없어(범위 밖 변경 최소화),
+        # 기존에 이미 공개된 port_tab_panel 접근자(Facade property, LoD 상 허용된
+        # 기존 패턴 — MainLeftSection.port_tab_panel은 view/main_window.py 등에서도
+        # 직접 사용 중)를 통해 PortTabPanel의 시그널을 직접 구독한다.
+        self.left_section.port_tab_panel.port_tab_closed.connect(self.handle_tab_closed)
+
         # Model Signal 연결 (DTO 수신)
         self.connection_controller.connection_opened.connect(self.on_connection_opened)
         self.connection_controller.connection_closed.connect(self.on_connection_closed)
@@ -270,6 +277,22 @@ class PortPresenter(QObject):
             config = sender.get_port_config()
             if config and config.port:
                 self.connection_controller.close_connection(config.port)
+
+    def handle_tab_closed(self, port_name: str) -> None:
+        """
+        포트 탭이 닫혔을 때 처리 (View Signal Slot, S-040).
+
+        Logic:
+            - 탭이 닫히면 View에 남아있는 위젯 참조와 무관하게 해당 이름의 연결을
+              정리해 좀비 연결(재시도 시 "Connection is already open." 오류)을 방지한다.
+            - 해당 이름이 미연결 상태여도 Controller.close_connection()은 무해하게
+              통과하므로 별도 방어 로직이 필요 없다.
+
+        Args:
+            port_name (str): 닫힌 탭에 설정되어 있던 포트 이름.
+        """
+        if port_name:
+            self.connection_controller.close_connection(port_name)
 
     def _log_event(self, message: str, level: str) -> None:
         """

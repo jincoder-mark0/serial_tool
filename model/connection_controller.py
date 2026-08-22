@@ -256,6 +256,7 @@ class ConnectionController(QObject):
             lambda n=name: self.connection_opened.emit(PortConnectionEvent(port=n, state="opened"))
         )
         worker.connection_closed.connect(self.on_worker_closed)
+        worker.worker_terminated.connect(self.on_worker_terminated)
 
         # 데이터 및 에러 핸들러 연결
         worker.error_occurred.connect(lambda msg, n=name: self._emit_error(n, msg))
@@ -297,16 +298,18 @@ class ConnectionController(QObject):
             for port_name in list(self.workers.keys()):
                 self.close_connection(port_name)
 
-    def on_worker_closed(self, name: str) -> None:
+    def _cleanup_worker_registry(self, name: str) -> bool:
         """
-        Worker가 완전히 종료되었을 때 호출되는 콜백.
+        Worker/Parser/Config 관리 Dictionary에서 name에 해당하는 항목을 제거합니다.
 
-        Logic:
-            - 관리 Dictionary에서 해당 리소스 제거
-            - 닫힘 시그널 발행
+        두 종료 경로(정상 종료 `on_worker_closed`, 비정상 종료 `on_worker_terminated`)가
+        공유하는 정리 로직이다. 이미 제거된 이름에 대해 다시 호출해도 안전하다(멱등).
 
         Args:
-            name (str): 종료된 포트 이름.
+            name (str): 정리할 연결 이름.
+
+        Returns:
+            bool: 실제로 workers에서 제거했으면 True (중복 호출 시 False).
         """
         was_registered = name in self.workers
         if was_registered:
@@ -315,9 +318,40 @@ class ConnectionController(QObject):
             del self.parsers[name]
         if name in self.connection_configs:
             del self.connection_configs[name]
+        return was_registered
 
-        if was_registered:
+    def on_worker_closed(self, name: str) -> None:
+        """
+        Worker가 정상적으로(실제 연결되었다가) 종료되었을 때 호출되는 콜백.
+        `ConnectionWorker.connection_closed`(transport가 열렸던 경우에만 발행)에 연결된다.
+
+        Logic:
+            - 관리 Dictionary에서 해당 리소스 제거
+            - 닫힘 시그널 발행 (연결이 실제로 있었던 경우에만)
+
+        Args:
+            name (str): 종료된 포트 이름.
+        """
+        if self._cleanup_worker_registry(name):
             self.connection_closed.emit(PortConnectionEvent(port=name, state="closed"))
+
+    def on_worker_terminated(self, name: str) -> None:
+        """
+        Worker 스레드가 어떤 사유로든(정상/비정상) 종료되었을 때 호출되는 콜백.
+        `ConnectionWorker.worker_terminated`(성공/실패 무관 항상 발행)에 연결된다 (S-040/B-3).
+
+        Logic:
+            - 관리 Dictionary에서 해당 리소스 제거만 수행한다.
+            - connection_closed는 발행하지 않는다: open 실패 경로는 이미
+              error_occurred로 실패가 통지되었으므로, 연결된 적 없는 포트에 대해
+              "Port closed"로 오인되는 메시지가 중복 표시되지 않도록 한다.
+            - 정상 종료 시에는 on_worker_closed가 먼저 호출되어 레지스트리가 이미
+              비어있으므로(멱등) 이 호출은 아무 효과가 없다.
+
+        Args:
+            name (str): 종료된 포트 이름.
+        """
+        self._cleanup_worker_registry(name)
 
     def _emit_error(self, port: str, message: str) -> None:
         """

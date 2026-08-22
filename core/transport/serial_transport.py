@@ -21,6 +21,7 @@ import serial
 from typing import Optional
 from core.transport.base_transport import BaseTransport
 from common.dtos import PortConfig
+from common.constants import WRITE_TIMEOUT_S
 
 class SerialTransport(BaseTransport):
     """
@@ -47,7 +48,8 @@ class SerialTransport(BaseTransport):
             - DTO에서 설정값 로드
             - 흐름 제어 설정 (RTS/CTS)
             - Non-blocking I/O 설정 (timeout=0)
-            - Write Timeout 설정 (GUI 프리징 방지)
+            - Write Timeout 설정 (WRITE_TIMEOUT_S — 쓰기 완료 확인, S-039)
+              워커 스레드(ConnectionWorker)에서만 블로킹되므로 UI는 멈추지 않음
             - serial.Serial 객체 생성
             - 에러 발생 시 Exception 전파
 
@@ -69,8 +71,8 @@ class SerialTransport(BaseTransport):
                 bytesize=self.config.bytesize,
                 parity=self.config.parity,
                 stopbits=self.config.stopbits,
-                timeout=0,       # Read timeout (Non-blocking)
-                write_timeout=0, # Write timeout (Non-blocking)
+                timeout=0,                    # Read timeout (Non-blocking)
+                write_timeout=WRITE_TIMEOUT_S, # Write timeout (완료 확인, S-039)
                 xonxoff=xonxoff,
                 rtscts=rtscts,
                 dsrdtr=False     # DTR 자동 제어 비활성화 (필요 시 수동 제어)
@@ -119,14 +121,21 @@ class SerialTransport(BaseTransport):
         """
         데이터 쓰기
 
-        전송 실패 시 예외를 전파하여 상위 계층에서 인지하도록 수정함.
-        이를 통해 데이터 유실을 방지합니다.
+        write_timeout=WRITE_TIMEOUT_S(0이 아님)이므로 pyserial(Windows
+        serialwin32.py)이 GetOverlappedResult로 쓰기 완료를 확인한 뒤 반환한다.
+        완료 전 타임아웃되면 SerialTimeoutException이 발생하며, 이를 상위
+        (Worker)로 전파해 데이터 유실을 인지하도록 한다.
+        (정정, S-039) write_timeout=0으로 두면 반대로 동작한다 — 설치된
+        pyserial 3.5의 Windows 구현은 이때 완료 확인 자체를 생략하고
+        ERROR_SUCCESS/ERROR_IO_PENDING만으로 len(data)를 반환해(성공 오보),
+        실제로는 유실됐는데도 예외가 올라오지 않는다. 과거 주석("write_timeout=0
+        으로 예외를 전파하여 데이터 유실을 방지")은 이 실측과 반대였다.
 
         Args:
             data (bytes): 전송할 바이트 데이터
 
         Raises:
-            serial.SerialTimeoutException: 쓰기 타임아웃 발생 시
+            serial.SerialTimeoutException: 쓰기 타임아웃 발생 시 (완료 미확인)
             serial.SerialException: 전송 실패 시
         """
         if self.is_open():
