@@ -137,8 +137,8 @@ class PortTabPanel(QTabWidget):
         current_name = widget.get_custom_name()
         new_name, ok = QInputDialog.getText(
             self,
-            "Edit Tab Name",
-            "Enter custom name:",
+            language_manager.get_text("port_tab_title_edit_name"),
+            language_manager.get_text("port_tab_msg_enter_name"),
             text=current_name
         )
 

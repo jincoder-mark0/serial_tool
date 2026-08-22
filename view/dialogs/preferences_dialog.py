@@ -209,7 +209,7 @@ class PreferencesDialog(QDialog):
         file_layout = QFormLayout()
 
         path_layout = QHBoxLayout()
-        self.log_path_edit = QLabel("Default ResourcePath")
+        self.log_path_edit = QLabel(language_manager.get_text("pref_lbl_log_path_placeholder"))
         self.log_path_edit.setFrameStyle(QLabel.Sunken | QLabel.Panel)
         self.browse_btn = QPushButton(language_manager.get_text("pref_btn_browse"))
         self.browse_btn.clicked.connect(self.browse_log_path)

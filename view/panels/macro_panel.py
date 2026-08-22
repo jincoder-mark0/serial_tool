@@ -283,8 +283,8 @@ class MacroPanel(QWidget):
             # 선택된 항목이 없으면 경고 메시지 표시
             QMessageBox.warning(
                 self,
-                "No Commands Selected",
-                "Please select at least one command to run."
+                language_manager.get_text("macro_panel_title_no_selection"),
+                language_manager.get_text("macro_panel_msg_no_selection")
             )
 
     def on_repeat_stop_requested(self) -> None:

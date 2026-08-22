@@ -1,6 +1,9 @@
 # S-021 — 하드코딩 사용자 메시지·라벨 언어팩 전환
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. 신설 키 32개, 상태바·통계는
+  값 캐시+refresh 헬퍼로 retranslate 연동. Presenter는 기존 main_presenter의
+  language_manager 직접 import 패턴을 일관 적용. about 버전은 app_info 단일 원천화.
+  check_language_keys SUCCESS, pytest 85 passed, ko 캡처에서 상태바·통계 한국어 확인)
 - Recommended model: **하위(Sonnet) 가능**
 - 선행: S-020 권장 (언어팩 정리 후)
 - Skills to load: task-done, lang-keys

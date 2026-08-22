@@ -17,6 +17,7 @@
 from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
 from PyQt5.QtCore import Qt
 from view.managers.language_manager import language_manager
+from common.app_info import __version__
 
 class AboutDialog(QDialog):
     """
@@ -39,7 +40,7 @@ class AboutDialog(QDialog):
         title_lbl.setStyleSheet("font-size: 24px; font-weight: bold;")
         title_lbl.setAlignment(Qt.AlignCenter)
 
-        version_lbl = QLabel(language_manager.get_text("about_lbl_version"))
+        version_lbl = QLabel(language_manager.get_text("about_lbl_version").format(__version__))
         version_lbl.setStyleSheet("font-size: 14px; color: #888;")
         version_lbl.setAlignment(Qt.AlignCenter)
 

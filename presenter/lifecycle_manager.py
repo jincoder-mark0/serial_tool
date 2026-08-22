@@ -26,6 +26,7 @@ from PyQt5.QtCore import QTimer
 from core.settings_manager import SettingsManager
 from core.logger import logger
 from view.managers.color_manager import color_manager
+from view.managers.language_manager import language_manager
 from common.constants import ConfigKeys
 from common.dtos import (
     MainWindowState,
@@ -115,8 +116,8 @@ class AppLifecycleManager:
         if self.settings_manager.config_was_reset:
             reason = self.settings_manager.reset_reason
             self.view.show_alert_message(
-                "Settings Reset",
-                f"Configuration file corrupted or invalid.\nDefaults restored.\n\nReason: {reason}"
+                language_manager.get_text("lifecycle_title_settings_reset"),
+                language_manager.get_text("lifecycle_msg_settings_reset").format(reason)
             )
 
         # View 초기화 로직 수행

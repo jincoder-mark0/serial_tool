@@ -370,8 +370,9 @@ class MainPresenter(QObject):
         from core.event_bus import event_bus
         event_bus.publish(EventTopics.SETTINGS_CHANGED, new_state)
 
-        self.view.show_status_message("Settings updated", 2000)
-        self._log_info("Settings updated")
+        settings_updated_msg = language_manager.get_text("main_status_msg_settings_updated")
+        self.view.show_status_message(settings_updated_msg, 2000)
+        self._log_info(settings_updated_msg)
 
     def on_font_settings_changed(self, font_config: FontConfig) -> None:
         """
@@ -499,12 +500,12 @@ class MainPresenter(QObject):
     def on_macro_started(self) -> None:
         """매크로 시작 알림"""
         self._log_info("Macro started")
-        self.view.show_status_message("Macro Running...", 0)
+        self.view.show_status_message(language_manager.get_text("main_status_msg_macro_running"), 0)
 
     def on_macro_finished(self) -> None:
         """매크로 종료 알림"""
         self._log_success("Macro finished")
-        self.view.show_status_message("Macro Finished", 3000)
+        self.view.show_status_message(language_manager.get_text("main_status_msg_macro_finished"), 3000)
 
     def on_macro_error(self, event: MacroErrorEvent) -> None:
         """
@@ -593,8 +594,8 @@ class MainPresenter(QObject):
         """
         logger.error(f"Macro stopped: {message}")
         self.macro_runner.stop()
-        self.view.show_status_message(f"Macro Stopped: {message}", 5000)
-        self.view.show_alert_message("Macro Error", message)
+        self.view.show_status_message(language_manager.get_text("main_status_msg_macro_stopped").format(message), 5000)
+        self.view.show_alert_message(language_manager.get_text("main_title_macro_error"), message)
 
     # -------------------------------------------------------------------------
     # File Transfer Handlers
@@ -606,15 +607,18 @@ class MainPresenter(QObject):
         Args:
             event (FileCompletionEvent): 완료 이벤트 DTO.
         """
-        status = "Completed" if event.success else "Failed"
-        msg = f"File transfer {status}: {event.message}"
+        status_key = "file_prog_lbl_status_completed" if event.success else "file_prog_lbl_status_failed"
+        status_text = language_manager.get_text(status_key)
+        msg = language_manager.get_text("main_msg_file_transfer_result").format(status_text, event.message)
 
         if event.success:
             self._log_success(msg)
         else:
             self._log_error(msg)
 
-        self.view.show_status_message(f"File Transfer {status}", 3000)
+        self.view.show_status_message(
+            language_manager.get_text("main_status_msg_file_transfer_result").format(status_text), 3000
+        )
 
     def on_file_transfer_error(self, event: FileErrorEvent) -> None:
         """

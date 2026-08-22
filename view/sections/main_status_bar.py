@@ -47,6 +47,13 @@ class MainStatusBar(QStatusBar):
         self.buffer_bar: QProgressBar = None
         self.time_lbl: QLabel = None
 
+        # 언어 전환(retranslate) 시 최신 값으로 라벨을 재구성하기 위한 상태 캐시
+        self._current_port = "--"
+        self._current_connected = False
+        self._current_rx_kbps = 0.0
+        self._current_tx_kbps = 0.0
+        self._current_bps = 0
+
         self.init_ui()
 
     def init_ui(self) -> None:
@@ -59,22 +66,22 @@ class MainStatusBar(QStatusBar):
     def _init_widgets(self) -> None:
         """상태바 우측에 표시될 영구 위젯들을 생성하고 배치합니다."""
         # 1. Port Label (연결 상태 표시)
-        self.port_lbl = QLabel("Port: -- ○")
+        self.port_lbl = QLabel()
         self.port_lbl.setMinimumWidth(100)
         self.addPermanentWidget(self.port_lbl)
 
         # 2. RX Speed
-        self.rx_count_lbl = QLabel("RX: 0 KB/s")
+        self.rx_count_lbl = QLabel()
         self.rx_count_lbl.setMinimumWidth(80)
         self.addPermanentWidget(self.rx_count_lbl)
 
         # 3. TX Speed
-        self.tx_count_lbl = QLabel("TX: 0 KB/s")
+        self.tx_count_lbl = QLabel()
         self.tx_count_lbl.setMinimumWidth(80)
         self.addPermanentWidget(self.tx_count_lbl)
 
         # 4. BPS (Bits Per Second)
-        self.bps_lbl = QLabel("BPS: 0")
+        self.bps_lbl = QLabel()
         self.bps_lbl.setMinimumWidth(80)
         self.addPermanentWidget(self.bps_lbl)
 
@@ -82,13 +89,19 @@ class MainStatusBar(QStatusBar):
         self.buffer_bar = QProgressBar()
         self.buffer_bar.setMaximum(100)
         self.buffer_bar.setFixedWidth(100)
-        self.buffer_bar.setFormat("Buffer: %p%")
+        self.buffer_bar.setFormat(language_manager.get_text("main_status_lbl_buffer"))
         self.buffer_bar.setAlignment(Qt.AlignCenter)
         self.addPermanentWidget(self.buffer_bar)
 
         # 6. Time Label (시스템 시간)
         self.time_lbl = QLabel("00:00:00")
         self.addPermanentWidget(self.time_lbl)
+
+        # 초기 라벨 텍스트 반영 (캐시된 기본값 기준)
+        self._refresh_port_label()
+        self._refresh_rx_label()
+        self._refresh_tx_label()
+        self._refresh_bps_label()
 
     def update_port_status(self, port: str, connected: bool) -> None:
         """
@@ -98,21 +111,36 @@ class MainStatusBar(QStatusBar):
             port (str): 포트 이름 (예: COM3).
             connected (bool): 연결 여부.
         """
-        status_symbol = "●" if connected else "○"
-        color = "#4CAF50" if connected else "#9E9E9E"  # Green / Grey
+        self._current_port = port
+        self._current_connected = connected
+        self._refresh_port_label()
+
+    def _refresh_port_label(self) -> None:
+        """캐시된 포트 상태로 포트 라벨을 (재)렌더링합니다."""
+        status_symbol = "●" if self._current_connected else "○"
+        color = "#4CAF50" if self._current_connected else "#9E9E9E"  # Green / Grey
+        label_text = language_manager.get_text("main_status_lbl_port").format(self._current_port)
 
         # HTML 태그로 색상 적용
-        self.port_lbl.setText(f"Port: {port} <span style='color:{color}; font-weight:bold;'>{status_symbol}</span>")
+        self.port_lbl.setText(f"{label_text} <span style='color:{color}; font-weight:bold;'>{status_symbol}</span>")
 
     def update_rx_speed(self, bytes_per_sec: int) -> None:
         """수신 속도 업데이트"""
-        speed = bytes_per_sec / 1024
-        self.rx_count_lbl.setText(f"RX: {speed:.1f} KB/s")
+        self._current_rx_kbps = bytes_per_sec / 1024
+        self._refresh_rx_label()
+
+    def _refresh_rx_label(self) -> None:
+        """캐시된 RX 속도로 라벨을 (재)렌더링합니다."""
+        self.rx_count_lbl.setText(language_manager.get_text("main_status_lbl_rx").format(f"{self._current_rx_kbps:.1f} KB/s"))
 
     def update_tx_speed(self, bytes_per_sec: int) -> None:
         """송신 속도 업데이트"""
-        speed = bytes_per_sec / 1024
-        self.tx_count_lbl.setText(f"TX: {speed:.1f} KB/s")
+        self._current_tx_kbps = bytes_per_sec / 1024
+        self._refresh_tx_label()
+
+    def _refresh_tx_label(self) -> None:
+        """캐시된 TX 속도로 라벨을 (재)렌더링합니다."""
+        self.tx_count_lbl.setText(language_manager.get_text("main_status_lbl_tx").format(f"{self._current_tx_kbps:.1f} KB/s"))
 
     def update_buffer(self, percent: int) -> None:
         """
@@ -156,7 +184,12 @@ class MainStatusBar(QStatusBar):
 
         # BPS (Optional)
         if hasattr(stats, 'bps'):
-             self.bps_lbl.setText(f"BPS: {stats.bps}")
+            self._current_bps = stats.bps
+            self._refresh_bps_label()
+
+    def _refresh_bps_label(self) -> None:
+        """캐시된 BPS 값으로 라벨을 (재)렌더링합니다."""
+        self.bps_lbl.setText(language_manager.get_text("main_status_lbl_bps").format(self._current_bps))
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 상태바 텍스트를 업데이트합니다."""
@@ -167,3 +200,10 @@ class MainStatusBar(QStatusBar):
         # 텍스트가 비어있거나 Ready 메시지와 일치하면 갱신
         if not current_msg or language_manager.text_matches_key(current_msg, ready_key):
             self.showMessage(language_manager.get_text(ready_key))
+
+        # 상시 노출 라벨(Port/RX/TX/BPS/Buffer)을 캐시된 값 기준으로 재구성
+        self._refresh_port_label()
+        self._refresh_rx_label()
+        self._refresh_tx_label()
+        self._refresh_bps_label()
+        self.buffer_bar.setFormat(language_manager.get_text("main_status_lbl_buffer"))

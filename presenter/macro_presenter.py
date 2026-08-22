@@ -31,6 +31,7 @@ except ImportError:
 from PyQt5.QtCore import QObject, QThread, pyqtSignal, Qt
 
 from view.panels.macro_panel import MacroPanel
+from view.managers.language_manager import language_manager
 from model.macro_runner import MacroRunner
 from common.dtos import (
     MacroEntry,
@@ -164,10 +165,16 @@ class MacroPresenter(QObject):
         """
         try:
             self._save_script_file(script_data.file_path, script_data.data)
-            self.panel.show_info("Success", "Script saved successfully.")
+            self.panel.show_info(
+                language_manager.get_text("macro_panel_title_save_success"),
+                language_manager.get_text("macro_panel_msg_save_success")
+            )
         except Exception as e:
             logger.error(f"Failed to save script: {e}")
-            self.panel.show_error("Save Error", f"Failed to save script:\n{str(e)}")
+            self.panel.show_error(
+                language_manager.get_text("macro_panel_title_save_error"),
+                language_manager.get_text("macro_panel_msg_save_error").format(str(e))
+            )
 
     def _save_script_file(self, file_path: str, data: dict) -> None:
         """
@@ -225,7 +232,10 @@ class MacroPresenter(QObject):
             error_msg (str): 에러 메시지.
         """
         logger.error(f"Failed to load script: {error_msg}")
-        self.panel.show_error("Load Error", f"Failed to load script:\n{error_msg}")
+        self.panel.show_error(
+            language_manager.get_text("macro_panel_title_load_error"),
+            language_manager.get_text("macro_panel_msg_load_error").format(error_msg)
+        )
         self._load_worker = None
 
     def on_repeat_start(self, request: MacroExecutionRequest) -> None:

@@ -31,6 +31,7 @@ from model.connection_controller import ConnectionController
 from model.port_scanner import PortScanWorker
 from core.settings_manager import SettingsManager
 from core.logger import logger
+from view.managers.language_manager import language_manager
 from common.constants import ConfigKeys
 from common.dtos import (
     PortConfig,
@@ -359,7 +360,11 @@ class PortPresenter(QObject):
 
         # View 계층을 통해 에러 메시지 표시
         if self.left_section:
-            QMessageBox.critical(self.left_section, "Error", f"Port Error ({event.port}): {event.message}")
+            QMessageBox.critical(
+                self.left_section,
+                language_manager.get_text("port_title_error"),
+                language_manager.get_text("port_msg_error_detail").format(event.port, event.message)
+            )
 
             # 시스템 로그 기록
             self._log_event(f"[{event.port}] Error: {event.message}", "ERROR")
