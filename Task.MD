@@ -23,6 +23,32 @@
 
 상태 값: `⏸ 대기` / `▶ 진행` / `✅ 완료` / `⛔ 보류(사유 기재)`
 
+### 리팩토링 감사 산출 (2026-08-22) — 전량 완료
+
+읽기 전용 4축 감사(아키텍처 규칙 / 구조·설계 / 오동작 예상 / 테스트·문서) 결과를
+우선순위대로 처리했다. 진단 근거와 남은 항목은 **[doc/refactor_audit_20260822.md](doc/refactor_audit_20260822.md)**,
+세부 절차는 `tasks/S-038~S-051`. 테스트 **134 → 284**.
+
+| ID | 제목 | 우선 | 상태 |
+|---|---|---|---|
+| [S-038](tasks/S-038-log-view-duplicate-methods.md) | 로그 뷰 표시 파손 (중복 메서드 정의) | P0 | ✅ 완료 |
+| [S-039](tasks/S-039-tx-data-loss.md) | TX 데이터 유실 (close flush + write_timeout) | P0 | ✅ 완료 |
+| [S-040](tasks/S-040-port-tab-close-cleanup.md) | 포트 탭 좀비 연결 + 워커 잔존 | P0 | ✅ 완료 |
+| [S-041](tasks/S-041-parser-and-protocol-wiring.md) | 파서 설정 무효 + SPI 선택 기만 | P1 | ✅ 완료 |
+| [S-042](tasks/S-042-silent-failures.md) | 전송 실패 무통보 + 매크로 종료 알림 | P1 | ✅ 완료 |
+| [S-043](tasks/S-043-settings-pollution.md) | 설정 기본값 개인정보 오염 차단 | P1 | ✅ 완료 |
+| [S-044](tasks/S-044-dead-code-and-dto.md) | dead code 3건 + DTO/enum 우회 | P2 | ✅ 완료 |
+| [S-045](tasks/S-045-test-coverage-gaps.md) | 커버리지 공백 5모듈 + DataLogger 종료 | P2 | ✅ 완료 |
+| [S-046](tasks/S-046-docs-and-rules-sync.md) | 문서·규칙 정합 (EventBus 규칙 정밀화) | P2 | ✅ 완료 |
+| [S-047](tasks/S-047-magic-numbers-naming-lint.md) | 매직 넘버·명명 + ruff 도입 | P3 | ✅ 완료 |
+| [S-048](tasks/S-048-singleton-isolation-and-key-check.md) | 싱글톤 격리 + 언어 키 사용처 검증 | P3 | ✅ 완료 |
+| [S-049](tasks/S-049-log-widget-commonization.md) | 로그 위젯 중복 공통화 | P3 | ✅ 완료 |
+| [S-050](tasks/S-050-theme-manager-safety-net.md) | 테마/색 매니저 안전망 + 순환 참조 해소 | P3 | ✅ 완료 |
+| [S-051](tasks/S-051-datalog-broadcast-init-mismatch.md) | DataLog 브로드캐스트 초기값 불일치 | — | ✅ 완료 |
+
+**후속 후보**: God object 실제 분해(분해 후보는 S-050 보고에 정리 — 이제 특성화 테스트가
+있어 착수 가능), 로그 위젯 제어 흐름 불일치 통일 여부, ruff 잔여 44건, 패킷 뷰 무스로틀.
+
 | ID | 제목 | Phase | 상태 | 비고 |
 |---|---|---|---|---|
 | S-001 | MVP 골격·UI·테마·다국어 | 1~2.5 | ✅ 완료 | doc/task.md Phase 1~2.5 |

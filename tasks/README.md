@@ -58,6 +58,28 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-010](S-010-virtual-serial-env.md) | 가상 시리얼 포트 실환경 검증 | 사용자 개입 필요 (com0com 설치) | — | TODO |
 | [S-015](S-015-spi-i2c-transport.md) | SPI/I2C Transport 확장 | **상위 전용** (요구 미확정) | — | ⛔ 보류 |
 
+### 리팩토링 감사 산출 (2026-08-22, `doc/refactor_audit_20260822.md`)
+
+| ID | 제목 | 우선 | 상태 |
+|---|---|---|---|
+| [S-038](S-038-log-view-duplicate-methods.md) | 로그 뷰 표시 파손 (중복 메서드 정의) | P0 | DONE |
+| [S-039](S-039-tx-data-loss.md) | TX 데이터 유실 (close flush + write_timeout) | P0 | DONE |
+| [S-040](S-040-port-tab-close-cleanup.md) | 포트 탭 좀비 연결 + 워커 잔존 | P0 | DONE |
+| [S-041](S-041-parser-and-protocol-wiring.md) | 파서 설정 무효 + SPI 선택 기만 | P1 | DONE |
+| [S-042](S-042-silent-failures.md) | 전송 실패 무통보 + 매크로 종료 알림 | P1 | DONE |
+| [S-043](S-043-settings-pollution.md) | 설정 기본값 개인정보 오염 차단 | P1 | DONE |
+| [S-044](S-044-dead-code-and-dto.md) | dead code 3건 + DTO/enum 우회 | P2 | DONE |
+| [S-045](S-045-test-coverage-gaps.md) | 커버리지 공백 5모듈 + DataLogger 종료 | P2 | DONE |
+| [S-046](S-046-docs-and-rules-sync.md) | 문서·규칙 정합 (EventBus 규칙 정밀화 포함) | P2 | DONE |
+| [S-047](S-047-magic-numbers-naming-lint.md) | 매직 넘버·명명 + ruff 도입 | P3 | DONE |
+| [S-048](S-048-singleton-isolation-and-key-check.md) | 싱글톤 격리 + 언어 키 사용처 검증 | P3 | DONE |
+| [S-049](S-049-log-widget-commonization.md) | 로그 위젯 중복 공통화 | P3 | DONE |
+| [S-050](S-050-theme-manager-safety-net.md) | 테마/색 매니저 안전망 + 순환 참조 해소 | P3 | DONE |
+| [S-051](S-051-datalog-broadcast-init-mismatch.md) | DataLog 브로드캐스트 초기값 불일치 | — | DONE |
+
+후속(미작성): God object 실제 분해(후보는 S-050 보고에 정리됨), 로그 위젯 제어 흐름
+불일치 통일 여부, ruff 잔여 44건 정리.
+
 - **하위 가능**: Steps가 자족적으로 작성됨. Steps 밖 판단이 필요해지면 즉시 중단·보고.
 - **상위 전용/권장**: 설계·판단이 본체인 태스크. 하위 모델은 시작하지 않는다.
 - 상태 값: `TODO` / `DOING` / `DONE` / `⛔ 보류(사유)` — 태스크 파일 상단 Status와 이 표, Task.MD를 함께 갱신.
