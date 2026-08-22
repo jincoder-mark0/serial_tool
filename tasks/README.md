@@ -26,7 +26,7 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | ID | 제목 | Recommended model | 선행 | 상태 |
 |---|---|---|---|---|
 | [S-019](S-019-datalog-duplicate-init.md) | DataLogWidget init_ui 중복 블록 제거 | **하위 가능** | — | DONE |
-| [S-020](S-020-langpack-broken-keys.md) | 언어팩 결함 수정 (깨진 키·오타·용어) | **하위 가능** | — | TODO |
+| [S-020](S-020-langpack-broken-keys.md) | 언어팩 결함 수정 (깨진 키·오타·용어) | **하위 가능** | — | DONE |
 | [S-022](S-022-theme-contrast-hardcoded-colors.md) | 테마 대비·하드코딩 색 수정 | **하위 가능** | — | TODO |
 | [S-024](S-024-text-clipping-fixed-sizes.md) | 텍스트 잘림·고정 크기 수정 | **하위 가능** | — | TODO |
 | [S-023](S-023-theme-system-structural.md) | 테마 시스템 구조 결함 수정 | **하위 가능** | — | TODO |

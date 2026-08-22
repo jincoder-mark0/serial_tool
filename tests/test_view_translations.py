@@ -40,18 +40,18 @@ def reset_language_manager():
         "en": {
             "manual_control_btn_send": "Send",
             "manual_panel_title": "Manual Control",
-            "packet_panel_btn_clear": "Clear",
-            "packet_panel_title": "Packet Inspector",
-            "packet_panel_chk_capture": "Capture",
-            "packet_panel_chk_autoscroll": "Auto Scroll"
+            "packet_btn_clear": "Clear",
+            "packet_grp_title": "Packet Inspector",
+            "packet_chk_capture": "Capture",
+            "packet_chk_autoscroll": "Auto Scroll"
         },
         "ko": {
             "manual_control_btn_send": "전송",
             "manual_panel_title": "수동 제어",
-            "packet_panel_btn_clear": "지우기",
-            "packet_panel_title": "패킷 검사기",
-            "packet_panel_chk_capture": "캡처",
-            "packet_panel_chk_autoscroll": "자동 스크롤"
+            "packet_btn_clear": "지우기",
+            "packet_grp_title": "패킷 검사기",
+            "packet_chk_capture": "캡처",
+            "packet_chk_autoscroll": "자동 스크롤"
         }
     }
     language_manager._current_language = 'en'

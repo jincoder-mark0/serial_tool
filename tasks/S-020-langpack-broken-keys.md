@@ -1,6 +1,10 @@
 # S-020 — 언어팩 결함 수정 (깨진 키·오타·용어 통일·사체 정리)
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. 키 신설 3·개명 1·오타 1·
+  용어 통일 7·고아 키 2 삭제·template_en.json 삭제. check_language_keys SUCCESS,
+  pytest 85 passed, 8조합 캡처에서 키 원문 노출 0건 확인.
+  부수 발견: `view/widgets/packet.py`는 어디서도 import되지 않는 dead code — 삭제하지 않고 보고만.
+  명명 규칙 위반 잔여 목록은 아래 Step 7 및 doc/ux_audit_20260822.md 참조)
 - Recommended model: **하위(Sonnet) 가능**
 - 선행: 없음 (근거: doc/ux_audit_20260822.md 높음 #2·#3, 중간 용어/명명, 낮음 template)
 - Skills to load: task-done, lang-keys

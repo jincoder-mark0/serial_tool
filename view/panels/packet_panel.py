@@ -191,19 +191,19 @@ class PacketPanel(QWidget):
         toolbar_layout = QHBoxLayout()
 
         # 타이틀
-        self._title_lbl = QLabel(language_manager.get_text("packet_panel_title", "Packet Inspector"))
+        self._title_lbl = QLabel(language_manager.get_text("packet_grp_title"))
         self._title_lbl.setProperty("class", "section-title")
 
         # 제어 버튼들
-        self._capture_chk = QCheckBox(language_manager.get_text("packet_capture_chk", "Capture"))
+        self._capture_chk = QCheckBox(language_manager.get_text("packet_chk_capture"))
         self._capture_chk.setChecked(True)
         self._capture_chk.toggled.connect(self.capture_toggled.emit)
 
-        self._autoscroll_chk = QCheckBox(language_manager.get_text("packet_autoscroll_chk", "Auto Scroll"))
+        self._autoscroll_chk = QCheckBox(language_manager.get_text("packet_chk_autoscroll"))
         self._autoscroll_chk.setChecked(True)
         self._autoscroll_chk.toggled.connect(self._on_autoscroll_toggled)
 
-        self._clear_btn = QPushButton(language_manager.get_text("packet_panel_btn_clear"))
+        self._clear_btn = QPushButton(language_manager.get_text("packet_btn_clear"))
         self._clear_btn.clicked.connect(self.clear_requested.emit)
 
         toolbar_layout.addWidget(self._title_lbl)
@@ -235,10 +235,10 @@ class PacketPanel(QWidget):
 
     def retranslate_ui(self) -> None:
         """언어 변경 시 텍스트 업데이트"""
-        self._title_lbl.setText(language_manager.get_text("packet_panel_title"))
-        self._clear_btn.setText(language_manager.get_text("packet_panel_btn_clear"))
-        self._capture_chk.setText(language_manager.get_text("packet_panel_chk_capture"))
-        self._autoscroll_chk.setText(language_manager.get_text("packet_panel_chk_autoscroll"))
+        self._title_lbl.setText(language_manager.get_text("packet_grp_title"))
+        self._clear_btn.setText(language_manager.get_text("packet_btn_clear"))
+        self._capture_chk.setText(language_manager.get_text("packet_chk_capture"))
+        self._autoscroll_chk.setText(language_manager.get_text("packet_chk_autoscroll"))
         # 타이틀 라벨 업데이트 로직 필요 시 추가 (객체 참조 저장 필요)
 
     # -------------------------------------------------------------------------
