@@ -7,11 +7,17 @@ import pytest
 from common.constants import ConfigKeys
 from common.dtos import ManualControlState
 from presenter.manual_control_presenter import ManualControlPresenter
+from view.panels.manual_control_panel import ManualControlPanel
 
 
 @pytest.fixture
 def mock_panel():
-    panel = MagicMock()
+    # spec을 지정해 실제 ManualControlPanel에 없는 메서드 호출을 Mock이 삼키지 않게 한다.
+    # spec 없는 MagicMock은 어떤 이름이든 받아주므로, Presenter가 존재하지 않는 View
+    # 메서드를 불러도 테스트는 통과한다 — 실제로 그 틈으로 결함이 새어 나갔다:
+    # set_enabled()가 패널에 없는데(실제 이름은 set_controls_enabled) 393개 테스트가
+    # 모두 통과하는 동안 앱은 포트 탭을 바꿀 때마다 AttributeError로 죽고 있었다.
+    panel = MagicMock(spec=ManualControlPanel)
     panel.get_input_text.return_value = ""
     panel.is_hex_mode.return_value = False
     panel.is_prefix_enabled.return_value = False
@@ -171,3 +177,19 @@ def test_local_echo_setting_updates_panel(presenter, mock_panel):
 
     assert presenter.local_echo_enabled is True
     mock_panel.set_local_echo_checked.assert_called_once_with(True)
+
+
+def test_set_enabled_calls_existing_panel_method(presenter, mock_panel):
+    """
+    `set_enabled()`가 패널에 **실제로 존재하는** 메서드를 호출하는지 고정한다.
+
+    회귀 배경: 이 메서드가 `panel.set_enabled()`를 부르고 있었는데 패널의 실제 이름은
+    `set_controls_enabled()`였다. 포트 탭을 바꿀 때마다 AttributeError로 앱이 죽었지만,
+    패널 Mock에 spec이 없어 어떤 이름이든 통과하는 바람에 전체 테스트는 초록이었다.
+    `mock_panel`이 `spec=ManualControlPanel`이므로, 없는 이름을 부르면 여기서 걸린다.
+    """
+    presenter.set_enabled(True)
+    mock_panel.set_controls_enabled.assert_called_once_with(True)
+
+    presenter.set_enabled(False)
+    assert mock_panel.set_controls_enabled.call_args[0][0] is False

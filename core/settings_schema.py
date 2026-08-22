@@ -24,7 +24,7 @@ CORE_SETTINGS_SCHEMA = {
         "settings": {
             "type": "object",
             "properties": {
-                "theme": {"type": "string", "enum": ["dark", "light", "dracula"]},
+                "theme": {"type": "string", "enum": ["dark", "light", "dracula", "classic"]},
                 "language": {"type": "string", "enum": ["en", "ko"]}
             },
             "required": ["theme", "language"]

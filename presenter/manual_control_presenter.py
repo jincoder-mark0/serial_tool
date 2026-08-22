@@ -122,7 +122,7 @@ class ManualControlPresenter(QObject):
         Args:
             enabled (bool): 활성화 여부.
         """
-        self.panel.set_enabled(enabled)
+        self.panel.set_controls_enabled(enabled)
 
     def is_broadcast_enabled(self) -> bool:
         """

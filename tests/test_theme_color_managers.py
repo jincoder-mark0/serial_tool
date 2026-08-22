@@ -424,3 +424,37 @@ def test_add_and_remove_custom_rule_round_trip():
     color_manager.remove_rule("CHAR_TEST_RULE")
     assert len(color_manager._rules) == original_count
     assert not any(r.name == "CHAR_TEST_RULE" for r in color_manager._rules)
+
+
+def test_settings_schema_theme_enum_covers_every_theme_type():
+    """
+    설정 스키마의 theme enum이 `ThemeType`의 모든 값을 담고 있는지 고정한다.
+
+    회귀 배경: S-060이 클래식 테마를 추가하면서 `ThemeType.CLASSIC`과 QSS 파일,
+    메뉴 항목까지는 만들었지만 `core/settings_schema.py`의 enum은
+    `["dark", "light", "dracula"]` 그대로였다. 그 결과 사용자가 클래식을 고르면
+    저장 시 스키마 검증에 걸려 폴백 테마로 되돌아간다 - 테마를 고를 수는 있는데
+    유지되지 않는 상태였고, 393개 테스트 중 어느 것도 이 enum을 보지 않았다.
+
+    테마를 새로 추가할 때 스키마 갱신을 강제하기 위해 두 정의를 기계적으로 묶는다.
+    """
+    from common.enums import ThemeType
+    from core.settings_schema import CORE_SETTINGS_SCHEMA
+
+    schema_enum = set(
+        CORE_SETTINGS_SCHEMA["properties"]["settings"]["properties"]["theme"]["enum"]
+    )
+    theme_type_values = {t.value for t in ThemeType}
+
+    missing = theme_type_values - schema_enum
+    assert not missing, (
+        f"ThemeType에 있으나 설정 스키마 enum에 없는 테마: {sorted(missing)} - "
+        f"이 테마를 고르면 저장 시 검증 실패로 되돌아간다. "
+        f"core/settings_schema.py의 theme enum을 갱신하라."
+    )
+
+    stray = schema_enum - theme_type_values
+    assert not stray, (
+        f"스키마 enum에만 있고 ThemeType에는 없는 값: {sorted(stray)} - "
+        f"둘 중 하나가 낡았다."
+    )
