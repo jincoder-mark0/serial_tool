@@ -50,7 +50,7 @@
 * 통신 구현은 `SerialTransport`만 제공하며 SPI/I2C Transport는 없습니다.
 * 패킷 설정 UI는 존재하지만 연결 생성 시 현재 `RawParser`가 기본으로 사용됩니다.
 * 사용자 설정은 배포(PyInstaller 번들) 시 `%APPDATA%\SerialTool\settings.json`, 개발 모드에서는 `resources/configs/settings.local.json`에 분리 저장됩니다(S-013/S-043 완료). 저장소의 `resources/configs/settings.json`은 최초 배포 시의 기본값 원본으로만 사용됩니다.
-* 자동화 테스트는 Core, Model, Presenter, View 및 주요 통합 흐름 349개를 검증합니다.
+* 자동화 테스트는 Core, Model, Presenter, View 및 주요 통합 흐름 367개를 검증합니다.
 * 성능 벤치마크(S-011)·패키징(S-012)·CI(S-014)는 완료되었습니다. 가상 시리얼 포트(com0com) 실환경 검증(S-010)만 후속 작업입니다.
 
 ---

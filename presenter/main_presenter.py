@@ -23,7 +23,6 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 * DTO를 활용한 데이터 교환 (Type Safety)
 * SettingsManager 주입 및 관리
 """
-import os
 from typing import Optional
 from PyQt5.QtCore import QObject, QTimer, QDateTime, QCoreApplication
 
@@ -39,6 +38,9 @@ from .manual_control_presenter import ManualControlPresenter
 from .event_router import EventRouter
 from .data_handler import DataTrafficHandler
 from .lifecycle_manager import AppLifecycleManager
+from .logging_format_resolver import LoggingFormatResolver
+from .preferences_coordinator import PreferencesCoordinator
+from .shutdown_state_collector import ShutdownStateCollector
 
 from core.command_processor import CommandProcessor
 from core.settings_manager import SettingsManager
@@ -51,7 +53,6 @@ from view.managers.language_manager import language_manager
 from view.managers.color_manager import color_manager
 from core.logger import logger
 from common.constants import ConfigKeys, EventTopics
-from common.enums import LogFormat
 from common.dtos import (
     ManualCommand,
     PortDataEvent,
@@ -220,33 +221,10 @@ class MainPresenter(QObject):
         설정을 변경할 수 있는 PreferencesDialog를 표시합니다.
 
         Logic:
-            - SettingsManager에서 현재 설정을 조회
-            - PreferencesState DTO 생성 및 View에 전달
+            - PreferencesCoordinator를 통해 현재 설정으로부터 DTO 조립 (S-058)
+            - View에 전달
         """
-        settings = self.settings_manager
-        state = PreferencesState(
-            theme=settings.get(ConfigKeys.THEME, "Dark").capitalize(),
-            language=settings.get(ConfigKeys.LANGUAGE, "en"),
-            font_size=settings.get(ConfigKeys.PROP_FONT_SIZE, 10),
-            max_log_lines=settings.get(ConfigKeys.RX_MAX_LINES, 2000),
-            baudrate=settings.get(ConfigKeys.PORT_BAUDRATE, 115200),
-            newline=str(settings.get(ConfigKeys.PORT_NEWLINE, "\n")),
-            local_echo_enabled=settings.get(ConfigKeys.PORT_LOCAL_ECHO, False),
-            scan_interval_ms=settings.get(ConfigKeys.PORT_SCAN_INTERVAL, 1000),
-            command_prefix=settings.get(ConfigKeys.COMMAND_PREFIX, ""),
-            command_suffix=settings.get(ConfigKeys.COMMAND_SUFFIX, ""),
-            log_dir=settings.get(ConfigKeys.LOG_PATH, ""),
-            parser_type=settings.get(ConfigKeys.PACKET_PARSER_TYPE, 0),
-            delimiters=settings.get(ConfigKeys.PACKET_DELIMITERS, ["\\r\\n"]),
-            packet_length=settings.get(ConfigKeys.PACKET_LENGTH, 64),
-            at_color_ok=settings.get(ConfigKeys.AT_COLOR_OK, True),
-            at_color_error=settings.get(ConfigKeys.AT_COLOR_ERROR, True),
-            at_color_urc=settings.get(ConfigKeys.AT_COLOR_URC, True),
-            at_color_prompt=settings.get(ConfigKeys.AT_COLOR_PROMPT, True),
-            packet_buffer_size=settings.get(ConfigKeys.PACKET_BUFFER_SIZE, 100),
-            packet_realtime=settings.get(ConfigKeys.PACKET_REALTIME, True),
-            packet_autoscroll=settings.get(ConfigKeys.PACKET_AUTOSCROLL, True)
-        )
+        state = PreferencesCoordinator.build_state(self.settings_manager)
         self.view.open_preferences_dialog(state)
 
     def on_close_requested(self) -> None:
@@ -285,43 +263,10 @@ class MainPresenter(QObject):
         # ManualControlPresenter를 통해 상태 DTO 획득
         manual_state_dto = self.manual_control_presenter.get_state()
 
-        # DTO -> Dict 변환하여 상태 병합 (설정 저장용)
-        state.left_section_state["manual_control"] = {
-            "manual_control_widget": {
-                "input_text": manual_state_dto.input_text,
-                "hex_mode": manual_state_dto.hex_mode,
-                "prefix_enabled": manual_state_dto.prefix_enabled,
-                "suffix_enabled": manual_state_dto.suffix_enabled,
-                "rts_enabled": manual_state_dto.rts_enabled,
-                "dtr_enabled": manual_state_dto.dtr_enabled,
-                "local_echo_enabled": manual_state_dto.local_echo_enabled,
-                "broadcast_enabled": manual_state_dto.broadcast_enabled,
-                "auto_tx_enabled": manual_state_dto.auto_tx_enabled,
-                "auto_tx_interval_ms": manual_state_dto.auto_tx_interval_ms
-            }
-        }
-
-        # SettingsManager에 값 설정
+        # DTO -> Dict 변환·병합 및 SettingsManager 반영은 ShutdownStateCollector로
+        # 통합 (S-058) — 저장 키·조건·순서는 기존과 완전히 동일하다.
         settings = self.settings_manager
-        settings.set(ConfigKeys.WINDOW_WIDTH, state.width)
-        settings.set(ConfigKeys.WINDOW_HEIGHT, state.height)
-        settings.set(ConfigKeys.WINDOW_X, state.x)
-        settings.set(ConfigKeys.WINDOW_Y, state.y)
-        settings.set(ConfigKeys.SPLITTER_STATE, state.splitter_state)
-        settings.set(ConfigKeys.RIGHT_PANEL_VISIBLE, state.right_panel_visible)
-
-        if state.right_section_width is not None:
-            settings.set(ConfigKeys.SAVED_RIGHT_WIDTH, state.right_section_width)
-
-        # 하위 위젯 상태 저장
-        if ConfigKeys.MANUAL_CONTROL_STATE in state.left_section_state:
-            settings.set(ConfigKeys.MANUAL_CONTROL_STATE, state.left_section_state[ConfigKeys.MANUAL_CONTROL_STATE])
-        if ConfigKeys.PORTS_TABS_STATE in state.left_section_state:
-            settings.set(ConfigKeys.PORTS_TABS_STATE, state.left_section_state[ConfigKeys.PORTS_TABS_STATE])
-        if ConfigKeys.MACRO_COMMANDS in state.right_section_state:
-            settings.set(ConfigKeys.MACRO_COMMANDS, state.right_section_state[ConfigKeys.MACRO_COMMANDS])
-        if ConfigKeys.MACRO_CONTROL_STATE in state.right_section_state:
-            settings.set(ConfigKeys.MACRO_CONTROL_STATE, state.right_section_state[ConfigKeys.MACRO_CONTROL_STATE])
+        ShutdownStateCollector.collect_and_apply(settings, state, manual_state_dto)
 
         settings.save_settings()
 
@@ -350,30 +295,8 @@ class MainPresenter(QObject):
             new_state (PreferencesState): 변경된 설정 상태 DTO.
         """
         settings = self.settings_manager
-        # 설정 저장 로직 ... (기존과 동일)
-        settings.set(ConfigKeys.THEME, new_state.theme.lower())
-        settings.set(ConfigKeys.LANGUAGE, new_state.language)
-        settings.set(ConfigKeys.PROP_FONT_SIZE, new_state.font_size)
-        settings.set(ConfigKeys.RX_MAX_LINES, new_state.max_log_lines)
-        settings.set(ConfigKeys.PORT_BAUDRATE, new_state.baudrate)
-        settings.set(ConfigKeys.PORT_NEWLINE, new_state.newline)
-        settings.set(ConfigKeys.PORT_LOCAL_ECHO, new_state.local_echo_enabled)
-        settings.set(ConfigKeys.PORT_SCAN_INTERVAL, new_state.scan_interval_ms)
-        settings.set(ConfigKeys.COMMAND_PREFIX, new_state.command_prefix)
-        settings.set(ConfigKeys.COMMAND_SUFFIX, new_state.command_suffix)
-        settings.set(ConfigKeys.LOG_PATH, new_state.log_dir)
-
-        # Packet Settings
-        settings.set(ConfigKeys.PACKET_PARSER_TYPE, new_state.parser_type)
-        settings.set(ConfigKeys.PACKET_DELIMITERS, new_state.delimiters)
-        settings.set(ConfigKeys.PACKET_LENGTH, new_state.packet_length)
-        settings.set(ConfigKeys.AT_COLOR_OK, new_state.at_color_ok)
-        settings.set(ConfigKeys.AT_COLOR_ERROR, new_state.at_color_error)
-        settings.set(ConfigKeys.AT_COLOR_URC, new_state.at_color_urc)
-        settings.set(ConfigKeys.AT_COLOR_PROMPT, new_state.at_color_prompt)
-        settings.set(ConfigKeys.PACKET_BUFFER_SIZE, new_state.packet_buffer_size)
-        settings.set(ConfigKeys.PACKET_REALTIME, new_state.packet_realtime)
-        settings.set(ConfigKeys.PACKET_AUTOSCROLL, new_state.packet_autoscroll)
+        # 설정 저장 로직: DTO<->키 매핑은 PreferencesCoordinator로 통합 (S-058)
+        PreferencesCoordinator.apply_state(settings, new_state)
 
         settings.save_settings()
 
@@ -801,11 +724,6 @@ class MainPresenter(QObject):
         Args:
             panel (PortPanel): 요청한 패널.
         """
-        format_map = {
-            '.pcap': LogFormat.PCAP,
-            '.txt': LogFormat.HEX,
-        }
-
         file_path = self._start_log_capture_dialog(panel)
         if file_path is None:
             return
@@ -815,11 +733,8 @@ class MainPresenter(QObject):
             panel.set_logging_active(False)
             return
 
-        # 확장자 기반 포맷 결정
-        _, ext = os.path.splitext(file_path)
-
-        lower_ext = ext.lower()
-        log_format = format_map.get(lower_ext, LogFormat.BIN)
+        # 확장자 기반 포맷 결정 (순수 로직은 LoggingFormatResolver로 분리 — S-058)
+        log_format = LoggingFormatResolver.resolve(file_path)
 
         # 포맷 전달 및 시작
         if data_logger_manager.start_logging(port, file_path, log_format):
