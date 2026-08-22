@@ -52,6 +52,8 @@ class MainLeftSection(QWidget):
     # PortPanel이 DataLogWidget의 logging_start/stop_requested를 재발행하는 것과 동일 패턴)
     sys_logging_start_requested = pyqtSignal()
     sys_logging_stop_requested = pyqtSignal()
+    # 시스템 로그 화면에 실제로 추가된 한 줄 재발행 (S-055: 실제 파일 기록 연동용)
+    system_log_line_appended = pyqtSignal(str)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -118,6 +120,10 @@ class MainLeftSection(QWidget):
         )
         self._system_log_widget.sys_logging_stop_requested.connect(
             self.sys_logging_stop_requested.emit
+        )
+        # 실제 파일 기록용 라인 재발행 (S-055)
+        self._system_log_widget.system_log_line_appended.connect(
+            self.system_log_line_appended.emit
         )
 
         # 레이아웃 배치

@@ -35,6 +35,7 @@ S-045 커버리지 테스트: GlobalErrorHandler (core/error_handler.py)
 import sys
 import threading
 import types
+from pathlib import Path
 
 import pytest
 
@@ -44,6 +45,39 @@ from core.error_handler import (
     install_global_error_handler,
     get_error_handler,
 )
+
+# clean_error_handler_state fixture가 매 테스트마다 GlobalErrorHandler._show_error_dialog를
+# 몽키패치로 가로채므로(QMessageBox.exec_() 블로킹 방지용), 문구 계산 로직 자체를 검증하는
+# 테스트는 몽키패치되기 전(모듈 임포트 시점)에 잡아둔 이 원본 구현을 직접 호출한다.
+_ORIGINAL_SHOW_ERROR_DIALOG = GlobalErrorHandler._show_error_dialog
+
+
+def _install_fake_message_box(monkeypatch) -> dict:
+    """
+    core.error_handler.QMessageBox를 가짜 클래스로 교체하고, setWindowTitle/setText로
+    들어온 값을 담을 dict를 반환한다.
+
+    QMessageBox.Critical/Ok 같은 클래스 상수는 실제 값을 그대로 물려받아야
+    `msg_box.setIcon(QMessageBox.Critical)` 호출이 AttributeError 없이 통과한다.
+    """
+    from PyQt5.QtWidgets import QMessageBox as _RealQMessageBox
+
+    captured: dict = {}
+
+    class _FakeMsgBox:
+        Critical = _RealQMessageBox.Critical
+        Ok = _RealQMessageBox.Ok
+
+        def setIcon(self, *a): pass
+        def setWindowTitle(self, title): captured["title"] = title
+        def setText(self, text): captured["text"] = text
+        def setInformativeText(self, *a): pass
+        def setDetailedText(self, *a): pass
+        def setStandardButtons(self, *a): pass
+        def exec_(self): pass
+
+    monkeypatch.setattr(error_handler_module, "QMessageBox", _FakeMsgBox)
+    return captured
 
 
 # -----------------------------------------------------------------------------
@@ -262,3 +296,133 @@ def test_falls_back_to_stderr_when_no_qapplication_instance(
     assert clean_error_handler_state.dialog_calls == []
     # 로깅 자체는 QApplication 유무와 무관하게 여전히 수행됨
     assert len(clean_error_handler_state.critical_calls) == 1
+
+
+# -----------------------------------------------------------------------------
+# S-056: 다이얼로그 문구 콜백 주입 (core는 view.language_manager를 모른 채로
+# 조립 계층이 주입한 콜백으로만 문구를 얻는다) - 실제 QMessageBox는 여전히
+# 몽키패치로 가로채되, `_show_error_dialog`의 문구 계산 로직 자체를 검증한다.
+# -----------------------------------------------------------------------------
+
+def test_show_error_dialog_uses_english_fallback_without_provider(
+    qapp, clean_error_handler_state, monkeypatch
+):
+    """
+    콜백을 주입하지 않으면(기본값) 영어 하드코딩 폴백 문구가 그대로 쓰인다.
+    (손상된 상태·테스트·라이브러리 사용 시 안전을 위한 기본 동작)
+    """
+    from common.dtos import ErrorContext
+    from core.error_handler import _FALLBACK_TITLE, _FALLBACK_MESSAGE_TEMPLATE
+
+    captured_kwargs = _install_fake_message_box(monkeypatch)
+
+    handler = GlobalErrorHandler()  # message_provider 생략 -> None
+    context = ErrorContext(
+        error_type="ValueError", message="boom", traceback="tb", timestamp=0.0
+    )
+    _ORIGINAL_SHOW_ERROR_DIALOG(handler, context)
+
+    assert captured_kwargs["title"] == _FALLBACK_TITLE
+    assert captured_kwargs["text"] == _FALLBACK_MESSAGE_TEMPLATE.format("ValueError")
+
+
+def test_show_error_dialog_uses_injected_message_provider(
+    qapp, clean_error_handler_state, monkeypatch
+):
+    """주입된 콜백이 있으면 그 콜백이 돌려준 (제목, 메시지 템플릿)을 사용한다."""
+    from common.dtos import ErrorContext
+
+    captured_kwargs = _install_fake_message_box(monkeypatch)
+
+    handler = GlobalErrorHandler(
+        message_provider=lambda: ("치명적 오류", "예상치 못한 오류가 발생했습니다: {0}")
+    )
+    context = ErrorContext(
+        error_type="ValueError", message="boom", traceback="tb", timestamp=0.0
+    )
+    _ORIGINAL_SHOW_ERROR_DIALOG(handler, context)
+
+    assert captured_kwargs["title"] == "치명적 오류"
+    assert captured_kwargs["text"] == "예상치 못한 오류가 발생했습니다: ValueError"
+
+
+def test_show_error_dialog_falls_back_when_provider_raises(
+    qapp, clean_error_handler_state, monkeypatch
+):
+    """콜백 호출 자체가 실패하면(손상된 상태) 영어 하드코딩 폴백으로 조용히 떨어진다."""
+    from common.dtos import ErrorContext
+    from core.error_handler import _FALLBACK_TITLE, _FALLBACK_MESSAGE_TEMPLATE
+
+    captured_kwargs = _install_fake_message_box(monkeypatch)
+
+    def _broken_provider():
+        raise RuntimeError("language resource load failed")
+
+    handler = GlobalErrorHandler(message_provider=_broken_provider)
+    context = ErrorContext(
+        error_type="ValueError", message="boom", traceback="tb", timestamp=0.0
+    )
+    _ORIGINAL_SHOW_ERROR_DIALOG(handler, context)
+
+    assert captured_kwargs["title"] == _FALLBACK_TITLE
+    assert captured_kwargs["text"] == _FALLBACK_MESSAGE_TEMPLATE.format("ValueError")
+
+
+def test_set_error_message_provider_updates_installed_handler(qapp, clean_error_handler_state):
+    """set_error_message_provider()로 이미 설치된 핸들러의 콜백을 나중에 주입할 수 있다."""
+    from core.error_handler import set_error_message_provider
+
+    install_global_error_handler()
+    handler = get_error_handler()
+
+    def provider():
+        return ("주입된 제목", "주입된 메시지: {0}")
+
+    set_error_message_provider(provider)
+
+    assert handler._message_provider is provider
+
+
+def test_set_error_message_provider_noop_before_install(clean_error_handler_state):
+    """핸들러가 설치되기 전에 호출해도 예외 없이 아무 일도 하지 않는다."""
+    from core.error_handler import set_error_message_provider
+
+    assert get_error_handler() is None
+    set_error_message_provider(lambda: ("x", "y"))  # 예외 없이 통과해야 함
+    assert get_error_handler() is None
+
+
+def test_install_global_error_handler_no_args_defaults_to_no_provider(
+    qapp, clean_error_handler_state
+):
+    """인자 없이 install_global_error_handler()를 호출하면 콜백이 주입되지 않은 상태(None)다."""
+    install_global_error_handler()
+    handler = get_error_handler()
+
+    assert handler._message_provider is None
+
+
+def test_core_error_handler_module_does_not_import_view():
+    """
+    core/error_handler.py 소스에 view 계층 import가 없어야 한다(S-056).
+
+    문자열 검색이 아니라 AST로 확인해, 함수 내부의 지연 import(S-036이 도입했던
+    형태)까지 포함해 전부 잡아낸다. tests/test_layer_dependencies.py의
+    core/ 전체 검사와 취지는 같지만, 이 파일 자체에서도 회귀를 바로 알 수 있도록
+    좁혀서 한 번 더 고정한다.
+    """
+    import ast
+
+    source = Path(error_handler_module.__file__).read_text(encoding="utf-8")
+    tree = ast.parse(source)
+    imported_roots = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            imported_roots.update(alias.name.split(".")[0] for alias in node.names)
+        elif isinstance(node, ast.ImportFrom):
+            if node.level == 0 and node.module:
+                imported_roots.add(node.module.split(".")[0])
+
+    assert "view" not in imported_roots
+    assert "presenter" not in imported_roots
+    assert "model" not in imported_roots

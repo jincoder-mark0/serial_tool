@@ -24,7 +24,7 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QCheckBox, QLabel, QLineEdit, QFileDialog
 )
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QRegExp
 
 from view.managers.language_manager import language_manager
 from view.managers.theme_manager import theme_manager
@@ -52,6 +52,13 @@ class SystemLogWidget(QWidget):
     # 로깅 제어 시그널 (S-052: DataLogWidget과 대칭 — 인자 없는 요청 시그널)
     sys_logging_start_requested = pyqtSignal()
     sys_logging_stop_requested = pyqtSignal()
+
+    # 화면에 실제로 한 줄이 추가될 때마다 발행 (S-055: 실제 파일 기록 연동용).
+    # View는 파일을 직접 쓰지 않는다 — Presenter가 이 시그널을 구독해 텍스트
+    # 라이터(core/text_log_writer.py)에 같은 줄을 넘긴다. 화면 필터가 걸려
+    # 있으면(검색어+필터 체크박스) 화면에서 숨겨지는 줄은 이 시그널도 받지
+    # 않는다 — "저장 대상은 화면에 표시되는 라인 그대로"라는 결정(S-055) 때문.
+    system_log_line_appended = pyqtSignal(str)
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
         """
@@ -227,7 +234,11 @@ class SystemLogWidget(QWidget):
         # 2. 타임스탬프 포맷팅
         dt = datetime.datetime.fromtimestamp(event.timestamp)
         timestamp_str = dt.strftime("[%H:%M:%S]")
-        full_text = f"{timestamp_str} {text}"
+        # plain_text: 색상 HTML 마크업이 섞이기 전의 순수 텍스트.
+        # 파일에 저장할 때는 이 값을 쓴다 — HTML 태그는 화면 표시 전용이라
+        # 파일에 그대로 쓰면 사람이 읽기 어렵다(S-055).
+        plain_text = f"{timestamp_str} {text}"
+        full_text = plain_text
 
         # 3. 색상 규칙 적용
         if self._color_rules:
@@ -237,6 +248,47 @@ class SystemLogWidget(QWidget):
 
         # 4. 뷰에 추가
         self.sys_log_list.append(full_text)
+
+        # 5. 실제 파일 기록용 시그널 발행 (S-055).
+        # 화면 검색 필터가 켜져 있고 현재 라인이 필터에 걸리지 않으면(=화면에
+        # 보이지 않으면) 저장도 하지 않는다 — "보이는 것 = 저장되는 것" 결정.
+        if self._passes_display_filter(plain_text):
+            self.system_log_line_appended.emit(plain_text)
+
+    def _passes_display_filter(self, plain_text: str) -> bool:
+        """
+        현재 화면 필터(검색어 + 필터 체크박스) 기준으로 해당 라인이 화면에
+        보이는 상태인지 판단합니다.
+
+        Logic:
+            - 필터 체크박스가 꺼져 있거나 검색어가 비어 있으면 항상 통과(True).
+            - `QSmartListView`(view/custom_qt/smart_list_view.py)의
+              `set_search_pattern()`/`_execute_filter_update()`와 동일한 방식
+              (대소문자 무시 정규식, 무효 패턴은 일반 텍스트로 이스케이프)으로
+              매칭해 화면에 보이는 규칙과 일치시킨다.
+            - 이 위젯은 필터링을 위해 `QSortFilterProxyModel`을 직접 다루지
+              않으므로(그 로직은 QSmartListView 내부), 여기서는 동일한 판정
+              규칙만 재현한다 — 실제 표시 여부의 최종 권한은 여전히
+              QSmartListView에 있다.
+
+        Args:
+            plain_text: 색상 마크업이 적용되기 전의 순수 로그 라인.
+
+        Returns:
+            bool: 현재 필터 기준으로 화면에 표시되면(=저장 대상이면) True.
+        """
+        if not self.filter_enabled:
+            return True
+
+        search_text = self.sys_log_search_input.text() if self.sys_log_search_input else ""
+        if not search_text:
+            return True
+
+        pattern = QRegExp(search_text, Qt.CaseInsensitive)
+        if not pattern.isValid():
+            pattern = QRegExp(QRegExp.escape(search_text), Qt.CaseInsensitive)
+
+        return pattern.indexIn(plain_text) != -1
 
     def clear(self) -> None:
         """로그를 초기화합니다."""
@@ -326,11 +378,14 @@ class SystemLogWidget(QWidget):
         if self.tab_name:
             title = f"{self.tab_name}::{title}"
 
+        # 시스템 로그는 항상 줄 단위 텍스트이므로(S-055) 텍스트 확장자를 기본으로 안내한다.
+        # (기존 "Binary Files (*.bin)"는 DataLogWidget과의 복사·구현 과정에서 남은
+        # 오기였다 — 시스템 로그는 바이너리 포맷을 지원한 적이 없다.)
         filename, _ = QFileDialog.getSaveFileName(
             self,
             title,
             "",
-            "Binary Files (*.bin);;All Files (*)"
+            "Text Files (*.txt *.log);;All Files (*)"
         )
         return filename
 

@@ -39,7 +39,7 @@ from view.main_window import MainWindow
 from presenter.main_presenter import MainPresenter
 
 from core.logger import logger
-from core.error_handler import install_global_error_handler
+from core.error_handler import install_global_error_handler, set_error_message_provider
 from core.settings_manager import SettingsManager
 from view.managers.theme_manager import ThemeManager
 from view.managers.language_manager import LanguageManager
@@ -95,6 +95,21 @@ def main() -> None:
     language_manager = LanguageManager(resource_path)
     theme_manager = ThemeManager(resource_path)
     ColorManager(resource_path)
+
+    # 4-1. 전역 에러 핸들러에 다이얼로그 문구 콜백 주입 (S-056)
+    # install_global_error_handler()는 이미 1단계에서 호출되어 훅은 설치된 상태.
+    # core/error_handler.py는 view.managers.language_manager를 알면 안 되므로
+    # (의존 방향 View -> Presenter -> Model -> Core), 조립 지점인 여기서 콜백으로
+    # 문구를 나중에 주입한다. 콜백으로 넘기는 이유는 호출 시점(다음 크래시 시)마다
+    # language_manager.get_text()를 다시 평가해, 실행 중 언어를 바꿔도 즉시 반영되게
+    # 하기 위함이다(문자열을 한 번만 캡처해 넘기면 언어 전환 후에도 옛 문구가 남는다).
+    def _get_crash_dialog_texts() -> tuple:
+        return (
+            language_manager.get_text("error_title_critical"),
+            language_manager.get_text("error_msg_unexpected"),
+        )
+
+    set_error_message_provider(_get_crash_dialog_texts)
 
     # 5. 언어 설정 적용
     # MainWindow 생성 전에 언어를 설정해야 UI 텍스트가 올바르게 표시됨

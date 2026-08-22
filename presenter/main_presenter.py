@@ -43,6 +43,7 @@ from .lifecycle_manager import AppLifecycleManager
 from core.command_processor import CommandProcessor
 from core.settings_manager import SettingsManager
 from core.data_logger import data_logger_manager
+from core.text_log_writer import TextLogWriter
 
 from view.panels.port_panel import PortPanel
 
@@ -88,6 +89,8 @@ class MainPresenter(QObject):
         self.view = view
         self.settings_manager = SettingsManager()
         self.status_timer: Optional[QTimer] = None
+        # 시스템 로그 REC 토글의 실제 파일 기록 라이터 (S-055). None이면 미기록 상태.
+        self._sys_log_writer: Optional[TextLogWriter] = None
 
         # LifecycleManager를 통해 초기화 위임
         self.lifecycle_manager = AppLifecycleManager(self)
@@ -269,6 +272,11 @@ class MainPresenter(QObject):
         self.data_handler.stop()
         if self.status_timer:
             self.status_timer.stop()
+
+        # 시스템 로그 REC 중이었다면 파일을 닫아 유실을 방지한다 (S-055).
+        # AppLifecycleManager는 초기화 시퀀스만 담당하고 별도 종료 시퀀스가 없어
+        # (initialize_app()만 존재), 실제 종료 처리는 이 메서드가 유일한 지점이다.
+        self._close_sys_log_writer()
 
         # View 상태 수집 (Facade Method 사용)
         state = self.view.get_window_state()
@@ -709,6 +717,8 @@ class MainPresenter(QObject):
         left_view = self.view.port_view
         left_view.sys_logging_start_requested.connect(self._on_sys_logging_start_requested)
         left_view.sys_logging_stop_requested.connect(self._on_sys_logging_stop_requested)
+        # 화면에 실제로 추가되는 시스템 로그 한 줄 한 줄을 라이터에도 전달 (S-055)
+        left_view.system_log_line_appended.connect(self._on_system_log_line_appended)
 
     def _on_port_tab_added(self, panel: PortPanel) -> None:
         """
@@ -823,25 +833,74 @@ class MainPresenter(QObject):
 
     def _on_sys_logging_start_requested(self) -> None:
         """
-        시스템 로그 REC 시작 요청 처리 (S-052).
+        시스템 로그 REC 시작 요청 처리 (S-052 제어 흐름, S-055 실제 파일 기록).
 
         Logic:
             - View Facade(MainLeftSection)를 통해 파일 다이얼로그 표시
-            - DataLog와 달리 포트에 종속되지 않는 단일 로그이므로 별도의
-              DataLoggerManager 연동 없이(기존 SystemLog 자기 권위 구현도 동일하게
-              파일 시스템에 실제로 기록하지 않았다 — 사전 존재 기능 격차, 이번
-              태스크 범위 밖) 다이얼로그 결과에 따라 REC UI 상태만 갱신한다.
+            - DataLog와 달리 포트에 종속되지 않는 단일 로그이므로 DataLoggerManager
+              대신 전용 TextLogWriter(core/text_log_writer.py)를 사용한다
+              (시스템 로그는 줄 단위 텍스트, DataLogger는 바이트 스트림 전용).
+            - 파일 열기 실패는 조용히 삼키지 않는다(S-039/S-045 원칙) — REC UI를
+              켜지 않고 ERROR로 표면화한다.
         """
         left_view = self.view.port_view
         file_path = self._start_log_capture_dialog(left_view)
         if file_path is None:
             return
 
+        writer = TextLogWriter()
+        try:
+            writer.open(file_path)
+        except OSError as e:
+            left_view.set_logging_active(False)
+            self._log_error(f"Failed to start system log recording ({file_path}): {e}")
+            return
+
+        self._sys_log_writer = writer
         left_view.set_logging_active(True)
         self._log_info(f"System log recording enabled: {file_path}")
 
     def _on_sys_logging_stop_requested(self) -> None:
-        """시스템 로그 REC 중지 요청 처리 (S-052)."""
+        """시스템 로그 REC 중지 요청 처리 (S-052 제어 흐름, S-055 실제 파일 닫기)."""
         left_view = self.view.port_view
+        self._close_sys_log_writer()
         left_view.set_logging_active(False)
         self._log_info("System log recording stopped")
+
+    def _close_sys_log_writer(self) -> None:
+        """
+        시스템 로그 라이터가 열려 있으면 닫습니다 (S-055).
+
+        REC 중지 요청 처리와 앱 종료 처리(`on_close_requested`) 양쪽에서
+        공유하는 정리 로직 — 앱 종료 시에도 REC 중이었다면 파일이 유실 없이
+        닫혀야 한다.
+        """
+        if self._sys_log_writer is not None:
+            self._sys_log_writer.close()
+            self._sys_log_writer = None
+
+    def _on_system_log_line_appended(self, text: str) -> None:
+        """
+        화면에 실제로 추가된 시스템 로그 한 줄을 파일에도 기록합니다 (S-055).
+
+        Logic:
+            - 현재 REC 중이 아니면(writer가 None) 아무 것도 하지 않는다.
+            - 쓰기 실패 시 조용히 삼키지 않는다 — writer를 먼저 닫아 REC 상태를
+              끈 뒤(재귀적으로 이 메서드가 다시 불려도 즉시 반환되도록) ERROR로
+              표면화한다. writer를 먼저 정리하지 않으면 `_log_error()`가 다시
+              이 메서드를 재호출할 때 동일한 쓰기 실패가 반복될 수 있다.
+
+        Args:
+            text: 화면에 추가된 것과 동일한(필터 적용 후) 한 줄.
+        """
+        if self._sys_log_writer is None:
+            return
+
+        writer = self._sys_log_writer
+        try:
+            writer.write_line(text)
+        except OSError as e:
+            self._sys_log_writer = None
+            writer.close()
+            self.view.port_view.set_logging_active(False)
+            self._log_error(f"System log write failed, recording stopped: {e}")

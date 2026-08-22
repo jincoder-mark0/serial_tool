@@ -18,17 +18,29 @@
 * QObject 상속 및 Signal 사용
 * traceback 모듈로 스택 트레이스 추출
 * DTO(ErrorContext)를 사용하여 에러 정보 전달
+* 다이얼로그 문구는 조립 계층(main.py)이 콜백으로 주입 (core는 번역을 모른다, S-056)
 """
 import sys
 import threading
 import traceback
 import time
-from typing import Type, Optional
+from typing import Type, Optional, Callable, Tuple
 from types import TracebackType
 from PyQt5.QtWidgets import QMessageBox, QApplication
 from PyQt5.QtCore import QObject, pyqtSignal
 from core.logger import logger
 from common.dtos import ErrorContext
+
+# 다이얼로그 문구(제목, 메시지 템플릿)를 돌려주는 콜백 타입.
+# core는 view/language_manager를 모른 채로 지내고, 조립 계층(main.py)이 호출 시점마다
+# 최신 언어로 문구를 계산해 돌려준다 - 문자열을 한 번만 주입하지 않고 콜백을 받는 이유는
+# 앱 실행 중 언어를 바꿔도 "다음 크래시"부터 즉시 새 언어가 반영되게 하기 위함이다(S-056).
+MessageProvider = Callable[[], Tuple[str, str]]
+
+# 콜백이 주입되지 않았거나(라이브러리 사용/테스트) 콜백 자체가 실패했을 때(손상된 상태)
+# 쓰는 최후의 안전망. core는 항상 이 값만으로도 정상 동작해야 한다.
+_FALLBACK_TITLE = "Critical Error"
+_FALLBACK_MESSAGE_TEMPLATE = "An unexpected error occurred: {0}"
 
 class GlobalErrorHandler(QObject):
     """
@@ -39,8 +51,14 @@ class GlobalErrorHandler(QObject):
     # UI 스레드에서 다이얼로그를 띄우기 위한 시그널
     show_error_signal = pyqtSignal(object)
 
-    def __init__(self):
+    def __init__(self, message_provider: Optional[MessageProvider] = None):
+        """
+        Args:
+            message_provider: 다이얼로그 (제목, 메시지 템플릿)을 돌려주는 콜백.
+                None이면 영어 하드코딩 폴백을 그대로 사용한다(손상 상태·테스트 안전).
+        """
         super().__init__()
+        self._message_provider = message_provider
         # 1. Main Thread 예외 훅
         self._old_excepthook = sys.excepthook
         sys.excepthook = self._handle_sys_exception
@@ -52,6 +70,19 @@ class GlobalErrorHandler(QObject):
 
         # 시그널 연결 (QueuedConnection으로 동작하여 UI 스레드에서 실행됨)
         self.show_error_signal.connect(self._show_error_dialog)
+
+    def set_message_provider(self, message_provider: Optional[MessageProvider]) -> None:
+        """
+        다이얼로그 문구 콜백을 교체합니다.
+
+        installed 시점에는 아직 LanguageManager가 준비되지 않았을 수 있으므로,
+        조립 계층(main.py)이 초기화를 마친 뒤 이 메서드로 나중에 주입한다.
+
+        Args:
+            message_provider: 다이얼로그 (제목, 메시지 템플릿)을 돌려주는 콜백. None이면
+                영어 하드코딩 폴백으로 되돌린다.
+        """
+        self._message_provider = message_provider
 
     def report_error(self, exc_type: Type[BaseException], exc_value: BaseException, tb: Optional[TracebackType]) -> None:
         """
@@ -143,27 +174,26 @@ class GlobalErrorHandler(QObject):
             # GUI가 없는 경우 콘솔에 출력
             print("Critical Error (No GUI):", error_msg, file=sys.stderr)
 
-    @staticmethod
-    def _show_error_dialog(context: ErrorContext) -> None:
+    def _show_error_dialog(self, context: ErrorContext) -> None:
         """
         에러 다이얼로그 표시 (메인 스레드에서 실행됨)
 
         Args:
             context (ErrorContext): 에러 정보 DTO
         """
-        # 다이얼로그 문구는 언어 키(S-036)를 우선 쓰되, 이 핸들러는 "손상된 상태"에서도
-        # 떠야 하는 최후의 안전망이라 view 계층(language_manager) 의존을 지연 import +
-        # try/except로 격리한다 - core는 원래 view를 참조하지 않지만, 이 다이얼로그가
-        # 뜨는 시점 자체가 이미 비정상 상태이므로 언어 리소스 로드 실패(깨진 JSON,
-        # 초기화 전 호출 등) 시 조용히 아래 except의 영어 하드코딩 폴백으로 떨어진다.
-        title = "Critical Error"
-        text = f"An unexpected error occurred: {context.error_type}"
-        try:
-            from view.managers.language_manager import language_manager
-            title = language_manager.get_text("error_title_critical")
-            text = language_manager.get_text("error_msg_unexpected").format(context.error_type)
-        except Exception:
-            pass  # 언어 리소스 로드 실패 - 위에서 이미 설정한 영어 폴백을 그대로 사용
+        # 다이얼로그 문구는 조립 계층이 주입한 콜백(self._message_provider)으로 얻는다.
+        # core는 view/language_manager를 모른다(S-056) - 콜백이 없거나(주입 전/테스트/
+        # 라이브러리 사용) 콜백 호출 자체가 실패하면(손상된 상태, 깨진 언어 리소스 등)
+        # 아래 영어 하드코딩 폴백으로 조용히 떨어진다. 이 다이얼로그는 손상된 상태에서도
+        # 반드시 떠야 하는 최후의 안전망이기 때문이다.
+        title = _FALLBACK_TITLE
+        text = _FALLBACK_MESSAGE_TEMPLATE.format(context.error_type)
+        if self._message_provider is not None:
+            try:
+                title, message_template = self._message_provider()
+                text = message_template.format(context.error_type)
+            except Exception:
+                pass  # 콜백 실패 - 위에서 이미 설정한 영어 폴백을 그대로 사용
 
         try:
             msg_box = QMessageBox()
@@ -181,12 +211,38 @@ class GlobalErrorHandler(QObject):
 # 싱글톤 인스턴스 변수
 global_error_handler: Optional[GlobalErrorHandler] = None
 
-def install_global_error_handler() -> None:
-    """전역 에러 핸들러를 설치합니다."""
+def install_global_error_handler(message_provider: Optional[MessageProvider] = None) -> None:
+    """
+    전역 에러 핸들러를 설치합니다.
+
+    이미 설치되어 있으면 훅은 재설치하지 않고(idempotent), message_provider가
+    주어졌다면 기존 인스턴스의 문구 콜백만 갱신한다.
+
+    Args:
+        message_provider: 다이얼로그 (제목, 메시지 템플릿) 콜백. 생략하면 영어
+            하드코딩 폴백이 기본값으로 남는다(손상 상태·테스트·라이브러리 사용 시 안전).
+    """
     global global_error_handler
     if global_error_handler is None:
-        global_error_handler = GlobalErrorHandler()
+        global_error_handler = GlobalErrorHandler(message_provider)
         logger.info("Global error handler installed (Sys & Threading hooks).")
+    elif message_provider is not None:
+        global_error_handler.set_message_provider(message_provider)
+
+def set_error_message_provider(message_provider: Optional[MessageProvider]) -> None:
+    """
+    이미 설치된 전역 에러 핸들러의 다이얼로그 문구 콜백을 교체합니다.
+
+    설치(훅 등록) 자체는 main.py 초기화 초반(LanguageManager보다 먼저)에 이뤄지지만,
+    문구 콜백은 LanguageManager가 준비된 뒤 별도로 주입해야 하므로 분리한다(S-056).
+    핸들러가 아직 설치되지 않았다면 아무 일도 하지 않는다.
+
+    Args:
+        message_provider: 다이얼로그 (제목, 메시지 템플릿) 콜백. None이면 영어
+            하드코딩 폴백으로 되돌린다.
+    """
+    if global_error_handler is not None:
+        global_error_handler.set_message_provider(message_provider)
 
 def get_error_handler() -> Optional[GlobalErrorHandler]:
     """핸들러 인스턴스 반환 (수동 호출용)"""
