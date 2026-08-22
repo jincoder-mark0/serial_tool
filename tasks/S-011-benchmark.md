@@ -1,6 +1,10 @@
 # S-011 — 성능 벤치마크 도구
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. 4종 측정 구현·실측 기록
+  (ringbuffer 10,005 MB/s·queue 8.27M ops/s·parser 32.98M lines/s·logger 1,105 MB/s —
+  doc/benchmark_20260822.md). 스모크 5건 추가 → pytest 기준선 90. 코어 무수정.
+  측정 설계 메모: ringbuffer는 인터리브 write+read(512KB 링에 순차 256MB는 무의미),
+  logger는 join(1s) 한계를 피해 큐 드레인 폴링 후 stop — 실 디스크 처리량 측정)
 - Recommended model: **하위(Sonnet) 가능**
 - 선행: 없음
 - Skills to load: task-done

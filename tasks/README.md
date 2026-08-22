@@ -35,7 +35,7 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-017](S-017-ui-refresh-constant.md) | UI 갱신 주기 리터럴 30 상수화 | **하위 가능** | — | DONE |
 | [S-018](S-018-meipass-detection-fix.md) | PyInstaller 감지 버그 수정 (`os._MEIPASS`→`sys`) | **하위 가능** | — | DONE |
 | [S-006](S-006-auto-tx-scheduler.md) | AutoTxScheduler (주기적 자동 전송) | **하위 가능** | — | TODO |
-| [S-011](S-011-benchmark.md) | 성능 벤치마크 도구 | **하위 가능** | — | TODO |
+| [S-011](S-011-benchmark.md) | 성능 벤치마크 도구 | **하위 가능** | — | DONE |
 | [S-013](S-013-user-config-dir.md) | 설정 파일 사용자 디렉터리 분리 | **하위 가능** | S-018 | TODO |
 | [S-014](S-014-github-actions-ci.md) | GitHub Actions CI | **하위 가능** | — | DONE (러너 확인 대기) |
 | [S-027](S-027-settings-namespace-migration.md) | 설정 네임스페이스 마이그레이션 (settings.* 정본화) | **하위 가능** | S-013 | TODO |

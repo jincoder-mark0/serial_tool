@@ -35,7 +35,7 @@
 | [S-008](tasks/S-008-rx-capture-writer.md) | Rx 파일 캡처 (`RxCaptureWriter`) 필요성 판정 | 6 | ✅ 완료 | **폐기 결정** (2026-08-22) — DataLogger가 전이중·3포맷 기록 이미 제공 |
 | [S-009](tasks/S-009-plugin-system.md) | 플러그인 인프라 (base/loader/Example) | 7 | ⏸ 대기 | 인터페이스 설계 선행 (상위 전용) |
 | [S-010](tasks/S-010-virtual-serial-env.md) | 가상 시리얼 포트 실환경 검증 (com0com) | 8 | ⏸ 대기 | 사용자 설치 개입 필요. 실기기 미검증 해소 기반 |
-| [S-011](tasks/S-011-benchmark.md) | 성능 벤치마크 도구 | 8 | ⏸ 대기 | 하위 모델 수행 가능. 통과 후 README 수치 보장 전환 |
+| [S-011](tasks/S-011-benchmark.md) | 성능 벤치마크 도구 | 8 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 실측: doc/benchmark_20260822.md. S-007 선행 해소 |
 | [S-012](tasks/S-012-packaging.md) | 패키징 (pyinstaller spec, 독립 실행 파일) | 8 | ⏸ 대기 | 선행: S-013, S-018 |
 | [S-013](tasks/S-013-user-config-dir.md) | 설정 파일 사용자 디렉터리 분리 | 8 | ⏸ 대기 | 선행: S-018. 배포 시 필수 |
 | [S-014](tasks/S-014-github-actions-ci.md) | GitHub Actions CI (pytest + 언어 키 검사) | 8 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 러너 실검증은 push 후 확인 필요 |
