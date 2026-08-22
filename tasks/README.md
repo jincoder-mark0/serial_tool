@@ -53,6 +53,7 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-033](S-033-loopback-dummy-port.md) | 루프백 더미 포트 (디버깅용) | **하위 가능** | — | TODO |
 | [S-034](S-034-remove-scan-button.md) | 중복 검색 버튼 제거 (팝업 자동 스캔 존재) | **하위 가능** | — | DONE |
 | [S-035](S-035-spacing-grouping-polish.md) | 마진·구획 정비 (테두리 대비·제목 간격·그루핑) | **하위 가능** | S-033, S-034 | TODO |
+| [S-036](S-036-fixed-font-routing-and-i18n.md) | 고정폭 폰트 설정 미반영 수정 + 언어팩 잔여 | **하위 가능** | S-035 | TODO |
 | [S-010](S-010-virtual-serial-env.md) | 가상 시리얼 포트 실환경 검증 | 사용자 개입 필요 (com0com 설치) | — | TODO |
 | [S-015](S-015-spi-i2c-transport.md) | SPI/I2C Transport 확장 | **상위 전용** (요구 미확정) | — | ⛔ 보류 |
 
