@@ -153,15 +153,37 @@ class TestShutdownStopsDataLogger:
         assert data_logger_manager.is_logging(LOOPBACK_PORT_NAME) is True
 
         payload = b"HELLO-RX-SHUTDOWN"
-        presenter.connection_controller.send_data(LOOPBACK_PORT_NAME, payload)
+        # 주의(S-066): `connection_controller.send_data()`는 발신(TX) 시 EventBus를
+        # 거쳐 `DataTrafficHandler.on_data_sent()`로도 라우팅되어 전이중(Full Duplex)
+        # 로깅상 *호출 즉시* 로거 큐에 기록된다(`test_shutdown_flushes_pending_leftover_
+        # batch_before_closing_logger`의 기존 주석이 이미 문서화한 사실). LOOPBACK에서는
+        # 보낸 바이트가 그대로 에코되어 RX Fast Path로도 다시 들어오므로, 그 RX 배치가
+        # 셧다운 전에 추가로 flush되는지 여부(실 스레드 스케줄링에 좌우되는 경합)에 따라
+        # 파일에 payload가 1회(TX만) 또는 2회(TX+RX) 기록되어 이 테스트가 간헐적으로
+        # 실패했다 — 유실이 아니라 이미 존재하는 전이중 로깅 설계와 어설션 간의 불일치였다.
+        # 이 테스트가 검증하려는 것은 "RX Fast Path로 들어온 데이터가 종료 후 보존되는가"
+        # 하나뿐이므로, 형제 테스트와 동일하게 TX 경로를 우회하고 "외부 장치가 보낸 데이터"를
+        # transport에 직접 써서 순수 RX만 재현한다.
+        worker = presenter.connection_controller.workers[LOOPBACK_PORT_NAME]
+        worker.transport.write(payload)
 
         # 실제 Fast Path(워커 스레드 에코 -> data_received -> DataTrafficHandler ->
         # data_logger_manager.write())를 통해 배경 쓰기 스레드가 큐를 완전히
         # 소비할 때까지 이벤트 루프를 돌며 기다린다 (정상 배치 타임아웃 경로).
+        #
+        # `dl._queue.empty()`만으로는 "아직 아무것도 도착하지 않음"과 "전부 소비됨"을
+        # 구분하지 못한다 — 새로 만든 DataLogger의 큐는 시작부터 비어 있어, Fast Path가
+        # 이 payload를 실어 나르기도 전에 이 조건이 우연히 참이 될 수 있다. 실제로
+        # 파일에 바이트가 쓰였는지(`_file.tell()`)까지 확인해 이 거짓 양성을 차단한다.
         def _fully_written_to_logger() -> bool:
             qapp.processEvents()
             dl = data_logger_manager._loggers.get(LOOPBACK_PORT_NAME)
-            return dl is not None and dl._file is not None and dl._queue.empty()
+            return (
+                dl is not None
+                and dl._file is not None
+                and dl._queue.empty()
+                and dl._file.tell() >= len(payload)
+            )
 
         qtbot.waitUntil(_fully_written_to_logger, timeout=2000)
 
@@ -196,12 +218,24 @@ class TestShutdownStopsDataLogger:
         assert data_logger_manager.is_logging(LOOPBACK_PORT_NAME) is True
 
         payload = b"PCAP-PAYLOAD-ON-SHUTDOWN"
-        presenter.connection_controller.send_data(LOOPBACK_PORT_NAME, payload)
+        # S-066: 위 BIN 테스트와 동일한 이유(전이중 TX+RX 중복 로깅 경합, 위 주석 참조)로
+        # TX 경로를 우회하고 transport에 직접 써서 순수 RX Fast Path만 재현한다.
+        worker = presenter.connection_controller.workers[LOOPBACK_PORT_NAME]
+        worker.transport.write(payload)
+
+        # PCAP 글로벌 헤더 + 패킷 헤더 + payload가 모두 실제로 쓰인 뒤에만 "완료"로
+        # 간주해 조기 종료(거짓 양성)를 막는다.
+        expected_min_bytes = PCAP_GLOBAL_HEADER_SIZE + PCAP_PACKET_HEADER_SIZE + len(payload)
 
         def _fully_written_to_logger() -> bool:
             qapp.processEvents()
             dl = data_logger_manager._loggers.get(LOOPBACK_PORT_NAME)
-            return dl is not None and dl._file is not None and dl._queue.empty()
+            return (
+                dl is not None
+                and dl._file is not None
+                and dl._queue.empty()
+                and dl._file.tell() >= expected_min_bytes
+            )
 
         qtbot.waitUntil(_fully_written_to_logger, timeout=2000)
 

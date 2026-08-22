@@ -92,7 +92,7 @@
 |---|---|---|
 | [S-064](tasks/S-064-parser-buffer-truncation-loss.md) | **파서 버퍼 잘라내기로 완결 패킷 유실** (P1) | ✅ 완료 |
 | [S-065](tasks/S-065-qss-contrast-regression-test.md) | QSS 대비 회귀 테스트 + 포트 상태 색 점검 | ✅ 완료 |
-| [S-066](tasks/S-066-flaky-shutdown-datalogger-test.md) | 종료 시 DataLogger 테스트 간헐 실패 조사 | ⏸ 대기 |
+| [S-066](tasks/S-066-flaky-shutdown-datalogger-test.md) | 종료 시 DataLogger 테스트 간헐 실패 조사 | ✅ 완료 |
 
 - S-064는 S-061이 고속 측정 중 발견했다. `DelimiterParser.parse()`가 구분자로 나누기
   **전에** 버퍼를 자르는데, 파서 상한(4096B)이 워커 배치 임계값(8192B)보다 작아
@@ -116,8 +116,25 @@
   미달인 채 방치돼 있었음). S-063이 검증한 accent/danger 값을 그대로 재사용해 수정
   (connected→어두운 글씨 #1b1b1b, error→danger와 동일 배경 톤). 일부러 색을 되돌려
   테스트가 실패하는 것을 확인 후 복구. pytest 393 passed(+3), ruff 0건.
-- S-066은 `doc/mistakes.md` #7이 "이름을 확보하라"고 남겨둔 간헐 실패다. 이번에
-  특정됐다(6회 중 1회). 테스트만의 문제인지 **종료 시 실제 데이터 유실**인지 판정이 본체다.
+- **S-066 완료(2026-08-22)**: `doc/mistakes.md` #7이 남겨둔 간헐 실패의 정체를
+  특정했다. **판정: 테스트 문제** (프로덕션 유실 아님). 원인:
+  `test_shutdown_stops_data_logger_and_preserves_written_bytes`/
+  `test_shutdown_closes_pcap...`가 `connection_controller.send_data()`로 payload를
+  보냈는데, 이 API는 발신(TX) 즉시 EventBus 경유로 `DataTrafficHandler.on_data_sent()`
+  에도 라우팅되어(전이중 로깅, 기존 설계) 로거에 곧바로 1회 기록된다. LOOPBACK은
+  보낸 바이트가 그대로 에코되어 RX Fast Path로도 다시 들어오므로, 종료 전에 그 RX
+  배치까지 추가로 flush되는지 여부(스레드 스케줄링 경합)에 따라 파일에 payload가
+  1회(TX만, 우연히 테스트 의도와 일치) 또는 2회(TX+RX, 테스트 실패) 기록됐다 —
+  실제 종료 시퀀스(S-059/S-061/S-062)는 매 회 데이터를 온전히 보존했고 유실은 한
+  번도 재현되지 않았다(재현: 단독 파일 반복 실행만으로 200/250회 중 5회 실패,
+  전이중 우회 후 450회 전부 통과 — in-process 300회 별도 재현에서도 0/300).
+  형제 테스트(`test_shutdown_flushes_pending_leftover_batch...`)가 이미 문서화한
+  "TX 경로 우회(transport에 직접 write)" 패턴을 두 테스트에도 동일 적용해 순수 RX
+  Fast Path만 재현하도록 수정. 조기 종료 판정 오탐(큐가 "아직 비어 있음"과 "다
+  써서 비어 있음"을 구분 못 함)도 `_file.tell()` 확인을 추가해 함께 보강.
+  이 태스크는 테스트 개수를 늘리지 않았다(기존 2개 테스트 본문만 수정). 검증 시점
+  전체 스위트 397 passed(병행 작업 중인 다른 태스크의 변경 포함, 10회 반복 전부
+  통과), ruff 0건. 상세는 태스크 파일 Status 및 `doc/mistakes.md` #7 참조.
 
 | ID | 제목 | Phase | 상태 | 비고 |
 |---|---|---|---|---|

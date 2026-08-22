@@ -1,6 +1,6 @@
 # S-066 — 종료 시 DataLogger 테스트 간헐 실패 조사
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위(Sonnet), 판정: 테스트 문제. `test_shutdown_stops_data_logger_and_preserves_written_bytes`/`test_shutdown_closes_pcap...`가 `send_data()`의 전이중(TX+RX) 로깅과 경합해 간헐적으로 payload가 2회 기록됨. 형제 테스트의 "TX 우회" 패턴 적용 + `_file.tell()` 조기종료 오탐 보강으로 수정. 프로덕션 데이터 유실 재현 0건(단독 250회+in-process 300회), 수정 후 전체 pytest 10회 반복 전부 통과, ruff 0건)
 - Recommended model: **하위(Sonnet) 가능** (단, 원인이 프로덕션 경합으로 판명되면 중단·보고)
 - 선행: 없음
 - Skills to load: task-done
@@ -64,8 +64,8 @@ tests/test_shutdown_data_logger.py::TestShutdownStopsDataLogger
 
 ## Acceptance criteria (DoD)
 
-- [ ] 재현 조건과 빈도가 수치로 기록된다.
-- [ ] 원인이 "테스트 문제" / "프로덕션 경합" 중 하나로 근거와 함께 판정된다.
-- [ ] 테스트 문제였다면 계약을 유지한 채 수정되고, 10회 반복 통과가 확인된다.
-- [ ] 프로덕션 경합이었다면 수정하지 않고 근거와 함께 보고된다.
-- [ ] `doc/mistakes.md` #7이 갱신된다.
+- [x] 재현 조건과 빈도가 수치로 기록된다.
+- [x] 원인이 "테스트 문제" / "프로덕션 경합" 중 하나로 근거와 함께 판정된다.
+- [x] 테스트 문제였다면 계약을 유지한 채 수정되고, 10회 반복 통과가 확인된다.
+- [ ] 프로덕션 경합이었다면 수정하지 않고 근거와 함께 보고된다. (해당 없음 — 테스트 문제로 판정됨)
+- [x] `doc/mistakes.md` #7이 갱신된다.
