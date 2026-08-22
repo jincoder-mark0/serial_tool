@@ -32,6 +32,8 @@
    `QDialogButtonBox(Ok|Cancel|Apply)`로 교체 (`font_settings_dialog.py:138-142` 패턴 참고,
    기존 시그널 연결 유지).
 7. **PortStatsWidget** — `view/widgets/port_stats.py:39-40` 그리드에 spacing 명시(형제와 동일 값).
+8. (S-024 수행 중 실측 발견, 2026-08-22) `macro_control.py`의 `repeat_interval_ms_edit.setFixedWidth(50)` —
+   16pt 폰트에서 "1000"이 ")00"으로 잘림. 고정폭 입력란들을 최소폭+폰트 메트릭 기준으로 정리할 때 포함.
 
 ## Acceptance criteria (DoD)
 

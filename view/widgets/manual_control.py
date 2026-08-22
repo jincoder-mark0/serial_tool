@@ -124,7 +124,9 @@ class ManualControlWidget(QWidget):
         self.send_command_btn = QPushButton(language_manager.get_text("manual_control_btn_send"))
         self.send_command_btn.setCursor(Qt.PointingHandCursor)
         self.send_command_btn.setProperty("class", "accent")
-        self.send_command_btn.setFixedSize(40, 30) # 높이 조정
+        # 고정 크기(40x30)가 "Send"/"전송" 텍스트를 짓눌러 알아볼 수 없게 잘랐음(S-024 추가 발견).
+        # 최소 크기로 완화해 sizeHint만큼 자연 확장되도록 함.
+        self.send_command_btn.setMinimumSize(40, 30)
         self.send_command_btn.clicked.connect(self.on_send_manual_command_clicked)
 
         # 3. 체크박스 구성

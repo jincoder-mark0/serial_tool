@@ -19,7 +19,7 @@
 * updateRequest 및 blockCountChanged 시그널을 통해 영역 너비와 내용을 동적으로 갱신
 * QPainter를 사용하여 라인 번호를 직접 그림
 """
-from PyQt5.QtWidgets import QWidget, QPlainTextEdit, QTextEdit
+from PyQt5.QtWidgets import QWidget, QPlainTextEdit, QTextEdit, QStyle
 from PyQt5.QtCore import Qt, QRect, pyqtProperty, QSize
 from PyQt5.QtGui import QPainter, QColor, QTextFormat, QPaintEvent, QResizeEvent
 
@@ -84,6 +84,11 @@ class QSmartTextEdit(QPlainTextEdit):
 
         # 라인 번호 영역 위젯 생성
         self.line_number_area = LineNumberArea(self)
+
+        # 스크롤바 정책 명시 (필요할 때만 표시) - S-024: 다중행 입력창에서
+        # 가로 스크롤바가 나타날 때 마지막 줄과 겹치는 문제의 원인 확인 차 명시적으로 고정
+        self.setHorizontalScrollBarPolicy(Qt.ScrollBarAsNeeded)
+        self.setVerticalScrollBarPolicy(Qt.ScrollBarAsNeeded)
 
         # 시그널 연결
         # 1. 블록(라인) 수 변경 시 너비 재계산
@@ -177,10 +182,16 @@ class QSmartTextEdit(QPlainTextEdit):
         라인 번호 영역의 너비를 업데이트합니다.
         블록 수가 변경될 때 호출됩니다.
 
+        Logic:
+            - 좌측은 라인 번호 영역 너비만큼 확보
+            - 하단은 가로 스크롤바 두께만큼 여백을 항상 확보해 다중행 입력 시
+              가로 스크롤바가 나타나도 마지막 줄 텍스트를 가리지 않게 함(S-024)
+
         Args:
             _: 변경된 블록 수 (사용하지 않음).
         """
-        self.setViewportMargins(self.line_number_area_width(), 0, 0, 0)
+        scrollbar_reserve = self.style().pixelMetric(QStyle.PM_ScrollBarExtent)
+        self.setViewportMargins(self.line_number_area_width(), 0, 0, scrollbar_reserve)
 
     def update_line_number_area(self, rect: QRect, dy: int) -> None:
         """

@@ -30,6 +30,9 @@
 3. 스키마를 실사용 키 전체(ConfigKeys 30개)로 확장할지, 최소 골격만 유지할지.
 4. `resources/configs/settings.json`의 `settings.theme="dracula"` — dracula 테마 QSS는
    존재하지 않는다(`resource_path.py:74`는 common/dark/light만). 값 정리 필요.
+5. (S-024 수행 중 추가 확인, 2026-08-22) 폰트 키도 같은 이중화: 실소비 키는
+   `settings.proportional_font_size`(ConfigKeys.PROP_FONT_SIZE)이고 `ui.proportional_font_size`는
+   파일에 존재하지만 읽히지 않는 죽은 키다 — theme/language만의 문제가 아니라 ui 블록 전반 점검 필요.
 
 ## Acceptance criteria (결정 후 구현 태스크로 분할)
 

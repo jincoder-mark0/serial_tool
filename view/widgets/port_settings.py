@@ -133,14 +133,16 @@ class PortSettingsWidget(QGroupBox):
 
         # 스캔 버튼
         self.scan_btn = QPushButton(language_manager.get_text("port_btn_scan"))
-        self.scan_btn.setFixedWidth(50)
+        # 고정폭(50)이 ko "검색" 기준이라 en "Scan"이 잘림(S-024) - 최소폭으로 완화
+        self.scan_btn.setMinimumWidth(50)
         self.scan_btn.setToolTip(language_manager.get_text("port_btn_scan_tooltip"))
         self.scan_btn.clicked.connect(self.on_port_scan_clicked)
 
         # 연결 버튼
         self.connect_btn = QPushButton(language_manager.get_text("port_btn_connect"))
         self.connect_btn.setCheckable(True)
-        self.connect_btn.setFixedWidth(70)
+        # 텍스트가 Connect/Disconnect/Reconnect로 전환되므로 고정폭 대신 최소폭만 보장(S-024)
+        self.connect_btn.setMinimumWidth(70)
         self.connect_btn.setToolTip(language_manager.get_text("port_btn_connect_tooltip"))
         self.connect_btn.clicked.connect(self.on_connect_clicked)
 

@@ -102,7 +102,9 @@ class SystemLogWidget(QWidget):
             - 툴바(검색, 필터, 버튼) 구성
             - 로그 뷰(QSmartListView) 배치
         """
-        self.setFixedHeight(100)  # 위젯 전체 높이 고정 (레이아웃 밸런스)
+        # 고정 높이(100)는 폰트 확대 시 로그 영역이 잘리는 원인이었음(S-024).
+        # 최소 높이만 보장하고 수직으로는 필요 시 확장 가능하도록 완화.
+        self.setMinimumHeight(100)
 
         """UI 컴포넌트 및 레이아웃을 초기화합니다."""
         # 1. 툴바 영역 (타이틀 + 도구들)

@@ -168,7 +168,9 @@ class MacroControlWidget(QWidget):
 
         # 자동 실행 설정 그룹 (Execution Group)
         self.execution_settings_grp = QGroupBox(language_manager.get_text("macro_control_grp_execution"))
-        self.execution_settings_grp.setFixedHeight(100)
+        # 고정 높이(100)는 en 라벨/폰트 확대 시 버튼 상단이 잘리는 원인이었음(S-024).
+        # 최소 높이로 완화해 실제 필요 높이(sizeHint)만큼 자연 확장되도록 함.
+        self.execution_settings_grp.setMinimumHeight(100)
         self.execution_settings_grp.setLayout(execution_layout)
 
         # 메인 레이아웃 적용
