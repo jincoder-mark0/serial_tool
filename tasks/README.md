@@ -43,7 +43,7 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-012](S-012-packaging.md) | PyInstaller 패키징 | 하위 가능 (수동 확인 항목 있음) | S-013, S-018 | TODO |
 | [S-016](S-016-settings-namespace.md) | 설정 키 네임스페이스 이중화 해소 | **상위 전용** (결정 필요) | — | DONE (결정 — 구현은 S-027) |
 | [S-008](S-008-rx-capture-writer.md) | RxCaptureWriter 필요성 판정 | **상위 전용** (결정 필요) | — | DONE (폐기 결정) |
-| [S-007](S-007-performance-optimization.md) | 성능 최적화 | **상위 권장** | S-011 | TODO |
+| [S-007](S-007-performance-optimization.md) | 성능 최적화 | **상위 권장** | S-011 | ⛔ 보류 (실측상 병목 없음) |
 | [S-009](S-009-plugin-system.md) | 플러그인 인프라 | **상위 전용** (설계 선행) | — | TODO |
 | [S-026](S-026-minimum-window-width.md) | 최소 창 크기 과대 완화 (1435px) | **상위 권장** (설계) | S-019, S-024 | TODO |
 | [S-010](S-010-virtual-serial-env.md) | 가상 시리얼 포트 실환경 검증 | 사용자 개입 필요 (com0com 설치) | — | TODO |

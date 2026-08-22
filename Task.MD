@@ -31,7 +31,7 @@
 | S-004 | Presenter 세분화·EventRouter | 5 | ✅ 완료 | |
 | S-005 | 안정화·테스트 기준선 85개 | 5.5 | ✅ 완료 | 경합·교착 수정, conftest 복구 |
 | [S-006](tasks/S-006-auto-tx-scheduler.md) | `AutoTxScheduler` (주기적 자동 전송) | 6 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 테스트 9건, 실기기 미검증. 기준선 109 |
-| [S-007](tasks/S-007-performance-optimization.md) | 성능 최적화 (Rx 경로·렌더링) | 6 | ⏸ 대기 | 벤치마크(S-011) 선행 필수 — 측정 없는 최적화 금지 |
+| [S-007](tasks/S-007-performance-optimization.md) | 성능 최적화 (Rx 경로·렌더링) | 6 | ⛔ 보류 | **실측상 병목 없음** (2026-08-22 판정, benchmark_20260822.md). 체감 보고 시 재개 |
 | [S-008](tasks/S-008-rx-capture-writer.md) | Rx 파일 캡처 (`RxCaptureWriter`) 필요성 판정 | 6 | ✅ 완료 | **폐기 결정** (2026-08-22) — DataLogger가 전이중·3포맷 기록 이미 제공 |
 | [S-009](tasks/S-009-plugin-system.md) | 플러그인 인프라 (base/loader/Example) | 7 | ⏸ 대기 | 인터페이스 설계 선행 (상위 전용) |
 | [S-010](tasks/S-010-virtual-serial-env.md) | 가상 시리얼 포트 실환경 검증 (com0com) | 8 | ⏸ 대기 | 사용자 설치 개입 필요. 실기기 미검증 해소 기반 |
