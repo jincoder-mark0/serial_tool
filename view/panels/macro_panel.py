@@ -33,6 +33,7 @@ from common.dtos import (
     MacroExecutionRequest,
     MacroEntry
 )
+from common.constants import LAYOUT_MARGIN_NONE, LAYOUT_SPACING_DEFAULT
 
 
 class MacroPanel(QWidget):
@@ -119,8 +120,9 @@ class MacroPanel(QWidget):
         # Layout Setup
         # ---------------------------------------------------------------------
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(5)
+        layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
+                                   LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
+        layout.setSpacing(LAYOUT_SPACING_DEFAULT)
 
         # 리스트가 가능한 많은 공간을 차지하도록 배치
         layout.addWidget(self._macro_list, stretch=1)

@@ -34,6 +34,7 @@ from common.dtos import (
     PortStatistics,
     ColorRule
 )
+from common.constants import LAYOUT_MARGIN_NONE, LAYOUT_SPACING_TIGHT
 
 class PortPanel(QWidget):
     """
@@ -93,8 +94,9 @@ class PortPanel(QWidget):
             - 레이아웃 배치
         """
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(2)
+        layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
+                                   LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
+        layout.setSpacing(LAYOUT_SPACING_TIGHT)
 
         # 1. 컴포넌트 생성
         self._port_settings_widget = PortSettingsWidget()

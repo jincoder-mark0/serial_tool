@@ -23,6 +23,7 @@ from view.managers.language_manager import language_manager
 
 from view.panels.macro_panel import MacroPanel
 from view.panels.packet_panel import PacketPanel
+from common.constants import LAYOUT_MARGIN_NONE
 
 
 class MainRightSection(QWidget):
@@ -62,7 +63,8 @@ class MainRightSection(QWidget):
             - 레이아웃 배치
         """
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
+                                   LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
 
         self.tabs = QTabWidget()
 

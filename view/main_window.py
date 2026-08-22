@@ -37,6 +37,7 @@ from view.dialogs.font_settings_dialog import FontSettingsDialog
 from view.dialogs.about_dialog import AboutDialog
 from view.dialogs.preferences_dialog import PreferencesDialog
 from view.dialogs.file_transfer_dialog import FileTransferDialog
+from common.constants import LAYOUT_MARGIN_DEFAULT, LAYOUT_SPACING_DEFAULT
 
 from view.managers.theme_manager import theme_manager
 from view.managers.language_manager import language_manager
@@ -131,8 +132,9 @@ class MainWindow(QMainWindow):
         self.setCentralWidget(self.central_widget)
 
         main_layout = QVBoxLayout(self.central_widget)
-        main_layout.setContentsMargins(5, 5, 5, 5)
-        main_layout.setSpacing(5)
+        main_layout.setContentsMargins(LAYOUT_MARGIN_DEFAULT, LAYOUT_MARGIN_DEFAULT,
+                                        LAYOUT_MARGIN_DEFAULT, LAYOUT_MARGIN_DEFAULT)
+        main_layout.setSpacing(LAYOUT_SPACING_DEFAULT)
 
         # 스플리터 구성 (좌: 포트/제어, 우: 커맨드/인스펙터)
         self.splitter = QSplitter(Qt.Horizontal)

@@ -7,7 +7,8 @@
 
 ## 목적 (Why)
 
-실행 실측(tools/ux_capture.py): MainWindow `minimumSizeHint`가 **ko 1458×735 / en 1435×735** —
+실행 실측(tools/ux_capture.py): MainWindow `minimumSizeHint`가 **ko 1458×735 / en 1435×735**
+(S-025 완료 후 최신 실측: ko 1471×751 / en 1427×751 — 아이콘 버튼 30×30 통일로 높이 +16) —
 1366×768 노트북 화면에 창이 들어가지 않는다. 시리얼 도구는 현장 노트북 사용이 잦아
 실사용 차단 수준의 결함이다 (근거: doc/ux_audit_20260822.md 요약).
 

@@ -30,7 +30,10 @@ from typing import Optional, List, Dict, Tuple
 from view.managers.language_manager import language_manager
 from common.enums import PortState, SerialParity, SerialStopBits, SerialFlowControl
 from common.dtos import PortConfig, PortInfo
-from common.constants import VALID_BAUDRATES, DEFAULT_BAUDRATE
+from common.constants import (
+    VALID_BAUDRATES, DEFAULT_BAUDRATE,
+    LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_DEFAULT, LAYOUT_SPACING_DEFAULT
+)
 from core.logger import logger
 
 class ClickableComboBox(QComboBox):
@@ -109,8 +112,9 @@ class PortSettingsWidget(QGroupBox):
             - 하단: QStackedWidget을 이용해 Serial/SPI 설정 패널 교체
         """
         main_layout = QVBoxLayout()
-        main_layout.setContentsMargins(5, 5, 5, 5)
-        main_layout.setSpacing(5)
+        main_layout.setContentsMargins(LAYOUT_MARGIN_DEFAULT, LAYOUT_MARGIN_DEFAULT,
+                                        LAYOUT_MARGIN_DEFAULT, LAYOUT_MARGIN_DEFAULT)
+        main_layout.setSpacing(LAYOUT_SPACING_DEFAULT)
 
         # ---------------------------------------------------------
         # 1. 상단 행 (Top Row): Protocol | Port | Scan | Open
@@ -159,7 +163,7 @@ class PortSettingsWidget(QGroupBox):
 
         # 레이아웃 조립
         top_layout = QHBoxLayout()
-        top_layout.setSpacing(5)
+        top_layout.setSpacing(LAYOUT_SPACING_DEFAULT)
         top_layout.addWidget(self.protocol_lbl)
         top_layout.addWidget(self.protocol_combo)
         top_layout.addWidget(self.port_lbl)
@@ -180,8 +184,9 @@ class PortSettingsWidget(QGroupBox):
         """
         widget = QWidget()
         layout = QHBoxLayout(widget)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(5)
+        layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
+                                   LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
+        layout.setSpacing(LAYOUT_SPACING_DEFAULT)
 
         # Baudrate
         self.serial_controls_ui['baud_lbl'] = QLabel(language_manager.get_text("port_lbl_baudrate"))
@@ -246,8 +251,9 @@ class PortSettingsWidget(QGroupBox):
         """
         widget = QWidget()
         layout = QHBoxLayout(widget)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
+        layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
+                                   LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
+        layout.setSpacing(10)  # SPI 설정 항목 간 넓은 간격 유지 (기존 값, 상수 목록에 없음)
 
         # Speed
         self.spi_controls_ui['speed_lbl'] = QLabel(language_manager.get_text("port_lbl_speed"))

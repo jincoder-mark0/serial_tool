@@ -34,7 +34,8 @@ from view.custom_qt.smart_list_view import QSmartListView
 from common.constants import (
     DEFAULT_LOG_MAX_LINES,
     UI_REFRESH_INTERVAL_MS,
-    FILE_FILTER_LOG, FILE_FILTER_ALL
+    FILE_FILTER_LOG, FILE_FILTER_ALL,
+    LAYOUT_MARGIN_NONE, LAYOUT_SPACING_TIGHT, ICON_BUTTON_SIZE
 )
 from common.enums import NewlineMode
 from common.dtos import ColorRule
@@ -155,14 +156,14 @@ class DataLogWidget(QWidget):
         self.data_log_search_prev_btn.setObjectName("data_log_search_prev_btn")
         self.data_log_search_prev_btn.setText("<") # 아이콘이 없을 경우를 대비한 텍스트
         self.data_log_search_prev_btn.setToolTip(language_manager.get_text("data_log_btn_search_prev_tooltip"))
-        self.data_log_search_prev_btn.setFixedWidth(30)
+        self.data_log_search_prev_btn.setFixedSize(ICON_BUTTON_SIZE, ICON_BUTTON_SIZE)
         self.data_log_search_prev_btn.clicked.connect(self.on_data_log_search_prev_clicked)
 
         self.data_log_search_next_btn = QPushButton()
         self.data_log_search_next_btn.setObjectName("data_log_search_next_btn")
         self.data_log_search_next_btn.setText(">") # 아이콘이 없을 경우를 대비한 텍스트
         self.data_log_search_next_btn.setToolTip(language_manager.get_text("data_log_btn_search_next_tooltip"))
-        self.data_log_search_next_btn.setFixedWidth(30)
+        self.data_log_search_next_btn.setFixedSize(ICON_BUTTON_SIZE, ICON_BUTTON_SIZE)
         self.data_log_search_next_btn.clicked.connect(self.on_data_log_search_next_clicked)
 
         self.data_log_clear_log_btn = QPushButton(language_manager.get_text("data_log_btn_clear"))
@@ -228,8 +229,9 @@ class DataLogWidget(QWidget):
         toolbar_layout.addWidget(self.data_log_toggle_logging_btn)
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(2)
+        layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
+                                   LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
+        layout.setSpacing(LAYOUT_SPACING_TIGHT)
         layout.addLayout(toolbar_layout)
         layout.addWidget(self.data_log_list)
 

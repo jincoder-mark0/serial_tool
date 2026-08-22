@@ -33,7 +33,11 @@ from PyQt5.QtGui import QKeyEvent
 from view.custom_qt.smart_plain_text_edit import QSmartTextEdit
 from view.managers.language_manager import language_manager
 from common.dtos import ManualCommand, ManualControlState
-from common.constants import MAX_COMMAND_HISTORY_SIZE
+from common.constants import (
+    MAX_COMMAND_HISTORY_SIZE,
+    LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_DEFAULT,
+    LAYOUT_SPACING_TIGHT, LAYOUT_SPACING_DEFAULT, ICON_BUTTON_SIZE
+)
 
 
 class ManualControlWidget(QWidget):
@@ -113,12 +117,12 @@ class ManualControlWidget(QWidget):
         # 2. 버튼 구성
         self.history_up_btn = QPushButton("▲")
         self.history_up_btn.setToolTip(language_manager.get_text("manual_control_btn_history_up_tooltip"))
-        self.history_up_btn.setFixedSize(40, 20)
+        self.history_up_btn.setFixedSize(ICON_BUTTON_SIZE, ICON_BUTTON_SIZE)
         self.history_up_btn.clicked.connect(self.on_history_up_clicked)
 
         self.history_down_btn = QPushButton("▼")
         self.history_down_btn.setToolTip(language_manager.get_text("manual_control_btn_history_down_tooltip"))
-        self.history_down_btn.setFixedSize(40, 20)
+        self.history_down_btn.setFixedSize(ICON_BUTTON_SIZE, ICON_BUTTON_SIZE)
         self.history_down_btn.clicked.connect(self.on_history_down_clicked)
 
         self.send_command_btn = QPushButton(language_manager.get_text("manual_control_btn_send"))
@@ -135,7 +139,9 @@ class ManualControlWidget(QWidget):
         self.hex_chk.toggled.connect(self.on_hex_toggled)
 
         self.prefix_chk = QCheckBox(language_manager.get_text("manual_control_chk_prefix"))
+        self.prefix_chk.setToolTip(language_manager.get_text("manual_control_chk_prefix_tooltip"))
         self.suffix_chk = QCheckBox(language_manager.get_text("manual_control_chk_suffix"))
+        self.suffix_chk.setToolTip(language_manager.get_text("manual_control_chk_suffix_tooltip"))
 
         self.rts_chk = QCheckBox(language_manager.get_text("manual_control_chk_rts"))
         self.rts_chk.setToolTip(language_manager.get_text("manual_control_chk_rts_tooltip"))
@@ -146,6 +152,7 @@ class ManualControlWidget(QWidget):
         self.dtr_chk.stateChanged.connect(lambda state: self.dtr_changed.emit(state == Qt.Checked))
 
         self.local_echo_chk = QCheckBox(language_manager.get_text("manual_control_chk_local_echo"))
+        self.local_echo_chk.setToolTip(language_manager.get_text("manual_control_chk_local_echo_tooltip"))
 
         self.broadcast_chk = QCheckBox(language_manager.get_text("manual_control_chk_broadcast"))
         self.broadcast_chk.setToolTip(language_manager.get_text("manual_control_chk_broadcast_tooltip"))
@@ -156,23 +163,26 @@ class ManualControlWidget(QWidget):
         # 4. 레이아웃 배치
         # 버튼 그룹 (우측)
         btn_layout = QVBoxLayout()
-        btn_layout.setSpacing(2)
-        btn_layout.setContentsMargins(0, 0, 0, 0)
+        btn_layout.setSpacing(LAYOUT_SPACING_TIGHT)
+        btn_layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
+                                       LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
         btn_layout.addWidget(self.history_up_btn)
         btn_layout.addWidget(self.history_down_btn)
         btn_layout.addWidget(self.send_command_btn)
 
         # 입력 영역 (좌측 에디터 + 우측 버튼)
         send_layout = QHBoxLayout()
-        send_layout.setContentsMargins(0, 0, 0, 0)
-        send_layout.setSpacing(5)
+        send_layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
+                                        LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
+        send_layout.setSpacing(LAYOUT_SPACING_DEFAULT)
         send_layout.addWidget(self.command_edit, 1)
         send_layout.addLayout(btn_layout)
 
         # 옵션 영역 (그리드)
         option_layout = QGridLayout()
-        option_layout.setContentsMargins(0, 5, 0, 0) # 상단 여백 추가
-        option_layout.setSpacing(5) # 간격 조정
+        option_layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_DEFAULT,
+                                          LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)  # 상단 여백 추가
+        option_layout.setSpacing(LAYOUT_SPACING_DEFAULT) # 간격 조정
 
         # 1행에 배치 (가로 공간 활용)
         option_layout.addWidget(self.hex_chk, 0, 0)
@@ -185,8 +195,9 @@ class ManualControlWidget(QWidget):
 
         # 전체 레이아웃 조합
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(2)
+        layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
+                                   LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
+        layout.setSpacing(LAYOUT_SPACING_TIGHT)
         layout.addLayout(send_layout)
         layout.addLayout(option_layout)
         layout.addStretch() # 하단 여백 추가 (레이아웃 압축)
@@ -202,10 +213,13 @@ class ManualControlWidget(QWidget):
         """
         self.hex_chk.setText(language_manager.get_text("manual_control_chk_hex"))
         self.prefix_chk.setText(language_manager.get_text("manual_control_chk_prefix"))
+        self.prefix_chk.setToolTip(language_manager.get_text("manual_control_chk_prefix_tooltip"))
         self.suffix_chk.setText(language_manager.get_text("manual_control_chk_suffix"))
+        self.suffix_chk.setToolTip(language_manager.get_text("manual_control_chk_suffix_tooltip"))
         self.rts_chk.setText(language_manager.get_text("manual_control_chk_rts"))
         self.dtr_chk.setText(language_manager.get_text("manual_control_chk_dtr"))
         self.local_echo_chk.setText(language_manager.get_text("manual_control_chk_local_echo"))
+        self.local_echo_chk.setToolTip(language_manager.get_text("manual_control_chk_local_echo_tooltip"))
         self.broadcast_chk.setText(language_manager.get_text("manual_control_chk_broadcast"))
         self.send_command_btn.setText(language_manager.get_text("manual_control_btn_send"))
         self.history_up_btn.setToolTip(language_manager.get_text("manual_control_btn_history_up_tooltip"))

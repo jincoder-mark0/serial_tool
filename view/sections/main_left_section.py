@@ -29,6 +29,7 @@ from view.panels.manual_control_panel import ManualControlPanel
 from view.panels.port_tab_panel import PortTabPanel
 from view.widgets.system_log import SystemLogWidget
 from common.dtos import LogDataBatch, SystemLogEvent, ColorRule
+from common.constants import LAYOUT_MARGIN_NONE
 
 
 class MainLeftSection(QWidget):
@@ -78,8 +79,9 @@ class MainLeftSection(QWidget):
             5. 레이아웃에 위젯 추가 (포트 탭 패널에 Stretch 부여)
         """
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(10)
+        layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
+                                   LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
+        layout.setSpacing(10)  # 형제 패널 폭 대비 넓은 간격 유지 (기존 값, 상수 목록에 없음)
 
         # ---------------------------------------------------------
         # 1. 포트 탭 패널 (Port Tabs)

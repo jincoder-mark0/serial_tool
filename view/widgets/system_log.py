@@ -29,7 +29,10 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
 from view.managers.language_manager import language_manager
 from view.managers.theme_manager import theme_manager
 from view.custom_qt.smart_list_view import QSmartListView
-from common.constants import DEFAULT_LOG_MAX_LINES
+from common.constants import (
+    DEFAULT_LOG_MAX_LINES,
+    LAYOUT_MARGIN_NONE, LAYOUT_SPACING_TIGHT, ICON_BUTTON_SIZE
+)
 from common.dtos import ColorRule, SystemLogEvent
 from view.services.color_service import ColorService
 
@@ -127,14 +130,14 @@ class SystemLogWidget(QWidget):
         self.sys_log_search_prev_btn.setObjectName("sys_log_search_prev_btn")
         self.sys_log_search_prev_btn.setText("<") # 아이콘이 없을 경우를 대비한 텍스트
         self.sys_log_search_prev_btn.setToolTip(language_manager.get_text("sys_log_btn_search_prev_tooltip"))
-        self.sys_log_search_prev_btn.setFixedWidth(30)
+        self.sys_log_search_prev_btn.setFixedSize(ICON_BUTTON_SIZE, ICON_BUTTON_SIZE)
         self.sys_log_search_prev_btn.clicked.connect(self.on_sys_log_search_prev_clicked)
 
         self.sys_log_search_next_btn = QPushButton()
         self.sys_log_search_next_btn.setObjectName("sys_log_search_next_btn")
         self.sys_log_search_next_btn.setText(">") # 아이콘이 없을 경우를 대비한 텍스트
         self.sys_log_search_next_btn.setToolTip(language_manager.get_text("sys_log_btn_search_next_tooltip"))
-        self.sys_log_search_next_btn.setFixedWidth(30)
+        self.sys_log_search_next_btn.setFixedSize(ICON_BUTTON_SIZE, ICON_BUTTON_SIZE)
         self.sys_log_search_next_btn.clicked.connect(self.on_sys_log_search_next_clicked)
 
         self.sys_log_clear_log_btn = QPushButton(language_manager.get_text("sys_log_btn_clear"))
@@ -160,8 +163,10 @@ class SystemLogWidget(QWidget):
         self.sys_log_list.setProperty("class", "fixed-font")
 
         # 레이아웃 배치
+        # DataLogWidget과 동일하게 타이틀 뒤에 stretch를 두어 툴바 우측 정렬 규칙을 통일 (S-025)
         toolbar_layout = QHBoxLayout()
         toolbar_layout.addWidget(self.sys_log_title)
+        toolbar_layout.addStretch()
         toolbar_layout.addWidget(self.sys_log_search_edit)
         toolbar_layout.addWidget(self.sys_log_search_prev_btn)
         toolbar_layout.addWidget(self.sys_log_search_next_btn)
@@ -170,8 +175,9 @@ class SystemLogWidget(QWidget):
         toolbar_layout.addWidget(self.sys_log_toggle_logging_btn)
 
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(2)
+        layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
+                                   LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
+        layout.setSpacing(LAYOUT_SPACING_TIGHT)
         layout.addLayout(toolbar_layout)
         layout.addWidget(self.sys_log_list)
 

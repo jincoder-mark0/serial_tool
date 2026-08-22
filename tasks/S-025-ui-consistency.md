@@ -1,6 +1,13 @@
 # S-025 — UI 일관성 정비 (툴팁·크기/여백 상수·다이얼로그·니모닉)
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. 레이아웃 상수 6종 신설·16개
+  파일 치환(현행 값 유지 원칙, 불일치 리터럴 8건은 사유 주석), 아이콘 버튼 30×30 통일,
+  툴팁 키 14개 신설, 메뉴 니모닉(en &File / ko 파일(&F)), SystemLog stretch 통일,
+  PreferencesDialog QDialogButtonBox 전환(별칭 하위 호환), interval 입력란 폰트 메트릭 폭.
+  check_language_keys SUCCESS(271키), pytest 85 passed, 캡처 8장 회귀 없음.
+  주의: 버튼 통일로 minimumSizeHint 높이 +16(735→751) — S-026에서 함께 다룸.
+  에스컬레이션 보류 2건: margin(2,2,2,2)용 상수 신설 여부, spacing=15의 DIALOG 상수 재사용
+  여부 — 하위 판단 보류가 적절했고 현행 유지로 승인. Alt+키 실동작은 사용자 수동 확인 항목)
 - Recommended model: **하위(Sonnet) 가능**
 - 선행: S-019 (DataLog 중복 제거 — 툴팁 상태가 바뀌므로 먼저)
 - Skills to load: task-done, lang-keys

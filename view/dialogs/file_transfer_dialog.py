@@ -26,6 +26,7 @@ from typing import Optional
 from view.managers.language_manager import language_manager
 from view.widgets.file_progress import FileProgressWidget
 from common.dtos import FileProgressState
+from common.constants import LAYOUT_MARGIN_DIALOG
 
 class FileTransferDialog(QDialog):
     """
@@ -67,8 +68,9 @@ class FileTransferDialog(QDialog):
     def init_ui(self) -> None:
         """UI 컴포넌트 및 레이아웃 초기화"""
         layout = QVBoxLayout()
-        layout.setSpacing(15)
-        layout.setContentsMargins(15, 15, 15, 15)
+        layout.setSpacing(15)  # 다이얼로그 여유 간격 (기존 값, spacing 전용 상수 없음)
+        layout.setContentsMargins(LAYOUT_MARGIN_DIALOG, LAYOUT_MARGIN_DIALOG,
+                                   LAYOUT_MARGIN_DIALOG, LAYOUT_MARGIN_DIALOG)
 
         # ---------------------------------------------------------
         # 1. 파일 선택 영역

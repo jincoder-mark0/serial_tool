@@ -109,18 +109,21 @@ class MainMenuBar(QMenuBar):
         # 포트 열기
         open_port_action = QAction(language_manager.get_text("main_menu_open_port"), self)
         open_port_action.setShortcut("Ctrl+O")
+        open_port_action.setToolTip(language_manager.get_text("main_menu_open_port_tooltip"))
         open_port_action.triggered.connect(self.connect_requested.emit)
         file_menu.addAction(open_port_action)
 
         # 탭 닫기
         close_tab_action = QAction(language_manager.get_text("main_menu_close_tab"), self)
         close_tab_action.setShortcut("Ctrl+W")
+        close_tab_action.setToolTip(language_manager.get_text("main_menu_close_tab_tooltip"))
         close_tab_action.triggered.connect(self.tab_close_requested.emit)
         file_menu.addAction(close_tab_action)
 
         # 데이터 로그 저장
         save_data_log_action = QAction(language_manager.get_text("main_menu_save_data_log"), self)
         save_data_log_action.setShortcut("Ctrl+Shift+S")
+        save_data_log_action.setToolTip(language_manager.get_text("main_menu_save_data_log_tooltip"))
         save_data_log_action.triggered.connect(self.data_log_save_requested.emit)
         file_menu.addAction(save_data_log_action)
 
@@ -215,6 +218,7 @@ class MainMenuBar(QMenuBar):
         # Preferences 액션
         preferences_action = QAction(language_manager.get_text("main_menu_preferences"), self)
         preferences_action.setShortcut("Ctrl+,")
+        preferences_action.setToolTip(language_manager.get_text("main_menu_preferences_tooltip"))
         preferences_action.triggered.connect(self.preferences_requested.emit)
         view_menu.addAction(preferences_action)
 
@@ -225,6 +229,7 @@ class MainMenuBar(QMenuBar):
 
         # 파일 전송 액션
         file_transfer_action = QAction(language_manager.get_text("main_menu_file_transfer"), self)
+        file_transfer_action.setToolTip(language_manager.get_text("main_menu_file_transfer_tooltip"))
         file_transfer_action.triggered.connect(self.file_transfer_requested.emit)
         tools_menu.addAction(file_transfer_action)
 
@@ -236,6 +241,7 @@ class MainMenuBar(QMenuBar):
         # 정보(About) 액션
         about_action = QAction(language_manager.get_text("main_menu_about"), self)
         about_action.setIcon(theme_manager.get_icon("info"))
+        about_action.setToolTip(language_manager.get_text("main_menu_about_tooltip"))
         about_action.triggered.connect(self.about_requested.emit)
         help_menu.addAction(about_action)
 

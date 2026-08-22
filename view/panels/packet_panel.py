@@ -30,6 +30,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QAbstractTableModel, QModelIndex, QVari
 
 from view.managers.language_manager import language_manager
 from common.dtos import PacketViewData
+from common.constants import LAYOUT_MARGIN_NONE, LAYOUT_SPACING_TIGHT
 
 
 class PacketModel(QAbstractTableModel):
@@ -184,8 +185,9 @@ class PacketPanel(QWidget):
     def init_ui(self) -> None:
         """UI 구성 및 레이아웃 설정"""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(2)
+        layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
+                                   LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
+        layout.setSpacing(LAYOUT_SPACING_TIGHT)
 
         # 1. 툴바 (Toolbar)
         toolbar_layout = QHBoxLayout()
@@ -193,17 +195,21 @@ class PacketPanel(QWidget):
         # 타이틀
         self._title_lbl = QLabel(language_manager.get_text("packet_grp_title"))
         self._title_lbl.setProperty("class", "section-title")
+        self._title_lbl.setToolTip(language_manager.get_text("packet_grp_title_tooltip"))
 
         # 제어 버튼들
         self._capture_chk = QCheckBox(language_manager.get_text("packet_chk_capture"))
         self._capture_chk.setChecked(True)
+        self._capture_chk.setToolTip(language_manager.get_text("packet_chk_capture_tooltip"))
         self._capture_chk.toggled.connect(self.capture_toggled.emit)
 
         self._autoscroll_chk = QCheckBox(language_manager.get_text("packet_chk_autoscroll"))
         self._autoscroll_chk.setChecked(True)
+        self._autoscroll_chk.setToolTip(language_manager.get_text("packet_chk_autoscroll_tooltip"))
         self._autoscroll_chk.toggled.connect(self._on_autoscroll_toggled)
 
         self._clear_btn = QPushButton(language_manager.get_text("packet_btn_clear"))
+        self._clear_btn.setToolTip(language_manager.get_text("packet_btn_clear_tooltip"))
         self._clear_btn.clicked.connect(self.clear_requested.emit)
 
         toolbar_layout.addWidget(self._title_lbl)
@@ -236,10 +242,13 @@ class PacketPanel(QWidget):
     def retranslate_ui(self) -> None:
         """언어 변경 시 텍스트 업데이트"""
         self._title_lbl.setText(language_manager.get_text("packet_grp_title"))
+        self._title_lbl.setToolTip(language_manager.get_text("packet_grp_title_tooltip"))
         self._clear_btn.setText(language_manager.get_text("packet_btn_clear"))
+        self._clear_btn.setToolTip(language_manager.get_text("packet_btn_clear_tooltip"))
         self._capture_chk.setText(language_manager.get_text("packet_chk_capture"))
+        self._capture_chk.setToolTip(language_manager.get_text("packet_chk_capture_tooltip"))
         self._autoscroll_chk.setText(language_manager.get_text("packet_chk_autoscroll"))
-        # 타이틀 라벨 업데이트 로직 필요 시 추가 (객체 참조 저장 필요)
+        self._autoscroll_chk.setToolTip(language_manager.get_text("packet_chk_autoscroll_tooltip"))
 
     # -------------------------------------------------------------------------
     # Public Methods (Presenter에서 호출 - Facade Interface)

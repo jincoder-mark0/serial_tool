@@ -28,6 +28,7 @@ from PyQt5.QtCore import pyqtSignal
 from view.managers.language_manager import language_manager
 from view.widgets.manual_control import ManualControlWidget
 from common.dtos import ManualCommand, ManualControlState
+from common.constants import LAYOUT_MARGIN_NONE, LAYOUT_SPACING_DEFAULT
 
 
 class ManualControlPanel(QWidget):
@@ -69,8 +70,9 @@ class ManualControlPanel(QWidget):
     def init_ui(self) -> None:
         """UI 구성 및 레이아웃 설정"""
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(5)
+        layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
+                                   LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
+        layout.setSpacing(LAYOUT_SPACING_DEFAULT)
 
         # 타이틀
         self.title_lbl = QLabel(language_manager.get_text("manual_panel_title"))

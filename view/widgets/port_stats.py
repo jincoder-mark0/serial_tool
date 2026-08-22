@@ -19,6 +19,7 @@ from PyQt5.QtWidgets import QWidget, QGroupBox, QGridLayout, QLabel
 from typing import Optional
 from view.managers.language_manager import language_manager
 from common.dtos import PortStatistics
+from common.constants import LAYOUT_MARGIN_NONE, LAYOUT_SPACING_DEFAULT
 
 class PortStatsWidget(QWidget):
     """
@@ -45,10 +46,13 @@ class PortStatsWidget(QWidget):
 
     def init_ui(self):
         layout = QGridLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
+                                   LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
 
         self.group_box = QGroupBox(language_manager.get_text("port_stats_grp_title"))
         gb_layout = QGridLayout()
+        # 형제 그리드(macro_control 실행 설정, manual_control 옵션)와 동일한 spacing으로 통일 (S-025)
+        gb_layout.setSpacing(LAYOUT_SPACING_DEFAULT)
 
         self.rx_count_lbl = QLabel()
         self.tx_count_lbl = QLabel()

@@ -37,6 +37,7 @@ from PyQt5.QtCore import Qt, pyqtSignal, QPoint, QItemSelectionModel
 
 from view.managers.language_manager import language_manager
 from common.dtos import MacroEntry
+from common.constants import LAYOUT_MARGIN_NONE, ICON_BUTTON_SIZE
 
 
 class MacroColumns(IntEnum):
@@ -99,7 +100,8 @@ class MacroListWidget(QWidget):
             - 컨텍스트 메뉴 및 시그널 연결
         """
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
+        layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
+                                   LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
 
         # ---------------------------------------------------------
         # 1. 헤더 / 제어 버튼 (Header / Controls)
@@ -116,22 +118,22 @@ class MacroListWidget(QWidget):
         self.add_row_btn = QPushButton()
         self.add_row_btn.setObjectName("add_row_btn")
         self.add_row_btn.setToolTip(language_manager.get_text("macro_list_btn_add_row_tooltip"))
-        self.add_row_btn.setFixedSize(30, 30)
+        self.add_row_btn.setFixedSize(ICON_BUTTON_SIZE, ICON_BUTTON_SIZE)
 
         self.remove_row_btn = QPushButton()
         self.remove_row_btn.setObjectName("remove_row_btn")
         self.remove_row_btn.setToolTip(language_manager.get_text("macro_list_btn_remove_row_tooltip"))
-        self.remove_row_btn.setFixedSize(30, 30)
+        self.remove_row_btn.setFixedSize(ICON_BUTTON_SIZE, ICON_BUTTON_SIZE)
 
         self.up_row_btn = QPushButton()
         self.up_row_btn.setObjectName("up_row_btn")
         self.up_row_btn.setToolTip(language_manager.get_text("macro_list_btn_up_row_tooltip"))
-        self.up_row_btn.setFixedSize(30, 30)
+        self.up_row_btn.setFixedSize(ICON_BUTTON_SIZE, ICON_BUTTON_SIZE)
 
         self.down_row_btn = QPushButton()
         self.down_row_btn.setObjectName("down_row_btn")
         self.down_row_btn.setToolTip(language_manager.get_text("macro_list_btn_down_row_tooltip"))
-        self.down_row_btn.setFixedSize(30, 30)
+        self.down_row_btn.setFixedSize(ICON_BUTTON_SIZE, ICON_BUTTON_SIZE)
 
         header_layout.addWidget(self.select_all_chk)
         header_layout.addStretch()
@@ -605,7 +607,7 @@ class MacroListWidget(QWidget):
         """
         widget = QWidget()
         layout = QHBoxLayout(widget)
-        layout.setContentsMargins(2, 2, 2, 2)
+        layout.setContentsMargins(2, 2, 2, 2)  # 셀 내부 촘촘한 여백 (기존 값, 상수 목록에 없음)
         layout.setAlignment(Qt.AlignCenter)
 
         btn = QPushButton(language_manager.get_text("macro_list_btn_send"))

@@ -30,7 +30,10 @@ from PyQt5.QtCore import pyqtSignal, Qt
 
 from view.managers.language_manager import language_manager
 from common.dtos import MacroRepeatOption
-from common.constants import DEFAULT_MACRO_INTERVAL_MS
+from common.constants import (
+    DEFAULT_MACRO_INTERVAL_MS,
+    LAYOUT_MARGIN_NONE, LAYOUT_SPACING_TIGHT, LAYOUT_SPACING_DEFAULT
+)
 
 
 class MacroControlWidget(QWidget):
@@ -95,7 +98,10 @@ class MacroControlWidget(QWidget):
         # Interval
         self.interval_lbl = QLabel(language_manager.get_text("macro_control_lbl_repeat_interval"))
         self.repeat_interval_ms_edit = QLineEdit(str(DEFAULT_MACRO_INTERVAL_MS))
-        self.repeat_interval_ms_edit.setFixedWidth(50)
+        # 고정폭(50px)이 16pt 폰트에서 "1000"을 ")00"으로 잘랐음(S-024 실측, S-025 조치).
+        # 5자리(최대 99999ms) 기준 폰트 메트릭으로 최소 폭을 계산해 폰트 확대에도 안전하게 함.
+        min_width = self.repeat_interval_ms_edit.fontMetrics().horizontalAdvance("0" * 5) + 12
+        self.repeat_interval_ms_edit.setMinimumWidth(min_width)
         self.repeat_interval_ms_edit.setAlignment(Qt.AlignRight)
         self.repeat_interval_ms_edit.setToolTip(language_manager.get_text("macro_control_edit_repeat_interval_tooltip"))
 
@@ -147,8 +153,8 @@ class MacroControlWidget(QWidget):
 
 
         execution_layout = QGridLayout()
-        execution_layout.setContentsMargins(2, 2, 2, 2)
-        execution_layout.setSpacing(5)
+        execution_layout.setContentsMargins(2, 2, 2, 2)  # 그룹박스 내부 촘촘한 여백 (기존 값, 상수 목록에 없음)
+        execution_layout.setSpacing(LAYOUT_SPACING_DEFAULT)
 
         # Row 0 배치
         execution_layout.addWidget(self.interval_lbl, 0, 0)
@@ -175,8 +181,9 @@ class MacroControlWidget(QWidget):
 
         # 메인 레이아웃 적용
         layout = QVBoxLayout()
-        layout.setContentsMargins(0, 0, 0, 0)
-        layout.setSpacing(2)
+        layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
+                                   LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
+        layout.setSpacing(LAYOUT_SPACING_TIGHT)
         layout.addWidget(self.execution_settings_grp)
         self.setLayout(layout)
 

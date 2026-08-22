@@ -181,6 +181,16 @@ LOG_COLOR_LIGHT_PROMPT: str = '#008B8B'
 LOG_COLOR_LIGHT_SUCCESS: str = "#008000"
 
 # ==========================================
+# Layout & Sizing Constants (S-025: 위젯 간 여백/크기 상수화)
+# ==========================================
+LAYOUT_MARGIN_NONE: int = 0      # 여백 없음 (내부 컨테이너 레이아웃 기본값)
+LAYOUT_MARGIN_DEFAULT: int = 5   # 일반 패널 외곽 여백
+LAYOUT_MARGIN_DIALOG: int = 15   # 다이얼로그 외곽 여백 (여유 있는 룩)
+LAYOUT_SPACING_TIGHT: int = 2    # 툴바 등 촘촘한 배치 간격
+LAYOUT_SPACING_DEFAULT: int = 5  # 일반 위젯 간 기본 간격
+ICON_BUTTON_SIZE: int = 30       # 아이콘형 소형 버튼 한 변 길이 (정사각형)
+
+# ==========================================
 # System & File Constants
 # ==========================================
 PLATFORM_WINDOWS = "Windows"

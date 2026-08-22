@@ -20,7 +20,7 @@ from PyQt5.QtWidgets import (
     QDialog, QVBoxLayout, QHBoxLayout, QTabWidget, QWidget,
     QLabel, QComboBox, QSpinBox, QPushButton,
     QFileDialog, QGroupBox, QFormLayout, QRadioButton,
-    QButtonGroup, QListWidget, QCheckBox, QLineEdit
+    QButtonGroup, QListWidget, QCheckBox, QLineEdit, QDialogButtonBox
 )
 from PyQt5.QtCore import pyqtSignal, Qt
 from typing import Optional, Any
@@ -73,24 +73,23 @@ class PreferencesDialog(QDialog):
 
         layout.addWidget(self.tabs)
 
-        # 하단 버튼 (OK / Cancel / Apply)
-        btn_layout = QHBoxLayout()
-        btn_layout.addStretch()
+        # 하단 버튼 (OK / Cancel / Apply) - font_settings_dialog.py와 동일하게 QDialogButtonBox로 통일
+        self.button_box = QDialogButtonBox(
+            QDialogButtonBox.Ok | QDialogButtonBox.Cancel | QDialogButtonBox.Apply
+        )
+        self.button_box.accepted.connect(self.accept)
+        self.button_box.rejected.connect(self.reject)
+        self.button_box.button(QDialogButtonBox.Apply).clicked.connect(self.apply_settings)
 
-        self.ok_btn = QPushButton(language_manager.get_text("pref_btn_ok"))
-        self.ok_btn.clicked.connect(self.accept)
+        # 기존 시그널 연결(accept/reject/apply_settings)을 유지하기 위한 별칭
+        self.ok_btn = self.button_box.button(QDialogButtonBox.Ok)
+        self.cancel_btn = self.button_box.button(QDialogButtonBox.Cancel)
+        self.apply_btn = self.button_box.button(QDialogButtonBox.Apply)
+        self.ok_btn.setText(language_manager.get_text("pref_btn_ok"))
+        self.cancel_btn.setText(language_manager.get_text("pref_btn_cancel"))
+        self.apply_btn.setText(language_manager.get_text("pref_btn_apply"))
 
-        self.cancel_btn = QPushButton(language_manager.get_text("pref_btn_cancel"))
-        self.cancel_btn.clicked.connect(self.reject)
-
-        self.apply_btn = QPushButton(language_manager.get_text("pref_btn_apply"))
-        self.apply_btn.clicked.connect(self.apply_settings)
-
-        btn_layout.addWidget(self.ok_btn)
-        btn_layout.addWidget(self.cancel_btn)
-        btn_layout.addWidget(self.apply_btn)
-
-        layout.addLayout(btn_layout)
+        layout.addWidget(self.button_box)
         self.setLayout(layout)
 
     def create_general_tab(self) -> QWidget:
