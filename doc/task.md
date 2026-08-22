@@ -207,10 +207,10 @@
 
 ## Phase 6: 자동화 및 고급 기능 (계획됨)
 
-- [ ] `AutoTxScheduler` 구현 (주기적 전송)
+- [x] `AutoTxScheduler` 구현 (주기적 전송) — S-006 (`model/auto_tx.py`)
 - [ ] 성능 최적화
   - [ ] RxLogView를 위한 `BatchRenderer` 구현
-  - [ ] `RingBuffer` 최적화 (bytearray)
+  - [x] `RingBuffer` 최적화 (bytearray) — 이미 구현돼 있었음 (`core/structures.py`)
   - [ ] 논블로킹 I/O 루프 최적화
 - [ ] ~~Rx 파일 캡처 (`RxCaptureWriter`)~~ → 폐기 (2026-08-22, S-008 판정: DataLogger가 전이중·3포맷 기록을 이미 제공 — 중복)
 
@@ -229,8 +229,8 @@
 - [x] 자동화 테스트
   - [x] 단위 테스트 (Core/Model/Presenter/View)
   - [x] Mock Serial 기반 통합 테스트
-  - [ ] 성능 벤치마크 (Rx 처리량, UI 렌더링)
-- [ ] 패키징 및 배포
-  - [ ] `pyinstaller.spec` 생성
-  - [ ] 독립 실행형 EXE/AppImage 빌드
-  - [ ] GitHub Actions CI/CD 설정
+  - [x] 성능 벤치마크 (Rx 처리량, UI 렌더링) — S-011 (`tools/benchmark.py`, `doc/benchmark_20260822.md`)
+- [x] 패키징 및 배포
+  - [x] `pyinstaller.spec` 생성 — S-012 (`serial_tool.spec`)
+  - [x] 독립 실행형 EXE/AppImage 빌드 — S-012 (Windows EXE 빌드·스모크 확인, AppImage는 대상 외)
+  - [x] GitHub Actions CI/CD 설정 — S-014 (`.github/workflows/ci.yml`)

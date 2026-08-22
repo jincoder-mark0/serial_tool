@@ -89,23 +89,31 @@ class Example:
 
 ### 2.2 Context (위젯/섹션)
 
+`resources/languages/en.json`의 실제 키 접두어 기준 (2026-08-22 조사, S-046):
+
 | Context | 설명 | 관련 클래스 | 예시 |
 |---------|------|------------|------|
-| **`global`** | 앱 전역 공유 | - | `global_btn_ok`, `global_msg_saved` |
-| **`main`** | 메인 윈도우 | `MainWindow` | `main_title`, `main_menu_file` |
-| **`toolbar`** | 메인 툴바 | `MainToolBar` | `toolbar_act_open`, `toolbar_act_settings` |
-| **`status`** | 메인 상태바 | `MainStatusBar` | `status_msg_ready`, `status_lbl_port` |
-| **`port`** | 포트 설정 패널 | `PortSettingsWidget` | `port_btn_connect`, `port_combo_baud` |
-| **`rx`** | 수신 로그 영역 | `ReceivedAreaWidget` | `rx_btn_clear`, `rx_chk_timestamp` |
-| **`manual_ctrl`**| 수동 제어/전송 | `ManualCtrlWidget` | `manual_ctrl_btn_send`, `manual_ctrl_chk_hex` |
-| **`file_prog`** | 파일 전송 진행 | `FileProgressWidget` | `file_prog_bar_transfer`, `file_prog_btn_cancel` |
-| **`macro_list`**| 매크로 리스트 | `MacroListWidget` | `macro_list_col_command`, `macro_list_btn_add` |
-| **`macro_ctrl`**| 매크로 제어 | `MacroCtrlWidget` | `macro_ctrl_spin_repeat`, `macro_ctrl_btn_start` |
-| **`inspector`** | 패킷 인스펙터 | `PacketInspectorWidget`| `inspector_tree_packet`, `inspector_col_value` |
-| **`system`** | 시스템 로그 | `SystemLogWidget` | `system_list_log`, `system_lbl_title` |
-| **`pref`** | 설정 다이얼로그 | `PreferencesDialog` | `pref_tab_general`, `pref_chk_auto_update` |
-| **`font`** | 폰트 설정 | `FontSettingsDialog` | `font_spin_size`, `font_combo_family` |
+| **`main`** | 메인 윈도우 (메뉴/상태바/타이틀) | `MainWindow`, `MainMenuBar`, `MainStatusBar` | `main_menu_about`, `main_status_lbl_port`, `main_title` |
+| **`port`** | 포트 설정/탭/통계 | `PortSettingsWidget`, `PortTabPanel`, `PortStatsWidget` | `port_btn_connect`, `port_combo_baudrate`, `port_stats_lbl_errors` |
+| **`data_log`** | 수신 로그 영역 (RX) | `DataLogWidget` | `data_log_btn_clear`, `data_log_chk_hex` |
+| **`sys_log`** | 시스템 로그 | `SystemLogWidget` | `sys_log_btn_clear`, `sys_log_chk_filter` |
+| **`manual_control`** | 수동 제어/전송 | `ManualControlWidget`, `ManualControlPanel` | `manual_control_btn_close`, `manual_control_chk_auto_tx` |
+| **`macro_list`** | 매크로 리스트 | `MacroListWidget` | `macro_list_btn_add_row`, `macro_list_col_command` |
+| **`macro_control`** | 매크로 실행 제어 | `MacroControlWidget` | `macro_control_btn_repeat_pause`, `macro_control_edit_repeat_interval` |
+| **`macro_panel`** | 매크로 패널(로드/저장) | `MacroPanel` | `macro_panel_dialog_title_open`, `macro_panel_msg_load_error` |
+| **`packet`** | 패킷 인스펙터 | `PacketPanel` | `packet_col_field`, `packet_chk_autoscroll` |
+| **`file_prog`** | 파일 전송 진행 | `FileProgressWidget` | `file_prog_btn_cancel`, `file_prog_lbl_status_sending` |
+| **`pref`** | 설정 다이얼로그 | `PreferencesDialog` | `pref_tab_general`, `pref_chk_at_ok` |
+| **`font`** | 폰트 설정 | `FontSettingsDialog` | `font_spin_size`, `font_grp_fixed` |
 | **`about`** | 정보 다이얼로그 | `AboutDialog` | `about_lbl_version`, `about_btn_close` |
+| **`left`** | 좌측 섹션(포트 탭 영역) | `MainLeftSection` | `left_tooltip_port_tab` |
+| **`right`** | 우측 섹션(매크로/패킷 탭) | `MainRightSection` | `right_tab_macro_list`, `right_tooltip_packet` |
+| **`lifecycle`** | 앱 생명주기 메시지 | `LifecycleManager` | `lifecycle_title_settings_reset`, `lifecycle_msg_settings_reset` |
+
+> **Note**: 이전 버전 표에 있던 `global`/`toolbar`/`status`/`rx`/`manual_ctrl`/`inspector`/`system`
+> 등의 Context는 실제 코드에 존재하지 않는다(위 표로 대체됨, 2026-08-22 확인). `toolbar`/`status`는
+> 각각 `main_menu`/`main_status`로, `rx`는 `data_log`로, `manual_ctrl`은 `manual_control`로,
+> `inspector`는 `packet`으로, `system`은 `sys_log`로 실제 구현되어 있다.
 
 ### 2.3 Type (UI 요소 타입)
 
@@ -119,6 +127,7 @@ class Example:
 | `chk` | 체크박스 | `QCheckBox` | `manual_ctrl_chk_rts`, `rx_chk_hex` |
 | `combo` | 콤보박스 | `QComboBox` | `port_combo_baud` |
 | `input` | 문자열 입력 필드 | `QLineEdit` | `manual_ctrl_input_cmd` |
+| `edit` | 문자열/숫자 입력 필드 (`QLineEdit`/`SmartNumberEdit`) — 코드에서 `input`과 혼용 중, 정리 대상 | `QLineEdit`, `SmartNumberEdit` | `data_log_edit_search`, `manual_control_edit_auto_tx_interval` |
 | `spin` | 숫자 입력 필드 | `QSpinBox` | `macro_ctrl_spin_repeat`, `font_spin_size` |
 | `txt` | 멀티라인 텍스트 영역 | `QTextEdit` | `rx_txt_log` |
 | `grp` | 그룹박스 | `QGroupBox` | `cmd_grp_auto`, `font_grp_fixed` |
@@ -212,7 +221,7 @@ UI 요소의 기본 텍스트 외에 부가적인 정보를 정의할 때, 키 �
 
 ### 3.2 기존 코드 리팩토링 시
 - 규칙에 맞지 않는 키를 발견하면 수정
-- 일괄 변경 시 `tools/manage_lang_keys.py` 활용
+- 일괄 변경 시 `tools/manage_language_keys.py` 활용
 
 ### 3.3 일관성 유지
 - 비슷한 기능은 비슷한 이름 사용
@@ -231,7 +240,7 @@ UI 요소의 기본 텍스트 외에 부가적인 정보를 정의할 때, 키 �
 ### 4.2 도구 활용
 프로젝트에는 언어 키 관리를 위한 도구가 있습니다:
 ```bash
-python tools/manage_lang_keys.py
+python tools/manage_language_keys.py
 ```
 
 이 도구는:

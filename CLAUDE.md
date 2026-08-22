@@ -2,7 +2,7 @@
 
 PyQt5 기반 멀티포트 시리얼 통신 유틸리티. **Strict MVP** + **EventBus** + **Fast Path** 아키텍처.
 현재 상태: 핵심 기능(멀티포트/매크로/파일 전송/로깅/테마/다국어) 구현 완료,
-테스트 기준선 **168개 통과**. PyInstaller 패키징·CI·AutoTx·벤치마크 도입 완료,
+테스트 기준선 **227개 통과**. PyInstaller 패키징·CI·AutoTx·벤치마크 도입 완료,
 SPI/I2C Transport·플러그인은 미착수 (Task.MD 참조).
 
 ## 실행·검증 명령
@@ -28,8 +28,11 @@ $env:QT_QPA_PLATFORM="offscreen"; .venv\Scripts\python -m pytest -q   # 전체 �
   - **View는 Model을 import하지 않는다** (Passive View — 시그널 emit + 인터페이스 메서드만).
   - **Model은 View/위젯을 모른다**. UI 갱신은 Presenter가 중재한다.
 - 계층 간 데이터 전달은 `dict` 금지, `common/dtos.py`의 DTO만 사용.
-- 상태·이벤트는 **EventBus**(`core/event_bus.py`) 경유. 예외는 단 하나 — 대량 RX 데이터의
-  **Fast Path**(ConnectionController → MainPresenter 직접 시그널). 새 Fast Path를 임의로 늘리지 않는다.
+- 상태·이벤트 전달은 목적에 따라 두 채널을 구분해 쓴다: **Qt 직접 시그널**(소유 관계가 명확한
+  인접 계층 1:1/1:N — Model ↔ 그것을 소유한 Presenter, 예: `connection_closed`)과 **EventBus**
+  (`core/event_bus.py`, 계층을 건너뛰거나 소유 관계가 없는 다자 팬아웃). 대량 RX 데이터는 EventBus를
+  우회하는 **Fast Path**(ConnectionController → MainPresenter 직접 시그널)를 예외로 허용한다.
+  새 Fast Path를 임의로 늘리지 않는다.
 - 수신 데이터의 UI 반영은 MainPresenter의 **30ms Throttling** 버퍼를 거친다. 위젯 직접 갱신 금지.
 - 워커 스레드(ConnectionWorker/MacroRunner/FileTransferService)에서 위젯 직접 접근 금지 —
   Qt 시그널로만 UI 스레드에 전달.

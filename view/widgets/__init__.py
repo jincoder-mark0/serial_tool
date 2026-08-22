@@ -8,7 +8,6 @@ from .port_settings import PortSettingsWidget
 from .manual_control import ManualControlWidget
 from .macro_list import MacroListWidget
 from .macro_control import MacroControlWidget
-from .packet import PacketWidget
 from .file_progress import FileProgressWidget
 
 __all__ = [
@@ -18,6 +17,5 @@ __all__ = [
     'ManualControlWidget',
     'MacroListWidget',
     'MacroControlWidget',
-    'PacketWidget',
     'FileProgressWidget',
 ]

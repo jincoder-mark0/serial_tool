@@ -18,7 +18,7 @@ Steps 그대로 수행할 수 있는 수준**으로 상세화한 문서 모음.
 ```powershell
 Set-Location e:\Python\serial_tool
 $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
-.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 168개)
+.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 227개)
 ```
 
 ## 태스크 목록 (의존 순서)

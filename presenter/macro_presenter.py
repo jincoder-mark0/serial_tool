@@ -52,7 +52,7 @@ class ScriptLoadWorker(QThread):
 
     대용량 JSON 파일 파싱 시 UI 블로킹을 방지하기 위해 별도 스레드에서 실행됩니다.
     """
-    load_finished = pyqtSignal(dict)
+    load_finished = pyqtSignal(object)  # MacroScriptData
     load_failed = pyqtSignal(str)
 
     def __init__(self, file_path: str):
@@ -71,12 +71,13 @@ class ScriptLoadWorker(QThread):
 
         Logic:
             - 파일 열기 및 JSON 파싱
-            - 성공 시 데이터 방출, 실패 시 에러 메시지 방출
+            - 성공 시 DTO(MacroScriptData)로 감싸 방출, 실패 시 에러 메시지 방출
         """
         try:
             with open(self.file_path, 'r', encoding='utf-8') as f:
                 data = commentjson.load(f)
-            self.load_finished.emit(data)
+            script_data = MacroScriptData.from_dict(self.file_path, data)
+            self.load_finished.emit(script_data)
         except Exception as e:
             self.load_failed.emit(str(e))
 
@@ -212,16 +213,16 @@ class MacroPresenter(QObject):
         self._load_worker.load_failed.connect(self._on_load_failed)
         self._load_worker.start()
 
-    def _on_load_success(self, data: dict) -> None:
+    def _on_load_success(self, script_data: MacroScriptData) -> None:
         """
         로드 성공 시 View에 데이터를 적용합니다.
 
         Args:
-            data (dict): 로드된 스크립트 데이터.
+            script_data (MacroScriptData): 로드된 스크립트 데이터 DTO.
         """
         logger.info("Script loaded successfully.")
-        # Panel Facade 호출
-        self.panel.apply_state(data)
+        # Panel Facade 호출 (DTO의 데이터 payload를 기존 상태 dict 계약으로 전달)
+        self.panel.apply_state(script_data.data)
         self._load_worker = None
 
     def _on_load_failed(self, error_msg: str) -> None:

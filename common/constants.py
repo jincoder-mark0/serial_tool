@@ -141,6 +141,15 @@ DEFAULT_READ_CHUNK_SIZE: int = 4096  # 한 번에 읽을 바이트 수
 # 보드레이트, 대용량 청크)에서의 적정값 재검증은 S-010(가상 포트)/실기기 대상.
 WRITE_TIMEOUT_S: float = 1.0
 
+# DataLogger.stop_logging() 드레인 상한(초) — S-045
+# stop_logging()은 배경 스레드가 큐를 비울 때까지 기다린 뒤 파일을 닫는다.
+# 상한 없이 기다리면 디스크 지연 시 종료가 무기한 멈출 수 있고, 상한 없이
+# 곧바로 파일을 닫으면 아직 쓰이지 않은 잔여 큐가 조용히 사라진다(WRITE_TIMEOUT_S와
+# 동일한 문제의식). 1차 대기(DRAIN)로 정상 드레인 기회를 주고, 그래도 못 끝내면
+# FORCE로 루프를 강제 종료 요청한 뒤 남은 개수를 경고로 표면화한다.
+DATA_LOGGER_STOP_DRAIN_TIMEOUT_S: float = 1.0
+DATA_LOGGER_STOP_FORCE_TIMEOUT_S: float = 0.5
+
 # 더미 포트 예약명 (S-033) — 실기기 없이 송수신 경로를 디버깅하기 위한 루프백 에코 포트.
 # 실제 장치명(COMx 등)과 충돌하지 않는 이름으로 고정.
 LOOPBACK_PORT_NAME: str = "LOOPBACK"

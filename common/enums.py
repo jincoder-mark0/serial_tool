@@ -11,7 +11,7 @@
 ## WHAT
 * PortState, ParserType, ThemeType 등 상태 열거형
 * SerialParity, SerialStopBits 등 통신 설정 열거형
-* FileStatus, MacroStepType 등 프로세스 상태
+* FileStatus 등 프로세스 상태
 * LogFormat 등 파일 저장 형식
 
 ## HOW
@@ -174,17 +174,6 @@ class ThemeType(Enum):
     DARK = "dark"
     LIGHT = "light"
     DRACULA = "dracula"
-
-class MacroStepType(Enum):
-    """
-    매크로 실행 단계 타입
-
-    Attributes:
-        STARTED: 시작됨
-        COMPLETED: 완료됨
-    """
-    STARTED = "started"
-    COMPLETED = "completed"
 
 class FileStatus(Enum):
     """

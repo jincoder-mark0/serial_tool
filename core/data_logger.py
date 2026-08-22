@@ -27,6 +27,10 @@ import time
 import struct
 from core.logger import logger
 from common.enums import LogFormat
+from common.constants import (
+    DATA_LOGGER_STOP_DRAIN_TIMEOUT_S,
+    DATA_LOGGER_STOP_FORCE_TIMEOUT_S,
+)
 
 class DataLogger:
     """
@@ -42,6 +46,8 @@ class DataLogger:
         self._queue: Queue = Queue() # (timestamp, data) 튜플 저장
         self._thread: Optional[Thread] = None
         self._is_logging = False
+        # stop_logging()이 드레인 상한을 넘겨 루프를 강제 종료할 때만 True로 설정
+        self._force_stop_drain = False
         self.file_path: str = ""
         self.format: LogFormat = LogFormat.BIN
 
@@ -72,6 +78,7 @@ class DataLogger:
 
             self.format = log_format
             self.file_path = file_path
+            self._force_stop_drain = False
 
             # 모든 포맷을 바이너리 모드로 엽니다 (텍스트 인코딩 이슈 방지 및 PCAP 호환)
             self._file = open(file_path, 'wb')
@@ -92,12 +99,35 @@ class DataLogger:
             return False
 
     def stop_logging(self) -> None:
-        """로깅을 중단하고 파일을 닫습니다."""
+        """
+        로깅을 중단하고 파일을 닫습니다.
+
+        Logic:
+            - 배경 스레드가 큐에 남은 항목을 모두 쓸 때까지 기다리되,
+              무한 대기를 피하기 위해 상한(DATA_LOGGER_STOP_DRAIN_TIMEOUT_S)을 둔다.
+            - 상한을 넘기면 드레인 루프에 즉시 종료를 요청하고 짧게(DATA_LOGGER_STOP_FORCE_TIMEOUT_S)
+              추가 대기한다.
+            - 그래도 큐에 남은 항목이 있으면 조용히 버리지 않고 개수를 경고 로그로
+              표면화한다 (S-039의 TX 드레인 유실 방지와 동일한 원칙).
+        """
         self._is_logging = False
 
         if self._thread and self._thread.is_alive():
-            # 스레드가 큐를 비우고 종료될 때까지 대기
-            self._thread.join(timeout=1.0)
+            # 1차: 정상적으로 큐를 비우며 종료할 시간을 준다.
+            self._thread.join(timeout=DATA_LOGGER_STOP_DRAIN_TIMEOUT_S)
+
+            if self._thread.is_alive():
+                # 상한 초과: 드레인 루프를 강제로 끊고 짧게 추가 대기한다.
+                self._force_stop_drain = True
+                self._thread.join(timeout=DATA_LOGGER_STOP_FORCE_TIMEOUT_S)
+
+                remaining = self._queue.qsize()
+                if remaining > 0:
+                    logger.warning(
+                        f"DataLogger stop_logging: drain exceeded "
+                        f"{DATA_LOGGER_STOP_DRAIN_TIMEOUT_S}s for '{self.file_path}'; "
+                        f"{remaining} queued item(s) discarded."
+                    )
 
         if self._file:
             try:
@@ -130,7 +160,7 @@ class DataLogger:
             - 큐에서 (timestamp, data)를 꺼냄
             - 포맷에 따라 데이터 가공 후 파일 쓰기
         """
-        while self._is_logging or not self._queue.empty():
+        while (self._is_logging or not self._queue.empty()) and not self._force_stop_drain:
             try:
                 item = self._queue.get(timeout=0.1)
                 timestamp, data = item

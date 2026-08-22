@@ -13,6 +13,8 @@
 ### 1.1 핵심 기능
 
 * **멀티포트 시리얼 지원**: 탭 인터페이스로 여러 시리얼 포트를 동시에 제어
+* **LOOPBACK 디버그 포트**: 실기기 없이도 송수신 전 경로(Fast Path, 로깅, 매크로 Expect, AutoTx,
+  파일 전송)를 검증할 수 있는 소프트웨어 에코 포트를 포트 목록에 상시 제공
 * **고성능 데이터 처리**:
   * **Fast Path 아키텍처**: 대량의 수신 데이터를 EventBus를 거치지 않고 직접 전달하여 오버헤드 최소화
   * **UI Throttling**: 30ms 주기로 UI 업데이트를 배칭(Batching)하여 CPU 점유율 최적화
@@ -69,7 +71,7 @@
   선택 시 연결이 거부됩니다(명시적 에러, 조용한 Serial 대체 없음).
 * 패킷 파서(Raw/AT/Delimiter/FixedLength)는 Preferences에서 고른 설정이 연결 시 적용됩니다.
 * 처리량 수치는 자동 벤치마크가 도입되기 전까지 보장하지 않습니다.
-* 현재 자동화 테스트 기준선은 168개 테스트 통과입니다.
+* 현재 자동화 테스트 기준선은 227개 테스트 통과입니다.
 
 ---
 
@@ -152,6 +154,7 @@ serial_tool/
 ├── core/                               # 인프라 및 유틸리티
 │   ├── transport/
 │   │   ├── base_transport.py           # 하드웨어 통신 추상화 인터페이스
+│   │   ├── loopback_transport.py       # 소프트웨어 루프백(디버그 에코) 구현체
 │   │   └── serial_transport.py         # PySerial 구현체
 │   │
 │   ├── command_processor.py            # Command 전처리 (Prefix/Suffix/Hex)
@@ -166,7 +169,6 @@ serial_tool/
 │
 ├── model/                              # [Model] 비즈니스 로직 및 상태
 │   ├── connection_controller.py        # 연결 제어, Fast Path 시그널링
-│   ├── connection_manager.py           # 연결 인스턴스 관리
 │   ├── connection_worker.py            # I/O 워커 스레드 (Batch Processing)
 │   ├── file_transfer_service.py        # 파일 전송 엔진 (Backpressure)
 │   ├── macro_runner.py                 # 매크로 엔진 (Broadcast/Expect)
@@ -476,6 +478,7 @@ graph TD
 
 ```json
 {
+  "version": "1.3",
   "settings": {
     "theme": "dark",
     "language": "ko",
@@ -488,6 +491,8 @@ graph TD
   "ports": { "tabs": [] }
 }
 ```
+
+`version`은 스키마 검증(`core/settings_schema.py`)의 필수 필드이며 현재 값은 `"1.3"`입니다.
 
 ### 6.6 Git 버전 관리
 

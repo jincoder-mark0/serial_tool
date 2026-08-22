@@ -33,6 +33,7 @@ from common.dtos import (
     FileErrorEvent
 )
 from common.constants import EventTopics
+from common.enums import FileStatus, SerialFlowControl
 
 
 class FileTransferSignals(QObject):
@@ -146,7 +147,7 @@ class FileTransferService(QRunnable):
                         file_path=self.file_path,
                         sent_bytes=sent_bytes,
                         total_bytes=total_size,
-                        status="Sending"
+                        status=FileStatus.SENDING.value
                     )
                     self.signals.progress_updated.emit(state)
 
@@ -158,7 +159,7 @@ class FileTransferService(QRunnable):
 
                     # Speed Control (소프트웨어 흐름 제어)
                     # 하드웨어 흐름 제어가 없는 경우, Baudrate에 맞춰 인위적 지연 추가
-                    if self.config.flowctrl in ["RTS/CTS", "XON/XOFF"]:
+                    if self.config.flowctrl in (SerialFlowControl.RTS_CTS.value, SerialFlowControl.XON_XOFF.value):
                         pass  # 하드웨어/소프트웨어 핸드쉐이킹 신뢰
                     else:
                         # (데이터 크기 * 10비트) / Baudrate = 전송 소요 시간 (초)
