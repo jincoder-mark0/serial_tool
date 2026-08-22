@@ -62,10 +62,9 @@ def test_connection_send_and_close_flow(
     controller = presenter.connection_controller
 
     assert controller.open_connection(sample_port_config) is True
-    assert wait_until(
-        lambda: controller.workers[sample_port_config.port].is_running()
-    )
-
+    # 의도적으로 worker.is_running()(transport open 완료 플래그) 대기 없이 곧바로
+    # send한다 — S-037 수정 전에는 이 타이밍의 send가 조용히 유실되었다
+    # (회귀 테스트: tests/test_send_before_open_race.py).
     controller.send_data(sample_port_config.port, b"TEST_MSG")
 
     assert wait_until(lambda: mock_serial.write.called)

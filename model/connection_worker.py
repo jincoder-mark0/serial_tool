@@ -172,7 +172,16 @@ class ConnectionWorker(QThread):
         데이터 전송 (Non-blocking)
 
         Logic:
-            - Transport가 열려있는지 확인
+            - 워커 종료 요청 여부만 확인 (transport.is_open()이 아님 — S-037)
+              QThread.start() 직후 controller.is_connection_open()은 즉시 True가
+              되지만, 실제 OS 스레드가 run()에 진입해 transport.open()을 마치기까지는
+              지연이 있다. 그 틈에 들어온 send를 transport.is_open()으로 막으면
+              큐잉이 조용히 실패해 데이터가 유실된다. run() 루프는 open 성공 후
+              TX 큐를 전량 드레인하므로(L111-115), 열리기 전에 큐잉해도 순서가
+              보존된다. open이 실패하면 큐는 드레인되지 않고 버려지지만(L127-128
+              경로는 while 루프 진입 자체가 없음), 이 경우 이미 별도로
+              "Failed to open connection" error_occurred가 발행되므로 상태 정보
+              누락은 아니다.
             - 전송 큐에 데이터 추가
 
         Args:
@@ -181,9 +190,11 @@ class ConnectionWorker(QThread):
         Returns:
             bool: Queue 추가 성공 여부
         """
-        if self.transport.is_open():
-            return self._write_queue.enqueue(data)
-        return False
+        with QMutexLocker(self._mutex):
+            stop_requested = self._stop_requested
+        if stop_requested:
+            return False
+        return self._write_queue.enqueue(data)
 
     def get_write_queue_size(self) -> int:
         """

@@ -1,7 +1,9 @@
 # S-037 — 연결 직후 send 침묵 실패 레이스 수정
 
-- Status: TODO
-- Recommended model: **하위(Sonnet) 가능** (옵션 판단 1건 포함 — 코드 확인 후 선택)
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. **옵션 A 채택**: 가드를
+  종료 요청 여부로 완화(open 전 큐잉 허용, run 루프가 드레인해 순서 보존).
+  회귀 테스트 4건 신설, 기존 wait_until 회피 2곳 제거(불필요 실증) → 기준선 134.
+  부수 발견: close 시 TX flush 로직 부재 — 종료 직전 send 유실은 별건(후속 검토))
 - 선행: S-033 (발견 경위)
 - Skills to load: task-done
 

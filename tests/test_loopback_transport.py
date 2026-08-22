@@ -156,11 +156,13 @@ def test_send_data_echoes_back_through_data_received_signal(qapp, qtbot, loopbac
 
     Logic:
         - ConnectionController.open_connection(LOOPBACK)으로 연결
-        - Worker의 내부 실행 플래그(is_running)가 True가 될 때까지 대기
-          (QThread.isRunning()은 start() 직후 곧바로 True가 되지만, 실제로
-          run()이 스케줄되어 transport.open()이 끝나기까지는 미세한 지연이
-          있음 — 기존 통합 테스트의 wait_until 패턴과 동일한 이유)
-        - send_data로 바이트 전송
+        - send_data로 곧바로 바이트 전송 (Worker의 내부 실행 플래그 is_running이
+          True가 될 때까지 대기하지 않음 — S-037 수정 전에는 QThread.isRunning()이
+          start() 직후 곧바로 True가 되는 반면 transport.open()은 실제 run()
+          스레드에서 지연 완료되어, 그 틈의 send가 조용히 유실되었다. 이제는
+          ConnectionWorker.send_data()가 stop 요청 여부만으로 큐잉을 허용하고
+          run() 루프가 open 후 큐를 드레인하므로 대기가 불필요하다. 회귀 테스트:
+          tests/test_send_before_open_race.py)
         - ConnectionWorker의 폴링 루프가 write -> read를 수행할 때까지
           qtbot.waitSignal로 data_received(PortDataEvent)를 대기
         - 수신된 DTO의 port/data가 기대값과 일치하는지 확인
@@ -168,9 +170,6 @@ def test_send_data_echoes_back_through_data_received_signal(qapp, qtbot, loopbac
     controller = ConnectionController()
     try:
         assert controller.open_connection(loopback_config) is True
-
-        worker = controller.workers[LOOPBACK_PORT_NAME]
-        qtbot.waitUntil(lambda: worker.is_running(), timeout=2000)
 
         with qtbot.waitSignal(controller.data_received, timeout=2000) as blocker:
             controller.send_data(LOOPBACK_PORT_NAME, b"PING")
