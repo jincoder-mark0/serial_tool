@@ -1,4 +1,4 @@
-# 프로젝트 개요 (Project Overview)
+﻿# 프로젝트 개요 (Project Overview)
 
 **SerialTool**은 Python(PyQt5) 기반의 고성능 멀티포트 시리얼 통신 유틸리티입니다.
 엄격한 **MVP 아키텍처**와 **이벤트 기반 통신(EventBus)**을 채택하여 유지보수성과 확장성을 극대화했습니다.
@@ -50,7 +50,7 @@
 * 통신 구현은 `SerialTransport`만 제공하며 SPI/I2C Transport는 없습니다.
 * 패킷 설정 UI는 존재하지만 연결 생성 시 현재 `RawParser`가 기본으로 사용됩니다.
 * 설정은 현재 프로젝트의 `resources/configs/settings.json`에 저장되므로 배포 전 사용자 데이터 경로 분리가 필요합니다.
-* 자동화 테스트는 Core, Model, Presenter, View 및 주요 통합 흐름 85개를 검증합니다.
+* 자동화 테스트는 Core, Model, Presenter, View 및 주요 통합 흐름 139개를 검증합니다.
 * 성능 벤치마크, 실제 가상 시리얼 포트 검증, 패키징 및 CI는 후속 작업입니다.
 
 ---
