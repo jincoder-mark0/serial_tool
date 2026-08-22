@@ -46,8 +46,9 @@ $env:QT_QPA_PLATFORM="offscreen"; .venv\Scripts\python -m pytest -q   # 전체 �
 - 기존 코드 수정 시 요청과 직접 관련된 줄만. 관련 없는 dead code는 삭제하지 말고 보고.
 - 변경 후 가장 작은 관련 검증부터 실행하고, 실행한 명령·결과·Mock/실장 여부를 정확히 보고.
   검증 없이 "완료/정상 동작" 표현 금지. 실제 시리얼 포트 검증이 필요한 항목은 "실기기 미검증"으로 구분.
-- 코딩 표준은 `.agent/rules/` 4종을 따른다: 코드 스타일(code_style_guide), 주석(comment_guide —
-  Google Style Docstring + 모듈 헤더 WHY/WHAT/HOW), 명명(naming_convention_guide), Git(git_guide).
+- 코딩 표준은 `.agent/rules/` 5종을 따른다: 코드 스타일(code_style_guide), 주석(comment_guide —
+  Google Style Docstring + 모듈 헤더 WHY/WHAT/HOW), 명명(naming_convention_guide), Git(git_guide),
+  **UI(ui_guide — 색·대비·잘림·다국어·테마·상태 저장, `tests/test_ui_guidelines.py`가 강제)**.
 - 주석·Docstring은 한국어, 타입 힌트 필수.
 
 ## 자가 진화
