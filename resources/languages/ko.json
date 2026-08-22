@@ -49,6 +49,7 @@
     "font_lbl_preview": "미리보기",
     "font_lbl_size": "크기",
     "font_title_settings": "폰트 설정",
+    "font_txt_preview_sample": "The quick brown fox jumps over the lazy dog.\n빠른 갈색 여우가 게으른 개를 뛰어넘습니다.",
     "left_tooltip_port_tab": "포트 구성",
     "lifecycle_msg_settings_reset": "설정 파일이 손상되었거나 올바르지 않습니다.\n기본값으로 복원되었습니다.\n\n사유: {0}",
     "lifecycle_title_settings_reset": "설정 초기화",

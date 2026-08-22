@@ -213,6 +213,22 @@ QLabel[class="hint-text"] {
     font-weight: normal;
 }
 
+/* About Dialog Text Hierarchy (크기만 공통 지정, 색은 테마별 QSS에서 지정) */
+QLabel[class="about-title"] {
+    font-size: 24px;
+    font-weight: bold;
+}
+
+QLabel[class="about-version"] {
+    font-size: 14px;
+    font-weight: normal;
+}
+
+QLabel[class="about-copyright"] {
+    font-size: 12px;
+    font-weight: normal;
+}
+
 /* File Path Box (선택된 파일 경로 표시, 색은 테마별 QSS에서 지정) */
 QLabel[class="file-path-box"] {
     padding: 5px;

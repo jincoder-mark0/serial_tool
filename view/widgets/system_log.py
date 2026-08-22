@@ -109,7 +109,6 @@ class SystemLogWidget(QWidget):
         # 최소 높이만 보장하고 수직으로는 필요 시 확장 가능하도록 완화.
         self.setMinimumHeight(100)
 
-        """UI 컴포넌트 및 레이아웃을 초기화합니다."""
         # 1. 툴바 영역 (타이틀 + 도구들)
         # 타이틀 섹션
         self.sys_log_title = QLabel(language_manager.get_text("sys_log_title"))

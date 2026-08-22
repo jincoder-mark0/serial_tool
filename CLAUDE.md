@@ -2,7 +2,7 @@
 
 PyQt5 기반 멀티포트 시리얼 통신 유틸리티. **Strict MVP** + **EventBus** + **Fast Path** 아키텍처.
 현재 상태: 핵심 기능(멀티포트/매크로/파일 전송/로깅/테마/다국어) 구현 완료,
-테스트 기준선 **118개 통과**. PyInstaller 패키징·CI·AutoTx·벤치마크 도입 완료,
+테스트 기준선 **122개 통과**. PyInstaller 패키징·CI·AutoTx·벤치마크 도입 완료,
 SPI/I2C Transport·플러그인은 미착수 (Task.MD 참조).
 
 ## 실행·검증 명령
@@ -83,7 +83,7 @@ $env:QT_QPA_PLATFORM="offscreen"; .venv\Scripts\python -m pytest -q   # 전체 �
 | `doc/mistakes.md` | 실수 대장 (자가 진화 §) |
 | `doc/history/` | 세션별 작업 기록 |
 | `tests/README.md` | 테스트 실행·해석 가이드 |
-| `.agent/rules/` | 코드 스타일·주석·명명·Git 가이드 (표준) |
+| `.agent/rules/` | 코드 스타일·주석·명명·Git·UI 가이드 (표준) |
 
 ## 구조 안내
 

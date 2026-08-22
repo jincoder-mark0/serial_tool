@@ -627,7 +627,7 @@ class ThemeManager(QObject):
             str: QSS 문자열.
         """
         qss = f"""
-        /* 전역 위젯 배경/글자색 (폰트는 _generate_font_stylesheet에서 처리) */
+        /* Global widget background/text color (font handled in _generate_font_stylesheet) */
         QWidget {{
             background-color: {c['bg_alt']};
             color: {c['fg_primary']};
@@ -639,7 +639,7 @@ class ThemeManager(QObject):
             background-color: {c['bg_alt']};
         }}
 
-        /* 입력 필드 */
+        /* Input fields */
         QLineEdit, QSpinBox, QComboBox {{
             background-color: {c['bg_input']};
             border: 1px solid {c['border']};
@@ -655,14 +655,14 @@ class ThemeManager(QObject):
             color: {c['fg_secondary']};
         }}
 
-        /* 텍스트 에디터 배경 (폰트는 별도 적용) */
+        /* Text editor background (font applied separately) */
         QTextEdit, QPlainTextEdit {{
             background-color: {c['bg_input']};
             border: 1px solid {c['border']};
             color: {c['fg_primary']};
         }}
 
-        /* 버튼 */
+        /* Buttons */
         QPushButton {{
             background-color: {c['button_bg']};
             border: 1px solid {c['border']};
@@ -683,7 +683,7 @@ class ThemeManager(QObject):
             border-color: {c['border']};
         }}
 
-        /* 체크박스 */
+        /* Checkbox */
         QCheckBox {{
             spacing: 5px;
         }}
@@ -698,7 +698,7 @@ class ThemeManager(QObject):
             border: 1px solid {c['accent']};
         }}
 
-        /* 그룹박스 */
+        /* GroupBox */
         QGroupBox {{
             border: 1px solid {c['border']};
             border-radius: 5px;
@@ -713,7 +713,7 @@ class ThemeManager(QObject):
             color: {c['accent']};
         }}
 
-        /* 테이블 뷰 */
+        /* Table view */
         QTableView {{
             background-color: {c['bg_base']};
             gridline-color: {c['table_grid']};
@@ -732,7 +732,7 @@ class ThemeManager(QObject):
             border: 1px solid {c['table_grid']};
         }}
 
-        /* 탭 위젯 */
+        /* Tab widget */
         QTabWidget::pane {{
             border: 1px solid {c['border']};
             background-color: {c['bg_base']};
@@ -755,7 +755,7 @@ class ThemeManager(QObject):
             background-color: {c['button_hover']};
         }}
 
-        /* 스크롤바 */
+        /* Scrollbar */
         QScrollBar:vertical {{
             border: none;
             background: {c['scrollbar_bg']};
@@ -782,7 +782,7 @@ class ThemeManager(QObject):
             border-radius: 6px;
         }}
 
-        /* 스플리터 */
+        /* Splitter */
         QSplitter::handle {{
             background-color: {c['border']};
         }}
@@ -793,7 +793,7 @@ class ThemeManager(QObject):
             height: 2px;
         }}
 
-        /* 메뉴바 */
+        /* Menu bar */
         QMenuBar {{
             background-color: {c['bg_alt']};
             border-bottom: 1px solid {c['border']};

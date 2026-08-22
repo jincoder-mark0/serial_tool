@@ -256,7 +256,9 @@ QGroupBox::title, QLabel[class="section-title"] {
     color: #ff79c6; /* Pink Title */
 }
 
-QLabel[class="hint-text"] {
+QLabel[class="hint-text"],
+QLabel[class="about-version"],
+QLabel[class="about-copyright"] {
     color: #8a94c8;
 }
 

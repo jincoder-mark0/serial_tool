@@ -1,6 +1,10 @@
 # S-031 — UI 가이드 기계적 강제 테스트 + 잔여 위반 정리
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. 정적 스캔 테스트 4종 신설,
+  스캔 위반 4그룹 전부 실수정(허용 목록 0건): about_dialog 인라인 font-size→QSS 클래스,
+  theme_manager 폴백 QSS 한글 주석 11건 영문화, 폰트 미리보기 팬그램→언어 키,
+  system_log 죽은 statement 삭제. 색 리터럴 위반 0건 확인(S-022 완전성 검증).
+  테스트 +4 → 기준선 122. 캡처 4조합 회귀 없음)
 - Recommended model: **하위(Sonnet) 가능**
 - 선행: `.agent/rules/ui_guide.md` (2026-08-22 제정 — 이 태스크의 근거 문서)
 - Skills to load: task-done

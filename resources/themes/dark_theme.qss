@@ -253,7 +253,9 @@ QGroupBox::title, QLabel[class="section-title"] {
     color: #4CAF50;
 }
 
-QLabel[class="hint-text"] {
+QLabel[class="hint-text"],
+QLabel[class="about-version"],
+QLabel[class="about-copyright"] {
     color: #b0b0b0;
 }
 

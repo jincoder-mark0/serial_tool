@@ -82,7 +82,7 @@ class FontSettingsDialog(QDialog):
         self.prop_preview = QTextEdit()
         self.prop_preview.setReadOnly(True)
         self.prop_preview.setMaximumHeight(80)
-        self.prop_preview.setText("The quick brown fox jumps over the lazy dog.\n빠른 갈색 여우가 게으른 개를 뛰어넘습니다.")
+        self.prop_preview.setText(language_manager.get_text("font_txt_preview_sample"))
         self.prop_preview_lbl = QLabel(language_manager.get_text("font_lbl_preview"))
         prop_layout.addWidget(self.prop_preview_lbl)
         prop_layout.addWidget(self.prop_preview)

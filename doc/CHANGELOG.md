@@ -21,6 +21,20 @@
 
 - 레이아웃 여백·간격·아이콘 버튼 크기 상수 6종을 신설해 16개 파일의 리터럴을 치환하고, 툴팁 14개 보강, 메뉴 니모닉(Alt+F/V/T/H), PreferencesDialog 표준 버튼바 전환을 적용했습니다 (S-025).
 
+#### 기능 (Added)
+
+- AutoTxScheduler — 수동 명령 주기 반복 전송 (S-006, 실기기 미검증).
+- PyInstaller 패키징(onedir spec, S-012)과 GitHub Actions CI(S-014, 러너 확인 대기), 성능 벤치마크 도구(S-011).
+- 번들 실행 시 설정·로그를 `%APPDATA%\SerialTool`로 분리 저장 (S-013/S-029) — 첫 실행 자연 이관.
+
+#### 설정 파일 정합 (Settings)
+
+- 설정 네임스페이스를 `settings.*`로 정본화하고 스키마가 실사용 키를 검증하도록 재작성 — `global` 블록·죽은 ui 폰트 키·우측 폭 이중 키·고아 `serial` 블록을 1.1→1.3 마이그레이션으로 정리 (S-027/S-028/S-030). defaults에 마이그레이션을 적용하면 no-op이어야 한다는 재발 차단 테스트 추가.
+
+#### UI 가이드 (Rules)
+
+- `.agent/rules/ui_guide.md` 제정(색·대비·잘림·다국어·테마·상태 저장) 및 정적 스캔 강제 테스트 `tests/test_ui_guidelines.py` 도입 — 색 리터럴·인라인 font-size·한글 하드코딩 잔여 위반 전부 정리, 허용 목록 0건 (S-031).
+
 #### 도구·문서 (Tooling & Documentation)
 
 - 에이전트 작업 체계를 신설했습니다: 루트 `Task.MD` 작업 보드 + `tasks/S-0xx-*.md` 세부 태스크(하위 모델용 자족 문서), CLAUDE.md/RULES.md 재작성, chatlog 훅, task-done/lang-keys 스킬.
