@@ -1,6 +1,8 @@
 # S-029 — 번들 모드 로그 경로 사용자 디렉터리화
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. logs_dir을 프로퍼티로 전환:
+  번들=APPDATA\SerialTool\logs(+홈 폴백), 개발 모드 불변. 테스트 3건(신규 파일
+  test_bundle_paths.py) → 기준선 115. README §2.4 현행화. 번들 재빌드 실검증은 미실시)
 - Recommended model: **하위(Sonnet) 가능**
 - 선행: S-012 (패키징 — 증상 확인 경로)
 - Skills to load: task-done

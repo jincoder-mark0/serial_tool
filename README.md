@@ -124,9 +124,10 @@ dist\SerialTool\SerialTool.exe
 * 아이콘: `resources/icons/`에 `.ico` 파일이 없어 현재 spec은 기본 아이콘을 사용합니다.
   아이콘을 지정하려면 `.ico` 파일을 추가하고 `serial_tool.spec`의 `EXE(icon=...)`을
   채워 넣으세요.
-* 로그 파일은 개발 모드와 동일하게 `logs/` 하위에 생성되며, onedir 번들에서는
-  `dist\SerialTool\_internal\logs\`에 생성됩니다(PyInstaller 6.x가 onedir 종속성을
-  `_internal\`로 이동하면서 `sys._MEIPASS`가 그 경로를 가리키기 때문).
+* 로그 파일은 개발 모드에서는 기존과 동일하게 `logs/` 하위에 생성되지만, 번들
+  실행 시에는 설치 폴더(onedir의 `_internal\`, `sys._MEIPASS` 기준)가 읽기 전용일
+  수 있으므로 사용자 설정(§6.5)과 같은 패턴으로 `%APPDATA%\SerialTool\logs\`에
+  분리 저장됩니다(APPDATA가 없으면 `~/.serial_tool\logs`로 폴백).
 
 ---
 

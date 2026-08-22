@@ -82,8 +82,23 @@ class ResourcePath:
         # 아이콘 경로
         self.icons_dir = self.resources_dir / 'icons'
 
-        # 로그 경로
-        self.logs_dir = self.base_dir / 'logs'
+    @property
+    def logs_dir(self) -> Path:
+        """
+        로그 파일을 저장할 디렉터리 경로를 반환합니다.
+
+        Logic:
+            - 번들 실행(PyInstaller frozen) 시: base_dir(sys._MEIPASS, onedir에서는
+              `_internal\\`)가 읽기 전용 설치 폴더일 수 있으므로, user_config_dir와
+              동일한 사용자 데이터 경로(APPDATA) 하위 'logs'를 사용한다.
+            - 개발 모드: 기존 동작 그대로 base_dir 하위 'logs' (회귀 방지 — 불변).
+
+        Returns:
+            Path: 로그 디렉터리 경로.
+        """
+        if getattr(sys, 'frozen', False):
+            return self.user_config_dir / 'logs'
+        return self.base_dir / 'logs'
 
     @property
     def user_config_dir(self) -> Path:
