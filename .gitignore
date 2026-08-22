@@ -158,3 +158,6 @@ repomix-output.xml
 
 # Ignore folder (practice/test files)
 _ignore/
+
+# S-043: 개발 모드 사용자 설정(배포 기본값 원본 resources/configs/settings.json과 분리)
+resources/configs/settings.local.json

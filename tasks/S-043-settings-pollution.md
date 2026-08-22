@@ -1,7 +1,10 @@
 # S-043 — [P1] 설정 기본값 파일이 개발자 세션으로 오염됨
 
-- Status: TODO
-- Recommended model: **하위(Sonnet) 가능** (설계 확정 — 벗어나면 중단·보고)
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. 개발 모드 user_settings_file을
+  settings.local.json(gitignore)으로 분리, 배포 기본값 정화(개인 경로·창 위치·입력 잔재),
+  S-013 회귀 테스트를 새 계약으로 갱신. **재오염 차단 실증**: 앱 구동 후에도 settings.json
+  무변경, 런타임 값은 local 파일로 흡수. pytest 150 passed(캡처 전후 2회).
+  ⚠ 과거 커밋 이력의 개인 경로는 그대로 — 이력 재작성은 사용자 판단 필요)
 - 선행: 없음 (다른 P0/P1과 파일 겹침 없음 — 병렬 가능)
 - Skills to load: task-done
 - 근거: `doc/refactor_audit_20260822.md` C-5

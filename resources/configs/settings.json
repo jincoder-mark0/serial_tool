@@ -19,9 +19,9 @@
     "max_log_lines": 2000,
     "window_width": 1471,
     "window_height": 786,
-    "window_x": 72,
-    "window_y": 93,
-    "splitter_state": "AAAA/wAAAAEAAAACAAADVwAAAowB/////wEAAAABAA==",
+    "window_x": null,
+    "window_y": null,
+    "splitter_state": null,
     "right_section_visible": true,
     "saved_right_section_width": 598
   },
@@ -31,7 +31,7 @@
   },
   "logging": {
     "log_dir": "",
-    "path": "C:\\Users\\lkj01\\Desktop\\Serial_Tool"
+    "path": ""
   },
   "packet": {
     "parser_type": 0,
@@ -58,7 +58,7 @@
   },
   "manual_control": {
     "manual_control_widget": {
-      "input_text": "zx\nzc\nz\nzc\n",
+      "input_text": "",
       "hex_mode": false,
       "prefix_enabled": true,
       "suffix_enabled": true,

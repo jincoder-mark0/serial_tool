@@ -324,22 +324,30 @@ class TestSettingsManager:
         manager.set("test_key", 12345)
         manager.save_settings()
 
-        assert test_file.exists()
+        # S-043: 개발 모드에서도 사용자 파일이 배포 기본값(test_file)과 분리되므로
+        # 실제 저장 대상은 manager.user_settings_path(settings.local.json)다.
+        assert manager.user_settings_path.exists()
 
         import json
-        with open(test_file, 'r') as f:
+        with open(manager.user_settings_path, 'r') as f:
             data = json.load(f)
             assert data["test_key"] == 12345
 
-    def test_dev_mode_user_settings_path_matches_config_path(self, tmp_path):
+    def test_dev_mode_user_settings_path_is_separate_local_file(self, tmp_path):
         """
-        S-013 회귀 방지: 개발 모드(sys.frozen 미설정)에서는
-        config_path와 user_settings_path가 완전히 동일해야 한다
-        (기존 동작·테스트 완전 불변).
+        S-043 회귀 방지(계약 갱신): S-013은 "개발 모드는 config_path와
+        user_settings_path가 동일하다"를 고정했었으나, 그 동일성 자체가
+        개발자 로컬 세션(창 위치·경로 등)이 배포 기본값 원본
+        (resources/configs/settings.json)에 그대로 저장되어 커밋에 섞여
+        들어가는 원인이었다(S-043, doc/refactor_audit_20260822.md C-5).
+        이제 개발 모드도 사용자 파일을 settings.local.json으로 분리해,
+        config_path(배포 기본값)는 읽기 전용 소스로만 남아야 한다.
 
         Logic:
             - 개발 모드 그대로(ResourcePath, sys.frozen 미설정)로 초기화
-            - config_path와 user_settings_path가 같은 경로인지 확인
+            - user_settings_path가 config_path와 다른 파일(settings.local.json)인지 확인
+            - 배포 기본값 파일(config_path)이 없어도 로드는 정상 동작(fallback)하고
+              그 결과가 user_settings_path에만 저장되는지 확인
         """
         SettingsManager._instance = None
 
@@ -347,8 +355,12 @@ class TestSettingsManager:
         resource_path.config_dir.mkdir(parents=True)
         manager = SettingsManager(resource_path)
 
-        assert manager.config_path == manager.user_settings_path
-        assert resource_path.user_settings_file == resource_path.settings_file
+        assert manager.config_path != manager.user_settings_path
+        assert resource_path.user_settings_file != resource_path.settings_file
+        assert resource_path.user_settings_file == resource_path.settings_file.parent / 'settings.local.json'
+        # 배포 기본값 원본은 앱이 만들지 않는다 — 사용자 경로에만 저장됨
+        assert not resource_path.settings_file.exists()
+        assert resource_path.user_settings_file.exists()
 
         SettingsManager._instance = None
 

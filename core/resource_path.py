@@ -135,14 +135,18 @@ class ResourcePath:
 
         Logic:
             - 번들 실행: user_config_dir(APPDATA) 하위 settings.json.
-            - 개발 모드: settings_file과 동일 (분리 없음, 회귀 방지).
+            - 개발 모드: settings_file과 같은 디렉터리의 settings.local.json
+              (S-043 — 배포 기본값 원본(settings_file)에 앱이 직접 쓰던 것을
+              분리해 개발자 로컬 세션이 커밋에 섞여 들어가는 오염을 차단한다.
+              settings_file이 재정의되어도 그 디렉터리를 추종하도록
+              config_dir가 아닌 settings_file.parent를 기준으로 삼는다).
 
         Returns:
             Path: 사용자 설정 파일 경로.
         """
         if getattr(sys, 'frozen', False):
             return self.user_config_dir / 'settings.json'
-        return self.settings_file
+        return self.settings_file.parent / 'settings.local.json'
 
     def get_language_path(self, language_code: str) -> Path:
         """

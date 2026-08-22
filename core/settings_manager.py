@@ -87,7 +87,7 @@ class SettingsManager:
         self.settings: Dict[str, Any] = {}
         # 프로퍼티를 통해 경로 접근
         self.config_path = self._get_config_path()
-        # 개발 모드에서는 설정 파일과 사용자 설정 파일이 동일
+        # S-043: 개발 모드도 settings.local.json으로 분리(배포 기본값 원본 보호)
         self.user_settings_path = self._get_user_settings_path()
 
         # 설정 초기화(Reset) 발생 여부 플래그
@@ -113,7 +113,8 @@ class SettingsManager:
         """
         사용자 설정 파일의 경로를 반환합니다.
         번들 실행 시에는 APPDATA 하위(쓰기 가능) 경로, 개발 모드에서는
-        기본 설정 파일과 동일한 경로입니다 (ResourcePath.user_settings_file 참고).
+        기본 설정 파일과 같은 디렉터리의 settings.local.json입니다
+        (S-043 — 배포 기본값 원본과 분리. ResourcePath.user_settings_file 참고).
 
         Returns:
             Path: 사용자 설정 파일 경로.
@@ -125,7 +126,8 @@ class SettingsManager:
         설정을 로드하고 유효성을 검사합니다.
         사용자 설정 파일(user_settings_path)이 있으면 그것을 우선 로드하고,
         없으면 기본 배포본(config_path, resources/configs/settings.json)을
-        읽습니다. 개발 모드에서는 두 경로가 동일하므로 기존 동작과 같습니다.
+        읽습니다. 개발 모드에서도 사용자 파일은 settings.local.json으로
+        분리되어 있으므로(S-043), 첫 실행 시 기본 배포본에서 자연 이관됩니다.
         파일이 없거나 손상되었거나 스키마가 일치하지 않는 경우
         기본값(Fallback)을 사용하고 파일을 복구합니다.
         """
@@ -348,7 +350,8 @@ class SettingsManager:
         데이터를 사용자 설정 파일에 저장합니다.
         항상 user_settings_path에 씁니다 — 기본 배포본
         (resources/configs/settings.json)은 원본 그대로 보존됩니다
-        (개발 모드에서는 두 경로가 동일하여 현재와 같습니다).
+        (개발 모드에서도 settings.local.json으로 분리되어 있어 S-043 이후
+        동일하게 성립합니다).
 
         Args:
             data: 저장할 설정 딕셔너리
