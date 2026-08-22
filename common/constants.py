@@ -285,6 +285,14 @@ CONTROL_WIDTH_FILE_PROGRESS_CANCEL_BTN: int = 60
 # 데이터 로그 위젯의 개행 모드 콤보박스 (view/widgets/data_log.py)
 CONTROL_WIDTH_DATA_LOG_NEWLINE_COMBO: int = 100
 
+# 우측 섹션 최소 폭 (view/sections/main_right_section.py)
+# 매크로 테이블의 7개 컬럼 중 6개가 ResizeToContents라 내용보다 좁아지지 않는다.
+# 이 폭보다 좁아지면 매크로 목록에 가로 스크롤이 생겨 편집이 불편해진다.
+# 근거(실측, 2026-08-22): 4테마 x 2언어 전 조합에서 임계값이 동일하게 나왔다 —
+# ko 566px / en 575px. 최댓값 575에 여유를 더해 잡는다. 컬럼 구성이나 헤더 문구가
+# 바뀌면 이 값도 다시 재야 한다(tests/test_right_section_min_width.py가 강제).
+CONTROL_MIN_WIDTH_RIGHT_SECTION: int = 580
+
 # ==========================================
 # System & File Constants
 # ==========================================

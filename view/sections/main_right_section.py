@@ -23,7 +23,7 @@ from view.managers.language_manager import language_manager
 
 from view.panels.macro_panel import MacroPanel
 from view.panels.packet_panel import PacketPanel
-from common.constants import LAYOUT_MARGIN_NONE
+from common.constants import LAYOUT_MARGIN_NONE, CONTROL_MIN_WIDTH_RIGHT_SECTION
 
 
 class MainRightSection(QWidget):
@@ -81,6 +81,12 @@ class MainRightSection(QWidget):
 
         layout.addWidget(self.tabs)
         self.setLayout(layout)
+
+        # 매크로 목록에 가로 스크롤이 생기지 않는 폭을 하한으로 고정한다.
+        # 이 값이 없으면(기존 minimumWidth=0) 스플리터가 우측 섹션을 0까지 밀어붙일 수
+        # 있어, 패널이 "표시됨" 상태인데도 화면에서 사라지거나 매크로 표가 가로로
+        # 잘린다. 근거 수치는 CONTROL_MIN_WIDTH_RIGHT_SECTION 주석 참조.
+        self.setMinimumWidth(CONTROL_MIN_WIDTH_RIGHT_SECTION)
 
     def retranslate_ui(self) -> None:
         """
