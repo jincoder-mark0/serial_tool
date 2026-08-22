@@ -47,7 +47,7 @@ class SettingsManager:
     _resource_path = None
 
     # 현재 애플리케이션 설정 버전
-    CURRENT_VERSION = "1.2"
+    CURRENT_VERSION = "1.3"
 
     def __new__(cls, *args, **kwargs):
         """
@@ -225,12 +225,6 @@ class SettingsManager:
         # 1. Serial Migration
         if "serial" in migrated:
             serial = migrated["serial"]
-            if "flowctrl" in serial:
-                val = serial.pop("flowctrl")
-                if "flow_control" not in serial:
-                    serial["flow_control"] = val
-                    logger.info(f"Migrated setting: flowctrl -> flow_control ({val})")
-
             if "scan_interval" in serial:
                 val = serial.pop("scan_interval")
                 if "scan_interval_ms" not in serial:
@@ -299,6 +293,16 @@ class SettingsManager:
                         f"Removed stale ui setting: right_section_width "
                         f"(value {val} discarded; saved_right_section_width already set)"
                     )
+
+        # 7. 루트 serial 블록 제거 (S-030, 1.2 -> 1.3)
+        # 최상위 settings.json["serial"](baudrate/parity/.../flowctrl 등)는 어떤 코드도
+        # 읽지 않는 고아 블록이다(실사용은 settings.port_* / PortConfig 쪽 — S-030 조사).
+        # ports.tabs[*].serial(탭별 실사용 상태, port_settings.py get_state/apply_state)은
+        # 완전히 다른 데이터 경로이므로 절대 건드리지 않는다 — 여기서 pop하는 것은
+        # 최상위 "serial" 키 하나뿐이다.
+        if "serial" in migrated:
+            removed = migrated.pop("serial")
+            logger.info(f"Removed orphan top-level 'serial' block: {removed}")
 
         migrated["version"] = self.CURRENT_VERSION
         return migrated

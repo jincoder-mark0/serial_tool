@@ -30,7 +30,6 @@ CORE_SETTINGS_SCHEMA = {
             "required": ["theme", "language"]
         },
         "ui": {"type": "object"},
-        "serial": {"type": "object"},
         "command": {"type": "object"},
         "logging": {"type": "object"},
         "packet": {"type": "object"},

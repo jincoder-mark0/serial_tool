@@ -44,7 +44,7 @@
 | [S-016](tasks/S-016-settings-namespace.md) | 설정 키 네임스페이스 이중화 해소 (`settings.*` vs `global.*`) | 유지보수 | ✅ 완료 | **결정**: `settings.*` 정본 (2026-08-22). 구현은 S-027 |
 | [S-027](tasks/S-027-settings-namespace-migration.md) | 설정 네임스페이스 마이그레이션 구현 (1.0→1.1) | 유지보수 | ✅ 완료 | 하위 모델 수행 (2026-08-22). global 소멸·스키마 실검증. 기준선 100 |
 | [S-028](tasks/S-028-right-width-key-conflict.md) | 우측 폭 저장 키 이중화 해소 | 유지보수 | ✅ 완료 | 하위 모델 수행 (2026-08-22). saved_* 정본, 1.2 마이그레이션. 기준선 112 |
-| [S-030](tasks/S-030-flowctrl-key-resurrection.md) | serial.flowctrl 죽은 키 부활 차단 | 유지보수 | ⏸ 대기 | S-028 중 발견 — defaults가 옛 키 보유 (동일 계열 3번째) |
+| [S-030](tasks/S-030-flowctrl-key-resurrection.md) | 루트 serial 고아 블록 정리 + defaults no-op 가드 | 유지보수 | ✅ 완료 | 하위 조사로 전제 오류 정정 후 완결 (2026-08-22). 1.3 승격, 재발 차단 테스트. 기준선 118 |
 | [S-017](tasks/S-017-ui-refresh-constant.md) | UI 갱신 주기 리터럴 30 상수화 | 유지보수 | ✅ 완료 | 하위 모델 수행 (2026-08-22). pytest 85 passed |
 | [S-018](tasks/S-018-meipass-detection-fix.md) | PyInstaller 감지 버그 수정 (`os._MEIPASS`→`sys`) | 유지보수 | ✅ 완료 | 하위 모델 수행 (2026-08-22). S-012/013 선행 해소 |
 | [S-019](tasks/S-019-datalog-duplicate-init.md) | DataLogWidget init_ui 중복 생성 블록 제거 | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 26줄 삭제, pytest 85+캡처 검증. 검색창 축소 별건은 S-026로 |

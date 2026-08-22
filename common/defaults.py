@@ -5,7 +5,6 @@
 SettingsManager의 하드코딩을 방지하고 설정값 관리를 중앙화합니다.
 """
 from common.constants import (
-    DEFAULT_BAUDRATE,
     DEFAULT_LOG_MAX_LINES,
     DEFAULT_MACRO_INTERVAL_MS
 )
@@ -32,17 +31,6 @@ DEFAULT_UI_SETTINGS = {
     "splitter_state": None,
     "right_section_visible": True,
     "saved_right_section_width": None
-}
-
-DEFAULT_SERIAL_SETTINGS = {
-    "baudrate": DEFAULT_BAUDRATE,
-    "parity": "N",
-    "bytesize": 8,
-    "stopbits": 1,
-    "flowctrl": "None",
-    "newline": "LF",
-    "local_echo_enabled": False,
-    "scan_interval_ms": 1000
 }
 
 DEFAULT_COMMAND_SETTINGS = {
@@ -101,10 +89,9 @@ def create_fallback_settings() -> dict:
     전체 기본 설정 딕셔너리를 생성하여 반환합니다.
     """
     return {
-        "version": "1.2",
+        "version": "1.3",
         "settings": DEFAULT_SETTINGS_BLOCK.copy(),
         "ui": DEFAULT_UI_SETTINGS.copy(),
-        "serial": DEFAULT_SERIAL_SETTINGS.copy(),
         "command": DEFAULT_COMMAND_SETTINGS.copy(),
         "logging": DEFAULT_LOGGING_SETTINGS.copy(),
         "packet": DEFAULT_PACKET_SETTINGS.copy(),

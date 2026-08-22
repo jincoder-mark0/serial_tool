@@ -486,8 +486,8 @@ class TestSettingsManager:
               settings.theme="dracula"/settings.language="en"인 파일 작성
             - SettingsManager 초기화
             - settings.theme/language가 기존 settings.* 값을 유지하는지 확인
-            - global 키가 사라지고 version이 CURRENT_VERSION(1.2)인지 확인
-              (S-028: CURRENT_VERSION 1.1 -> 1.2 승격에 맞춰 갱신)
+            - global 키가 사라지고 version이 CURRENT_VERSION(1.3)인지 확인
+              (S-030: CURRENT_VERSION 1.2 -> 1.3 승격에 맞춰 갱신)
         """
         SettingsManager._instance = None
 
@@ -508,7 +508,7 @@ class TestSettingsManager:
             assert manager.get("settings.theme") == "dracula"
             assert manager.get("settings.language") == "en"
             assert manager.get("global") is None
-            assert manager.get("version") == "1.2"
+            assert manager.get("version") == "1.3"
 
             # 파일에도 반영되었는지 확인
             with open(manager.user_settings_path, 'r', encoding='utf-8') as f:
@@ -589,13 +589,13 @@ class TestSettingsManager:
         finally:
             SettingsManager._instance = None
 
-    def test_migration_v1_2_file_passes_unchanged(self, tmp_path):
+    def test_migration_v1_3_file_passes_unchanged(self, tmp_path):
         """
-        S-028: 이미 1.2 버전(현재 버전)인 파일은 마이그레이션 없이 그대로 통과해야 한다.
-        (S-027 당시 1.1 기준으로 작성된 테스트를 CURRENT_VERSION 1.2 승격에 맞춰 갱신)
+        S-030: 이미 1.3 버전(현재 버전)인 파일은 마이그레이션 없이 그대로 통과해야 한다.
+        (S-028 당시 1.2 기준으로 작성된 테스트를 CURRENT_VERSION 1.3 승격에 맞춰 갱신)
 
         Logic:
-            - version 1.2, settings.theme/language를 가진 정상 파일 작성
+            - version 1.3, settings.theme/language를 가진 정상 파일 작성
             - SettingsManager 초기화 후 값이 그대로 유지되는지 확인
             - _needs_migration이 False인지 확인(마이그레이션 미실행 방증)
         """
@@ -607,7 +607,7 @@ class TestSettingsManager:
         resource_path.config_dir.mkdir(parents=True)
 
         current_settings = create_fallback_settings()
-        current_settings["version"] = "1.2"
+        current_settings["version"] = "1.3"
         current_settings["settings"] = {"theme": "dracula", "language": "en"}
         with open(resource_path.settings_file, 'w', encoding='utf-8') as f:
             json.dump(current_settings, f)
@@ -615,12 +615,116 @@ class TestSettingsManager:
         try:
             manager = SettingsManager(resource_path)
 
-            assert manager._needs_migration({"version": "1.2"}) is False
+            assert manager._needs_migration({"version": "1.3"}) is False
             assert manager.get("settings.theme") == "dracula"
             assert manager.get("settings.language") == "en"
             assert manager.get("global") is None
         finally:
             SettingsManager._instance = None
+
+    def test_migration_v1_2_removes_orphan_serial_keeps_tab_flowctrl(self, tmp_path):
+        """
+        S-030: 1.2 파일의 최상위 serial 블록(고아 블록, flowctrl/flow_control 포함)은
+        1.3 마이그레이션에서 완전히 제거되어야 하고, ports.tabs[*].serial.flowctrl
+        (탭별 실사용 상태, 완전히 다른 데이터 경로)는 절대 건드리지 않아야 한다.
+
+        Logic:
+            - version 1.2, 최상위 serial 블록(flowctrl/flow_control 공존) +
+              ports.tabs에 flowctrl을 가진 탭 상태 1개를 포함한 파일 작성
+            - SettingsManager 초기화 후:
+              * 최상위 serial 키가 완전히 사라졌는지 확인
+              * ports.tabs[0].serial.flowctrl 값이 그대로 보존되는지 확인
+              * version이 1.3으로 갱신되었는지 확인
+        """
+        SettingsManager._instance = None
+
+        resource_path = ResourcePath(tmp_path)
+        resource_path.config_dir.mkdir(parents=True)
+
+        old_settings = {
+            "version": "1.2",
+            "settings": {"theme": "dark", "language": "ko"},
+            "serial": {
+                "baudrate": 115200,
+                "parity": "N",
+                "bytesize": 8,
+                "stopbits": 1,
+                "flowctrl": "None",
+                "newline": "LF",
+                "local_echo_enabled": False,
+                "scan_interval_ms": 1000,
+                "flow_control": "None"
+            },
+            "ports": {
+                "tabs": [
+                    {
+                        "protocol": "Serial",
+                        "port": "COM3",
+                        "serial": {
+                            "baudrate": "9600",
+                            "bytesize": "8",
+                            "parity": "N",
+                            "stopbits": "1",
+                            "flowctrl": "RTS/CTS"
+                        }
+                    }
+                ]
+            }
+        }
+        with open(resource_path.settings_file, 'w', encoding='utf-8') as f:
+            json.dump(old_settings, f)
+
+        try:
+            manager = SettingsManager(resource_path)
+
+            assert manager.get("serial") is None
+            tabs = manager.get("ports.tabs")
+            assert tabs[0]["serial"]["flowctrl"] == "RTS/CTS"
+            assert manager.get("version") == "1.3"
+
+            # 파일에도 반영되었는지 확인
+            with open(manager.user_settings_path, 'r', encoding='utf-8') as f:
+                saved = json.load(f)
+            assert "serial" not in saved
+            assert saved["ports"]["tabs"][0]["serial"]["flowctrl"] == "RTS/CTS"
+        finally:
+            SettingsManager._instance = None
+
+    def test_defaults_have_no_orphan_serial_block(self):
+        """
+        S-030: create_fallback_settings()에는 더 이상 최상위 serial 블록이
+        존재하지 않아야 한다 (고아 블록 완전 제거 확인 — DoD 1항).
+        """
+        from common.defaults import create_fallback_settings
+
+        defaults = create_fallback_settings()
+
+        assert "serial" not in defaults
+
+    def test_migrate_settings_applied_to_defaults_is_noop(self):
+        """
+        S-030 재발 차단 (핵심 산출물, doc/mistakes.md #2 규칙화):
+        create_fallback_settings()의 산출물에 _migrate_settings를 적용해도
+        무변경(no-op)이어야 한다. defaults가 마이그레이션이 지운/개명한 옛 키를
+        다시 갖는 순간(예: 이번 사건의 serial.flowctrl) 이 테스트가 즉시 깨진다.
+
+        Logic:
+            - create_fallback_settings()로 현재 버전 기본 설정 생성
+            - _needs_migration(defaults)가 False인지 확인
+            - _migrate_settings(defaults)를 적용한 결과가 원본과 완전히 동일한지 확인
+        """
+        from common.defaults import create_fallback_settings
+
+        SettingsManager._instance = None
+        manager = SettingsManager.__new__(SettingsManager)
+
+        defaults = create_fallback_settings()
+
+        assert manager._needs_migration(defaults) is False
+
+        migrated = manager._migrate_settings(defaults)
+
+        assert migrated == defaults
 
     def test_migration_v1_0_saved_right_width_not_renamed(self, tmp_path):
         """
@@ -632,7 +736,7 @@ class TestSettingsManager:
             - version 1.0, ui.saved_right_section_width=598인 파일 작성
             - SettingsManager 초기화 후 ui.saved_right_section_width==598 유지,
               ui.right_section_width는 생기지 않아야 함
-            - version이 1.2로 갱신되었는지 확인
+            - version이 1.3으로 갱신되었는지 확인
         """
         SettingsManager._instance = None
 
@@ -653,7 +757,7 @@ class TestSettingsManager:
             ui = manager.get("ui")
             assert ui.get("saved_right_section_width") == 598
             assert "right_section_width" not in ui
-            assert manager.get("version") == "1.2"
+            assert manager.get("version") == "1.3"
         finally:
             SettingsManager._instance = None
 
@@ -688,7 +792,7 @@ class TestSettingsManager:
             ui = manager.get("ui")
             assert ui.get("saved_right_section_width") == 651
             assert "right_section_width" not in ui
-            assert manager.get("version") == "1.2"
+            assert manager.get("version") == "1.3"
         finally:
             SettingsManager._instance = None
 
@@ -722,7 +826,7 @@ class TestSettingsManager:
             ui = manager.get("ui")
             assert ui.get("saved_right_section_width") == 700
             assert "right_section_width" not in ui
-            assert manager.get("version") == "1.2"
+            assert manager.get("version") == "1.3"
         finally:
             SettingsManager._instance = None
 
