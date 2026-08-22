@@ -15,43 +15,28 @@
 """
 
 # 핵심 설정 스키마 정의
-# 필수 필드만 엄격하게 검사하고, 나머지는 허용(additionalProperties: True)
+# 정본 네임스페이스는 settings.*(S-027, S-016 확정) — 실사용 키(theme/language)만
+# 엄격 검증하고, 나머지 블록은 존재 여부(type: object)만 느슨하게 확인한다(과잉 고정 금지).
 CORE_SETTINGS_SCHEMA = {
     "type": "object",
     "properties": {
         "version": {"type": "string"},
-        "global": {
+        "settings": {
             "type": "object",
             "properties": {
-                "theme": {"type": "string"},
-                "language": {"type": "string"}
+                "theme": {"type": "string", "enum": ["dark", "light", "dracula"]},
+                "language": {"type": "string", "enum": ["en", "ko"]}
             },
             "required": ["theme", "language"]
         },
-        "ui": {
-            "type": "object",
-            "properties": {
-                "max_log_lines": {"type": "integer"},
-                "proportional_font_family": {"type": "string"},
-                "proportional_font_size": {"type": "integer"},
-                "fixed_font_family": {"type": "string"},
-                "fixed_font_size": {"type": "integer"}
-            }
-        },
-        "ports": {
-            "type": "object",
-            "properties": {
-                "default_config": {
-                    "type": "object",
-                    "properties": {
-                        "baudrate": {"type": "integer"},
-                        "parity": {"type": "string"},
-                        "bytesize": {"type": "integer"},
-                        "stopbits": {"type": "number"}
-                    }
-                }
-            }
-        }
+        "ui": {"type": "object"},
+        "serial": {"type": "object"},
+        "command": {"type": "object"},
+        "logging": {"type": "object"},
+        "packet": {"type": "object"},
+        "ports": {"type": "object"},
+        "manual_control": {"type": "object"},
+        "macro_list": {"type": "object"}
     },
-    "required": ["version", "global"]
+    "required": ["version", "settings"]
 }

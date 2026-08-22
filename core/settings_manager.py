@@ -47,7 +47,7 @@ class SettingsManager:
     _resource_path = None
 
     # 현재 애플리케이션 설정 버전
-    CURRENT_VERSION = "1.0"
+    CURRENT_VERSION = "1.1"
 
     def __new__(cls, *args, **kwargs):
         """
@@ -260,6 +260,31 @@ class SettingsManager:
                 if "log_dir" not in log:
                     log["log_dir"] = val
                     logger.info(f"Migrated setting: log_path -> log_dir ({val})")
+
+        # 4. Global -> Settings 네임스페이스 이관 (S-027, 1.0 -> 1.1)
+        # 정본은 settings.*(코드 실태 기준) — global은 죽은 블록이므로 제거하되,
+        # settings.*에 이미 실사용 값이 있으면 그 값을 우선한다.
+        if "global" in migrated:
+            global_block = migrated.pop("global")
+            if isinstance(global_block, dict):
+                settings_block = migrated.setdefault("settings", {})
+                for key in ("theme", "language"):
+                    if key in global_block and key not in settings_block:
+                        settings_block[key] = global_block[key]
+                        logger.info(f"Migrated setting: global.{key} -> settings.{key} ({global_block[key]})")
+
+        # 5. UI 블록의 죽은 폰트 키 제거 (실사용은 settings.* 쪽 — S-027)
+        if "ui" in migrated:
+            ui = migrated["ui"]
+            for dead_key in (
+                "proportional_font_family",
+                "proportional_font_size",
+                "fixed_font_family",
+                "fixed_font_size",
+            ):
+                if dead_key in ui:
+                    ui.pop(dead_key)
+                    logger.info(f"Removed dead ui setting: {dead_key}")
 
         migrated["version"] = self.CURRENT_VERSION
         return migrated

@@ -38,7 +38,8 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-011](S-011-benchmark.md) | 성능 벤치마크 도구 | **하위 가능** | — | DONE |
 | [S-013](S-013-user-config-dir.md) | 설정 파일 사용자 디렉터리 분리 | **하위 가능** | S-018 | DONE |
 | [S-014](S-014-github-actions-ci.md) | GitHub Actions CI | **하위 가능** | — | DONE (러너 확인 대기) |
-| [S-027](S-027-settings-namespace-migration.md) | 설정 네임스페이스 마이그레이션 (settings.* 정본화) | **하위 가능** | S-013 | TODO |
+| [S-027](S-027-settings-namespace-migration.md) | 설정 네임스페이스 마이그레이션 (settings.* 정본화) | **하위 가능** | S-013 | DONE |
+| [S-028](S-028-right-width-key-conflict.md) | 우측 폭 저장 키 이중화 해소 | 상위 결정 후 하위 | S-027 | TODO |
 | [S-012](S-012-packaging.md) | PyInstaller 패키징 | 하위 가능 (수동 확인 항목 있음) | S-013, S-018 | TODO |
 | [S-016](S-016-settings-namespace.md) | 설정 키 네임스페이스 이중화 해소 | **상위 전용** (결정 필요) | — | DONE (결정 — 구현은 S-027) |
 | [S-008](S-008-rx-capture-writer.md) | RxCaptureWriter 필요성 판정 | **상위 전용** (결정 필요) | — | DONE (폐기 결정) |

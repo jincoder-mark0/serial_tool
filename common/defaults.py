@@ -14,17 +14,16 @@ from common.constants import (
 # Section Defaults
 # ==========================================
 
-DEFAULT_GLOBAL_SETTINGS = {
+# settings.* 정본 블록의 기본값 (S-027 — 과거 global 블록 기본값 유지)
+DEFAULT_SETTINGS_BLOCK = {
     "theme": "dark",
     "language": "ko"
 }
 
 DEFAULT_UI_SETTINGS = {
     "max_log_lines": DEFAULT_LOG_MAX_LINES,
-    "proportional_font_family": "Segoe UI",
-    "proportional_font_size": 9,
-    "fixed_font_family": "Consolas",
-    "fixed_font_size": 9,
+    # S-027: 폰트 키(proportional/fixed font family/size)는 죽은 키였다 —
+    # 실사용은 settings.* 쪽(ConfigKeys.PROP_FONT_*)이므로 여기서 제거.
     # Window state placeholders
     "window_width": 1200,
     "window_height": 800,
@@ -102,8 +101,8 @@ def create_fallback_settings() -> dict:
     전체 기본 설정 딕셔너리를 생성하여 반환합니다.
     """
     return {
-        "version": "1.0",
-        "global": DEFAULT_GLOBAL_SETTINGS.copy(),
+        "version": "1.1",
+        "settings": DEFAULT_SETTINGS_BLOCK.copy(),
         "ui": DEFAULT_UI_SETTINGS.copy(),
         "serial": DEFAULT_SERIAL_SETTINGS.copy(),
         "command": DEFAULT_COMMAND_SETTINGS.copy(),

@@ -1,22 +1,30 @@
 {
-  "version": "1.0",
-  "global": {
-    "theme": "dark",
-    "language": "ko"
+  "version": "1.1",
+  "settings": {
+    "theme": "dracula",
+    "language": "en",
+    "proportional_font_size": 10,
+    "max_log_lines": 2000,
+    "port_baudrate": 115200,
+    "port_newline": "\n",
+    "port_local_echo": false,
+    "port_scan_interval_ms": 1000,
+    "command_prefix": "",
+    "command_suffix": "",
+    "proportional_font_family": "나눔고딕",
+    "fixed_font_family": "D2Coding",
+    "fixed_font_size": 9
   },
   "ui": {
     "max_log_lines": 2000,
-    "proportional_font_family": "Segoe UI",
-    "proportional_font_size": 9,
-    "fixed_font_family": "Consolas",
-    "fixed_font_size": 9,
-    "window_width": 1520,
-    "window_height": 697,
+    "window_width": 1471,
+    "window_height": 751,
     "window_x": 72,
     "window_y": 93,
     "splitter_state": "AAAA/wAAAAEAAAACAAADVwAAAowB/////wEAAAABAA==",
     "right_section_visible": true,
-    "saved_right_section_width": 651
+    "saved_right_section_width": 598,
+    "right_section_width": 651
   },
   "serial": {
     "baudrate": 115200,
@@ -26,7 +34,8 @@
     "flowctrl": "None",
     "newline": "LF",
     "local_echo_enabled": false,
-    "scan_interval_ms": 1000
+    "scan_interval_ms": 1000,
+    "flow_control": "None"
   },
   "command": {
     "prefix": "",
@@ -34,7 +43,6 @@
   },
   "logging": {
     "log_dir": "",
-    "log_path": "",
     "path": "C:\\Users\\lkj01\\Desktop\\Serial_Tool"
   },
   "packet": {
@@ -79,20 +87,5 @@
       "max_runs": 0,
       "broadcast_enabled": false
     }
-  },
-  "settings": {
-    "theme": "dracula",
-    "language": "en",
-    "proportional_font_size": 10,
-    "max_log_lines": 2000,
-    "port_baudrate": 115200,
-    "port_newline": "\n",
-    "port_local_echo": false,
-    "port_scan_interval_ms": 1000,
-    "command_prefix": "",
-    "command_suffix": "",
-    "proportional_font_family": "나눔고딕",
-    "fixed_font_family": "D2Coding",
-    "fixed_font_size": 9
   }
 }

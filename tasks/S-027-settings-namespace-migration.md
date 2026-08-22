@@ -1,6 +1,11 @@
 # S-027 — 설정 네임스페이스 마이그레이션 구현 (`settings.*` 정본화)
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. 1.0→1.1 마이그레이션(global
+  이관·삭제, 죽은 ui 폰트 키 제거), 스키마 실사용 키 검증(theme/language enum), defaults
+  settings 블록 전환, settings.json 이관 커밋(실사용 값 dracula/en 생존). 테스트 5건 →
+  기준선 100. 판단 편차 2건 승인: 언어 기본값 "ko" 유지(태스크 본문 "en"이 오기),
+  fallback 죽은 키 제거(merge 부활 방지 — DoD 필수임을 실측).
+  부수 발견: saved_right_section_width/right_section_width 이중화 → S-028 등재)
 - Recommended model: **하위(Sonnet) 가능** (결정은 S-016에 확정됨 — 벗어나면 중단·보고)
 - 선행: **S-013 (설정 사용자 디렉터리 분리) 커밋 완료 후** — 같은 파일(settings_manager) 수정
 - Skills to load: task-done

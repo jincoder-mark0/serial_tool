@@ -474,3 +474,179 @@ class TestSettingsManager:
             assert manager.get("distribution_marker") == "from_user_file"
         finally:
             SettingsManager._instance = None
+
+    def test_migration_global_and_settings_coexist_settings_wins(self, tmp_path):
+        """
+        S-027: 1.0 파일에 global과 settings가 공존하고 값이 다를 때,
+        마이그레이션 후 settings.* 값(실사용 값)이 살아남고 global 블록은
+        사라져야 한다.
+
+        Logic:
+            - version 1.0, global.theme="dark"/global.language="ko",
+              settings.theme="dracula"/settings.language="en"인 파일 작성
+            - SettingsManager 초기화
+            - settings.theme/language가 기존 settings.* 값을 유지하는지 확인
+            - global 키가 사라지고 version이 1.1인지 확인
+        """
+        SettingsManager._instance = None
+
+        resource_path = ResourcePath(tmp_path)
+        resource_path.config_dir.mkdir(parents=True)
+
+        old_settings = {
+            "version": "1.0",
+            "global": {"theme": "dark", "language": "ko"},
+            "settings": {"theme": "dracula", "language": "en"}
+        }
+        with open(resource_path.settings_file, 'w', encoding='utf-8') as f:
+            json.dump(old_settings, f)
+
+        try:
+            manager = SettingsManager(resource_path)
+
+            assert manager.get("settings.theme") == "dracula"
+            assert manager.get("settings.language") == "en"
+            assert manager.get("global") is None
+            assert manager.get("version") == "1.1"
+
+            # 파일에도 반영되었는지 확인
+            with open(manager.user_settings_path, 'r', encoding='utf-8') as f:
+                saved = json.load(f)
+            assert "global" not in saved
+        finally:
+            SettingsManager._instance = None
+
+    def test_migration_global_only_moves_to_settings(self, tmp_path):
+        """
+        S-027: global만 있고 settings가 없는 1.0 파일은 global 값이
+        settings.*로 이관되어야 한다.
+
+        Logic:
+            - version 1.0, global.theme/language만 있는 파일 작성(settings 없음)
+            - SettingsManager 초기화
+            - settings.theme/language가 global 값과 동일한지 확인
+        """
+        SettingsManager._instance = None
+
+        resource_path = ResourcePath(tmp_path)
+        resource_path.config_dir.mkdir(parents=True)
+
+        old_settings = {
+            "version": "1.0",
+            "global": {"theme": "light", "language": "ko"}
+        }
+        with open(resource_path.settings_file, 'w', encoding='utf-8') as f:
+            json.dump(old_settings, f)
+
+        try:
+            manager = SettingsManager(resource_path)
+
+            assert manager.get("settings.theme") == "light"
+            assert manager.get("settings.language") == "ko"
+            assert manager.get("global") is None
+        finally:
+            SettingsManager._instance = None
+
+    def test_migration_removes_dead_ui_font_keys(self, tmp_path):
+        """
+        S-027: ui 블록의 죽은 폰트 키 4종(proportional/fixed font family/size)은
+        마이그레이션 후 제거되어야 한다(실사용은 settings.* 쪽).
+
+        Logic:
+            - version 1.0, ui에 죽은 폰트 키를 포함한 파일 작성
+            - SettingsManager 초기화 후 ui 블록에 해당 키들이 없는지 확인
+            - max_log_lines 등 살아있는 키는 유지되는지 확인
+        """
+        SettingsManager._instance = None
+
+        resource_path = ResourcePath(tmp_path)
+        resource_path.config_dir.mkdir(parents=True)
+
+        old_settings = {
+            "version": "1.0",
+            "global": {"theme": "dark", "language": "ko"},
+            "ui": {
+                "max_log_lines": 500,
+                "proportional_font_family": "Segoe UI",
+                "proportional_font_size": 9,
+                "fixed_font_family": "Consolas",
+                "fixed_font_size": 9
+            }
+        }
+        with open(resource_path.settings_file, 'w', encoding='utf-8') as f:
+            json.dump(old_settings, f)
+
+        try:
+            manager = SettingsManager(resource_path)
+
+            ui = manager.get("ui")
+            assert "proportional_font_family" not in ui
+            assert "proportional_font_size" not in ui
+            assert "fixed_font_family" not in ui
+            assert "fixed_font_size" not in ui
+            assert ui.get("max_log_lines") == 500
+        finally:
+            SettingsManager._instance = None
+
+    def test_migration_v1_1_file_passes_unchanged(self, tmp_path):
+        """
+        S-027: 이미 1.1 버전인 파일은 마이그레이션 없이 그대로 통과해야 한다.
+
+        Logic:
+            - version 1.1, settings.theme/language를 가진 정상 파일 작성
+            - SettingsManager 초기화 후 값이 그대로 유지되는지 확인
+            - _needs_migration이 False인지 확인(마이그레이션 미실행 방증)
+        """
+        from common.defaults import create_fallback_settings
+
+        SettingsManager._instance = None
+
+        resource_path = ResourcePath(tmp_path)
+        resource_path.config_dir.mkdir(parents=True)
+
+        current_settings = create_fallback_settings()
+        current_settings["version"] = "1.1"
+        current_settings["settings"] = {"theme": "dracula", "language": "en"}
+        with open(resource_path.settings_file, 'w', encoding='utf-8') as f:
+            json.dump(current_settings, f)
+
+        try:
+            manager = SettingsManager(resource_path)
+
+            assert manager._needs_migration({"version": "1.1"}) is False
+            assert manager.get("settings.theme") == "dracula"
+            assert manager.get("settings.language") == "en"
+            assert manager.get("global") is None
+        finally:
+            SettingsManager._instance = None
+
+    def test_schema_rejects_invalid_theme_value(self, tmp_path):
+        """
+        S-027 DoD: 스키마가 실사용 키(settings.theme)의 잘못된 값(enum 외)을
+        실제로 거부하는지 검증한다.
+
+        Logic:
+            - version 1.1, settings.theme="not_a_theme"인 파일 작성
+            - SettingsManager 초기화 시 스키마 검증 실패 -> Fallback 사용
+            - config_was_reset=True, reset_reason에 검증 실패 문구가 포함되는지 확인
+        """
+        from common.defaults import create_fallback_settings
+
+        SettingsManager._instance = None
+
+        resource_path = ResourcePath(tmp_path)
+        resource_path.config_dir.mkdir(parents=True)
+
+        bad_settings = create_fallback_settings()
+        bad_settings["version"] = "1.1"
+        bad_settings["settings"] = {"theme": "not_a_theme", "language": "ko"}
+        with open(resource_path.settings_file, 'w', encoding='utf-8') as f:
+            json.dump(bad_settings, f)
+
+        try:
+            manager = SettingsManager(resource_path)
+
+            assert manager.config_was_reset is True
+            assert "Validation failed" in manager.reset_reason
+        finally:
+            SettingsManager._instance = None
