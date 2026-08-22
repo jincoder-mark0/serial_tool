@@ -426,6 +426,27 @@ class QSmartListView(QListView):
         # 모드 변경은 즉시 적용
         self._execute_filter_update()
 
+    def matches_search_pattern(self, text: str) -> bool:
+        """
+        현재 검색 패턴에 텍스트가 매칭되는지 판정합니다 (필터 on/off 상태와 무관).
+
+        `set_search_pattern()`이 구성한 패턴(대소문자 무시 정규식, 무효 패턴은
+        일반 텍스트로 이스케이프)으로 판정한다 — 이 정규식 구성·매칭 방식이
+        `system_log.py`(저장 대상 판정)에도 그대로 재현되어 있던 중복이었다
+        (S-062). 필터 모드 자체의 on/off는 호출자가 각자 관리하는 상태(체크박스)를
+        따르는 것을 전제로 하므로 여기서는 검사하지 않는다 — 검색어가 비어
+        패턴이 없으면(=필터를 걸 대상이 없으면) 항상 True.
+
+        Args:
+            text (str): 판정할 텍스트.
+
+        Returns:
+            bool: 검색 패턴이 없거나 매칭되면 True.
+        """
+        if not self._current_pattern:
+            return True
+        return self._current_pattern.indexIn(text) != -1
+
     def _execute_filter_update(self) -> None:
         """
         디바운스 타이머 종료 후 실제 필터링을 수행합니다.

@@ -227,6 +227,33 @@ class PortPresenter(QObject):
         self._scan_worker.ports_found.connect(self._on_scan_finished)
         self._scan_worker.start()
 
+    def stop_pending_scan(self) -> None:
+        """
+        진행 중인 포트 스캔 스레드를 정리합니다 (앱 종료 시, S-062).
+
+        Logic:
+            - 스캔 워커가 없거나 이미 끝났으면 아무 것도 하지 않는다.
+            - 실행 중이면 결과를 기다린다(온디맨드 초단명 스레드라 `wait()`이
+              곧 반환된다). 종료 도중 스캔이 겹쳐 QThread가 실행 중인 채로
+              파괴되면 Qt 경고("QThread: Destroyed while thread is still
+              running")나 드문 크래시로 이어질 수 있어(S-059 조사에서 발견),
+              앱 종료 전에 반드시 완료를 기다린 뒤 참조를 해제한다.
+            - `ports_found` 시그널 연결은 끊지 않는다 — `wait()` 이후에도
+              큐잉된 시그널이 있다면 `_on_scan_finished`가 정상적으로 View를
+              갱신하는 편이 안전하다(종료 시퀀스는 아직 View를 파괴하지 않는다).
+
+        Note:
+            데이터 유실과 무관한 UI 편의 스레드이므로, 종료 순서상 어디에
+            두어도 안전하다 — `on_close_requested`에서는 매크로 러너 정리와
+            같은 그룹(맨 앞, 백그라운드 스레드 정리 단계)에 배치해 RX 로거의
+            "연결 종료 -> processEvents -> 로거 정리" 순서(S-059)를 건드리지
+            않는다.
+        """
+        if self._scan_worker and self._scan_worker.isRunning():
+            logger.debug("Waiting for pending port scan to finish before shutdown...")
+            self._scan_worker.wait(2000)
+        self._scan_worker = None
+
     def _on_scan_finished(self, port_list: List[PortInfo]) -> None:
         """
         포트 스캔 완료 핸들러 (UI 업데이트).

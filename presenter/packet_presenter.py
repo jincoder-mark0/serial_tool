@@ -7,25 +7,35 @@
 * 실시간 패킷 데이터의 UI 업데이트 로직 분리 (MVP 패턴)
 * 패킷 파싱 데이터의 시각화 형식(Hex/ASCII) 변환 담당
 * 대량 패킷 수신 시 UI 버퍼링 및 설정 동기화 관리
+* 고속 패킷 환경에서 GUI 스레드 블로킹 방지 (S-061 — 실측 근거는
+  `tasks/S-061-packet-view-throttle.md` "측정 결과·판정" 절 참조. 기본 설정
+  (buffer_size=100, autoscroll=True)에서 즉시 append 시 8,000패킷 버스트에
+  500ms 이상, 실제 LOOPBACK 파이프라인의 14,336패킷 버스트에 약 1초가
+  걸려 그 시간만큼 UI가 멈추는 것을 확인)
 
 ## WHAT
 * PacketPanel(View)과 EventRouter(Model Interface) 연결
 * 패킷 수신 이벤트(PacketEvent) 처리 및 View 데이터(PacketViewData) 변환
 * 설정 변경(버퍼 크기, 색상 등)에 따른 View 업데이트
 * 캡처 시작/정지 및 초기화 제어
+* 수신 패킷의 View 반영을 30ms 주기로 버퍼링 (Throttling, S-061)
 
 ## HOW
 * EventRouter의 시그널을 구독하여 패킷 수신
-* DTO 변환 후 View의 append_packet 메서드 호출
+* DTO 변환 후 리스트에 버퍼링 -> QTimer(UI_REFRESH_INTERVAL_MS)가 주기적으로
+  순서대로 flush하여 View의 append_packet 메서드 호출 (`data_handler.py`의
+  30ms 배치 패턴을 재사용 — 새 방식을 발명하지 않음)
 * SettingsManager를 통해 초기 설정 로드 및 변경 사항 반영
 """
-from PyQt5.QtCore import QObject, QDateTime
+from typing import List
+
+from PyQt5.QtCore import QObject, QDateTime, QTimer
 
 from view.panels.packet_panel import PacketPanel
 from presenter.event_router import EventRouter
 from core.settings_manager import SettingsManager
 from core.logger import logger
-from common.constants import ConfigKeys
+from common.constants import ConfigKeys, UI_REFRESH_INTERVAL_MS
 from common.dtos import (
     PacketEvent,
     PacketViewData,
@@ -55,6 +65,18 @@ class PacketPresenter(QObject):
         # 캡처 활성화 상태 (기본값 True)
         self._is_capturing = True
 
+        # 패킷 View 반영 버퍼 (Throttling, S-061) — on_packet_received는 즉시
+        # panel.append_packet을 호출하지 않고 여기 쌓아 두었다가 타이머가 flush한다.
+        self._pending_packets: List[PacketViewData] = []
+        # View(PacketModel)의 표시 버퍼 크기 사본 (_apply_initial_settings/on_settings_changed가
+        # 갱신). _flush_pending_packets가 "화면에 남지도 못하고 즉시 밀려날 항목"을
+        # 판단하는 데 쓴다 — 기본값은 PacketModel의 기본 buffer_size(100)와 동일.
+        self._buffer_size = 100
+        self._flush_timer = QTimer(self)
+        self._flush_timer.setInterval(UI_REFRESH_INTERVAL_MS)
+        self._flush_timer.timeout.connect(self._flush_pending_packets)
+        self._flush_timer.start()
+
         # 1. 초기 설정 적용
         self._apply_initial_settings()
 
@@ -65,6 +87,9 @@ class PacketPresenter(QObject):
         # 3. EventRouter 시그널 연결
         self.event_router.packet_received.connect(self.on_packet_received)
         self.event_router.settings_changed.connect(self.on_settings_changed)
+        # 포트가 닫히면 그 포트에서 아직 버퍼에 남아있는 패킷을 즉시 flush한다
+        # (다음 30ms 주기까지 기다리지 않고, 조용히 묻히지 않도록 — S-061).
+        self.event_router.port_closed.connect(self._flush_pending_packets)
 
     def _apply_initial_settings(self) -> None:
         """
@@ -78,6 +103,7 @@ class PacketPresenter(QObject):
         autoscroll = self.settings_manager.get(ConfigKeys.PACKET_AUTOSCROLL, True)
         realtime = self.settings_manager.get(ConfigKeys.PACKET_REALTIME, True)
 
+        self._buffer_size = buffer_size
         self.panel.set_buffer_size(buffer_size)
         self.panel.set_autoscroll(autoscroll)
         self._is_capturing = realtime
@@ -129,8 +155,50 @@ class PacketPresenter(QObject):
             data_ascii=data_ascii
         )
 
-        # View 업데이트 (Facade Method)
-        self.panel.append_packet(view_data)
+        # View 업데이트 버퍼링 (Throttling, S-061) — 즉시 panel.append_packet을
+        # 호출하지 않고 큐에 쌓는다. 실제 반영은 _flush_pending_packets가 담당.
+        self._pending_packets.append(view_data)
+
+    def _flush_pending_packets(self) -> None:
+        """
+        버퍼링된 패킷을 순서대로 View에 반영합니다 (Timer Slot, S-061).
+
+        Logic:
+            - 버퍼가 비어있으면 즉시 리턴
+            - 현재 버퍼를 스냅샷하고 즉시 비움 (flush 도중 들어오는 새 패킷과
+              분리 — 이번 flush 대상에는 영향 없음, 다음 flush에서 처리됨)
+            - 대기 중인 개수가 View의 표시 버퍼 크기(buffer_size)를 넘으면,
+              그중 앞부분(가장 오래된 것들)은 하나씩 넣더라도 View의 고정
+              크기 버퍼(deque, 링버퍼)에서 즉시 밀려나 화면에 한 번도 보이지
+              못한다 — 최종 표시 결과가 달라지지 않으므로 건너뛴다. 실측(S-061)
+              결과, 대량 backlog를 통째로 다 넣으면 단일 flush가 1초 이상
+              걸릴 수 있어(개선 전보다 오히려 나쁨) 이 컷이 필요했다.
+            - 나머지(최근 buffer_size개)를 수신 순서 그대로 View에 반영
+              (순서 보장, "화면에 남을 수 있는" 패킷의 유실은 없음)
+        """
+        if not self._pending_packets:
+            return
+
+        pending = self._pending_packets
+        self._pending_packets = []
+
+        if self._buffer_size > 0 and len(pending) > self._buffer_size:
+            pending = pending[-self._buffer_size:]
+
+        for view_data in pending:
+            self.panel.append_packet(view_data)
+
+    def stop(self) -> None:
+        """
+        Presenter를 정지합니다 (앱 종료 시 호출, S-061).
+
+        Logic:
+            - 타이머를 멈춰 이후 flush가 더는 예약되지 않게 한다.
+            - 버퍼에 남아있는 패킷을 즉시 flush한다 — 조용히 버리지 않는다
+              (S-039/S-045/S-059와 동일한 원칙).
+        """
+        self._flush_timer.stop()
+        self._flush_pending_packets()
 
     def on_settings_changed(self, state: PreferencesState) -> None:
         """
@@ -144,6 +212,7 @@ class PacketPresenter(QObject):
             state (PreferencesState): 변경된 설정 상태 DTO.
         """
         # View Facade 메서드 사용
+        self._buffer_size = state.packet_buffer_size
         self.panel.set_buffer_size(state.packet_buffer_size)
         self.panel.set_autoscroll(state.packet_autoscroll)
 
@@ -155,7 +224,12 @@ class PacketPresenter(QObject):
     def on_clear_requested(self) -> None:
         """
         View의 Clear 버튼 클릭 요청 처리
+
+        Logic:
+            - 아직 flush되지 않은 버퍼도 함께 비운다 — 그렇지 않으면 Clear 직후
+              지연되어 있던 이전 패킷들이 다음 flush 주기에 다시 나타난다 (S-061).
         """
+        self._pending_packets.clear()
         self.panel.clear_view()
         logger.debug("Packet view cleared by user.")
 

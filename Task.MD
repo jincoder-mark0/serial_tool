@@ -77,13 +77,18 @@
 | ID | 제목 | 상태 |
 |---|---|---|
 | [S-060](tasks/S-060-classic-theme.md) | 클래식 테마 추가 — 4번째 테마 | ✅ 완료 |
-| [S-061](tasks/S-061-packet-view-throttle.md) | 패킷 뷰 스로틀 — **측정 선행 후 판단**(S-007 원칙) | DOING |
+| [S-061](tasks/S-061-packet-view-throttle.md) | 패킷 뷰 스로틀 — **측정 선행 후 판단**(S-007 원칙) | ✅ 완료 |
 | [S-062](tasks/S-062-scanner-cleanup-and-filter-dedup.md) | PortScanWorker 종료 정리 + 필터 판정 중복 해소 | ✅ 완료 |
-| [S-063](tasks/S-063-semantic-button-contrast.md) | **의미색 버튼 텍스트 대비 미달** — 전송·반복 버튼이 안 읽힘 | DOING |
+| [S-063](tasks/S-063-semantic-button-contrast.md) | **의미색 버튼 텍스트 대비 미달** — 전송·반복 버튼이 안 읽힘 | ✅ 완료 |
 
 - S-063은 S-060이 클래식 테마를 만들며 발견해 에스컬레이션한 결함이다. 대칭성을 위해
   기존 3테마의 규칙을 그대로 복사하다 **원본에 있던 문제**를 드러냈다:
   `warning` 버튼은 흰 글씨/주황 배경으로 대비 **2.16:1**(기준 4.5:1).
+  **완료(2026-08-22)**: 4테마 × accent/danger/warning × 4상태(normal/hover/pressed/
+  disabled) 48개 조합 전부 대비 기준 충족(계산 확인) — light/classic accent는 어두운
+  글씨(`#1b1b1b`)로, danger는 배경을 한 단계 낮춰(`#C62828`계열) 흰 글씨 유지, warning
+  pressed의 배경 버그(danger 톤 혼입)도 함께 교정. dark/dracula는 disabled 상태 등
+  일부 상태만 보정. 상세는 `tasks/S-063-semantic-button-contrast.md` Status 참조.
 
 | ID | 제목 | Phase | 상태 | 비고 |
 |---|---|---|---|---|

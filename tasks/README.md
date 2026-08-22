@@ -90,9 +90,9 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | ID | 제목 | 우선 | 상태 |
 |---|---|---|---|
 | [S-060](S-060-classic-theme.md) | 클래식 테마 추가 (4번째 테마) | 기능 | DONE |
-| [S-061](S-061-packet-view-throttle.md) | 패킷 뷰 스로틀 (측정 선행 후 판단) | 성능 | DOING |
+| [S-061](S-061-packet-view-throttle.md) | 패킷 뷰 스로틀 (측정 선행 후 판단) | 성능 | DONE |
 | [S-062](S-062-scanner-cleanup-and-filter-dedup.md) | PortScanWorker 종료 정리 + 필터 판정 중복 해소 | 안정성 | DONE |
-| [S-063](S-063-semantic-button-contrast.md) | 의미색 버튼 텍스트 대비 미달 (전송·반복 버튼) | UX | DOING |
+| [S-063](S-063-semantic-button-contrast.md) | 의미색 버튼 텍스트 대비 미달 (전송·반복 버튼) | UX | DONE |
 
 - **하위 가능**: Steps가 자족적으로 작성됨. Steps 밖 판단이 필요해지면 즉시 중단·보고.
 - **상위 전용/권장**: 설계·판단이 본체인 태스크. 하위 모델은 시작하지 않는다.

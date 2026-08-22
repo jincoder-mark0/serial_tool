@@ -248,7 +248,15 @@ class MainPresenter(QObject):
             self.macro_runner.stop()
             self.macro_runner.wait(1000)  # 최대 1초 대기
 
+        # [안전 종료] 진행 중인 포트 스캔 스레드 정리 (S-062).
+        # 데이터 유실과 무관한 온디맨드 스레드라 RX 로거의 "연결 종료 ->
+        # processEvents -> 로거 정리" 순서(S-059, 아래)와는 별개로, 같은
+        # "백그라운드 스레드 정리" 단계로 매크로 러너 옆에 둔다.
+        self.port_presenter.stop_pending_scan()
+
         self.data_handler.stop()
+        # 패킷 뷰 버퍼(S-061)에 남은 잔여를 조용히 버리지 않고 flush한다.
+        self.packet_presenter.stop()
         if self.status_timer:
             self.status_timer.stop()
 

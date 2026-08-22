@@ -174,6 +174,11 @@ BATCH_TIMEOUT_MS: int = 50        # 이 시간이 지나면 크기가 작아도 
 WORKER_IDLE_WAIT_MS: int = 1      # 데이터 없을 때 대기 시간 (CPU 방어)
 WORKER_BUSY_WAIT_US: int = 100    # 데이터 처리 중 짧은 대기 시간
 UI_REFRESH_INTERVAL_MS: int = 30  # 로그 뷰 갱신 주기 (약 33 FPS)
+# presenter/data_handler.py(RX 로그 뷰)와 presenter/packet_presenter.py(패킷 뷰, S-061)가
+# 동일한 "즉시 반영 대신 짧은 주기로 모아서 반영" 스로틀 개념을 공유하므로 같은 상수를
+# 재사용한다 — 실측(tasks/S-061-packet-view-throttle.md "측정 결과·판정" 절)으로
+# 병목이 확인된 뒤 도입. 별도 상수로 분리할 근거(서로 다른 튜닝이 필요해질 때)가
+# 생기면 그때 나눈다.
 
 # ==========================================
 # UI Limits & Defaults

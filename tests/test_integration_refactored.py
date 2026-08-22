@@ -38,6 +38,7 @@ def integration_system(mock_main_window, mock_serial_port, mock_settings_manager
     yield presenter, mock_main_window, mock_serial_port
 
     presenter.data_handler.stop()
+    presenter.packet_presenter.stop()
     if presenter.status_timer:
         presenter.status_timer.stop()
     presenter.connection_controller.close_connection()
@@ -98,6 +99,7 @@ def test_packet_event_is_formatted_for_packet_view(integration_system):
     )
 
     presenter.event_router.packet_received.emit(event)
+    presenter.packet_presenter._flush_pending_packets()  # S-061: 버퍼링되므로 명시적 flush 필요
 
     view_data = window.packet_view.append_packet.call_args[0][0]
     assert view_data.data_hex == "AA BB"

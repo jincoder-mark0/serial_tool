@@ -24,7 +24,7 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
     QPushButton, QCheckBox, QLabel, QLineEdit, QFileDialog
 )
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt, QRegExp
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
 
 from view.managers.language_manager import language_manager
 from view.managers.theme_manager import theme_manager
@@ -261,15 +261,13 @@ class SystemLogWidget(QWidget):
         보이는 상태인지 판단합니다.
 
         Logic:
-            - 필터 체크박스가 꺼져 있거나 검색어가 비어 있으면 항상 통과(True).
-            - `QSmartListView`(view/custom_qt/smart_list_view.py)의
-              `set_search_pattern()`/`_execute_filter_update()`와 동일한 방식
-              (대소문자 무시 정규식, 무효 패턴은 일반 텍스트로 이스케이프)으로
-              매칭해 화면에 보이는 규칙과 일치시킨다.
-            - 이 위젯은 필터링을 위해 `QSortFilterProxyModel`을 직접 다루지
-              않으므로(그 로직은 QSmartListView 내부), 여기서는 동일한 판정
-              규칙만 재현한다 — 실제 표시 여부의 최종 권한은 여전히
-              QSmartListView에 있다.
+            - 필터 체크박스가 꺼져 있으면 항상 통과(True).
+            - 켜져 있으면 검색 패턴 매칭 자체는
+              `QSmartListView.matches_search_pattern()`에 위임한다(S-062) —
+              이전에는 여기서 동일한 정규식 구성·매칭(대소문자 무시, 무효
+              패턴 이스케이프)을 그대로 재현했으나, 그 판정 로직이 두 곳에
+              있으면 한쪽만 바뀔 때 화면과 저장 내용이 어긋날 위험이 있어
+              단일화했다.
 
         Args:
             plain_text: 색상 마크업이 적용되기 전의 순수 로그 라인.
@@ -280,15 +278,7 @@ class SystemLogWidget(QWidget):
         if not self.filter_enabled:
             return True
 
-        search_text = self.sys_log_search_input.text() if self.sys_log_search_input else ""
-        if not search_text:
-            return True
-
-        pattern = QRegExp(search_text, Qt.CaseInsensitive)
-        if not pattern.isValid():
-            pattern = QRegExp(QRegExp.escape(search_text), Qt.CaseInsensitive)
-
-        return pattern.indexIn(plain_text) != -1
+        return self.sys_log_list.matches_search_pattern(plain_text)
 
     def clear(self) -> None:
         """로그를 초기화합니다."""
