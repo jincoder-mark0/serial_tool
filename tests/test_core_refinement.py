@@ -20,12 +20,17 @@
 
 pytest tests/test_core_refinement.py -v
 """
+import json
+import sys
+from pathlib import Path
+
 import pytest
 from unittest.mock import MagicMock, patch
 
 from core.command_processor import CommandProcessor
 from core.event_bus import EventBus
 from core.settings_manager import SettingsManager
+from core.resource_path import ResourcePath
 from common.constants import ConfigKeys
 
 
@@ -325,3 +330,147 @@ class TestSettingsManager:
         with open(test_file, 'r') as f:
             data = json.load(f)
             assert data["test_key"] == 12345
+
+    def test_dev_mode_user_settings_path_matches_config_path(self, tmp_path):
+        """
+        S-013 회귀 방지: 개발 모드(sys.frozen 미설정)에서는
+        config_path와 user_settings_path가 완전히 동일해야 한다
+        (기존 동작·테스트 완전 불변).
+
+        Logic:
+            - 개발 모드 그대로(ResourcePath, sys.frozen 미설정)로 초기화
+            - config_path와 user_settings_path가 같은 경로인지 확인
+        """
+        SettingsManager._instance = None
+
+        resource_path = ResourcePath(tmp_path)
+        resource_path.config_dir.mkdir(parents=True)
+        manager = SettingsManager(resource_path)
+
+        assert manager.config_path == manager.user_settings_path
+        assert resource_path.user_settings_file == resource_path.settings_file
+
+        SettingsManager._instance = None
+
+    def test_frozen_mode_user_config_dir_uses_appdata(self, tmp_path, monkeypatch):
+        """
+        번들 실행(sys.frozen=True) 시 user_config_dir가 APPDATA/SerialTool을
+        가리키는지 검증한다.
+
+        Logic:
+            - sys.frozen=True, APPDATA 환경변수를 임시 경로로 patch
+            - ResourcePath.user_config_dir가 <APPDATA>/SerialTool 인지 확인
+            - 디렉터리가 실제로 생성되었는지 확인
+        """
+        fake_appdata = tmp_path / "AppData" / "Roaming"
+        monkeypatch.setattr(sys, 'frozen', True, raising=False)
+        monkeypatch.setenv('APPDATA', str(fake_appdata))
+
+        resource_path = ResourcePath(tmp_path)
+
+        expected = fake_appdata / 'SerialTool'
+        assert resource_path.user_config_dir == expected
+        assert expected.exists()
+        assert resource_path.user_settings_file == expected / 'settings.json'
+
+    def test_frozen_mode_appdata_missing_falls_back_to_home(self, tmp_path, monkeypatch):
+        """
+        번들 실행인데 APPDATA 환경변수가 없는 예외 상황에서
+        홈 디렉터리 하위 .serial_tool로 폴백하는지 검증한다.
+
+        Logic:
+            - sys.frozen=True, APPDATA 환경변수 제거
+            - Path.home()을 tmp_path로 patch
+            - user_config_dir == tmp_path / '.serial_tool' 확인
+        """
+        monkeypatch.setattr(sys, 'frozen', True, raising=False)
+        monkeypatch.delenv('APPDATA', raising=False)
+        monkeypatch.setattr(Path, 'home', classmethod(lambda cls: tmp_path))
+
+        resource_path = ResourcePath(tmp_path)
+
+        expected = tmp_path / '.serial_tool'
+        assert resource_path.user_config_dir == expected
+        assert expected.exists()
+
+    def test_frozen_mode_first_run_migrates_from_default_distribution(self, tmp_path, monkeypatch):
+        """
+        번들 모드 첫 실행 시나리오: 사용자 경로에 설정 파일이 없으면
+        기본 배포본(resources/configs/settings.json)을 읽어 초기화하고,
+        저장은 사용자 경로(APPDATA)에만 이루어져야 한다(배포본은 불변).
+
+        Logic:
+            - 기본 배포본에 식별 가능한 마커 키를 넣어 둔다
+            - sys.frozen=True, APPDATA를 임시 경로로 patch
+            - SettingsManager 초기화 후 사용자 경로에 파일이 생성되고
+              마커 값이 반영되었는지 확인
+            - 배포본 파일 내용이 변경되지 않았는지(쓰기 금지) 확인
+        """
+        fake_appdata = tmp_path / "AppData"
+        monkeypatch.setattr(sys, 'frozen', True, raising=False)
+        monkeypatch.setenv('APPDATA', str(fake_appdata))
+
+        resource_path = ResourcePath(tmp_path)
+        resource_path.config_dir.mkdir(parents=True)
+
+        # 기본 배포본 작성 (마커 포함)
+        from common.defaults import create_fallback_settings
+        default_distribution = create_fallback_settings()
+        default_distribution["distribution_marker"] = "from_default_distribution"
+        with open(resource_path.settings_file, 'w', encoding='utf-8') as f:
+            json.dump(default_distribution, f)
+        original_distribution_text = resource_path.settings_file.read_text(encoding='utf-8')
+
+        # 사용자 경로에는 아직 파일이 없어야 한다
+        assert not resource_path.user_settings_file.exists()
+
+        SettingsManager._instance = None
+        manager = SettingsManager(resource_path)
+
+        try:
+            # 첫 실행 이관: 사용자 경로에 파일이 생성되고 마커가 반영됨
+            assert manager.user_settings_path.exists()
+            assert manager.get("distribution_marker") == "from_default_distribution"
+
+            # 배포본 파일은 변경되지 않아야 함(쓰기 금지)
+            assert resource_path.settings_file.read_text(encoding='utf-8') == original_distribution_text
+        finally:
+            SettingsManager._instance = None
+
+    def test_frozen_mode_second_run_prefers_user_file(self, tmp_path, monkeypatch):
+        """
+        번들 모드에서 사용자 설정 파일이 이미 존재하면, 기본 배포본이 아닌
+        사용자 파일을 우선 로드해야 한다.
+
+        Logic:
+            - 배포본과 사용자 경로 양쪽에 서로 다른 마커 값을 가진 설정을 배치
+            - SettingsManager 초기화 후 사용자 파일의 값을 사용하는지 확인
+        """
+        fake_appdata = tmp_path / "AppData"
+        monkeypatch.setattr(sys, 'frozen', True, raising=False)
+        monkeypatch.setenv('APPDATA', str(fake_appdata))
+
+        resource_path = ResourcePath(tmp_path)
+        resource_path.config_dir.mkdir(parents=True)
+
+        from common.defaults import create_fallback_settings
+
+        default_distribution = create_fallback_settings()
+        default_distribution["distribution_marker"] = "from_default_distribution"
+        with open(resource_path.settings_file, 'w', encoding='utf-8') as f:
+            json.dump(default_distribution, f)
+
+        user_settings = create_fallback_settings()
+        user_settings["distribution_marker"] = "from_user_file"
+        # user_config_dir 접근 시 디렉터리가 생성됨
+        user_path = resource_path.user_settings_file
+        with open(user_path, 'w', encoding='utf-8') as f:
+            json.dump(user_settings, f)
+
+        SettingsManager._instance = None
+        manager = SettingsManager(resource_path)
+
+        try:
+            assert manager.get("distribution_marker") == "from_user_file"
+        finally:
+            SettingsManager._instance = None

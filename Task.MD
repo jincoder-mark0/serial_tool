@@ -37,7 +37,7 @@
 | [S-010](tasks/S-010-virtual-serial-env.md) | 가상 시리얼 포트 실환경 검증 (com0com) | 8 | ⏸ 대기 | 사용자 설치 개입 필요. 실기기 미검증 해소 기반 |
 | [S-011](tasks/S-011-benchmark.md) | 성능 벤치마크 도구 | 8 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 실측: doc/benchmark_20260822.md. S-007 선행 해소 |
 | [S-012](tasks/S-012-packaging.md) | 패키징 (pyinstaller spec, 독립 실행 파일) | 8 | ⏸ 대기 | 선행: S-013, S-018 |
-| [S-013](tasks/S-013-user-config-dir.md) | 설정 파일 사용자 디렉터리 분리 | 8 | ⏸ 대기 | 선행: S-018. 배포 시 필수 |
+| [S-013](tasks/S-013-user-config-dir.md) | 설정 파일 사용자 디렉터리 분리 | 8 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 번들=APPDATA, 개발 모드 불변. S-012 선행 해소 |
 | [S-014](tasks/S-014-github-actions-ci.md) | GitHub Actions CI (pytest + 언어 키 검사) | 8 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 러너 실검증은 push 후 확인 필요 |
 | [S-015](tasks/S-015-spi-i2c-transport.md) | SPI/I2C Transport 확장 | 후속 | ⛔ 보류 | 요구 미확정 (대상 하드웨어·유스케이스) |
 | [S-016](tasks/S-016-settings-namespace.md) | 설정 키 네임스페이스 이중화 해소 (`settings.*` vs `global.*`) | 유지보수 | ✅ 완료 | **결정**: `settings.*` 정본 (2026-08-22). 구현은 S-027 |

@@ -18,7 +18,7 @@ Steps 그대로 수행할 수 있는 수준**으로 상세화한 문서 모음.
 ```powershell
 Set-Location e:\Python\serial_tool
 $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
-.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 85개)
+.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 95개)
 ```
 
 ## 태스크 목록 (의존 순서)
@@ -36,7 +36,7 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-018](S-018-meipass-detection-fix.md) | PyInstaller 감지 버그 수정 (`os._MEIPASS`→`sys`) | **하위 가능** | — | DONE |
 | [S-006](S-006-auto-tx-scheduler.md) | AutoTxScheduler (주기적 자동 전송) | **하위 가능** | — | TODO |
 | [S-011](S-011-benchmark.md) | 성능 벤치마크 도구 | **하위 가능** | — | DONE |
-| [S-013](S-013-user-config-dir.md) | 설정 파일 사용자 디렉터리 분리 | **하위 가능** | S-018 | TODO |
+| [S-013](S-013-user-config-dir.md) | 설정 파일 사용자 디렉터리 분리 | **하위 가능** | S-018 | DONE |
 | [S-014](S-014-github-actions-ci.md) | GitHub Actions CI | **하위 가능** | — | DONE (러너 확인 대기) |
 | [S-027](S-027-settings-namespace-migration.md) | 설정 네임스페이스 마이그레이션 (settings.* 정본화) | **하위 가능** | S-013 | TODO |
 | [S-012](S-012-packaging.md) | PyInstaller 패키징 | 하위 가능 (수동 확인 항목 있음) | S-013, S-018 | TODO |

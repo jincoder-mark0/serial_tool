@@ -66,7 +66,7 @@
 * 실제 통신 Transport는 `SerialTransport`만 구현되어 있습니다.
 * SPI/I2C, 플러그인 시스템, 독립 실행 파일 패키징은 향후 작업입니다.
 * 처리량 수치는 자동 벤치마크가 도입되기 전까지 보장하지 않습니다.
-* 현재 자동화 테스트 기준선은 85개 테스트 통과입니다.
+* 현재 자동화 테스트 기준선은 95개 테스트 통과입니다.
 
 ---
 
@@ -433,9 +433,14 @@ graph TD
 
 ### 6.5 설정 관리
 
-* 설정 파일은 현재 `resources/configs/settings.json`에 저장됩니다.
+* 개발 모드에서는 `resources/configs/settings.json`을 그대로 읽고 씁니다(기존과 동일).
+* 번들(PyInstaller) 실행 시에는 설치 폴더가 읽기 전용일 수 있으므로 사용자 설정을
+  `%APPDATA%\SerialTool\settings.json`에 분리 저장합니다(APPDATA가 없으면
+  `~/.serial_tool`로 폴백). `resources/configs/settings.json`은 최초 배포 시의
+  기본값 원본으로만 사용되며 번들 모드에서는 덮어쓰지 않습니다.
+* 첫 실행 시 사용자 설정 파일이 없으면 기본 배포본을 읽어 그대로 사용자 경로에
+  저장하여 자연스럽게 이관됩니다. 이후에는 사용자 경로가 우선 로드됩니다.
 * `SettingsManager`는 로드 시 `jsonschema`를 통해 무결성을 검증하며, 실패 시 안전한 기본값(Fallback)으로 복구합니다.
-* 배포 시 사용자별 설정 디렉터리로 분리하는 작업은 아직 필요합니다.
 
 #### 설정 구조
 

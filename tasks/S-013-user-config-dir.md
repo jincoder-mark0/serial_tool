@@ -1,6 +1,10 @@
 # S-013 — 설정 파일 사용자 디렉터리 분리
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. 번들 모드 APPDATA\SerialTool
+  (+홈 폴백)·첫 실행 자연 이관·저장은 항상 사용자 경로. 개발 모드 두 경로 동일(완전 불변,
+  기존 테스트 전부 통과). 신규 테스트 5건 → 기준선 95. README §6.5 현행화.
+  설계 판단 승인: dev 모드 user_settings_file은 기존 settings_file 속성 재사용
+  (테스트의 override 패턴과 호환 — 근거 명시됨). main.py GUI 실행은 수동 미확인)
 - Recommended model: **하위(Sonnet) 가능** (설계 확정됨 — 벗어나면 중단·보고)
 - 선행: S-018 (PyInstaller 감지 수정)
 - Skills to load: task-done

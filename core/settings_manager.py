@@ -112,34 +112,42 @@ class SettingsManager:
     def _get_user_settings_path(self) -> Path:
         """
         사용자 설정 파일의 경로를 반환합니다.
-        (현재는 기본 설정 파일과 동일한 경로를 사용합니다)
+        번들 실행 시에는 APPDATA 하위(쓰기 가능) 경로, 개발 모드에서는
+        기본 설정 파일과 동일한 경로입니다 (ResourcePath.user_settings_file 참고).
 
         Returns:
-            Path: 사용자 설정 파일의 ResourcePath 객체.
+            Path: 사용자 설정 파일 경로.
         """
-        return self.config_path
+        return self._resource_path.user_settings_file
 
     def load_settings(self) -> None:
         """
         설정을 로드하고 유효성을 검사합니다.
+        사용자 설정 파일(user_settings_path)이 있으면 그것을 우선 로드하고,
+        없으면 기본 배포본(config_path, resources/configs/settings.json)을
+        읽습니다. 개발 모드에서는 두 경로가 동일하므로 기존 동작과 같습니다.
         파일이 없거나 손상되었거나 스키마가 일치하지 않는 경우
         기본값(Fallback)을 사용하고 파일을 복구합니다.
         """
         fallback_settings = self._get_fallback_settings()
         self.config_was_reset = False
 
+        # 사용자 설정 파일 우선, 없으면 기본 배포본에서 읽는다.
+        loaded_from_default_distribution = not self.user_settings_path.exists()
+        read_path = self.user_settings_path if not loaded_from_default_distribution else self.config_path
+
         try:
-            if not self.config_path.exists():
+            if not read_path.exists():
                 raise FileNotFoundError("Settings file not found")
 
-            with open(self.config_path, 'r', encoding='utf-8') as f:
+            with open(read_path, 'r', encoding='utf-8') as f:
                 loaded_settings = json.load(f)
 
             # 마이그레이션 체크
             if self._needs_migration(loaded_settings):
                 logger.info("Settings migration required.")
                 loaded_settings = self._migrate_settings(loaded_settings)
-                # 마이그레이션 후 저장
+                # 마이그레이션 후 저장 (항상 사용자 경로에)
                 self._save_to_file(loaded_settings)
 
             # JSON Schema 검증 (Optional: 스키마가 있다면)
@@ -149,6 +157,10 @@ class SettingsManager:
             self.settings = fallback_settings.copy()
             self._merge_settings(loaded_settings)
 
+            # 기본 배포본에서 처음 읽은 경우(사용자 파일 부재), 사용자 경로로 이관 저장
+            if loaded_from_default_distribution:
+                self._save_to_file(self.settings)
+
             logger.info("Settings loaded and validated successfully.")
 
         except (FileNotFoundError, ValueError) as e:
@@ -157,7 +169,7 @@ class SettingsManager:
             # (JSONDecodeError는 ValueError의 하위 클래스임)
             logger.warning(f"Settings load failed ({type(e).__name__}): {e}. Using fallback.")
             self.settings = fallback_settings
-            self.save_settings() # 복구된 설정 저장
+            self.save_settings() # 복구된 설정 저장 (사용자 경로)
 
             # 리셋 플래그 설정
             self.config_was_reset = True
@@ -167,7 +179,7 @@ class SettingsManager:
             logger.error(f"Settings validation failed: {e.message}. Reverting to fallback.")
             # 스키마 불일치 시 Fallback 우선 사용
             self.settings = fallback_settings
-            self._backup_corrupted_settings()
+            self._backup_corrupted_settings(read_path)
             self.save_settings()
 
             # 리셋 플래그 설정
@@ -272,27 +284,35 @@ class SettingsManager:
 
         merge_dict(self.settings, user_settings)
 
-    def _backup_corrupted_settings(self) -> None:
+    def _backup_corrupted_settings(self, source_path: Optional[Path] = None) -> None:
         """
         손상된 설정 파일을 백업
+
+        Args:
+            source_path: 손상이 감지된 원본 파일 경로. None이면 사용자 설정 경로.
         """
-        backup_path = self.config_path.with_suffix('.json.bak')
+        target_path = source_path if source_path is not None else self.user_settings_path
+        backup_path = target_path.with_suffix('.json.bak')
         try:
-            if self.config_path.exists():
-                self.config_path.rename(backup_path)
+            if target_path.exists():
+                target_path.rename(backup_path)
                 logger.info(f"Corrupted settings backed up to {backup_path}")
         except OSError:
             pass
 
     def _save_to_file(self, data: Dict[str, Any]) -> None:
         """
-        데이터를 설정 파일에 저장
+        데이터를 사용자 설정 파일에 저장합니다.
+        항상 user_settings_path에 씁니다 — 기본 배포본
+        (resources/configs/settings.json)은 원본 그대로 보존됩니다
+        (개발 모드에서는 두 경로가 동일하여 현재와 같습니다).
+
         Args:
             data: 저장할 설정 딕셔너리
         """
-        if not self.config_path.parent.exists():
-            self.config_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.config_path, 'w', encoding='utf-8') as f:
+        if not self.user_settings_path.parent.exists():
+            self.user_settings_path.parent.mkdir(parents=True, exist_ok=True)
+        with open(self.user_settings_path, 'w', encoding='utf-8') as f:
             json.dump(data, f, indent=2, ensure_ascii=False)
 
     def save_settings(self) -> None:

@@ -85,6 +85,50 @@ class ResourcePath:
         # 로그 경로
         self.logs_dir = self.base_dir / 'logs'
 
+    @property
+    def user_config_dir(self) -> Path:
+        """
+        사용자별 설정을 저장할 디렉터리 경로를 반환합니다.
+
+        Logic:
+            - 번들 실행(PyInstaller frozen) 시: 설치 폴더가 읽기 전용일 수 있으므로
+              Windows 표준 사용자 데이터 경로(APPDATA)를 사용한다.
+              APPDATA 환경변수가 없으면 홈 디렉터리 하위 폴더로 폴백한다.
+            - 개발 모드: 기존 설정 파일이 위치한 디렉터리를 그대로 반환한다
+              (현행 동작·테스트 완전 불변 — settings_file 경로가 재정의되어도 추종).
+            - 디렉터리가 없으면 생성하여 보장한다.
+
+        Returns:
+            Path: 사용자 설정 파일을 저장할 디렉터리.
+        """
+        if getattr(sys, 'frozen', False):
+            appdata = os.environ.get('APPDATA')
+            if appdata:
+                directory = Path(appdata) / 'SerialTool'
+            else:
+                directory = Path.home() / '.serial_tool'
+        else:
+            directory = self.settings_file.parent
+
+        directory.mkdir(parents=True, exist_ok=True)
+        return directory
+
+    @property
+    def user_settings_file(self) -> Path:
+        """
+        사용자 설정 파일(settings.json)의 전체 경로를 반환합니다.
+
+        Logic:
+            - 번들 실행: user_config_dir(APPDATA) 하위 settings.json.
+            - 개발 모드: settings_file과 동일 (분리 없음, 회귀 방지).
+
+        Returns:
+            Path: 사용자 설정 파일 경로.
+        """
+        if getattr(sys, 'frozen', False):
+            return self.user_config_dir / 'settings.json'
+        return self.settings_file
+
     def get_language_path(self, language_code: str) -> Path:
         """
         언어 코드에 해당하는 언어 파일 경로 반환
