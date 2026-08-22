@@ -178,8 +178,6 @@
     "port_btn_connect_tooltip": "시리얼 포트 열기",
     "port_btn_disconnect": "닫기",
     "port_btn_reconnect": "재연결",
-    "port_btn_scan": "검색",
-    "port_btn_scan_tooltip": "사용 가능한 포트 검색",
     "port_combo_baudrate_tooltip": "보드레이트 선택",
     "port_combo_bytesize_tooltip": "데이터 비트 선택",
     "port_combo_flow_tooltip": "흐름 제어 선택",

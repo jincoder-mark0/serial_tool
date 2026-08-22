@@ -87,7 +87,6 @@ class PortSettingsWidget(QGroupBox):
         self.protocol_combo: Optional[QComboBox] = None
         self.port_lbl: Optional[QLabel] = None
         self.port_combo: Optional[ClickableComboBox] = None
-        self.scan_btn: Optional[QPushButton] = None
         self.connect_btn: Optional[QPushButton] = None
 
         # 설정 UI 관리
@@ -135,13 +134,6 @@ class PortSettingsWidget(QGroupBox):
         self.port_combo.setToolTip(language_manager.get_text("port_combo_port_tooltip"))
         self.port_combo.popup_show_requested.connect(self.on_port_combo_clicked)
 
-        # 스캔 버튼
-        self.scan_btn = QPushButton(language_manager.get_text("port_btn_scan"))
-        # 고정폭(50)이 ko "검색" 기준이라 en "Scan"이 잘림(S-024) - 최소폭으로 완화
-        self.scan_btn.setMinimumWidth(50)
-        self.scan_btn.setToolTip(language_manager.get_text("port_btn_scan_tooltip"))
-        self.scan_btn.clicked.connect(self.on_port_scan_clicked)
-
         # 연결 버튼
         self.connect_btn = QPushButton(language_manager.get_text("port_btn_connect"))
         self.connect_btn.setCheckable(True)
@@ -168,7 +160,6 @@ class PortSettingsWidget(QGroupBox):
         top_layout.addWidget(self.protocol_combo)
         top_layout.addWidget(self.port_lbl)
         top_layout.addWidget(self.port_combo, 1) # Stretch 적용
-        top_layout.addWidget(self.scan_btn)
         top_layout.addWidget(self.connect_btn)
 
         main_layout.addLayout(top_layout)
@@ -287,10 +278,6 @@ class PortSettingsWidget(QGroupBox):
         """
         self.port_scan_requested.emit()
         self.settings_stack.setCurrentIndex(index)
-
-    def on_port_scan_clicked(self) -> None:
-        """포트 스캔 버튼 클릭 핸들러"""
-        self.port_scan_requested.emit()
 
     def on_port_combo_clicked(self) -> None:
         """
@@ -452,7 +439,6 @@ class PortSettingsWidget(QGroupBox):
         # 연결 중에는 설정 변경 불가 (Lock UI)
         self.protocol_combo.setEnabled(is_disconnected)
         self.port_combo.setEnabled(is_disconnected)
-        self.scan_btn.setEnabled(is_disconnected)
         self.settings_stack.setEnabled(is_disconnected)
 
         self.port_connection_changed.emit(is_connected)
@@ -487,8 +473,6 @@ class PortSettingsWidget(QGroupBox):
         self.protocol_combo.setToolTip(language_manager.get_text("port_combo_protocol_tooltip"))
         self.port_lbl.setText(language_manager.get_text("port_lbl_port"))
         self.port_combo.setToolTip(language_manager.get_text("port_combo_port_tooltip"))
-        self.scan_btn.setText(language_manager.get_text("port_btn_scan"))
-        self.scan_btn.setToolTip(language_manager.get_text("port_btn_scan_tooltip"))
         self.connect_btn.setToolTip(language_manager.get_text("port_btn_connect_tooltip"))
 
         # 상태에 따른 버튼 텍스트 갱신

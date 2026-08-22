@@ -51,7 +51,7 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-026](S-026-minimum-window-width.md) | 최소 창 크기 완화 (1471→1093px) | 상위 설계 + 하위 수행 | S-019, S-024 | DONE |
 | [S-032](S-032-min-height-and-macro-header.md) | 최소 높이 마무리 + 매크로 헤더 잘림 | **하위 가능** | S-026 | DONE (높이 잔여는 보류 판정) |
 | [S-033](S-033-loopback-dummy-port.md) | 루프백 더미 포트 (디버깅용) | **하위 가능** | — | TODO |
-| [S-034](S-034-remove-scan-button.md) | 중복 검색 버튼 제거 (팝업 자동 스캔 존재) | **하위 가능** | — | TODO |
+| [S-034](S-034-remove-scan-button.md) | 중복 검색 버튼 제거 (팝업 자동 스캔 존재) | **하위 가능** | — | DONE |
 | [S-035](S-035-spacing-grouping-polish.md) | 마진·구획 정비 (테두리 대비·제목 간격·그루핑) | **하위 가능** | S-033, S-034 | TODO |
 | [S-010](S-010-virtual-serial-env.md) | 가상 시리얼 포트 실환경 검증 | 사용자 개입 필요 (com0com 설치) | — | TODO |
 | [S-015](S-015-spi-i2c-transport.md) | SPI/I2C Transport 확장 | **상위 전용** (요구 미확정) | — | ⛔ 보류 |

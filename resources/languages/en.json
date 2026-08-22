@@ -178,8 +178,6 @@
     "port_btn_connect_tooltip": "Open serial port",
     "port_btn_disconnect": "Close",
     "port_btn_reconnect": "Reconnect",
-    "port_btn_scan": "Scan",
-    "port_btn_scan_tooltip": "Scan available ports",
     "port_combo_baudrate_tooltip": "Select baudrate rate",
     "port_combo_bytesize_tooltip": "Select data bits",
     "port_combo_flow_tooltip": "Select flow control",
