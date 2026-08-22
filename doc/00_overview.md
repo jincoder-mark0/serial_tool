@@ -50,7 +50,7 @@
 * 통신 구현은 `SerialTransport`만 제공하며 SPI/I2C Transport는 없습니다.
 * 패킷 설정 UI는 존재하지만 연결 생성 시 현재 `RawParser`가 기본으로 사용됩니다.
 * 설정은 현재 프로젝트의 `resources/configs/settings.json`에 저장되므로 배포 전 사용자 데이터 경로 분리가 필요합니다.
-* 자동화 테스트는 Core, Model, Presenter, View 및 주요 통합 흐름 150개를 검증합니다.
+* 자동화 테스트는 Core, Model, Presenter, View 및 주요 통합 흐름 168개를 검증합니다.
 * 성능 벤치마크, 실제 가상 시리얼 포트 검증, 패키징 및 CI는 후속 작업입니다.
 
 ---

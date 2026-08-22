@@ -156,15 +156,17 @@ class MacroRunner(QThread):
             1. 실행 플래그 해제 및 일시정지 해제
             2. 대기 중인 모든 조건 변수(`_cond`, `_expect_cond`)를 깨움
             3. 스레드가 완전히 종료될 때까지 대기 (`wait`)
-            4. 종료 이벤트 발행
+
+        Note:
+            종료 시그널(`macro_finished`)과 이벤트(`EventTopics.MACRO_FINISHED`)는
+            `run()`의 종료부에서 정확히 1회 발행된다 (정상 루프 소진/수동 정지/에러 중단
+            공통 경로). 여기서 다시 발행하면 수동 정지 시 2회 발행되는 중복이 생기므로
+            발행하지 않는다 (S-042).
         """
         self._stop_internal(reason="User stopped macro")
 
-        # 스레드 종료 대기 (블로킹)
+        # 스레드 종료 대기 (블로킹) — run()이 종료되며 완료 시그널/이벤트를 발행한다.
         self.wait()
-
-        self.macro_finished.emit()
-        self.event_bus.publish(EventTopics.MACRO_FINISHED)
 
     def _stop_internal(self, reason: str = "") -> None:
         """
@@ -366,11 +368,12 @@ class MacroRunner(QThread):
             if self._check_running() and self._loop_interval_ms > 0:
                 self._interruptible_sleep(self._loop_interval_ms)
 
-        # 실행 종료 처리
+        # 실행 종료 처리 (정상 루프 소진 / stop() 요청 / 에러 중단 공통 경로)
         self._stop_internal()
 
-        # 완료 시그널 방출
+        # 완료 시그널/이벤트 방출 — 정상 종료·수동 정지 모두 여기서 정확히 1회 (S-042)
         self.macro_finished.emit()
+        self.event_bus.publish(EventTopics.MACRO_FINISHED)
 
     def _check_running(self) -> bool:
         """

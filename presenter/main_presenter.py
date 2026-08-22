@@ -187,6 +187,8 @@ class MainPresenter(QObject):
         self.manual_control_presenter.broadcast_changed.connect(
             lambda _: self._update_controls_state_for_current_tab()
         )
+        # 수동 전송(Auto Tx 포함) 실패를 매크로 에러와 동일한 관례로 표면화 (S-042)
+        self.manual_control_presenter.send_error.connect(self._on_manual_send_error)
         self.macro_presenter.broadcast_changed.connect(
             lambda _: self._update_controls_state_for_current_tab()
         )
@@ -598,6 +600,25 @@ class MainPresenter(QObject):
         self.macro_runner.stop()
         self.view.show_status_message(language_manager.get_text("main_status_msg_macro_stopped").format(message), 5000)
         self.view.show_alert_message(language_manager.get_text("main_title_macro_error"), message)
+
+    def _on_manual_send_error(self, title: str, message: str, show_dialog: bool) -> None:
+        """
+        수동 전송(Auto Tx 포함) 실패 알림 처리 (S-042)
+
+        `_notify_macro_error`와 동일한 상태바+다이얼로그 관례를 재사용한다.
+        `show_dialog`는 ManualControlPresenter가 판단해서 넘긴다 — 사용자의
+        단발 Send 클릭 실패는 True(다이얼로그 포함), Auto Tx 반복 실패는
+        연속 실패의 첫 회에서만 False(상태바만)로 전달되어 알림 폭주를 막는다.
+
+        Args:
+            title (str): 다이얼로그 제목 (show_dialog=True일 때만 사용).
+            message (str): 알림 메시지.
+            show_dialog (bool): 모달 다이얼로그 표시 여부.
+        """
+        self._log_error(f"Manual send failed: {message}")
+        self.view.show_status_message(message, 5000)
+        if show_dialog:
+            self.view.show_alert_message(title, message)
 
     # -------------------------------------------------------------------------
     # File Transfer Handlers

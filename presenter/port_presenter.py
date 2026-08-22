@@ -252,6 +252,27 @@ class PortPresenter(QObject):
         # 워커 참조 해제
         self._scan_worker = None
 
+    def _apply_packet_parser_settings(self, config: PortConfig) -> None:
+        """
+        Preferences에 저장된 패킷 파서 설정을 PortConfig에 실어 보냅니다.
+
+        Logic:
+            - PortSettingsWidget(View)에는 파서 설정 UI가 없다(패킷 파서는
+              Preferences 다이얼로그의 전역 설정이다). 계층 규율상 Model은
+              SettingsManager를 직접 읽지 않으므로, Presenter가 조회한 값을
+              DTO에 실어 open_connection()에 전달한다(S-041).
+            - 구분자는 목록(PACKET_DELIMITERS) 중 첫 번째 값만 사용한다
+              (DelimiterParser는 단일 구분자만 지원).
+
+        Args:
+            config (PortConfig): 값을 채워 넣을 연결 설정 DTO (in-place 수정).
+        """
+        settings = SettingsManager()
+        config.parser_type = settings.get(ConfigKeys.PACKET_PARSER_TYPE, 0)
+        delimiters = settings.get(ConfigKeys.PACKET_DELIMITERS, ["\\r\\n"])
+        config.packet_delimiter = delimiters[0] if delimiters else ""
+        config.packet_length = settings.get(ConfigKeys.PACKET_LENGTH, 64)
+
     def handle_open_request(self, config: PortConfig) -> None:
         """
         포트 열기 요청 처리 (View Signal Slot).
@@ -259,6 +280,7 @@ class PortPresenter(QObject):
         Args:
             config (PortConfig): 포트 설정 DTO.
         """
+        self._apply_packet_parser_settings(config)
         self.connection_controller.open_connection(config)
 
     def handle_close_request(self) -> None:
@@ -401,6 +423,7 @@ class PortPresenter(QObject):
             config = self.current_port_panel.get_port_config()
             port_name = config.port
             if port_name and not self.connection_controller.is_connection_open(port_name):
+                self._apply_packet_parser_settings(config)
                 self.connection_controller.open_connection(config)
             elif not port_name:
                 logger.warning("No port selected")

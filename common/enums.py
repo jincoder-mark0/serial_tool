@@ -33,6 +33,21 @@ class PortState(Enum):
     CONNECTED = 'connected'
     ERROR = 'error'
 
+class ConnectionProtocol:
+    """
+    PortConfig.protocol 값과 매칭되는 연결 프로토콜 상수 클래스
+
+    Attributes:
+        SERIAL: 시리얼 통신 (구현됨, SerialTransport).
+        SPI: SPI 통신 (UI 프로토콜 콤보박스에는 선택지로 존재하나 SpiTransport가
+             없어 미구현 — open_connection()이 명시적으로 거부한다, S-041 B-2).
+        SUPPORTED: 실제로 연결을 시도할 수 있는 프로토콜 값의 집합.
+    """
+    SERIAL = "Serial"
+    SPI = "SPI"
+
+    SUPPORTED = (SERIAL,)
+
 class ParserType:
     """
     패킷 파서 타입 상수 클래스
@@ -47,6 +62,31 @@ class ParserType:
     AT = "AT"
     DELIMITER = "Delimiter"
     FIXED_LENGTH = "FixedLength"
+
+    # PreferencesState.parser_type / ConfigKeys.PACKET_PARSER_TYPE은 정수 인덱스로
+    # 저장된다 (view/dialogs/preferences_dialog.py의 QButtonGroup 라디오 버튼 순서:
+    # 0=Auto, 1=AT, 2=Delimiter, 3=Fixed, 4=Raw). ParserFactory는 문자열 상수를
+    # 요구하므로 여기서 변환한다 (S-041). 라디오 버튼 순서를 바꾸면 이 매핑도 갱신할 것.
+    _PREFERENCE_INDEX_MAP = {
+        0: RAW,            # Auto: 자동 감지는 미구현 — 현재는 Raw로 처리
+        1: AT,
+        2: DELIMITER,
+        3: FIXED_LENGTH,
+        4: RAW,
+    }
+
+    @classmethod
+    def from_preference_index(cls, index: int) -> str:
+        """
+        Preferences에 저장된 정수 인덱스를 ParserFactory용 문자열 상수로 변환합니다.
+
+        Args:
+            index (int): PreferencesState.parser_type / PACKET_PARSER_TYPE 값.
+
+        Returns:
+            str: ParserType 문자열 상수. 알 수 없는 인덱스는 RAW로 폴백한다.
+        """
+        return cls._PREFERENCE_INDEX_MAP.get(index, cls.RAW)
 
 class LogFormat(Enum):
     """

@@ -9,6 +9,7 @@
 * RTS/DTR 등의 하드웨어 제어 신호 중계
 * 브로드캐스트 상태 변경을 상위 Presenter에 알림 (UI 동기화용)
 * Command를 일정 주기로 반복 전송하는 Auto Tx 기능 지원 (S-006)
+* 전송 실패(HEX 파싱 오류/브로드캐스트 대상 없음/미연결)를 사용자에게 표면화 (S-042)
 
 ## WHAT
 * View의 전송 요청(Signal)을 받아 상태를 직접 수집하여 DTO 생성 후 Controller로 전달
@@ -16,6 +17,8 @@
 * 전송 성공 시 로컬 에코(Local Echo) 처리
 * 브로드캐스트 모드 지원 (다중 포트 전송)
 * AutoTxScheduler 배선 — 토글 시 시작/정지, 포트 전체 종료 시 자동 정지
+* 전송 실패 시 `send_error` 시그널로 MainPresenter에 알려 상태바/다이얼로그로 표면화.
+  Auto Tx 반복 실패는 연속 실패 스트릭의 첫 실패에서만 알려 알림 폭주를 방지
 
 ## HOW
 * View(Panel)가 제공하는 Getter 메서드(Facade)를 통해 상태 조회 (LoD 준수)
@@ -23,12 +26,14 @@
 * ConnectionController를 통해 데이터 전송 수행
 * Callable 콜백을 통해 MainPresenter(View)에 로컬 에코 데이터 전달
 * 수동 전송과 Auto Tx가 동일한 가공/전송 헬퍼(`_process_and_send`)를 공유하여 중복 제거
+  (Auto Tx는 `_on_auto_tx_send_requested` 래퍼를 경유해 `is_auto_tx=True`로 구분)
 """
 from typing import Optional, Callable
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
 from view.panels.manual_control_panel import ManualControlPanel
+from view.managers.language_manager import language_manager
 from model.connection_controller import ConnectionController
 from model.auto_tx import AutoTxScheduler
 from core.command_processor import CommandProcessor
@@ -48,6 +53,12 @@ class ManualControlPresenter(QObject):
 
     # 브로드캐스트 상태 변경 알림 (MainPresenter가 구독하여 전송 버튼 활성화 여부 판단)
     broadcast_changed = pyqtSignal(bool)
+
+    # 전송 실패 알림 (title, message, show_dialog) — MainPresenter가 구독하여
+    # 매크로 구조적 에러(`_notify_macro_error`)와 동일한 상태바/다이얼로그 관례로 표면화한다.
+    # show_dialog=False인 경우 상태바만 갱신하고 다이얼로그는 띄우지 않는다
+    # (Auto Tx 반복 실패의 알림 폭주 방지, S-042).
+    send_error = pyqtSignal(str, str, bool)
 
     def __init__(
         self,
@@ -74,7 +85,10 @@ class ManualControlPresenter(QObject):
 
         # Auto Tx(주기적 자동 전송) 스케줄러 (UI 스레드 상주 QTimer, S-006)
         self.auto_tx_scheduler = AutoTxScheduler()
-        self.auto_tx_scheduler.send_requested.connect(self._process_and_send)
+        # 반복 컨텍스트임을 표시하기 위해 래퍼를 경유 (직접 연결 시 수동 전송과 구분 불가)
+        self.auto_tx_scheduler.send_requested.connect(self._on_auto_tx_send_requested)
+        # Auto Tx 반복 중 연속 실패 여부 (알림 폭주 방지용 edge-trigger 플래그, S-042)
+        self._auto_tx_failing = False
 
         # View -> Presenter 시그널 연결
         # View는 단순한 시그널만 보내고, 데이터 수집은 Presenter가 수행함 (Passive View)
@@ -170,20 +184,23 @@ class ManualControlPresenter(QObject):
             broadcast_enabled=broadcast_enabled
         )
 
-    def _process_and_send(self, command: ManualCommand) -> bool:
+    def _process_and_send(self, command: ManualCommand, is_auto_tx: bool = False) -> bool:
         """
         Command DTO를 가공(Prefix/Suffix/HEX)하여 전송하는 공용 헬퍼
 
-        수동 전송(`on_send_requested`)과 Auto Tx(`AutoTxScheduler.send_requested`)가
+        수동 전송(`on_send_requested`)과 Auto Tx(`_on_auto_tx_send_requested`)가
         이 메서드를 공유하여 가공/전송 로직 중복을 제거합니다.
 
         Logic:
             1. 설정된 Prefix/Suffix 조회 및 데이터 가공
             2. 단일/브로드캐스트 모드에 따라 전송 수행
             3. 성공 시 로컬 에코 출력
+            4. 실패 시 `_report_send_error`를 통해 사용자에게 표면화 (S-042)
 
         Args:
             command (ManualCommand): 전송할 명령어 DTO.
+            is_auto_tx (bool): Auto Tx 반복 경로에서의 호출 여부. 실패 알림 방식
+                (다이얼로그 vs 상태바만)을 구분하는 데 사용된다.
 
         Returns:
             bool: 전송 성공 여부.
@@ -202,7 +219,11 @@ class ManualControlPresenter(QObject):
             )
         except ValueError as e:
             logger.error(f"Command processing error: {e}")
-            # View에 에러 알림 필요 시 추가 구현
+            self._report_send_error(
+                is_auto_tx,
+                language_manager.get_text("manual_control_title_send_error"),
+                language_manager.get_text("manual_control_msg_invalid_command").format(e)
+            )
             return False
 
         if not data:
@@ -218,6 +239,11 @@ class ManualControlPresenter(QObject):
                 sent_success = True
             else:
                 logger.warning("No active ports for broadcast.")
+                self._report_send_error(
+                    is_auto_tx,
+                    language_manager.get_text("manual_control_title_send_error"),
+                    language_manager.get_text("manual_control_msg_no_broadcast_target")
+                )
         else:
             # 단일 전송 모드
             active_port = self.get_active_port_callback()
@@ -226,13 +252,59 @@ class ManualControlPresenter(QObject):
                 sent_success = True
             else:
                 logger.warning(f"Port '{active_port}' is not open.")
+                self._report_send_error(
+                    is_auto_tx,
+                    language_manager.get_text("manual_control_title_send_error"),
+                    language_manager.get_text("manual_control_msg_port_not_connected")
+                )
 
-        # 4. 로컬 에코 처리
-        # 전송 성공하고 로컬 에코가 활성화되어 있으면 콜백 호출
-        if sent_success and self.local_echo_enabled:
-            self.local_echo_callback(data)
+        # 4. 로컬 에코 처리 + Auto Tx 실패 스트릭 해제
+        if sent_success:
+            if is_auto_tx:
+                self._auto_tx_failing = False
+            if self.local_echo_enabled:
+                self.local_echo_callback(data)
 
         return sent_success
+
+    def _report_send_error(self, is_auto_tx: bool, title: str, message: str) -> None:
+        """
+        전송 실패를 사용자에게 표면화합니다 (S-042).
+
+        Logic:
+            - 수동 단발 전송(is_auto_tx=False): 사용자의 명시적 클릭 행위이므로
+              매번 알림(상태바+다이얼로그)한다 — 매크로의 구조적 에러
+              (`MainPresenter._notify_macro_error`)와 동일한 관례.
+            - Auto Tx 반복 전송(is_auto_tx=True): 매 tick마다 다이얼로그를 띄우면
+              알림 폭주가 발생하므로, 연속 실패 스트릭의 첫 실패에서만(edge-trigger)
+              상태바 알림만 발행하고 다이얼로그는 띄우지 않는다. 이미 실패 중이면
+              (연속 실패) 침묵하여 폭주를 막는다. 성공 1회로 스트릭이 해제되면
+              다음 실패에서 다시 알린다.
+
+        Args:
+            is_auto_tx (bool): Auto Tx 반복 경로에서 발생한 실패인지 여부.
+            title (str): 다이얼로그 제목 (다이얼로그 표시 시에만 사용됨).
+            message (str): 알림 메시지.
+        """
+        if is_auto_tx:
+            if self._auto_tx_failing:
+                return
+            self._auto_tx_failing = True
+            self.send_error.emit(title, message, False)
+        else:
+            self.send_error.emit(title, message, True)
+
+    def _on_auto_tx_send_requested(self, command: ManualCommand) -> None:
+        """
+        AutoTxScheduler의 반복 전송 요청 처리 핸들러 (S-006/S-042)
+
+        `_process_and_send`를 `is_auto_tx=True`로 호출하여, 실패 알림 방식을
+        수동 단발 전송과 구분한다 (반복 실패 시 다이얼로그 대신 상태바만, 폭주 방지).
+
+        Args:
+            command (ManualCommand): 반복 전송할 명령어 DTO.
+        """
+        self._process_and_send(command, is_auto_tx=True)
 
     def on_auto_tx_toggled(self, enabled: bool) -> None:
         """
@@ -253,6 +325,8 @@ class ManualControlPresenter(QObject):
                 return
 
             interval_ms = self.panel.get_auto_tx_interval_ms()
+            # 새 반복 시작 — 이전 실행의 실패 스트릭 상태를 이어받지 않도록 초기화
+            self._auto_tx_failing = False
             self.auto_tx_scheduler.start(command, interval_ms=interval_ms)
         else:
             self.auto_tx_scheduler.stop()

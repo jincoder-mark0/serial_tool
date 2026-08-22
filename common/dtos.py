@@ -96,6 +96,11 @@ class PortConfig:
         flowctrl (str): 흐름 제어 설정.
         speed (int): SPI 속도 (Hz).
         mode (int): SPI 모드.
+        parser_type (int): 패킷 파서 설정 (Preferences 정수 인덱스, S-041).
+            0=Auto, 1=AT, 2=Delimiter, 3=Fixed, 4=Raw — 문자열 상수 변환은
+            `common.enums.ParserType.from_preference_index` 참조.
+        packet_delimiter (str): DELIMITER 파서용 구분자 (이스케이프 문자열, 예: "\\r\\n").
+        packet_length (int): FIXED_LENGTH 파서용 고정 길이 (bytes).
     """
     port: str
     protocol: str = "Serial"
@@ -110,6 +115,12 @@ class PortConfig:
     # SPI Options
     speed: int = 1000000
     mode: int = 0
+
+    # Packet Parser Options (S-041) — Preferences 설정을 Presenter가 실어 보낸다
+    # (Model은 SettingsManager를 직접 읽지 않는다).
+    parser_type: int = 0
+    packet_delimiter: str = "\\r\\n"
+    packet_length: int = 64
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'PortConfig':
@@ -131,7 +142,10 @@ class PortConfig:
             stopbits=_safe_cast(data.get("stopbits"), float, SerialStopBits.ONE.value),
             flowctrl=data.get("flowctrl", SerialFlowControl.NONE.value),
             speed=_safe_cast(data.get("speed"), int, 1000000),
-            mode=_safe_cast(data.get("mode"), int, 0)
+            mode=_safe_cast(data.get("mode"), int, 0),
+            parser_type=_safe_cast(data.get("parser_type"), int, 0),
+            packet_delimiter=_safe_cast(data.get("packet_delimiter"), str, "\\r\\n"),
+            packet_length=_safe_cast(data.get("packet_length"), int, 64)
         )
 
 

@@ -27,7 +27,7 @@ from model.connection_worker import ConnectionWorker
 from core.transport.serial_transport import SerialTransport
 from core.transport.loopback_transport import LoopbackTransport
 from model.packet_parser import ParserFactory, PacketParser
-from common.enums import ParserType
+from common.enums import ParserType, ConnectionProtocol
 from common.dtos import (
     PortConfig,
     PortDataEvent,
@@ -237,6 +237,14 @@ class ConnectionController(QObject):
             self._emit_error(name, "Connection is already open.")
             return False
 
+        # 미구현 프로토콜 명시적 거부 (S-041 B-2) — 조용히 Serial로 연결 시도하지 않는다.
+        if config.protocol not in ConnectionProtocol.SUPPORTED:
+            self._emit_error(
+                name,
+                f"Protocol '{config.protocol}' is not implemented yet. Connection not attempted."
+            )
+            return False
+
         # DTO를 직접 Transport에 전달 (provider 분기는 이 한 곳뿐 — S-033)
         if config.port == LOOPBACK_PORT_NAME:
             transport = LoopbackTransport(config)
@@ -246,8 +254,17 @@ class ConnectionController(QObject):
         # Worker에 Transport 주입
         worker = ConnectionWorker(transport, name)
 
-        # Parser 생성 (기본 Raw)
-        self.parsers[name] = ParserFactory.create_parser(ParserType.RAW)
+        # Parser 생성 (설정값 반영 — S-041 B-1). 잘못된 파라미터(빈 delimiter,
+        # 0 이하 length)는 ParserFactory가 ValueError로 거부하므로 조용히
+        # 삼키지 않고 _emit_error로 사용자에게 표면화한다.
+        parser_type = ParserType.from_preference_index(config.parser_type)
+        try:
+            parser_kwargs = self._build_parser_kwargs(parser_type, config)
+            self.parsers[name] = ParserFactory.create_parser(parser_type, **parser_kwargs)
+        except ValueError as exc:
+            self._emit_error(name, f"Invalid packet parser configuration: {exc}")
+            return False
+
         self.connection_configs[name] = config
 
         # Worker signals -> Controller signals (Wrap in DTO)
@@ -352,6 +369,46 @@ class ConnectionController(QObject):
             name (str): 종료된 포트 이름.
         """
         self._cleanup_worker_registry(name)
+
+    @staticmethod
+    def _build_parser_kwargs(parser_type: str, config: PortConfig) -> Dict[str, Any]:
+        """
+        파서 타입에 따라 ParserFactory에 전달할 kwargs를 구성합니다.
+
+        Args:
+            parser_type (str): ParserType 문자열 상수.
+            config (PortConfig): 파서 설정이 실려 있는 연결 설정 DTO.
+
+        Returns:
+            Dict[str, Any]: ParserFactory.create_parser에 전달할 kwargs.
+        """
+        if parser_type == ParserType.DELIMITER:
+            return {"delimiter": ConnectionController._decode_delimiter(config.packet_delimiter)}
+        if parser_type == ParserType.FIXED_LENGTH:
+            return {"length": config.packet_length}
+        return {}
+
+    @staticmethod
+    def _decode_delimiter(raw: str) -> bytes:
+        """
+        Preferences에 저장된 이스케이프 문자열 구분자를 실제 바이트로 변환합니다.
+
+        예: "\\r\\n" (백슬래시-r-백슬래시-n 4글자) -> b'\\r\\n' (CR LF 2바이트).
+
+        Args:
+            raw (str): 설정에 저장된 구분자 문자열.
+
+        Returns:
+            bytes: 디코딩된 구분자 바이트열. 빈 문자열이면 b""
+                (DelimiterParser가 이를 거부하도록 그대로 전달한다).
+        """
+        if not raw:
+            return b""
+        try:
+            return raw.encode("utf-8").decode("unicode_escape").encode("latin-1")
+        except (UnicodeDecodeError, UnicodeEncodeError):
+            # 디코딩 불가능한 값은 원본을 그대로 바이트로 취급 (최선의 노력)
+            return raw.encode("utf-8")
 
     def _emit_error(self, port: str, message: str) -> None:
         """
