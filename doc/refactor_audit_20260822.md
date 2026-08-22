@@ -218,14 +218,36 @@ EventBus")가 합리적이다. Qt 시그널을 버스로 강제 우회시키면 
 | [S-044](../tasks/S-044-dead-code-and-dto.md) | dead code 3건 + DTO/enum 우회 (C-3, C-4) | ✅ P2 완료 (32dd019) |
 | [S-045](../tasks/S-045-test-coverage-gaps.md) | 커버리지 공백 5모듈 + DataLogger 종료 (B-5, C-2) | ✅ P2 완료 (32dd019) |
 | [S-046](../tasks/S-046-docs-and-rules-sync.md) | 문서·규칙 정합 일괄 (C-6 판정 반영, D 문서군) | ✅ P2 완료 (32dd019) |
-| [S-047](../tasks/S-047-magic-numbers-naming-lint.md) | 매직 넘버·명명 규칙·lint 도입 (D) | P3 |
-| [S-048](../tasks/S-048-singleton-isolation-and-key-check.md) | 싱글톤 테스트 격리, 언어 키 사용처 검증 (C-7, D) | P3 |
-| [S-049](../tasks/S-049-god-object-decomposition.md) | God object 분해·로그 위젯 공통화 (C-7) | P3 |
+| [S-047](../tasks/S-047-magic-numbers-naming-lint.md) | 매직 넘버·명명 규칙·lint 도입 (D) | ✅ P3 완료 (d9103ee) |
+| [S-048](../tasks/S-048-singleton-isolation-and-key-check.md) | 싱글톤 테스트 격리, 언어 키 사용처 검증 (C-7, D) | ✅ P3 완료 (d9103ee) |
+| [S-049](../tasks/S-049-log-widget-commonization.md) | 로그 위젯 중복 공통화 (C-7) | ✅ P3 완료 (927d625) |
+| [S-050](../tasks/S-050-theme-manager-safety-net.md) | 테마/색 매니저 안전망 + 순환 참조 해소 (C-7) | ✅ P3 완료 (927d625) |
+| [S-051](../tasks/S-051-datalog-broadcast-init-mismatch.md) | DataLog 브로드캐스트 초기값 불일치 (S-049 중 발견) | 진행 |
 
 ### 진행 경과 (2026-08-22)
 
-P0·P1·P2 전량 완료. **테스트 134 → 227**(신규 93건)로 안전망을 먼저 깔았고, 그 위에서
-P3 구조 개선을 착수한다. 감사에서 지목한 "조용히 틀린 결과를 내는" 결함은 모두 제거됐다.
+P0~P3 전량 완료. **테스트 134 → 282**(신규 148건). 감사에서 지목한 "조용히 틀린 결과를
+내는" 결함은 모두 제거됐고, 구조 개선은 **안전망을 먼저 깐 뒤** 착수하는 순서를 지켰다.
+
+### 감사 중 추가로 드러난 것 (감사 자체의 성과)
+
+- **로그 뷰가 아예 동작하지 않던 상태**(A-1)를 발견 — 테스트 134개가 전부 통과하는 채로.
+- ruff 도입 첫 실행에서 **도달 불가능한 `return` + 미정의 이름 참조**(F821)를 잡음.
+- S-049 특성화 테스트 작성 중 **초기값 불일치로 설정 복원이 실패하는 버그** 발견(S-051).
+- S-050이 **`_theme_dir` 캐싱으로 `ResourcePath` 재주입이 무효화되는 잠재 함정** 발견
+  (수정하지 않고 기록 — 향후 리소스 경로 리팩토링 시 함정).
+
+### 남은 것 (근거 있는 보류·후속)
+
+- **God object 실제 분해**: 분해 후보가 정리됨(ThemeManager → FontManager +
+  ThemeResourceLoader + 얇은 오케스트레이터, ColorManager → ColorRuleRepository +
+  ColorQtAdapter, MainPresenter → PreferencesCoordinator + ShutdownStateCollector 등).
+  이제 특성화 테스트가 있으므로 착수 가능하다.
+- **로그 위젯 제어 흐름 불일치**(DataLog=Presenter 권위 vs SystemLog=자기 권위):
+  중복 제거와 별개 판단이라 통일하지 않고 양쪽에 주석으로 기록.
+- **패킷 뷰 무스로틀**(C-6 인접): 고속 환경 실측 전까지 보류.
+- **ruff 잔여 44건**: 스코프 밖 파일(F401/E402 위주). CI lint job은 현재 non-blocking.
+- **S-007 성능 최적화**: 실측상 병목 없음으로 보류(재개 조건 기록됨).
 
 **원칙**: P0/P1은 "조용히 틀린 결과를 내는" 것들이라 먼저 없앤다. 구조 개선(God object 분해,
 중복 공통화)은 회귀 위험이 크므로 **커버리지 공백(S-045)을 메운 뒤** 착수한다 — 지금 상태에서
