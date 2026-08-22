@@ -185,6 +185,11 @@ class MacroListWidget(QWidget):
         header.setSectionResizeMode(MacroColumns.DELAY, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(MacroColumns.SEND_BTN, QHeaderView.ResizeToContents)
 
+        # 최소 창 폭에서 헤더 텍스트가 Stretch/ResizeToContents 계산 폭보다 좁아 잘리는
+        # 것을 방지 (S-032, 실측: "Command"->"omman", "Delay(ms)" 헤더도 동일 결함 잠재).
+        # ResizeToContents는 헤더 텍스트 폭을 고려하지 않으므로 전역 최소 폭을 별도로 둔다.
+        header.setMinimumSectionSize(self._compute_header_min_section_size(header))
+
         layout.addLayout(header_layout)
         layout.addWidget(self.macro_table)
 
@@ -338,6 +343,42 @@ class MacroListWidget(QWidget):
     # -------------------------------------------------------------------------
     # UI 갱신 및 컨텍스트 메뉴 (UI Updates & Context Menu)
     # -------------------------------------------------------------------------
+    @staticmethod
+    def _compute_header_min_section_size(header: QHeaderView) -> int:
+        """
+        헤더 폰트 메트릭 기반 최소 섹션 폭을 계산합니다.
+
+        Logic:
+            - 로드된 모든 언어(en/ko)의 헤더 텍스트 폭 중 가장 넓은 값을 구한다
+              (ResizeToContents는 헤더 텍스트 폭을 반영하지 않아 좁은 창에서
+              Command/Delay 등 헤더 문구가 잘리는 결함이 있었다 - S-032).
+            - QSS 패딩(양쪽 4px + 우측 테두리 1px, resources/themes/common.qss:158-164)을
+              더해 최소 섹션 폭을 반환한다. 픽셀을 직접 하드코딩하지 않는다(ui_guide.md §3).
+
+        Args:
+            header (QHeaderView): 폭을 계산할 대상 헤더.
+
+        Returns:
+            int: 최소 섹션 폭(px).
+        """
+        header_text_keys = [
+            "macro_list_col_prefix",
+            "macro_list_col_command",
+            "macro_list_col_suffix",
+            "macro_list_col_hex",
+            "macro_list_col_delay",
+            "macro_list_col_send",
+        ]
+        fm = header.fontMetrics()
+        max_text_width = 0
+        for key in header_text_keys:
+            for lang in language_manager.get_supported_languages():
+                text = language_manager.get_text(key, language_code=lang)
+                max_text_width = max(max_text_width, fm.horizontalAdvance(text))
+
+        section_padding = 4 + 4 + 1  # QHeaderView::section padding(4px x2) + border-right(1px)
+        return max_text_width + section_padding
+
     def update_header_labels(self) -> None:
         """테이블 헤더 라벨을 업데이트합니다."""
         # Enum 순서에 맞춰 라벨 리스트 생성
