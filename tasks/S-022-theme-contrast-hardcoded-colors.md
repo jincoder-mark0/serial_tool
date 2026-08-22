@@ -1,6 +1,11 @@
 # S-022 — 테마 대비 미달·하드코딩 색 수정
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. 8항목 전부 반영: 위젯 코드
+  색 리터럴 제거(QSS 동적 속성 방식), 3테마 QSS 규칙 신설, 대비 전 조합 ≥4.5 계산 검증.
+  하위 모델이 지정 색 2건의 미달을 계산으로 발견해 대체(light 연결색 #2e7d32→#1b5e20 4.499
+  미달, dracula danger #ff5555→#c62828 텍스트 대비 미달) — 근거 주석 명기.
+  에스컬레이션 처리: constants.py LOG_COLOR_DARK_ERROR도 #FF6B6B로 정합(상위 수정) —
+  color_rules.json 재생성 시 구값 복귀 드리프트 차단. pytest 85 passed, 캡처 4조합 확인)
 - Recommended model: **하위(Sonnet) 가능** (목표 색은 상위가 확정해 둠 — 대비 계산으로 검증)
 - 선행: 없음 (근거: doc/ux_audit_20260822.md 높음 #8~#10, 중간 에러색, 낮음 QSS 상태)
 - Skills to load: task-done

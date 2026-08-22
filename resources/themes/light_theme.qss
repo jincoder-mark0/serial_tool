@@ -249,7 +249,17 @@ QGroupBox {
 }
 
 QGroupBox::title, QLabel[class="section-title"] {
-    color: #2196F3;
+    color: #1565C0;
+}
+
+QLabel[class="hint-text"] {
+    color: #505050;
+}
+
+QLabel[class="file-path-box"] {
+    color: #505050;
+    border-color: #c0c0c0;
+    background-color: #ffffff;
 }
 
 /* QStatusBar */
@@ -380,6 +390,11 @@ QPushButton[state="disconnected"] {
     color: #333333;
 }
 
+QPushButton[state="disconnected"]:hover {
+    background-color: #d0d0d0;
+    border-color: #b0b0b0;
+}
+
 QPushButton[state="error"] {
     background-color: #F44336;
     border-color: #D32F2F;
@@ -389,4 +404,43 @@ QPushButton[state="error"] {
 QPushButton[state="error"]:hover {
     background-color: #EF5350;
     border-color: #C62828;
+}
+
+/* Recording (REC) State */
+QPushButton[state="recording"]:checked {
+    background-color: #ffcdd2;
+    color: #b71c1c;
+}
+
+/* Port Status Dot (StatusBar) */
+QLabel[state="connected"] {
+    color: #1b5e20;
+    font-weight: bold;
+}
+
+QLabel[state="disconnected"] {
+    color: #616161;
+    font-weight: bold;
+}
+
+/* Danger Progress (Buffer Overflow / Transfer Failure) */
+QProgressBar[state="danger"]::chunk {
+    background-color: #F44336;
+}
+
+/* Disabled States */
+QComboBox:disabled {
+    background-color: #f0f0f0;
+    color: #a0a0a0;
+    border-color: #e0e0e0;
+}
+
+QCheckBox::indicator:disabled {
+    background-color: #f0f0f0;
+    border-color: #e0e0e0;
+}
+
+QTabBar::tab:disabled {
+    background-color: #f0f0f0;
+    color: #a0a0a0;
 }

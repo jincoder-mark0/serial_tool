@@ -14,7 +14,7 @@
       "pattern": "\\bERROR\\b",
       "color": "",
       "light_color": "#CC0000",
-      "dark_color": "#F44336",
+      "dark_color": "#FF6B6B",
       "regex_enabled": true,
       "enabled": true
     },
@@ -50,7 +50,7 @@
       "pattern": "\\[ERROR\\]",
       "color": "",
       "light_color": "#CC0000",
-      "dark_color": "#F44336",
+      "dark_color": "#FF6B6B",
       "regex_enabled": true,
       "enabled": true
     },

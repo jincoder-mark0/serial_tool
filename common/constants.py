@@ -168,7 +168,7 @@ MAX_COMMAND_HISTORY_SIZE: int = 50    # 수동 명령 History 최대 크기
 # ==========================================
 LOG_COLOR_DARK_TIMESTAMP: str = "#9E9E9E"
 LOG_COLOR_DARK_INFO: str = "#2196F3"
-LOG_COLOR_DARK_ERROR: str = "#F44336"
+LOG_COLOR_DARK_ERROR: str = "#FF6B6B"  # 다크/드라큘라 배경에서 WCAG 4.5:1 확보 (S-022, color_rules.json과 동일 값 유지)
 LOG_COLOR_DARK_WARN: str = "#D4A017"
 LOG_COLOR_DARK_PROMPT: str = '#00BCD4'
 LOG_COLOR_DARK_SUCCESS: str = "#4CAF50"

@@ -256,6 +256,16 @@ QGroupBox::title, QLabel[class="section-title"] {
     color: #ff79c6; /* Pink Title */
 }
 
+QLabel[class="hint-text"] {
+    color: #8a94c8;
+}
+
+QLabel[class="file-path-box"] {
+    color: #8a94c8;
+    border-color: #44475a;
+    background-color: #21222c;
+}
+
 /* QStatusBar */
 QStatusBar {
     background-color: #191a21;
@@ -384,6 +394,11 @@ QPushButton[state="disconnected"] {
     color: #f8f8f2;
 }
 
+QPushButton[state="disconnected"]:hover {
+    background-color: #6272a4;
+    border-color: #bd93f9;
+}
+
 QPushButton[state="error"] {
     background-color: #ff5555;
     border-color: #ff5555;
@@ -393,4 +408,44 @@ QPushButton[state="error"] {
 QPushButton[state="error"]:hover {
     background-color: #ff6e6e;
     border-color: #ff6e6e;
+}
+
+/* Recording (REC) State */
+QPushButton[state="recording"]:checked {
+    background-color: #5a1d1d;
+    color: #ff8a80;
+}
+
+/* Port Status Dot (StatusBar) */
+QLabel[state="connected"] {
+    color: #50fa7b;
+    font-weight: bold;
+}
+
+QLabel[state="disconnected"] {
+    color: #8a94c8;
+    font-weight: bold;
+}
+
+/* Danger Progress (Buffer Overflow / Transfer Failure) */
+/* 순정 #ff5555는 QProgressBar 텍스트색(#f8f8f2)과 대비 미달이라 어두운 danger 톤 사용 */
+QProgressBar[state="danger"]::chunk {
+    background-color: #c62828;
+}
+
+/* Disabled States */
+QComboBox:disabled {
+    background-color: #21222c;
+    color: #6272a4;
+    border-color: #44475a;
+}
+
+QCheckBox::indicator:disabled {
+    background-color: #21222c;
+    border-color: #44475a;
+}
+
+QTabBar::tab:disabled {
+    background-color: #21222c;
+    color: #6272a4;
 }

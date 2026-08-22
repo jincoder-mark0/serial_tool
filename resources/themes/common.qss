@@ -208,6 +208,19 @@ QLabel[class="section-title"] {
     margin-bottom: 2px;
 }
 
+/* Hint / Muted Text (색은 테마별 QSS에서 지정) */
+QLabel[class="hint-text"] {
+    font-weight: normal;
+}
+
+/* File Path Box (선택된 파일 경로 표시, 색은 테마별 QSS에서 지정) */
+QLabel[class="file-path-box"] {
+    padding: 5px;
+    border-width: 1px;
+    border-style: solid;
+    border-radius: 4px;
+}
+
 /* QStatusBar */
 QStatusBar {
     border-top-width: 1px;

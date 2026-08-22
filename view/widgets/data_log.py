@@ -386,10 +386,12 @@ class DataLogWidget(QWidget):
 
         if active:
             self.data_log_toggle_logging_btn.setText("● REC")
-            self.data_log_toggle_logging_btn.setStyleSheet("color: red;")
+            self.data_log_toggle_logging_btn.setProperty("state", "recording")
         else:
             self.data_log_toggle_logging_btn.setText(language_manager.get_text("data_log_btn_toggle_logging"))
-            self.data_log_toggle_logging_btn.setStyleSheet("")
+            self.data_log_toggle_logging_btn.setProperty("state", None)
+        self.data_log_toggle_logging_btn.style().unpolish(self.data_log_toggle_logging_btn)
+        self.data_log_toggle_logging_btn.style().polish(self.data_log_toggle_logging_btn)
 
     def show_save_log_dialog(self) -> str:
         """

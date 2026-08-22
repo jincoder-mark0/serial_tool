@@ -137,6 +137,7 @@ class FileProgressWidget(QWidget):
         self.speed_lbl.setText("0 KB/s")
         self.eta_lbl.setText(language_manager.get_text("file_prog_lbl_eta_placeholder"))
         self.cancel_btn.setEnabled(False)
+        self._set_progress_bar_danger(False)
 
     def set_complete(self, success: bool, message: str = "") -> None:
         """
@@ -151,7 +152,20 @@ class FileProgressWidget(QWidget):
             self.progress_bar.setValue(100)
             status_msg = language_manager.get_text("file_prog_lbl_status_completed").format(message)
             self.status_lbl.setText(status_msg)
+            self._set_progress_bar_danger(False)
         else:
             status_msg = language_manager.get_text("file_prog_lbl_status_failed").format(message)
             self.status_lbl.setText(status_msg)
-            self.progress_bar.setStyleSheet("QProgressBar::chunk { background-color: red; }")
+            self._set_progress_bar_danger(True)
+
+    def _set_progress_bar_danger(self, danger: bool) -> None:
+        """
+        진행률 바를 실패(danger) 상태로 표시합니다.
+        색은 QSS(QProgressBar[state="danger"])가 테마별 danger 색과 동일하게 지정합니다.
+
+        Args:
+            danger (bool): 실패 상태 여부.
+        """
+        self.progress_bar.setProperty("state", "danger" if danger else None)
+        self.progress_bar.style().unpolish(self.progress_bar)
+        self.progress_bar.style().polish(self.progress_bar)

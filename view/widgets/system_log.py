@@ -296,7 +296,9 @@ class SystemLogWidget(QWidget):
                 self.sys_logging_started.emit(filename)
                 # 버튼 스타일 변경
                 self.sys_log_toggle_logging_btn.setText("● REC")
-                self.sys_log_toggle_logging_btn.setStyleSheet("color: red;")
+                self.sys_log_toggle_logging_btn.setProperty("state", "recording")
+                self.sys_log_toggle_logging_btn.style().unpolish(self.sys_log_toggle_logging_btn)
+                self.sys_log_toggle_logging_btn.style().polish(self.sys_log_toggle_logging_btn)
             else:
                 # 취소 시 버튼 복구
                 self.sys_log_toggle_logging_btn.setChecked(False)
@@ -305,7 +307,9 @@ class SystemLogWidget(QWidget):
             self.sys_logging_stopped.emit()
             # 버튼 스타일 복구
             self.sys_log_toggle_logging_btn.setText(language_manager.get_text("sys_log_btn_toggle_logging"))
-            self.sys_log_toggle_logging_btn.setStyleSheet("")
+            self.sys_log_toggle_logging_btn.setProperty("state", None)
+            self.sys_log_toggle_logging_btn.style().unpolish(self.sys_log_toggle_logging_btn)
+            self.sys_log_toggle_logging_btn.style().polish(self.sys_log_toggle_logging_btn)
 
     @pyqtSlot(int)
     def on_sys_log_filter_changed(self, state: int) -> None:

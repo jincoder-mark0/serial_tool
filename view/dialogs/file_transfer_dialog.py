@@ -78,9 +78,7 @@ class FileTransferDialog(QDialog):
 
         path_layout = QHBoxLayout()
         self.file_path_lbl = QLabel(language_manager.get_text("manual_control_lbl_file_path_no_file"))
-        self.file_path_lbl.setStyleSheet(
-            "color: gray; border: 1px solid #555; padding: 5px; border-radius: 4px; background-color: #2b2b2b;"
-        )
+        self.file_path_lbl.setProperty("class", "file-path-box")
         self.file_path_lbl.setWordWrap(True)
 
         self.select_file_btn = QPushButton(language_manager.get_text("manual_control_btn_select_file"))

@@ -41,6 +41,7 @@ class MainStatusBar(QStatusBar):
 
         # UI 컴포넌트 참조
         self.port_lbl: QLabel = None
+        self.port_status_lbl: QLabel = None
         self.rx_count_lbl: QLabel = None
         self.tx_count_lbl: QLabel = None
         self.bps_lbl: QLabel = None
@@ -69,6 +70,10 @@ class MainStatusBar(QStatusBar):
         self.port_lbl = QLabel()
         self.port_lbl.setMinimumWidth(100)
         self.addPermanentWidget(self.port_lbl)
+
+        # 1-1. Port Status Dot (●/○) - 색은 QSS 동적 속성(state)으로 테마별 지정
+        self.port_status_lbl = QLabel()
+        self.addPermanentWidget(self.port_status_lbl)
 
         # 2. RX Speed
         self.rx_count_lbl = QLabel()
@@ -118,11 +123,16 @@ class MainStatusBar(QStatusBar):
     def _refresh_port_label(self) -> None:
         """캐시된 포트 상태로 포트 라벨을 (재)렌더링합니다."""
         status_symbol = "●" if self._current_connected else "○"
-        color = "#4CAF50" if self._current_connected else "#9E9E9E"  # Green / Grey
+        state = "connected" if self._current_connected else "disconnected"
         label_text = language_manager.get_text("main_status_lbl_port").format(self._current_port)
 
-        # HTML 태그로 색상 적용
-        self.port_lbl.setText(f"{label_text} <span style='color:{color}; font-weight:bold;'>{status_symbol}</span>")
+        self.port_lbl.setText(label_text)
+
+        # 색은 QSS(QLabel[state=...])가 테마별로 결정 - 위젯 코드에 색 리터럴을 두지 않는다.
+        self.port_status_lbl.setText(status_symbol)
+        self.port_status_lbl.setProperty("state", state)
+        self.port_status_lbl.style().unpolish(self.port_status_lbl)
+        self.port_status_lbl.style().polish(self.port_status_lbl)
 
     def update_rx_speed(self, bytes_per_sec: int) -> None:
         """수신 속도 업데이트"""
@@ -152,10 +162,10 @@ class MainStatusBar(QStatusBar):
         """
         self.buffer_bar.setValue(percent)
 
-        if percent >= 80:
-            self.buffer_bar.setStyleSheet("QProgressBar::chunk { background-color: #FF5252; }") # TODO - using name_themes.QSS
-        else:
-            self.buffer_bar.setStyleSheet("") # Default Theme Style
+        # 색은 QSS(QProgressBar[state="danger"])가 테마별 danger 색과 동일하게 지정
+        self.buffer_bar.setProperty("state", "danger" if percent >= 80 else None)
+        self.buffer_bar.style().unpolish(self.buffer_bar)
+        self.buffer_bar.style().polish(self.buffer_bar)
 
     def update_time(self, time_str: str) -> None:
         """시간 표시 업데이트"""

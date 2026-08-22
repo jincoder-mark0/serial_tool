@@ -41,7 +41,8 @@ class AboutDialog(QDialog):
         title_lbl.setAlignment(Qt.AlignCenter)
 
         version_lbl = QLabel(language_manager.get_text("about_lbl_version").format(__version__))
-        version_lbl.setStyleSheet("font-size: 14px; color: #888;")
+        version_lbl.setStyleSheet("font-size: 14px;")
+        version_lbl.setProperty("class", "hint-text")
         version_lbl.setAlignment(Qt.AlignCenter)
 
         # 설명
@@ -50,7 +51,8 @@ class AboutDialog(QDialog):
 
         # 저작권
         copyright_lbl = QLabel(language_manager.get_text("about_lbl_copyright"))
-        copyright_lbl.setStyleSheet("font-size: 12px; color: #666;")
+        copyright_lbl.setStyleSheet("font-size: 12px;")
+        copyright_lbl.setProperty("class", "hint-text")
         copyright_lbl.setAlignment(Qt.AlignCenter)
 
         # 닫기 버튼
