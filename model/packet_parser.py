@@ -24,6 +24,8 @@ import time
 import re
 
 from common.enums import ParserType
+from common.constants import PARSER_MAX_BUFFER_SIZE
+from core.logger import logger
 
 @dataclass
 class Packet:
@@ -84,7 +86,7 @@ class ATParser(PacketParser):
     \\r\\n 구분자로 라인 단위 파싱, OK/ERROR 응답 처리
     """
 
-    def __init__(self, max_buffer_size: int = 4096):
+    def __init__(self, max_buffer_size: int = PARSER_MAX_BUFFER_SIZE):
         """
         ATParser 초기화
 
@@ -100,16 +102,11 @@ class ATParser(PacketParser):
 
         Logic:
             - 새 데이터를 내부 버퍼에 추가
-            - 버퍼 크기 제한 확인 (초과 시 오래된 데이터 버림)
-            - \\r\\n으로 라인 분리
-            - 각 라인을 Packet으로 변환
+            - \\r\\n으로 라인 분리 (완결 패킷을 먼저 전부 분리)
+            - 분리 후 남은 미완결 조각이 버퍼 크기 제한을 넘으면 그때만 버림
+              (S-064: 자르기를 분리보다 먼저 하면 완결 패킷까지 함께 유실된다)
         """
         self._buffer += buffer
-
-        # 버퍼 크기 제한 (메모리 보호)
-        if len(self._buffer) > self._max_buffer_size:
-            # 오래된 데이터 버림
-            self._buffer = self._buffer[-self._max_buffer_size:]
 
         packets = []
 
@@ -117,6 +114,15 @@ class ATParser(PacketParser):
             line, self._buffer = self._buffer.split(b'\r\n', 1)
             if line:
                 packets.append(Packet(data=line + b'\r\n', timestamp=time.time(), metadata={"type": "AT"}))
+
+        # 버퍼 크기 제한 (메모리 보호) — 완결 패킷을 모두 분리하고 남은 조각에만 적용
+        if len(self._buffer) > self._max_buffer_size:
+            dropped = len(self._buffer) - self._max_buffer_size
+            logger.warning(
+                f"ATParser: incomplete buffer exceeded max_buffer_size "
+                f"({self._max_buffer_size} bytes); dropping {dropped} oldest byte(s)."
+            )
+            self._buffer = self._buffer[-self._max_buffer_size:]
 
         return packets
 
@@ -126,7 +132,7 @@ class ATParser(PacketParser):
 class DelimiterParser(PacketParser):
     """사용자 정의 구분자 기반 파서"""
 
-    def __init__(self, delimiter: bytes = b'\n', max_buffer_size: int = 4096):
+    def __init__(self, delimiter: bytes = b'\n', max_buffer_size: int = PARSER_MAX_BUFFER_SIZE):
         """
         DelimiterParser 초기화
 
@@ -144,18 +150,31 @@ class DelimiterParser(PacketParser):
         self._max_buffer_size = max_buffer_size
 
     def parse(self, buffer: bytes) -> List[Packet]:
-        """구분자로 패킷 분리"""
-        self._buffer += buffer
+        """
+        구분자로 패킷 분리
 
-        # 버퍼 크기 제한
-        if len(self._buffer) > self._max_buffer_size:
-            self._buffer = self._buffer[-self._max_buffer_size:]
+        Logic:
+            - 새 데이터를 내부 버퍼에 추가
+            - 구분자로 완결 패킷을 먼저 전부 분리
+            - 분리 후 남은 미완결 조각이 버퍼 크기 제한을 넘으면 그때만 버림
+              (S-064: 자르기를 분리보다 먼저 하면 완결 패킷까지 함께 유실된다)
+        """
+        self._buffer += buffer
 
         packets = []
 
         while self._delimiter in self._buffer:
             chunk, self._buffer = self._buffer.split(self._delimiter, 1)
             packets.append(Packet(data=chunk + self._delimiter, timestamp=time.time()))
+
+        # 버퍼 크기 제한 (메모리 보호) — 완결 패킷을 모두 분리하고 남은 조각에만 적용
+        if len(self._buffer) > self._max_buffer_size:
+            dropped = len(self._buffer) - self._max_buffer_size
+            logger.warning(
+                f"DelimiterParser: incomplete buffer exceeded max_buffer_size "
+                f"({self._max_buffer_size} bytes); dropping {dropped} oldest byte(s)."
+            )
+            self._buffer = self._buffer[-self._max_buffer_size:]
 
         return packets
 
@@ -165,7 +184,7 @@ class DelimiterParser(PacketParser):
 class FixedLengthParser(PacketParser):
     """고정 길이 패킷 파서"""
 
-    def __init__(self, length: int, max_buffer_size: int = 4096):
+    def __init__(self, length: int, max_buffer_size: int = PARSER_MAX_BUFFER_SIZE):
         """
         FixedLengthParser 초기화
 
@@ -183,12 +202,17 @@ class FixedLengthParser(PacketParser):
         self._max_buffer_size = max_buffer_size
 
     def parse(self, buffer: bytes) -> List[Packet]:
-        """고정 길이로 패킷 분리"""
-        self._buffer += buffer
+        """
+        고정 길이로 패킷 분리
 
-        # 버퍼 크기 제한
-        if len(self._buffer) > self._max_buffer_size:
-            self._buffer = self._buffer[-self._max_buffer_size:]
+        Logic:
+            - 새 데이터를 내부 버퍼에 추가
+            - self._length 배수만큼 완결 패킷을 먼저 전부 분리
+            - 분리 후 남은 미완결 조각(length 미만)이 버퍼 크기 제한을 넘으면 그때만 버림
+              (S-064: 자르기를 분리보다 먼저 하면 완결 패킷까지 함께 유실된다.
+              DelimiterParser/ATParser와 동일하게 "길이 도달"이 여기서의 완결 기준이다.)
+        """
+        self._buffer += buffer
 
         packets = []
 
@@ -196,6 +220,15 @@ class FixedLengthParser(PacketParser):
             chunk = self._buffer[:self._length]
             self._buffer = self._buffer[self._length:]
             packets.append(Packet(data=chunk, timestamp=time.time()))
+
+        # 버퍼 크기 제한 (메모리 보호) — 완결 패킷을 모두 분리하고 남은 조각에만 적용
+        if len(self._buffer) > self._max_buffer_size:
+            dropped = len(self._buffer) - self._max_buffer_size
+            logger.warning(
+                f"FixedLengthParser: incomplete buffer exceeded max_buffer_size "
+                f"({self._max_buffer_size} bytes); dropping {dropped} oldest byte(s)."
+            )
+            self._buffer = self._buffer[-self._max_buffer_size:]
 
         return packets
 

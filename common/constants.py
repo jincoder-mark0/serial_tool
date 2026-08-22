@@ -168,6 +168,14 @@ TX_QUEUE_SIZE: int = 128
 BATCH_SIZE_THRESHOLD: int = 8192  # 이 크기가 넘으면 즉시 전송 (bytes)
 BATCH_TIMEOUT_MS: int = 50        # 이 시간이 지나면 크기가 작아도 전송 (ms)
 
+# PacketParser(AT/Delimiter/FixedLength) 내부 버퍼 상한 기본값 (S-064)
+# BATCH_SIZE_THRESHOLD(=한 번의 emit 최대 크기)의 배수로 정의한다: 완결 패킷을 모두
+# 분리한 뒤 남는 미완결 조각이 배치 한 번 분량만큼 더 누적돼도 곧바로 잘려나가지
+# 않도록 여유를 둔다. 파서 자체는 "먼저 분리, 남는 조각만 상한 적용" 순서로
+# 동작하므로 이 값은 정상적인 완결 패킷 유실을 막는 안전장치가 아니라, 구분자가
+# 오지 않는 미완결 조각(폭주/기형 스트림)에 대한 메모리 보호 목적이다.
+PARSER_MAX_BUFFER_SIZE: int = BATCH_SIZE_THRESHOLD * 2  # 16384
+
 # ==========================================
 # Performance & Timings
 # ==========================================

@@ -1,6 +1,6 @@
 # S-064 — 파서 버퍼 잘라내기로 완결 패킷 유실
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 Sonnet, 회귀 테스트로 수정 전 실패 확인 후 3파서 순서 교정, pytest 393 passed·ruff 0건)
 - Recommended model: **하위(Sonnet) 가능**
 - 선행: 없음 (S-061 측정 중 발견)
 - Skills to load: task-done
@@ -63,7 +63,33 @@ def parse(self, buffer: bytes) -> List[Packet]:
 
 ## Acceptance criteria (DoD)
 
-- [ ] 배치 임계값 이상을 한 번에 받아도 완결 패킷이 유실되지 않는다(수정 전 실패를 확인한 테스트).
-- [ ] 미완결 조각을 버릴 때 경고가 남는다.
-- [ ] 메모리 보호(무한 증가 방지)가 유지됨을 테스트로 고정한다.
-- [ ] 전체 pytest·ruff 통과.
+- [x] 배치 임계값 이상을 한 번에 받아도 완결 패킷이 유실되지 않는다(수정 전 실패를 확인한 테스트).
+- [x] 미완결 조각을 버릴 때 경고가 남는다.
+- [x] 메모리 보호(무한 증가 방지)가 유지됨을 테스트로 고정한다.
+- [x] 전체 pytest·ruff 통과.
+
+## 수행 결과 (2026-08-22, 하위 Sonnet)
+
+- **전제 재확인**: `model/packet_parser.py`의 세 생성자 라인(87/129/168)·
+  `common/constants.py:168`의 `BATCH_SIZE_THRESHOLD=8192`·
+  `model/connection_worker.py:107` 사용처 모두 태스크 기술과 일치함을 코드로 확인.
+- **수정 전 실패 확인**: `tests/test_model_packet_parsers.py`에 회귀 테스트를 먼저 작성한 뒤,
+  `model/packet_parser.py`만 수정 전(git HEAD) 버전으로 되돌려 실행 →
+  `DelimiterParser`: `assert 8 == 2000`(1992개 유실), `ATParser`: `assert 6 == 1500`
+  (1494개 유실), `FixedLengthParser`: `assert 8 == 1200`(1192개 유실) — 세 파서 모두
+  실패를 직접 확인한 뒤 수정 파일을 복원했다.
+- **세 파서 모두 수정**: `ATParser`/`DelimiterParser`/`FixedLengthParser` 전부 "완결 패킷
+  분리 → 남은 미완결 조각에만 상한 적용" 순서로 교정. `FixedLengthParser`도 "길이 도달"이
+  DelimiterParser의 구분자와 동일한 역할(완결 기준)을 하므로 같은 순서 버그를 갖고 있어
+  동일하게 고쳤다(별도 처리 불필요 — 코드로 확인, 성격이 다르지 않았음).
+- **미완결 조각 폐기 시 경고**: 세 파서 모두 `core.logger.logger.warning(...)`으로
+  버려지는 바이트 수를 로그에 남김 (`core/data_logger.py`의 기존 관례와 동일 계열).
+- **`max_buffer_size` 기본값 판단**: `common/constants.py`에 `PARSER_MAX_BUFFER_SIZE =
+  BATCH_SIZE_THRESHOLD * 2`(16384) 신설, 세 파서 기본값을 매직 넘버 4096 대신 이 상수로
+  교체. 순서 수정 자체로 "정상 배치가 즉시 상한에 걸리는" 원래 문제는 해소되지만,
+  구분자가 오지 않는 미완결 조각이 한 배치 분량만큼 더 누적돼도 곧바로 잘리지 않도록
+  여유를 둔 것 — `BATCH_SIZE_THRESHOLD`와의 관계를 배수로 명시해 매직 넘버 단일 관리
+  원칙을 충족.
+- **검증**: `pytest tests/test_model_packet_parsers.py -q` 23 passed →
+  전체 `pytest -q` 393 passed → `ruff check .` All checks passed. Mock 기반(실기기 미검증
+  항목 없음 — 순수 파서 단위 로직).
