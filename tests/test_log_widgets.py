@@ -253,15 +253,33 @@ class TestDataLogStateContract:
         widget = DataLogWidget()
         assert set(widget.get_state().keys()) == self.EXPECTED_KEYS
 
+    def test_initial_internal_state_matches_checkbox(self, qapp):
+        # S-051: 생성 직후 내부 변수(tx_broadcast_allowed_enabled)와 체크박스
+        # 초기 상태가 어긋나 있으면, apply_state가 체크박스의 stateChanged 신호에
+        # 의존하는 구조상 "이미 같은 값이라 신호가 안 나는" 왕복 실패로 이어진다.
+        widget = DataLogWidget()
+        assert widget.tx_broadcast_allowed_enabled == widget.data_log_tx_broadcast_allowed_chk.isChecked()
+
+    def test_apply_state_immediately_after_init_restores_broadcast_off(self, qapp):
+        # S-051 재현: 생성 직후(신호가 한 번도 발생하지 않은 상태)
+        # apply_state({"tx_broadcast_allowed_enabled": False, ...})를 호출해도
+        # 체크박스가 이미 초기값과 같으면 stateChanged가 발생하지 않아 내부 변수가
+        # 갱신되지 않던 결함을 고정한다(저장된 False가 True로 되살아나면 안 된다).
+        widget = DataLogWidget()
+        state_off = {
+            "tx_broadcast_allowed_enabled": False,
+            "hex_mode": False,
+            "timestamp": False,
+            "is_paused": False,
+            "search_text": "",
+            "filter_enabled": False,
+            "newline_mode": NewlineMode.RAW.value,
+        }
+        widget.apply_state(state_off)
+        assert widget.tx_broadcast_allowed_enabled is False
+        assert widget.get_state()["tx_broadcast_allowed_enabled"] is False
+
     def test_apply_state_then_get_state_round_trips(self, qapp):
-        # 주의(특성화로 확인된 기존 동작): 생성 직후 내부 변수
-        # `tx_broadcast_allowed_enabled`는 True이지만 체크박스 위젯 자체는
-        # 기본 unchecked(False)로 만들어져 있다 — 초기화 시 두 값이 어긋난 채로
-        # 시작한다. apply_state({"tx_broadcast_allowed_enabled": False, ...})를
-        # 생성 직후 바로 호출하면 체크박스가 이미 False라 setChecked(False)가
-        # 아무 신호도 내지 않고, 내부 변수는 초기값 True에 머문 채 get_state()가
-        # True를 반환한다(왕복 실패). 리팩토링 대상이 아니므로 고치지 않고,
-        # 실제로 상태가 바뀌는 전이만 왕복시켜 회귀를 감지한다.
         widget = DataLogWidget()
         state_on = {
             "tx_broadcast_allowed_enabled": True,

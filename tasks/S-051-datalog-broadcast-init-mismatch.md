@@ -1,7 +1,11 @@
 # S-051 — DataLogWidget 브로드캐스트 초기값 불일치
 
-- Status: TODO
-- Recommended model: **하위(Sonnet) 가능**
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. 내부 변수 기본값 True → False.
+  근거: connection_worker·DTO·defaults가 모두 False이고 체크박스도 명시 setChecked 없음 —
+  위젯 내부 변수만 오기였다. 재현 테스트 2건이 수정 전 실패함을 확인 후 수정 → 기준선 284.
+  같은 유형 전수 조사: 다른 위젯은 shadow 변수가 없거나 기본값이 일치해 실제 사례 없음.
+  `apply_state`의 신호 의존 구조는 잠재 취약점으로 기록만 — 현재 발현되는 곳이 없어
+  최소 구현 원칙에 따라 리팩토링하지 않음)
 - 선행: S-049 (발견 경위)
 - Skills to load: task-done
 

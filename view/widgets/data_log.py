@@ -87,7 +87,9 @@ class DataLogWidget(QWidget):
         self.data_log_newline_combo: Optional[QComboBox] = None
 
         # State Variables
-        self.tx_broadcast_allowed_enabled: bool = True
+        # 체크박스 초기값(unchecked)과 일치시킨다 — 모델 계층 기본값도 False
+        # (ConnectionWorker._broadcast_enabled = False, S-051)이므로 True는 오기였다.
+        self.tx_broadcast_allowed_enabled: bool = False
         self.hex_mode: bool = False
         self.is_paused: bool = False
         self.timestamp_enabled: bool = False
