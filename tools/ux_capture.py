@@ -19,6 +19,10 @@ UI/UX 점검·완료 판정용 실측 도구입니다. offscreen 플랫폼은 �
 * 사용: python tools/ux_capture.py --theme dark --lang ko --out <dir>
 * 전체 조합: 테마(dark/light) x 언어(ko/en) 루프로 4회 호출
 * 캡처 중 창이 1초 미만 잠깐 표시된다 (offscreen 사용 금지 — 폰트 미렌더)
+
+## 주의 (부작용)
+* 앱 종료 시퀀스가 창 지오메트리를 resources/configs/settings.json에 저장한다.
+  캡처를 마치면 반드시 되돌릴 것: git checkout -- resources/configs/settings.json
 """
 import argparse
 import os
