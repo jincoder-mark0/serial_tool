@@ -162,6 +162,7 @@
     "manual_control_edit_auto_tx_interval_tooltip": "Auto Tx 반복 간격 (ms, 최소 50ms)",
     "manual_control_grp_file": "파일 전송",
     "manual_control_lbl_file_path_no_file": "선택된 파일 없음",
+    "manual_control_lbl_ms_unit": "ms",
     "manual_control_txt_command_placeholder": "명령 입력 (Ctrl+Enter 전송)...",
     "manual_panel_title": "수동 제어",
     "packet_btn_clear": "초기화",

@@ -195,6 +195,14 @@ LAYOUT_SPACING_TIGHT: int = 2    # 툴바 등 촘촘한 배치 간격
 LAYOUT_SPACING_DEFAULT: int = 5  # 일반 위젯 간 기본 간격
 ICON_BUTTON_SIZE: int = 30       # 아이콘형 소형 버튼 한 변 길이 (정사각형)
 
+# 섹션 제목 → 내용 간격 (S-035). QGroupBox 타이틀 여백(~20px)과의 10배 차이를 좁히기 위해
+# section-title 계열의 margin-bottom을 이 값으로 통일한다.
+# QSS(resources/themes/common.qss)는 이 상수를 읽지 못하므로 값이 바뀌면 양쪽을 함께 수정할 것.
+LAYOUT_SPACING_TITLE: int = 8
+# 체크박스 등 옵션 항목 간 그루핑 간격 (S-035). 체크박스 내부 인디케이터-라벨 간격(QSS spacing 5px,
+# LAYOUT_SPACING_DEFAULT와 동일)보다 커야 "항목 간 구분 > 항목 내부 구성"이 성립해 소속이 헷갈리지 않는다.
+LAYOUT_SPACING_GROUP: int = 10
+
 # ==========================================
 # System & File Constants
 # ==========================================

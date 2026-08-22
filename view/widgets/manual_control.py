@@ -26,7 +26,7 @@ from typing import Optional, List, Dict, Any
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
-    QPushButton, QPlainTextEdit, QLineEdit, QCheckBox
+    QPushButton, QPlainTextEdit, QLineEdit, QCheckBox, QLabel
 )
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, QSize, Qt
 from PyQt5.QtGui import QKeyEvent
@@ -38,7 +38,7 @@ from common.dtos import ManualCommand, ManualControlState
 from common.constants import (
     MAX_COMMAND_HISTORY_SIZE, DEFAULT_MACRO_INTERVAL_MS, MIN_AUTO_TX_INTERVAL_MS,
     LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_DEFAULT,
-    LAYOUT_SPACING_TIGHT, LAYOUT_SPACING_DEFAULT, ICON_BUTTON_SIZE
+    LAYOUT_SPACING_TIGHT, LAYOUT_SPACING_DEFAULT, LAYOUT_SPACING_GROUP, ICON_BUTTON_SIZE
 )
 
 
@@ -93,6 +93,7 @@ class ManualControlWidget(QWidget):
         self.dtr_chk: Optional[QCheckBox] = None
         self.auto_tx_chk: Optional[QCheckBox] = None
         self.auto_tx_interval_edit: Optional[SmartNumberEdit] = None
+        self.auto_tx_ms_lbl: Optional[QLabel] = None
 
         # History State - 저장/복원 안함 (런타임 메모리)
         self.command_history: List[str] = []
@@ -185,6 +186,17 @@ class ManualControlWidget(QWidget):
         # 5자리(최대 99999ms) 기준 폰트 메트릭으로 최소 폭 계산 (S-025 관례)
         min_interval_width = self.auto_tx_interval_edit.fontMetrics().horizontalAdvance("0" * 5) + 12
         self.auto_tx_interval_edit.setMinimumWidth(min_interval_width)
+        # 실행 제어(매크로 반복 간격 입력)와 정렬 통일 (S-035). SmartNumberEdit(QPlainTextEdit
+        # 기반)는 setAlignment API가 없음(확인: QPlainTextEdit에 미존재). QTextCursor로 블록
+        # 서식(QTextBlockFormat)에 정렬을 지정하는 통상적 방법은 PlainTextDocumentLayout이
+        # 렌더 시 무시해 실측(육안)상 효과가 없었음 — 대신 문서 defaultTextOption의 정렬을
+        # 바꾸는 방식을 사용(문서 단위 설정이라 setPlainText로 텍스트가 바뀌어도 유지됨, 실측 확인).
+        self._align_number_edit_right(self.auto_tx_interval_edit)
+
+        # Auto Tx 간격 단위 라벨 ("ms") — 체크박스만 있고 단위 표시가 없어 숫자의 의미가
+        # 불분명했음(S-035). macro_control의 "간격 (ms)"는 라벨에 내장된 형태라 이 위치(입력 뒤)에는
+        # 맞지 않아 별도 단위 라벨을 신설.
+        self.auto_tx_ms_lbl = QLabel(language_manager.get_text("manual_control_lbl_ms_unit"))
 
         # 4. 레이아웃 배치
         # 버튼 그룹 (우측)
@@ -208,7 +220,9 @@ class ManualControlWidget(QWidget):
         option_layout = QGridLayout()
         option_layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_DEFAULT,
                                           LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)  # 상단 여백 추가
-        option_layout.setSpacing(LAYOUT_SPACING_DEFAULT) # 간격 조정
+        # 항목 간 간격(LAYOUT_SPACING_GROUP=10) > 체크박스 내부 인디케이터-라벨 간격(QSS 5px) —
+        # 두 간격이 같으면(기존 5px) 인디케이터가 어느 라벨 소속인지 혼동됨(S-035).
+        option_layout.setSpacing(LAYOUT_SPACING_GROUP)
 
         # 1행에 배치 (가로 공간 활용)
         option_layout.addWidget(self.hex_chk, 0, 0)
@@ -219,9 +233,10 @@ class ManualControlWidget(QWidget):
         option_layout.addWidget(self.local_echo_chk, 0, 5)
         option_layout.addWidget(self.broadcast_chk, 0, 6)
 
-        # 2행: Auto Tx (체크박스 + 간격 입력) — 1행이 이미 7칸으로 가득 차 별도 행에 배치
+        # 2행: Auto Tx (체크박스 + 간격 입력 + ms 단위 라벨) — 1행이 이미 7칸으로 가득 차 별도 행에 배치
         option_layout.addWidget(self.auto_tx_chk, 1, 0)
         option_layout.addWidget(self.auto_tx_interval_edit, 1, 1)
+        option_layout.addWidget(self.auto_tx_ms_lbl, 1, 2)
 
         # 전체 레이아웃 조합
         layout = QVBoxLayout()
@@ -236,6 +251,25 @@ class ManualControlWidget(QWidget):
 
         # 초기 상태 설정 (연결 전 비활성화)
         self.set_controls_enabled(False)
+
+    @staticmethod
+    def _align_number_edit_right(edit: SmartNumberEdit) -> None:
+        """
+        SmartNumberEdit(QPlainTextEdit 기반)의 텍스트를 우측 정렬합니다.
+
+        Logic:
+            - QPlainTextEdit에는 setAlignment API가 없다(확인됨, S-035).
+            - QTextCursor + QTextBlockFormat으로 블록 단위 정렬을 지정하는 통상적 방법은
+              PlainTextDocumentLayout이 렌더링 시 무시해 실측(네이티브 캡처)상 좌측 정렬로
+              보였다 — 대신 문서 전체의 defaultTextOption 정렬을 바꾸는 방식을 쓴다.
+              문서 단위 설정이라 setPlainText로 텍스트를 다시 설정해도 유지된다(실측 확인).
+
+        Args:
+            edit (SmartNumberEdit): 정렬을 적용할 위젯.
+        """
+        option = edit.document().defaultTextOption()
+        option.setAlignment(Qt.AlignRight)
+        edit.document().setDefaultTextOption(option)
 
     def retranslate_ui(self) -> None:
         """
@@ -256,6 +290,7 @@ class ManualControlWidget(QWidget):
         self.auto_tx_interval_edit.setToolTip(
             language_manager.get_text("manual_control_edit_auto_tx_interval_tooltip")
         )
+        self.auto_tx_ms_lbl.setText(language_manager.get_text("manual_control_lbl_ms_unit"))
         self.send_command_btn.setText(language_manager.get_text("manual_control_btn_send"))
         self.history_up_btn.setToolTip(language_manager.get_text("manual_control_btn_history_up_tooltip"))
         self.history_down_btn.setToolTip(language_manager.get_text("manual_control_btn_history_down_tooltip"))
@@ -554,6 +589,7 @@ class ManualControlWidget(QWidget):
             self.local_echo_chk.setChecked(state.local_echo_enabled)
             self.broadcast_chk.setChecked(state.broadcast_enabled)
             self.auto_tx_chk.setChecked(state.auto_tx_enabled)
+            # 정렬(우측)은 document defaultTextOption에 저장되어 setPlainText 후에도 유지됨
             self.auto_tx_interval_edit.setPlainText(str(state.auto_tx_interval_ms))
         finally:
             self.blockSignals(False)

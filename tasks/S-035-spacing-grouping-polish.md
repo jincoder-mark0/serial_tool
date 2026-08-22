@@ -1,7 +1,9 @@
 # S-035 — 마진·구획 정비 (그룹 경계·제목 간격·체크박스 그루핑)
 
-- Status: TODO
-- Recommended model: **하위(Sonnet) 가능** (확정 설계 기준)
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. 3테마 테두리 대비 3.03~3.59
+  (설계 원안 값이 계산상 미달임을 하위가 실측해 상향), SPACING_TITLE 8·SPACING_GROUP 10
+  신설·적용, Auto ms 라벨+우측 정렬(정렬 방식 2차 시도로 해결), 실행 제어 행 그룹 간격.
+  pytest 134·캡처 8조합 확인. 트레이드오프: 최소 높이 780→791(+11), 폭 불변)
 - 선행: **S-033·S-034 커밋 후** (constants.py·view 파일 충돌 회피)
 - Skills to load: task-done, lang-keys
 

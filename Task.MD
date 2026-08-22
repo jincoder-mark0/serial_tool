@@ -58,9 +58,9 @@
 | [S-026](tasks/S-026-minimum-window-width.md) | 최소 창 크기 완화 | UX | ✅ 완료 | **1471×786 → 1093×780** (2026-08-22). 폭 목표 초과 달성. 높이 잔여는 S-032 |
 | [S-032](tasks/S-032-min-height-and-macro-header.md) | 최소 높이 마무리 + 매크로 헤더 잘림 | UX | ✅ 완료 | 헤더 잘림 해소(스크롤 허용 판정). 높이 780 잔여는 ⛔ 보류(재개 조건부). 전제 오류 → RULES §8 규칙화 |
 | [S-033](tasks/S-033-loopback-dummy-port.md) | 루프백 더미 포트 (디버깅용) | 기능 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 테스트 +8, 기준선 130. 레이스 발견 → S-037 |
-| [S-037](tasks/S-037-send-before-open-race.md) | 연결 직후 send 침묵 실패 레이스 | 안정성 | ⏸ 대기 | S-033 중 발견 — isRunning/transport.is_open 간극에 send 유실 (기존 결함) |
+| [S-037](tasks/S-037-send-before-open-race.md) | 연결 직후 send 침묵 실패 레이스 | 안정성 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 옵션 A(큐잉 허용), 회귀 4건. 기준선 134 |
 | [S-034](tasks/S-034-remove-scan-button.md) | 중복 검색 버튼 제거 | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 삭제 20줄·키 2종 제거, 자동 스캔 경로 검증 |
-| [S-035](tasks/S-035-spacing-grouping-polish.md) | 마진·구획 정비 (테두리 대비·제목 간격·그루핑) | UX | ⏸ 대기 | 2026-08-22 마진·배치 점검 처방 — 테두리 1.1:1, 제목 간격 10배 차 등 |
+| [S-035](tasks/S-035-spacing-grouping-polish.md) | 마진·구획 정비 (테두리 대비·제목 간격·그루핑) | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 대비 3:1↑·간격 상수 2종·ms 라벨. 최소 높이 +11 |
 | [S-036](tasks/S-036-fixed-font-routing-and-i18n.md) | 고정폭 폰트 설정 미반영 + 언어팩 잔여 4건 | UX | ⏸ 대기 | 근본 원인: common.qss 하드코딩이 QSS 특이도로 동적 폰트 규칙을 이김 |
 
 ## 우선순위 메모

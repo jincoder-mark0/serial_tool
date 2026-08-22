@@ -202,10 +202,12 @@ QGroupBox::title {
 }
 
 /* Section Title (Unified with GroupBox Title) */
+/* margin-bottom는 common/constants.py의 LAYOUT_SPACING_TITLE(8)과 값을 맞춘다 (S-035) —
+   QGroupBox 타이틀 여백(~20px)과 10배 차이나던 것을 좁혀 제목-내용 간격을 통일. */
 QLabel[class="section-title"] {
     font-weight: bold;
     padding: 0 5px;
-    margin-bottom: 2px;
+    margin-bottom: 8px;
 }
 
 /* Hint / Muted Text (색은 테마별 QSS에서 지정) */

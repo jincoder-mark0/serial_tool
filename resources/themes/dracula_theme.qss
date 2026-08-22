@@ -248,8 +248,11 @@ QCheckBox::indicator:hover {
 }
 
 /* QGroupBox */
+/* border-color #44475a->#6272a4 (S-035): 배경 #282a36 대비 1.56:1 -> 3.03:1로 상향.
+   #6272a4는 이 파일 헤더에 이미 "Comment: Borders, Hints" 용도로 문서화된 공식 팔레트 색
+   (계산: tasks/S-022 스크립트 패턴, 실측값은 S-035 태스크 보고 참고). */
 QGroupBox {
-    border-color: #44475a;
+    border-color: #6272a4;
 }
 
 QGroupBox::title, QLabel[class="section-title"] {

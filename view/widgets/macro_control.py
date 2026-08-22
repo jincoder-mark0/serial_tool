@@ -32,7 +32,7 @@ from view.managers.language_manager import language_manager
 from common.dtos import MacroRepeatOption
 from common.constants import (
     DEFAULT_MACRO_INTERVAL_MS,
-    LAYOUT_MARGIN_NONE, LAYOUT_SPACING_TIGHT, LAYOUT_SPACING_DEFAULT
+    LAYOUT_MARGIN_NONE, LAYOUT_SPACING_TIGHT, LAYOUT_SPACING_DEFAULT, LAYOUT_SPACING_GROUP
 )
 
 
@@ -155,7 +155,9 @@ class MacroControlWidget(QWidget):
         # 3행 구성 (S-026): 1행 설정값 / 2행 스크립트 I·O / 3행 실행 제어
         # 기존 QGridLayout(1행 7열)이 가로 폭을 지배(592px)하던 문제를 세로로 풀어 해소.
         execution_layout = QVBoxLayout()
-        execution_layout.setContentsMargins(2, 2, 2, 2)  # 그룹박스 내부 촘촘한 여백 (기존 값, 상수 목록에 없음)
+        # 그룹박스 내부 촘촘한 여백 — 값(2)이 LAYOUT_SPACING_TIGHT와 같아 상수 재사용으로 정리 (S-035)
+        execution_layout.setContentsMargins(LAYOUT_SPACING_TIGHT, LAYOUT_SPACING_TIGHT,
+                                             LAYOUT_SPACING_TIGHT, LAYOUT_SPACING_TIGHT)
         execution_layout.setSpacing(LAYOUT_SPACING_DEFAULT)
 
         # Row 0: 간격(ms) + 반복 횟수 + 브로드캐스트
@@ -182,6 +184,9 @@ class MacroControlWidget(QWidget):
 
         execution_layout.addLayout(row0_layout)
         execution_layout.addLayout(row1_layout)
+        # 저장/불러오기(row1)와 실행 제어(row2) 사이 그루핑 간격 — 성격이 다른 행 묶음임을
+        # 시각적으로 구분한다 (S-035, 다른 행 간 간격 LAYOUT_SPACING_DEFAULT보다 크게).
+        execution_layout.addSpacing(LAYOUT_SPACING_GROUP)
         execution_layout.addLayout(row2_layout)
 
         # 자동 실행 설정 그룹 (Execution Group)

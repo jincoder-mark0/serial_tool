@@ -248,10 +248,11 @@ def test_no_hardcoded_korean_in_code():
 
 def test_layout_constants_exist():
     """
-    common.constants에 LAYOUT_* 6종 + ICON_BUTTON_SIZE가 존재하고 가이드 표의 값과 일치해야 한다.
+    common.constants에 LAYOUT_* 8종 + ICON_BUTTON_SIZE가 존재하고 가이드 표의 값과 일치해야 한다.
 
     Logic:
         - ui_guide.md §2 표에 박제된 값과 상수 모듈을 대조해 무단 삭제·변경을 감지한다.
+        - LAYOUT_SPACING_TITLE/LAYOUT_SPACING_GROUP은 S-035에서 신설(그룹 경계·제목 간격 정비).
     """
     from common import constants
 
@@ -261,6 +262,8 @@ def test_layout_constants_exist():
         "LAYOUT_MARGIN_DIALOG": 15,
         "LAYOUT_SPACING_TIGHT": 2,
         "LAYOUT_SPACING_DEFAULT": 5,
+        "LAYOUT_SPACING_TITLE": 8,
+        "LAYOUT_SPACING_GROUP": 10,
         "ICON_BUTTON_SIZE": 30,
     }
 
