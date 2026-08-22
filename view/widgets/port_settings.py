@@ -558,7 +558,9 @@ class PortSettingsWidget(QGroupBox):
         self.serial_controls_ui['baud_combo'].setCurrentText(str(serial_state.get("baudrate", DEFAULT_BAUDRATE)))
         self.serial_controls_ui['data_combo'].setCurrentText(str(serial_state.get("bytesize", "8")))
         self.serial_controls_ui['parity_combo'].setCurrentText(serial_state.get("parity", SerialParity.NONE.value))
-        self.serial_controls_ui['stop_combo'].setCurrentText(str(serial_state.get("stopbits", SerialStopBits.ONE.value)))
+        self.serial_controls_ui['stop_combo'].setCurrentText(
+            str(serial_state.get("stopbits", SerialStopBits.ONE.value))
+        )
         self.serial_controls_ui['flow_combo'].setCurrentText(serial_state.get("flowctrl", SerialFlowControl.NONE.value))
 
         spi_state = state.get("spi", {})

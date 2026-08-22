@@ -132,7 +132,9 @@ class FileProgressWidget(QWidget):
         self.eta_lbl.setText(f"ETA: {eta_min:02d}:{eta_sec:02d}")
 
         # 상태 메시지 업데이트
-        status_msg = language_manager.get_text("file_prog_lbl_status_sending").format(state.sent_bytes, state.total_bytes)
+        status_msg = language_manager.get_text("file_prog_lbl_status_sending").format(
+            state.sent_bytes, state.total_bytes
+        )
         self.status_lbl.setText(status_msg)
         self.cancel_btn.setEnabled(True)
 

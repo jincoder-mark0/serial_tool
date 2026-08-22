@@ -18,7 +18,7 @@
 import re
 import serial.tools.list_ports
 from PyQt5.QtCore import QThread, pyqtSignal
-from typing import List, Tuple
+from typing import List
 from core.logger import logger
 from common.dtos import PortInfo
 from common.constants import LOOPBACK_PORT_NAME

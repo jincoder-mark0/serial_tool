@@ -19,7 +19,7 @@
 * 쓰기 시점의 타임스탬프를 캡처하여 PCAP 정밀도 보장
 * 백그라운드 스레드에서 포맷에 따른 인코딩 및 파일 쓰기 수행
 """
-from typing import Optional, Dict, Tuple
+from typing import Optional, Dict
 from queue import Queue, Empty
 from threading import Thread
 import os
@@ -271,9 +271,19 @@ class DataLoggerManager:
             del self._loggers[port_name]
 
     def stop_all(self) -> None:
-        """모든 포트의 로깅을 중단합니다."""
+        """
+        모든 포트의 로깅을 중단합니다.
+
+        Logic:
+            - 포트별 stop_logging()을 순회 호출하되, 한 포트에서 예외가 발생해도
+              (S-059) 나머지 포트의 파일이 안 닫히는 일이 없도록 개별적으로
+              감싸 계속 진행한다. 실패는 조용히 삼키지 않고 ERROR로 표면화한다.
+        """
         for port_name in list(self._loggers.keys()):
-            self.stop_logging(port_name)
+            try:
+                self.stop_logging(port_name)
+            except Exception as e:
+                logger.error(f"DataLoggerManager stop_all: failed to stop '{port_name}': {e}")
 
     def write(self, port_name: str, data: bytes) -> None:
         """

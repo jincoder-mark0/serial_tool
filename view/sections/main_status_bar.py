@@ -142,7 +142,9 @@ class MainStatusBar(QStatusBar):
 
     def _refresh_rx_label(self) -> None:
         """캐시된 RX 속도로 라벨을 (재)렌더링합니다."""
-        self.rx_count_lbl.setText(language_manager.get_text("main_status_lbl_rx").format(f"{self._current_rx_kbps:.1f} KB/s"))
+        self.rx_count_lbl.setText(
+            language_manager.get_text("main_status_lbl_rx").format(f"{self._current_rx_kbps:.1f} KB/s")
+        )
 
     def update_tx_speed(self, bytes_per_sec: int) -> None:
         """송신 속도 업데이트"""
@@ -151,7 +153,9 @@ class MainStatusBar(QStatusBar):
 
     def _refresh_tx_label(self) -> None:
         """캐시된 TX 속도로 라벨을 (재)렌더링합니다."""
-        self.tx_count_lbl.setText(language_manager.get_text("main_status_lbl_tx").format(f"{self._current_tx_kbps:.1f} KB/s"))
+        self.tx_count_lbl.setText(
+            language_manager.get_text("main_status_lbl_tx").format(f"{self._current_tx_kbps:.1f} KB/s")
+        )
 
     def update_buffer(self, percent: int) -> None:
         """

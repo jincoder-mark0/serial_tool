@@ -21,13 +21,12 @@
 pytest tests/test_model.py -v
 """
 import time
-import pytest
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock
 
 from model.packet_parser import ParserFactory
 from model.connection_controller import ConnectionController
 from model.macro_runner import MacroRunner
-from common.dtos import PortConfig, MacroEntry, PortConnectionEvent, PortDataEvent
+from common.dtos import MacroEntry
 from common.enums import ParserType
 
 

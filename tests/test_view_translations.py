@@ -20,7 +20,6 @@
 pytest tests/test_view_translations.py -v
 """
 import pytest
-from PyQt5.QtWidgets import QPushButton, QLabel
 
 from view.managers.language_manager import language_manager
 from view.panels.manual_control_panel import ManualControlPanel

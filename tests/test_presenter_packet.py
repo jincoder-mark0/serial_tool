@@ -22,7 +22,7 @@ PacketPresenter의 비즈니스 로직과 뷰 제어 흐름을 검증합니다.
 pytest tests/test_presenter_packet.py -v
 """
 import pytest
-from unittest.mock import MagicMock, call
+from unittest.mock import MagicMock
 
 from presenter.packet_presenter import PacketPresenter
 from common.dtos import PacketEvent, PreferencesState, PacketViewData

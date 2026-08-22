@@ -136,7 +136,7 @@ def main() -> None:
 
     # 8. MainWindow 및 Presenter 초기화
     window = MainWindow()
-    presenter = MainPresenter(window)
+    presenter = MainPresenter(window)  # noqa: F841 - QObject 시그널 배선 유지 위해 참조 보관(GC 방지)
 
     window.show()
 

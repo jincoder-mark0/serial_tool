@@ -22,8 +22,6 @@ S-045 커버리지 테스트: RingBuffer / ThreadSafeQueue (core/structures.py)
   포인터 이동과 바이트 내용을 손으로 계산해 assert한다 (표준 라이브러리만 사용,
   하드웨어/스레드 불필요 — 순수 산술 검증).
 """
-import pytest
-
 from core.structures import RingBuffer, ThreadSafeQueue
 
 

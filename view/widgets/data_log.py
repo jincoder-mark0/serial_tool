@@ -144,7 +144,9 @@ class DataLogWidget(QWidget):
 
         # 도구 섹션 (검색, 옵션, 액션)
         # TX Broadcast Checkbox
-        self.data_log_tx_broadcast_allowed_chk = QCheckBox(language_manager.get_text("data_log_chk_tx_broadcast_allowed"))
+        self.data_log_tx_broadcast_allowed_chk = QCheckBox(
+            language_manager.get_text("data_log_chk_tx_broadcast_allowed")
+        )
         self.data_log_tx_broadcast_allowed_chk.setToolTip(language_manager.get_text("data_log_chk_tx_broadcast_allowed_tooltip"))
         self.data_log_tx_broadcast_allowed_chk.stateChanged.connect(self.on_data_log_tx_broadcast_allowed_changed)
 

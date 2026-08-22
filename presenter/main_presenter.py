@@ -25,7 +25,7 @@ View와 Model을 연결하고 전역 상태를 관리합니다.
 """
 import os
 from typing import Optional
-from PyQt5.QtCore import QObject, QTimer, QDateTime, Qt
+from PyQt5.QtCore import QObject, QTimer, QDateTime, QCoreApplication
 
 from view.main_window import MainWindow
 from model.connection_controller import ConnectionController
@@ -259,6 +259,7 @@ class MainPresenter(QObject):
             - View에서 현재 윈도우 및 위젯 상태(DTO) 수집 (Facade)
             - SettingsManager를 통해 설정 저장
             - 활성 연결 종료
+            - RX 데이터 로거 정리 (연결 종료 이후, S-059)
             - 종료 로그 기록
         """
         logger.info("Shutdown initiated...")
@@ -326,6 +327,18 @@ class MainPresenter(QObject):
 
         if self.connection_controller.has_active_connection:
             self.connection_controller.close_connection()
+
+        # [S-059] RX 데이터 로거 정리: 반드시 연결 종료 "이후"에 수행한다.
+        # 근거: ConnectionWorker.run()은 종료 직전 finally에서 배치 버퍼에 남은
+        # 마지막 RX 조각을 data_received로 flush한다(worker 스레드 emit, Fast Path로
+        # data_logger_manager.write()까지 전달). close_connection() -> worker.stop()은
+        # QThread.wait()로 블로킹 대기하므로, 그 사이 발생한 교차 스레드 큐잉 시그널은
+        # 메인 이벤트 루프가 아직 처리하지 못한 상태로 남는다. 로거를 먼저 닫으면
+        # 이 마지막 조각이 아직 파일에 반영되기 전에 파일이 닫혀 유실된다.
+        # 따라서 (1) 연결 종료 -> (2) processEvents()로 큐잉된 마지막 Fast Path
+        # 시그널 배송 -> (3) 로거 정리 순서로만 유실 없이 닫을 수 있다.
+        QCoreApplication.processEvents()
+        data_logger_manager.stop_all()
 
         logger.info("Shutdown completed.")
 

@@ -24,13 +24,10 @@ try:
     import commentjson as json
 except ImportError:
     import json
-import jsonschema
 from jsonschema import validate, ValidationError
 from pathlib import Path
 from typing import Dict, Any, Optional
-import os
 
-from common.constants import DEFAULT_BAUDRATE, DEFAULT_LOG_MAX_LINES
 from core.settings_schema import CORE_SETTINGS_SCHEMA
 from core.logger import logger
 from common.defaults import create_fallback_settings

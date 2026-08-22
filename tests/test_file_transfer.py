@@ -29,7 +29,6 @@ S-045 커버리지 테스트: FileTransferService (model/file_transfer_service.p
 * 실제 왕복 검증(성공 케이스)은 `tests/test_tx_flush.py`와 동일하게
   진짜 `ConnectionController` + `LoopbackTransport`를 사용한다.
 """
-import os
 import time
 
 import pytest

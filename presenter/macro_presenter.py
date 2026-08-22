@@ -22,13 +22,13 @@
 * DTO(MacroScriptData, MacroExecutionRequest)를 사용한 데이터 전달
 * Signal/Slot을 이용한 이벤트 처리
 """
-from typing import List, Dict, Any, Optional, Tuple
+from typing import List, Optional, Tuple
 try:
     import commentjson
 except ImportError:
     import json as commentjson
 
-from PyQt5.QtCore import QObject, QThread, pyqtSignal, Qt
+from PyQt5.QtCore import QObject, QThread, pyqtSignal
 
 from view.panels.macro_panel import MacroPanel
 from view.managers.language_manager import language_manager
@@ -36,7 +36,6 @@ from model.macro_runner import MacroRunner
 from common.dtos import (
     MacroEntry,
     MacroScriptData,
-    MacroRepeatOption,
     MacroStepEvent,
     ManualCommand,
     MacroExecutionRequest,

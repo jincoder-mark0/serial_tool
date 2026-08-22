@@ -84,7 +84,9 @@ class GlobalErrorHandler(QObject):
         """
         self._message_provider = message_provider
 
-    def report_error(self, exc_type: Type[BaseException], exc_value: BaseException, tb: Optional[TracebackType]) -> None:
+    def report_error(
+        self, exc_type: Type[BaseException], exc_value: BaseException, tb: Optional[TracebackType]
+    ) -> None:
         """
         수동으로 예외를 보고하는 메서드
 

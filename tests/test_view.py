@@ -18,9 +18,7 @@ UI 위젯(View)의 독립적인 동작과 사용자 상호작용을 검증합니
 * pytest-qt의 `qtbot` 픽스처를 사용하여 UI 이벤트(클릭, 키 입력) 시뮬레이션
 * SignalSpy(qtbot.waitSignal)를 사용하여 시그널 발생과 전달된 데이터(DTO) 검증
 """
-import pytest
 from PyQt5.QtCore import Qt
-from PyQt5.QtWidgets import QPushButton
 
 from view.custom_qt.smart_line_edit import QSmartLineEdit
 from view.panels.manual_control_panel import ManualControlPanel

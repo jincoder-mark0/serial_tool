@@ -19,7 +19,6 @@
 * DTO 변환 후 View의 append_packet 메서드 호출
 * SettingsManager를 통해 초기 설정 로드 및 변경 사항 반영
 """
-from typing import Optional
 from PyQt5.QtCore import QObject, QDateTime
 
 from view.panels.packet_panel import PacketPanel

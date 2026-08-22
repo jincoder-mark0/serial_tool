@@ -101,7 +101,13 @@ class Logger:
         if resource_path and hasattr(resource_path, 'logs_dir'):
             self._setup_file_handler(str(resource_path.logs_dir))
 
-    def _setup_file_handler(self, log_dir_path: str, file_formatter: logging.Formatter=logging.Formatter('%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s')):
+    def _setup_file_handler(
+        self,
+        log_dir_path: str,
+        file_formatter: logging.Formatter = logging.Formatter(
+            '%(asctime)s - %(name)s - %(levelname)s - %(filename)s:%(lineno)d - %(message)s'
+        ),
+    ):
         """
         파일 핸들러를 설정합니다
 

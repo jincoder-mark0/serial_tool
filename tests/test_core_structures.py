@@ -25,10 +25,8 @@ from dataclasses import asdict
 from common.dtos import (
     PortConfig,
     ManualCommand,
-    MacroEntry,
     PacketViewData,
-    PortDataEvent,
-    PortStatistics
+    PortDataEvent
 )
 from common.enums import (
     SerialParity,

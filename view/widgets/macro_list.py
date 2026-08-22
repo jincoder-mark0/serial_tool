@@ -557,7 +557,9 @@ class MacroListWidget(QWidget):
         # 추가된 행 선택
         self.macro_table.selectRow(insert_row_index)
 
-    def _insert_row(self, row_index: int, command: str, prefix: bool, hex_mode: bool, suffix: bool, delay: str, enabled: bool = True) -> None:
+    def _insert_row(
+        self, row_index: int, command: str, prefix: bool, hex_mode: bool, suffix: bool, delay: str, enabled: bool = True
+    ) -> None:
         """
         새로운 행을 모델의 특정 위치에 삽입합니다.
 

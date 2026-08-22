@@ -41,11 +41,11 @@ PROJECT_ROOT = Path(__file__).resolve().parents[1]
 if str(PROJECT_ROOT) not in sys.path:
     sys.path.insert(0, str(PROJECT_ROOT))
 
-from common.constants import DEFAULT_READ_CHUNK_SIZE, RING_BUFFER_SIZE
-from common.enums import LogFormat, ParserType
-from core.data_logger import DataLogger
-from core.structures import RingBuffer, ThreadSafeQueue
-from model.packet_parser import ParserFactory
+from common.constants import DEFAULT_READ_CHUNK_SIZE, RING_BUFFER_SIZE  # noqa: E402 - sys.path 조작 후 임포트 필요
+from common.enums import LogFormat, ParserType  # noqa: E402 - sys.path 조작 후 임포트 필요
+from core.data_logger import DataLogger  # noqa: E402 - sys.path 조작 후 임포트 필요
+from core.structures import RingBuffer, ThreadSafeQueue  # noqa: E402 - sys.path 조작 후 임포트 필요
+from model.packet_parser import ParserFactory  # noqa: E402 - sys.path 조작 후 임포트 필요
 
 DEFAULT_TOTAL_BYTES = 256 * 1024 * 1024  # 256MB
 DEFAULT_QUEUE_COUNT = 100_000

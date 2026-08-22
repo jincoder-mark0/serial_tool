@@ -30,8 +30,6 @@ import re
 import struct
 import time
 
-import pytest
-
 from core import data_logger as data_logger_module
 from core.data_logger import DataLogger, DataLoggerManager
 from common.enums import LogFormat

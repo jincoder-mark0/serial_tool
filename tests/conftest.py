@@ -25,7 +25,7 @@ import sys
 import os
 import copy
 import pytest
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 # -----------------------------------------------------------------------------
 # 1. 경로 설정 (Path Setup)
