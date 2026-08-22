@@ -20,9 +20,8 @@
 * 내부적으로 ColorRule DTO 리스트를 유지하며, 요청 시 Qt 객체로 변환하여 제공
 * ThemeManager와 연동하여 현재 테마에 맞는 색상 적용 (순환 참조 방지 적용)
 """
-import os
 import json
-from typing import List, Optional, Tuple, Dict, Any
+from typing import List, Optional, Tuple
 from pathlib import Path
 
 from PyQt5.QtCore import QObject
@@ -461,8 +460,10 @@ class ColorManager(QObject):
                 light_c = r.get('light_color', '')
                 dark_c = r.get('dark_color', '')
 
-                if not light_c: light_c = legacy_color
-                if not dark_c: dark_c = legacy_color
+                if not light_c:
+                    light_c = legacy_color
+                if not dark_c:
+                    dark_c = legacy_color
 
                 # [핵심] 로드 시점에 모든 색상 데이터 정규화 (# 붙이기)
                 self._rules.append(ColorRule(

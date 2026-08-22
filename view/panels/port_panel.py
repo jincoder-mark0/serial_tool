@@ -20,7 +20,7 @@ Presenter와 하위 위젯 사이의 인터페이스(Facade) 역할을 수행합
 * 하위 위젯의 시그널을 패널 시그널로 중계(Relay)
 * DTO(PortConfig, PortStatistics)를 사용하여 데이터 교환
 """
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout
 from PyQt5.QtCore import pyqtSignal

@@ -23,6 +23,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtGui import QFont
 import platform
 from view.managers.language_manager import language_manager
+from common.constants import DIALOG_SPACING_FONT_SETTINGS
 
 class FontSettingsDialog(QDialog):
     """
@@ -51,7 +52,7 @@ class FontSettingsDialog(QDialog):
     def init_ui(self):
         """UI 컴포넌트를 초기화하고 레이아웃을 구성합니다."""
         layout = QVBoxLayout(self)
-        layout.setSpacing(15)
+        layout.setSpacing(DIALOG_SPACING_FONT_SETTINGS)
 
         # 가변폭 폰트 그룹 (Proportional Font Group)
         self.prop_grp = QGroupBox(language_manager.get_text("font_grp_proportional"))

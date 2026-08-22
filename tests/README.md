@@ -36,7 +36,7 @@ source .venv/bin/activate
 
 Windows의 GUI 없는 환경에서는 먼저 `$env:QT_QPA_PLATFORM='offscreen'`을 설정합니다.
 
-현재 기준선은 **227 tests passed**입니다.
+현재 기준선은 **243 tests passed**입니다.
 
 ### 1.3 자주 사용하는 Pytest 옵션 (Arguments)
 

@@ -23,6 +23,7 @@ pytest tests/test_conf_test.py -v
 """
 import sys
 import os
+import copy
 import pytest
 from unittest.mock import MagicMock, patch
 
@@ -145,6 +146,77 @@ def reset_event_bus():
     # 테스트 후: 다시 초기화
     if hasattr(event_bus, '_subscribers'):
         event_bus._subscribers.clear()
+
+
+@pytest.fixture(autouse=True)
+def reset_ui_manager_state():
+    """
+    ThemeManager/ColorManager/LanguageManager 싱글톤의 가변 상태를 테스트 전후로
+    스냅샷/복원합니다 (자동 적용, S-048).
+
+    ## WHY (SettingsManager 리셋 패턴을 그대로 재사용하지 않은 이유)
+    `mock_settings_manager`(위)는 `SettingsManager._instance`를 None으로 리셋한 뒤
+    `SettingsManager()`를 다시 호출하는 방식이 통한다 — 실제 소비 코드
+    (presenter 등)가 필요할 때마다 `SettingsManager()`를 새로 호출해 싱글톤을
+    조회하기 때문이다.
+
+    반면 ThemeManager/ColorManager/LanguageManager는 각 모듈 하단에서 **단 한 번**
+    `theme_manager = ThemeManager()` 식으로 생성된 모듈 전역 인스턴스를 소비 코드가
+    `from view.managers.xxx import xxx_manager`로 직접 import해 재사용한다(생성자를
+    다시 호출하는 곳이 없음 — 코드베이스 전체 검색으로 확인, 2026-08-22). 따라서
+    `_instance`/`_initialized`를 None으로 리셋해도 이미 import되어 여기저기 박혀있는
+    전역 인스턴스 자체는 그대로 남아 오염이 사라지지 않는다(오히려 다음에 우연히
+    생성자가 호출되면 별개의 "두 번째 싱글톤"이 생겨 상태가 갈라지는 위험만 추가).
+
+    그래서 이 픽스처는 실제로 공유되는 그 전역 인스턴스의 **가변 상태 값**을
+    스냅샷/복원한다 — 재생성(파일 재로드) 없이 오염을 막는 방식.
+
+    ## WHY autouse (재생성이 아니라 스냅샷이므로 비용이 무시할 수준)
+    재생성 방식 비용을 측정한 결과(2026-08-22, 이 머신 기준):
+    - ThemeManager 재생성: ~0.02ms/회 (무시 가능)
+    - ColorManager 재생성: ~0.3ms/회 (무시 가능, JSON 규칙 8개 재로드/재저장)
+    - LanguageManager 재생성: ~64ms/회 (commentjson으로 en/ko 278키 재파싱 —
+      227개 테스트 전체에 autouse로 걸면 +14초 이상, 기준선(2.91초)의 5배 이상 증가)
+    반면 아래 스냅샷/복원 방식은 문자열 대입 + 작은 dict/list의 `copy.deepcopy`
+    뿐이라 1000회 반복 측정 기준 총 0.04ms(1회당 0.00004ms) 수준 — autouse로 걸어도
+    전체 실행 시간에 측정 가능한 영향이 없다. 그래서 opt-in이 아니라 autouse로 걸어
+    (아직 존재하지 않는 미래의) "상태를 바꾸는 테스트"까지 기본적으로 보호한다.
+
+    ## WHAT
+    - `ThemeManager._current_theme`: 문자열 스칼라라 얕은 복원으로 충분.
+    - `ColorManager._rules`: 규칙 리스트 자체가 재할당되기도 하고(add/remove_rule),
+      기존 ColorRule 객체의 `.color` 필드가 `apply_theme()`으로 제자리 수정되기도
+      하므로 `copy.deepcopy`로 값 단위 스냅샷이 필요하다(얕은 리스트 복사로는
+      제자리 mutation을 못 막음). `COLOR_*` 팔레트 속성도 함께 복원한다.
+    - `LanguageManager._current_language`, `.resources`: `test_view_translations.py`가
+      이미 `.resources`를 통째로 테스트용 dict로 교체하는 실사용 사례가 있어
+      (교체된 채 복원되지 않으면 이후 세션의 다른 테스트가 실제 언어 데이터 대신
+      그 테스트용 mini dict를 보게 된다) `.resources`도 deepcopy로 스냅샷한다.
+    """
+    from view.managers.theme_manager import theme_manager
+    from view.managers.color_manager import color_manager
+    from view.managers.language_manager import language_manager
+
+    theme_snapshot = theme_manager._current_theme
+
+    color_rules_snapshot = copy.deepcopy(color_manager._rules)
+    color_palette_snapshot = {
+        k: v for k, v in vars(color_manager).items() if k.startswith("COLOR_")
+    }
+
+    lang_current_snapshot = language_manager._current_language
+    lang_resources_snapshot = copy.deepcopy(language_manager.resources)
+
+    yield
+
+    theme_manager._current_theme = theme_snapshot
+
+    color_manager._rules = color_rules_snapshot
+    for key, value in color_palette_snapshot.items():
+        setattr(color_manager, key, value)
+
+    language_manager._current_language = lang_current_snapshot
+    language_manager.resources = lang_resources_snapshot
 
 
 # -----------------------------------------------------------------------------

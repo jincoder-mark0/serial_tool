@@ -19,14 +19,17 @@
 """
 from PyQt5.QtWidgets import (
     QWidget, QDialog, QVBoxLayout, QHBoxLayout, QPushButton,
-    QLabel, QFileDialog, QGroupBox, QMessageBox
+    QLabel, QFileDialog, QGroupBox
 )
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import pyqtSignal
 from typing import Optional
 from view.managers.language_manager import language_manager
 from view.widgets.file_progress import FileProgressWidget
 from common.dtos import FileProgressState
-from common.constants import LAYOUT_MARGIN_DIALOG
+from common.constants import (
+    LAYOUT_MARGIN_DIALOG, DIALOG_SIZE_FILE_TRANSFER_WIDTH,
+    DIALOG_SIZE_FILE_TRANSFER_HEIGHT, CONTROL_WIDTH_FILE_TRANSFER_SELECT_BTN
+)
 
 class FileTransferDialog(QDialog):
     """
@@ -50,7 +53,7 @@ class FileTransferDialog(QDialog):
         """
         super().__init__(parent)
         self.setWindowTitle(language_manager.get_text("manual_control_grp_file"))
-        self.setFixedSize(450, 250)
+        self.setFixedSize(DIALOG_SIZE_FILE_TRANSFER_WIDTH, DIALOG_SIZE_FILE_TRANSFER_HEIGHT)
         self.setModal(True)
 
         # UI Components
@@ -84,7 +87,7 @@ class FileTransferDialog(QDialog):
         self.file_path_lbl.setWordWrap(True)
 
         self.select_file_btn = QPushButton(language_manager.get_text("manual_control_btn_select_file"))
-        self.select_file_btn.setFixedWidth(100)
+        self.select_file_btn.setFixedWidth(CONTROL_WIDTH_FILE_TRANSFER_SELECT_BTN)
         self.select_file_btn.clicked.connect(self.on_select_file_clicked)
 
         path_layout.addWidget(self.file_path_lbl, 1)

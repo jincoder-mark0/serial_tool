@@ -23,16 +23,17 @@ from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QComboBox, QPushButton,
     QLabel, QGroupBox, QStackedWidget
 )
-from PyQt5.QtCore import pyqtSignal, Qt
+from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIntValidator
-from typing import Optional, List, Dict, Tuple
+from typing import Optional, List, Dict
 
 from view.managers.language_manager import language_manager
 from common.enums import PortState, SerialParity, SerialStopBits, SerialFlowControl
 from common.dtos import PortConfig, PortInfo
 from common.constants import (
     VALID_BAUDRATES, DEFAULT_BAUDRATE,
-    LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_DEFAULT, LAYOUT_SPACING_DEFAULT
+    LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_DEFAULT, LAYOUT_SPACING_DEFAULT,
+    CONTROL_WIDTH_PORT_DATA_COMBO, CONTROL_WIDTH_PORT_PARITY_COMBO, CONTROL_WIDTH_PORT_STOP_COMBO
 )
 from core.logger import logger
 
@@ -194,21 +195,21 @@ class PortSettingsWidget(QGroupBox):
         self.serial_controls_ui['data_combo'] = QComboBox()
         self.serial_controls_ui['data_combo'].addItems(["5", "6", "7", "8"])
         self.serial_controls_ui['data_combo'].setCurrentText("8")
-        self.serial_controls_ui['data_combo'].setFixedWidth(40)
+        self.serial_controls_ui['data_combo'].setFixedWidth(CONTROL_WIDTH_PORT_DATA_COMBO)
         self.serial_controls_ui['data_combo'].setToolTip(language_manager.get_text("port_combo_bytesize_tooltip"))
 
         # Parity
         self.serial_controls_ui['parity_lbl'] = QLabel(language_manager.get_text("port_lbl_parity"))
         self.serial_controls_ui['parity_combo'] = QComboBox()
         self.serial_controls_ui['parity_combo'].addItems([p.value for p in SerialParity])
-        self.serial_controls_ui['parity_combo'].setFixedWidth(40)
+        self.serial_controls_ui['parity_combo'].setFixedWidth(CONTROL_WIDTH_PORT_PARITY_COMBO)
         self.serial_controls_ui['parity_combo'].setToolTip(language_manager.get_text("port_combo_parity_tooltip"))
 
         # Stop Bits
         self.serial_controls_ui['stop_lbl'] = QLabel(language_manager.get_text("port_lbl_stop"))
         self.serial_controls_ui['stop_combo'] = QComboBox()
         self.serial_controls_ui['stop_combo'].addItems([str(s.value) for s in SerialStopBits])
-        self.serial_controls_ui['stop_combo'].setFixedWidth(45)
+        self.serial_controls_ui['stop_combo'].setFixedWidth(CONTROL_WIDTH_PORT_STOP_COMBO)
         self.serial_controls_ui['stop_combo'].setToolTip(language_manager.get_text("port_combo_stopbits_tooltip"))
 
         # Flow Control

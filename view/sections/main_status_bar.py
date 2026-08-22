@@ -18,11 +18,12 @@
 * addPermanentWidget을 사용하여 우측에 상태 위젯 고정
 * HTML 태그를 사용하여 상태 아이콘 색상 변경
 """
-from PyQt5.QtWidgets import QStatusBar, QLabel, QProgressBar, QWidget
+from PyQt5.QtWidgets import QStatusBar, QLabel, QProgressBar
 from PyQt5.QtCore import Qt
 
 from view.managers.language_manager import language_manager
 from common.dtos import PortStatistics
+from common.constants import CONTROL_WIDTH_MAIN_STATUS_PORT_LBL, CONTROL_WIDTH_MAIN_STATUS_BUFFER_BAR
 
 
 class MainStatusBar(QStatusBar):
@@ -68,7 +69,7 @@ class MainStatusBar(QStatusBar):
         """상태바 우측에 표시될 영구 위젯들을 생성하고 배치합니다."""
         # 1. Port Label (연결 상태 표시)
         self.port_lbl = QLabel()
-        self.port_lbl.setMinimumWidth(100)
+        self.port_lbl.setMinimumWidth(CONTROL_WIDTH_MAIN_STATUS_PORT_LBL)
         self.addPermanentWidget(self.port_lbl)
 
         # 1-1. Port Status Dot (●/○) - 색은 QSS 동적 속성(state)으로 테마별 지정
@@ -93,7 +94,7 @@ class MainStatusBar(QStatusBar):
         # 5. Buffer Bar (데이터 버퍼 점유율)
         self.buffer_bar = QProgressBar()
         self.buffer_bar.setMaximum(100)
-        self.buffer_bar.setFixedWidth(100)
+        self.buffer_bar.setFixedWidth(CONTROL_WIDTH_MAIN_STATUS_BUFFER_BAR)
         self.buffer_bar.setFormat(language_manager.get_text("main_status_lbl_buffer"))
         self.buffer_bar.setAlignment(Qt.AlignCenter)
         self.addPermanentWidget(self.buffer_bar)

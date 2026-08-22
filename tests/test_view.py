@@ -111,7 +111,7 @@ class TestManualControlPanel:
         widget = panel._manual_control_widget
 
         # 텍스트 입력
-        qtbot.keyClicks(widget.command_edit, "TEST_CMD")
+        qtbot.keyClicks(widget.command_txt, "TEST_CMD")
 
         # 옵션 설정 (예: Local Echo 체크)
         widget.local_echo_chk.setChecked(True)

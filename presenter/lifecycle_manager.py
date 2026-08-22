@@ -25,14 +25,12 @@ from PyQt5.QtCore import QTimer
 
 from core.settings_manager import SettingsManager
 from core.logger import logger
-from view.managers.color_manager import color_manager
 from view.managers.language_manager import language_manager
-from common.constants import ConfigKeys, DEFAULT_MACRO_INTERVAL_MS
+from common.constants import ConfigKeys, DEFAULT_MACRO_INTERVAL_MS, STATUS_BAR_UPDATE_INTERVAL_MS
 from common.dtos import (
     MainWindowState,
     FontConfig,
     ManualControlState,
-    PreferencesState,
     SystemLogEvent
 )
 
@@ -167,10 +165,10 @@ class AppLifecycleManager:
         """
         백그라운드 서비스 및 타이머를 시작합니다.
         """
-        # 상태바 업데이트 타이머 시작 (1초 주기)
+        # 상태바 업데이트 타이머 시작
         self.mp.status_timer = QTimer()
         self.mp.status_timer.timeout.connect(self.mp.update_status_bar)
-        self.mp.status_timer.start(1000)
+        self.mp.status_timer.start(STATUS_BAR_UPDATE_INTERVAL_MS)
 
         # 초기화 완료 로그 - DTO 사용
         event = SystemLogEvent(message="Application initialized", level="INFO")

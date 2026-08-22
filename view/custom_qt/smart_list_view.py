@@ -25,7 +25,9 @@ import datetime
 from typing import List, Any, Optional
 from collections import deque
 
-from PyQt5.QtWidgets import QListView, QAbstractItemView, QStyle, QStyledItemDelegate
+from PyQt5.QtWidgets import (
+    QListView, QAbstractItemView, QStyle, QStyledItemDelegate, QStyleOptionViewItem
+)
 from PyQt5.QtCore import (
     Qt, QAbstractListModel, QModelIndex, QVariant, QSize, QRegExp, pyqtSlot,
     QSortFilterProxyModel, QTimer, QDateTime
@@ -34,7 +36,7 @@ from PyQt5.QtGui import (
     QColor, QTextDocument, QAbstractTextDocumentLayout, QTextCharFormat, QPainter, QPalette
 )
 
-from common.constants import DEFAULT_LOG_MAX_LINES, TRIM_CHUNK_RATIO
+from common.constants import DEFAULT_LOG_MAX_LINES, TRIM_CHUNK_RATIO, FILTER_DEBOUNCE_MS
 from common.dtos import ColorRule
 from view.services.color_service import ColorService
 from view.managers.theme_manager import theme_manager
@@ -115,7 +117,7 @@ class QSmartListView(QListView):
         # 복잡한 정규식 입력 시 UI 프리징 방지
         self._filter_debounce_timer = QTimer()
         self._filter_debounce_timer.setSingleShot(True)
-        self._filter_debounce_timer.setInterval(300)  # 300ms 대기
+        self._filter_debounce_timer.setInterval(FILTER_DEBOUNCE_MS)
         self._filter_debounce_timer.timeout.connect(self._execute_filter_update)
 
         self.setObjectName("SmartListView")
@@ -340,7 +342,8 @@ class QSmartListView(QListView):
             # 현재 구조에서는 단순 텍스트 재구성이므로 타임스탬프 생략 (또는 규칙만 적용)
             formatter = None
             if self._color_rules:
-                formatter = lambda line: ColorService.apply_rules(line, self._color_rules, is_dark)
+                def formatter(line):
+                    return ColorService.apply_rules(line, self._color_rules, is_dark)
 
             self.append(text, formatter)
 

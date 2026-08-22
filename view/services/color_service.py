@@ -183,20 +183,20 @@ class ColorService:
             b = int(hex_color[5:7], 16) / 255.0
 
             # RGB -> HLS
-            h, l, s = colorsys.rgb_to_hls(r, g, b)
+            h, lightness, s = colorsys.rgb_to_hls(r, g, b)
 
             # 명도(Lightness) 조정 로직
             if is_dark_theme:
                 # 어두운 배경: 글자는 밝아야 함 (최소 0.6 이상 보장)
-                if l < 0.5:
-                    l = 0.6 + (0.4 * l)  # 어두운 색을 밝게 보정
+                if lightness < 0.5:
+                    lightness = 0.6 + (0.4 * lightness)  # 어두운 색을 밝게 보정
             else:
                 # 밝은 배경: 글자는 어두워야 함 (최대 0.4 이하 보장)
-                if l > 0.5:
-                    l = 0.4 * l  # 밝은 색을 어둡게 보정
+                if lightness > 0.5:
+                    lightness = 0.4 * lightness  # 밝은 색을 어둡게 보정
 
             # HLS -> RGB
-            r, g, b = colorsys.hls_to_rgb(h, l, s)
+            r, g, b = colorsys.hls_to_rgb(h, lightness, s)
 
             # 0~255 정수 변환 및 클램핑(Clamping)
             r = max(0, min(255, int(r * 255)))

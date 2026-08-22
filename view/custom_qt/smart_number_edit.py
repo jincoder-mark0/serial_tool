@@ -22,7 +22,6 @@ import re
 from PyQt5.QtWidgets import QPlainTextEdit, QTextEdit
 from PyQt5.QtCore import Qt, QEvent
 from PyQt5.QtGui import QKeyEvent, QTextCursor, QTextCharFormat, QColor
-from core.logger import logger
 
 
 class SmartNumberEdit(QPlainTextEdit):
@@ -277,7 +276,8 @@ class SmartNumberEdit(QPlainTextEdit):
 
         # 커서가 숫자 뒤에 있으면 1의 자리, 숫자 중간이면 해당 자릿수
         # 예: 1|23 -> 100의 자리 (power=2)
-        if digit_power < 0: digit_power = 0
+        if digit_power < 0:
+            digit_power = 0
 
         factor = 10 ** digit_power
 

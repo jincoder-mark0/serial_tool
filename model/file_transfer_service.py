@@ -24,7 +24,6 @@ from PyQt5.QtCore import QRunnable, QObject, pyqtSignal
 
 from model.connection_controller import ConnectionController
 from core.event_bus import event_bus
-from core.logger import logger
 from common.dtos import (
     FileProgressState,
     FileProgressEvent,
@@ -32,7 +31,7 @@ from common.dtos import (
     FileCompletionEvent,
     FileErrorEvent
 )
-from common.constants import EventTopics
+from common.constants import EventTopics, FILE_TRANSFER_BACKPRESSURE_WAIT_S
 from common.enums import FileStatus, SerialFlowControl
 
 
@@ -123,7 +122,7 @@ class FileTransferService(QRunnable):
                     # Backpressure Control (역압 제어)
                     # 전송 큐가 임계값을 초과하면 잠시 대기하여 메모리 폭증 방지
                     while self.connection_controller.get_write_queue_size(self.port_name) > self.queue_threshold:
-                        time.sleep(0.01)  # 10ms 대기
+                        time.sleep(FILE_TRANSFER_BACKPRESSURE_WAIT_S)
                         if self._is_cancelled:
                             break
 
@@ -191,7 +190,7 @@ class FileTransferService(QRunnable):
                 while self.connection_controller.get_write_queue_size(self.port_name) > 0:
                     if self._is_cancelled:
                         break
-                    time.sleep(0.01)
+                    time.sleep(FILE_TRANSFER_BACKPRESSURE_WAIT_S)
 
                 # 완료 이벤트 (성공)
                 comp_event = FileCompletionEvent(success=True, message="Transfer successful", file_path=self.file_path)

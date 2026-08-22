@@ -18,7 +18,7 @@
 * QTimer 및 QFileDialog를 활용한 부가 기능 구현
 """
 import datetime
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
@@ -64,7 +64,7 @@ class SystemLogWidget(QWidget):
         # UI Components
         self.sys_log_title: Optional[QLabel] = None
         self.sys_log_list: Optional[QSmartListView] = None
-        self.sys_log_search_edit: Optional[QLineEdit] = None
+        self.sys_log_search_input: Optional[QLineEdit] = None
         self.sys_log_search_prev_btn: Optional[QPushButton] = None
         self.sys_log_search_next_btn: Optional[QPushButton] = None
         self.sys_log_toggle_logging_btn: Optional[QPushButton] = None
@@ -117,13 +117,13 @@ class SystemLogWidget(QWidget):
 
         # 도구 섹션 (검색, 옵션, 액션)
         # Search Bar
-        self.sys_log_search_edit = QLineEdit()
-        self.sys_log_search_edit.setPlaceholderText(language_manager.get_text("sys_log_edit_search_placeholder"))
-        self.sys_log_search_edit.setToolTip(language_manager.get_text("sys_log_edit_search_tooltip"))
-        self.sys_log_search_edit.setMaximumWidth(200)
-        self.sys_log_search_edit.returnPressed.connect(self.on_sys_log_search_next_clicked)
+        self.sys_log_search_input = QLineEdit()
+        self.sys_log_search_input.setPlaceholderText(language_manager.get_text("sys_log_edit_search_placeholder"))
+        self.sys_log_search_input.setToolTip(language_manager.get_text("sys_log_edit_search_tooltip"))
+        self.sys_log_search_input.setMaximumWidth(200)
+        self.sys_log_search_input.returnPressed.connect(self.on_sys_log_search_next_clicked)
         # 검색어 변경 시 실시간 하이라이트 갱신
-        self.sys_log_search_edit.textChanged.connect(self.on_sys_log_search_text_changed)
+        self.sys_log_search_input.textChanged.connect(self.on_sys_log_search_text_changed)
 
         # Buttons
         self.sys_log_search_prev_btn = QPushButton()
@@ -167,7 +167,7 @@ class SystemLogWidget(QWidget):
         toolbar_layout = QHBoxLayout()
         toolbar_layout.addWidget(self.sys_log_title)
         toolbar_layout.addStretch()
-        toolbar_layout.addWidget(self.sys_log_search_edit)
+        toolbar_layout.addWidget(self.sys_log_search_input)
         toolbar_layout.addWidget(self.sys_log_search_prev_btn)
         toolbar_layout.addWidget(self.sys_log_search_next_btn)
         toolbar_layout.addWidget(self.sys_log_filter_chk)
@@ -191,8 +191,8 @@ class SystemLogWidget(QWidget):
         self.sys_log_list.setPlaceholderText(language_manager.get_text("sys_log_list_log_placeholder"))
 
         # Search Components
-        self.sys_log_search_edit.setPlaceholderText(language_manager.get_text("sys_log_edit_search_placeholder"))
-        self.sys_log_search_edit.setToolTip(language_manager.get_text("sys_log_edit_search_tooltip"))
+        self.sys_log_search_input.setPlaceholderText(language_manager.get_text("sys_log_edit_search_placeholder"))
+        self.sys_log_search_input.setToolTip(language_manager.get_text("sys_log_edit_search_tooltip"))
         self.sys_log_search_prev_btn.setToolTip(language_manager.get_text("sys_log_btn_search_prev_tooltip"))
         self.sys_log_search_next_btn.setToolTip(language_manager.get_text("sys_log_btn_search_next_tooltip"))
 
@@ -249,7 +249,7 @@ class SystemLogWidget(QWidget):
     @pyqtSlot()
     def on_sys_log_search_next_clicked(self) -> None:
         """검색창의 텍스트로 다음 항목을 찾습니다."""
-        text = self.sys_log_search_edit.text()
+        text = self.sys_log_search_input.text()
         if text:
             # 패턴 설정은 textChanged에서 실시간으로 되지만 안전을 위해 호출
             self.sys_log_list.set_search_pattern(text)
@@ -258,7 +258,7 @@ class SystemLogWidget(QWidget):
     @pyqtSlot()
     def on_sys_log_search_prev_clicked(self) -> None:
         """검색창의 텍스트로 이전 항목을 찾습니다."""
-        text = self.sys_log_search_edit.text()
+        text = self.sys_log_search_input.text()
         if text:
             self.sys_log_list.find_prev(text)
 
@@ -340,7 +340,7 @@ class SystemLogWidget(QWidget):
         """
         state = {
             "filter_enabled": self.filter_enabled,
-            "search_text": self.sys_log_search_edit.text(),
+            "search_text": self.sys_log_search_input.text(),
         }
         return state
 
@@ -356,7 +356,7 @@ class SystemLogWidget(QWidget):
 
         # 체크박스 상태 업데이트
         self.sys_log_filter_chk.setChecked(state.get("filter_enabled", False))
-        self.sys_log_search_edit.setText(state.get("search_text", ""))
+        self.sys_log_search_input.setText(state.get("search_text", ""))
 
     def closeEvent(self, event) -> None:
         """

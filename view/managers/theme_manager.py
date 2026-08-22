@@ -25,7 +25,6 @@ Dark/Light 모드 전환, 외부 QSS 파일 로드 및 경로 치환, 동적 색
 import os
 import platform
 from typing import Dict, Any, Optional, List, Tuple
-from pathlib import Path
 
 from PyQt5.QtWidgets import QApplication
 from PyQt5.QtGui import QPalette, QColor, QIcon, QFont
@@ -819,12 +818,12 @@ class ThemeManager(QObject):
         """
 
         if theme_name == "dark":
-            qss += f"""
-            QToolTip {{
+            qss += """
+            QToolTip {
                 color: #ffffff;
                 background-color: #2a2a2a;
                 border: 1px solid #767676;
-            }}
+            }
             """
 
         return qss

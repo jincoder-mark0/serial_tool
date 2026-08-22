@@ -18,6 +18,10 @@ from PyQt5.QtWidgets import QDialog, QVBoxLayout, QLabel, QPushButton
 from PyQt5.QtCore import Qt
 from view.managers.language_manager import language_manager
 from common.app_info import __version__
+from common.constants import (
+    DIALOG_SIZE_ABOUT_WIDTH, DIALOG_SIZE_ABOUT_HEIGHT,
+    DIALOG_SPACING_ABOUT, CONTROL_WIDTH_ABOUT_CLOSE_BTN
+)
 
 class AboutDialog(QDialog):
     """
@@ -27,13 +31,13 @@ class AboutDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle(language_manager.get_text("about_title"))
-        self.setFixedSize(400, 300)
+        self.setFixedSize(DIALOG_SIZE_ABOUT_WIDTH, DIALOG_SIZE_ABOUT_HEIGHT)
         self.init_ui()
 
     def init_ui(self):
         layout = QVBoxLayout()
         layout.setAlignment(Qt.AlignCenter)
-        layout.setSpacing(20)
+        layout.setSpacing(DIALOG_SPACING_ABOUT)
 
         # 앱 이름 및 버전
         title_lbl = QLabel(language_manager.get_text("about_lbl_app_name"))
@@ -55,7 +59,7 @@ class AboutDialog(QDialog):
 
         # 닫기 버튼
         close_btn = QPushButton(language_manager.get_text("about_btn_close"))
-        close_btn.setFixedWidth(100)
+        close_btn.setFixedWidth(CONTROL_WIDTH_ABOUT_CLOSE_BTN)
         close_btn.clicked.connect(self.accept)
 
         layout.addStretch()

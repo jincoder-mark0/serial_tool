@@ -22,13 +22,13 @@
 * PyQt Signal을 통해 사용자 입력 이벤트를 상위로 전달
 * Getter 메서드를 통해 내부 상태 캡슐화 (Facade 패턴 지원)
 """
-from typing import Optional, List, Dict, Any
+from typing import Optional, List
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout, QGridLayout,
-    QPushButton, QPlainTextEdit, QLineEdit, QCheckBox, QLabel
+    QPushButton, QPlainTextEdit, QCheckBox, QLabel
 )
-from PyQt5.QtCore import pyqtSignal, pyqtSlot, QSize, Qt
+from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
 from PyQt5.QtGui import QKeyEvent
 
 from view.custom_qt.smart_plain_text_edit import QSmartTextEdit
@@ -78,7 +78,7 @@ class ManualControlWidget(QWidget):
         super().__init__(parent)
 
         # UI 컴포넌트 변수 초기화
-        self.command_edit: Optional[QSmartTextEdit] = None
+        self.command_txt: Optional[QSmartTextEdit] = None
         self.send_command_btn: Optional[QPushButton] = None
         self.history_up_btn: Optional[QPushButton] = None
         self.history_down_btn: Optional[QPushButton] = None
@@ -92,7 +92,7 @@ class ManualControlWidget(QWidget):
         self.rts_chk: Optional[QCheckBox] = None
         self.dtr_chk: Optional[QCheckBox] = None
         self.auto_tx_chk: Optional[QCheckBox] = None
-        self.auto_tx_interval_edit: Optional[SmartNumberEdit] = None
+        self.auto_tx_interval_txt: Optional[SmartNumberEdit] = None
         self.auto_tx_ms_lbl: Optional[QLabel] = None
 
         # History State - 저장/복원 안함 (런타임 메모리)
@@ -114,13 +114,13 @@ class ManualControlWidget(QWidget):
             - 시그널 연결
         """
         # 1. 입력 에디터 설정
-        self.command_edit = QSmartTextEdit()  # 라인 번호 지원 에디터
-        self.command_edit.setPlaceholderText(language_manager.get_text("manual_control_txt_command_placeholder"))
-        self.command_edit.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
-        self.command_edit.setMaximumHeight(80)  # 최대 높이 제한
+        self.command_txt = QSmartTextEdit()  # 라인 번호 지원 에디터
+        self.command_txt.setPlaceholderText(language_manager.get_text("manual_control_txt_command_placeholder"))
+        self.command_txt.setProperty("class", "fixed-font")  # 고정폭 폰트 적용
+        self.command_txt.setMaximumHeight(80)  # 최대 높이 제한
 
         # 키 이벤트 오버라이딩 (Ctrl+Enter 전송 등)
-        self.command_edit.keyPressEvent = self._command_input_key_press_event
+        self.command_txt.keyPressEvent = self._command_input_key_press_event
 
         # 2. 버튼 구성
         self.history_up_btn = QPushButton("▲")
@@ -175,23 +175,23 @@ class ManualControlWidget(QWidget):
             lambda state: self.auto_tx_toggled.emit(state == Qt.Checked)
         )
 
-        self.auto_tx_interval_edit = SmartNumberEdit()
-        self.auto_tx_interval_edit.setPlainText(str(DEFAULT_MACRO_INTERVAL_MS))
-        self.auto_tx_interval_edit.setToolTip(
+        self.auto_tx_interval_txt = SmartNumberEdit()
+        self.auto_tx_interval_txt.setPlainText(str(DEFAULT_MACRO_INTERVAL_MS))
+        self.auto_tx_interval_txt.setToolTip(
             language_manager.get_text("manual_control_edit_auto_tx_interval_tooltip")
         )
-        self.auto_tx_interval_edit.setProperty("class", "fixed-font")
+        self.auto_tx_interval_txt.setProperty("class", "fixed-font")
         # 한 줄 높이로 압축 (SmartNumberEdit는 QPlainTextEdit 기반이라 기본 높이가 큼)
-        self.auto_tx_interval_edit.setFixedHeight(ICON_BUTTON_SIZE)
+        self.auto_tx_interval_txt.setFixedHeight(ICON_BUTTON_SIZE)
         # 5자리(최대 99999ms) 기준 폰트 메트릭으로 최소 폭 계산 (S-025 관례)
-        min_interval_width = self.auto_tx_interval_edit.fontMetrics().horizontalAdvance("0" * 5) + 12
-        self.auto_tx_interval_edit.setMinimumWidth(min_interval_width)
+        min_interval_width = self.auto_tx_interval_txt.fontMetrics().horizontalAdvance("0" * 5) + 12
+        self.auto_tx_interval_txt.setMinimumWidth(min_interval_width)
         # 실행 제어(매크로 반복 간격 입력)와 정렬 통일 (S-035). SmartNumberEdit(QPlainTextEdit
         # 기반)는 setAlignment API가 없음(확인: QPlainTextEdit에 미존재). QTextCursor로 블록
         # 서식(QTextBlockFormat)에 정렬을 지정하는 통상적 방법은 PlainTextDocumentLayout이
         # 렌더 시 무시해 실측(육안)상 효과가 없었음 — 대신 문서 defaultTextOption의 정렬을
         # 바꾸는 방식을 사용(문서 단위 설정이라 setPlainText로 텍스트가 바뀌어도 유지됨, 실측 확인).
-        self._align_number_edit_right(self.auto_tx_interval_edit)
+        self._align_number_edit_right(self.auto_tx_interval_txt)
 
         # Auto Tx 간격 단위 라벨 ("ms") — 체크박스만 있고 단위 표시가 없어 숫자의 의미가
         # 불분명했음(S-035). macro_control의 "간격 (ms)"는 라벨에 내장된 형태라 이 위치(입력 뒤)에는
@@ -213,7 +213,7 @@ class ManualControlWidget(QWidget):
         send_layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
                                         LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
         send_layout.setSpacing(LAYOUT_SPACING_DEFAULT)
-        send_layout.addWidget(self.command_edit, 1)
+        send_layout.addWidget(self.command_txt, 1)
         send_layout.addLayout(btn_layout)
 
         # 옵션 영역 (그리드)
@@ -235,7 +235,7 @@ class ManualControlWidget(QWidget):
 
         # 2행: Auto Tx (체크박스 + 간격 입력 + ms 단위 라벨) — 1행이 이미 7칸으로 가득 차 별도 행에 배치
         option_layout.addWidget(self.auto_tx_chk, 1, 0)
-        option_layout.addWidget(self.auto_tx_interval_edit, 1, 1)
+        option_layout.addWidget(self.auto_tx_interval_txt, 1, 1)
         option_layout.addWidget(self.auto_tx_ms_lbl, 1, 2)
 
         # 전체 레이아웃 조합
@@ -287,14 +287,14 @@ class ManualControlWidget(QWidget):
         self.broadcast_chk.setText(language_manager.get_text("manual_control_chk_broadcast"))
         self.auto_tx_chk.setText(language_manager.get_text("manual_control_chk_auto_tx"))
         self.auto_tx_chk.setToolTip(language_manager.get_text("manual_control_chk_auto_tx_tooltip"))
-        self.auto_tx_interval_edit.setToolTip(
+        self.auto_tx_interval_txt.setToolTip(
             language_manager.get_text("manual_control_edit_auto_tx_interval_tooltip")
         )
         self.auto_tx_ms_lbl.setText(language_manager.get_text("manual_control_lbl_ms_unit"))
         self.send_command_btn.setText(language_manager.get_text("manual_control_btn_send"))
         self.history_up_btn.setToolTip(language_manager.get_text("manual_control_btn_history_up_tooltip"))
         self.history_down_btn.setToolTip(language_manager.get_text("manual_control_btn_history_down_tooltip"))
-        self.command_edit.setPlaceholderText(language_manager.get_text("manual_control_txt_command_placeholder"))
+        self.command_txt.setPlaceholderText(language_manager.get_text("manual_control_txt_command_placeholder"))
 
     # -------------------------------------------------------------------------
     # Getters for Encapsulation (캡슐화를 위한 상태 조회 메서드)
@@ -342,14 +342,14 @@ class ManualControlWidget(QWidget):
             int: 전송 간격 (ms).
         """
         try:
-            interval_ms = int(self.auto_tx_interval_edit.toPlainText().strip())
+            interval_ms = int(self.auto_tx_interval_txt.toPlainText().strip())
         except ValueError:
             interval_ms = DEFAULT_MACRO_INTERVAL_MS
         return max(interval_ms, MIN_AUTO_TX_INTERVAL_MS)
 
     def get_input_text(self) -> str:
         """현재 입력창의 텍스트 반환"""
-        return self.command_edit.toPlainText()
+        return self.command_txt.toPlainText()
 
     # -------------------------------------------------------------------------
     # Setters & Actions (UI 제어 및 동작)
@@ -368,7 +368,7 @@ class ManualControlWidget(QWidget):
 
         # Hex, Prefix, Suffix, Broadcast 설정은 연결 여부와 무관하게 변경 가능해야 함
         # 따라서 이들은 enabled 인자의 영향을 받지 않도록 따로 처리하거나 그대로 둡니다.
-        # self.command_edit.setEnabled(True)
+        # self.command_txt.setEnabled(True)
         # self.hex_chk.setEnabled(True)
         # self.prefix_chk.setEnabled(True)
         # self.suffix_chk.setEnabled(True)
@@ -381,18 +381,18 @@ class ManualControlWidget(QWidget):
         Args:
             text (str): 설정할 텍스트.
         """
-        self.command_edit.setPlainText(text)
-        cursor = self.command_edit.textCursor()
+        self.command_txt.setPlainText(text)
+        cursor = self.command_txt.textCursor()
         cursor.movePosition(cursor.End)
-        self.command_edit.setTextCursor(cursor)
+        self.command_txt.setTextCursor(cursor)
 
     def clear_input(self) -> None:
         """입력창 내용을 지웁니다."""
-        self.command_edit.clear()
+        self.command_txt.clear()
 
     def set_input_focus(self) -> None:
         """입력 필드에 포커스를 설정합니다."""
-        self.command_edit.setFocus()
+        self.command_txt.setFocus()
 
     def set_local_echo_state(self, checked: bool) -> None:
         """
@@ -420,7 +420,7 @@ class ManualControlWidget(QWidget):
             checked (bool): 체크 여부.
         """
         # 추후 QSmartTextEdit에 HEX 모드 유효성 검사 로직 추가 시 연동
-        # self.command_edit.set_hex_mode(checked)
+        # self.command_txt.set_hex_mode(checked)
         pass
 
     def _command_input_key_press_event(self, event: QKeyEvent) -> None:
@@ -441,14 +441,14 @@ class ManualControlWidget(QWidget):
                 self.on_send_manual_command_clicked()
             else:
                 # Enter: 새 줄 추가
-                QPlainTextEdit.keyPressEvent(self.command_edit, event)
+                QPlainTextEdit.keyPressEvent(self.command_txt, event)
         elif event.key() == Qt.Key_Up and event.modifiers() == Qt.ControlModifier:
             self.on_history_up_clicked()
         elif event.key() == Qt.Key_Down and event.modifiers() == Qt.ControlModifier:
             self.on_history_down_clicked()
         else:
             # 다른 키는 기본 동작
-            QPlainTextEdit.keyPressEvent(self.command_edit, event)
+            QPlainTextEdit.keyPressEvent(self.command_txt, event)
 
     @pyqtSlot()
     def on_send_manual_command_clicked(self) -> None:
@@ -460,7 +460,7 @@ class ManualControlWidget(QWidget):
             - History에 추가
             - DTO 생성 후 시그널 발송
         """
-        command = self.command_edit.toPlainText()
+        command = self.command_txt.toPlainText()
 
         # History에 추가 (입력이 있을 경우)
         if not command:
@@ -510,7 +510,8 @@ class ManualControlWidget(QWidget):
 
     def on_history_up_clicked(self) -> None:
         """이전 History 탐색"""
-        if not self.command_history: return
+        if not self.command_history:
+            return
 
         if self.history_index == -1:
             # 현재 입력 중인 상태에서 위로 누르면 가장 최근(마지막) 명령
@@ -522,7 +523,8 @@ class ManualControlWidget(QWidget):
 
     def on_history_down_clicked(self) -> None:
         """다음 History 탐색"""
-        if not self.command_history or self.history_index == -1: return
+        if not self.command_history or self.history_index == -1:
+            return
 
         if self.history_index < len(self.command_history) - 1:
             self.history_index += 1
@@ -530,17 +532,17 @@ class ManualControlWidget(QWidget):
         else:
             # 마지막 항목에서 아래로 누르면 입력창 비우기 (새 명령 모드)
             self.history_index = -1
-            self.command_edit.clear()
+            self.command_txt.clear()
 
     def _update_input_from_history(self) -> None:
         """History 내용을 입력창에 반영"""
         if 0 <= self.history_index < len(self.command_history):
             command = self.command_history[self.history_index]
-            self.command_edit.setPlainText(command)
+            self.command_txt.setPlainText(command)
             # 커서 끝으로 이동
-            cursor = self.command_edit.textCursor()
+            cursor = self.command_txt.textCursor()
             cursor.movePosition(cursor.End)
-            self.command_edit.setTextCursor(cursor)
+            self.command_txt.setTextCursor(cursor)
 
     # -------------------------------------------------------------------------
     # State Persistence
@@ -578,9 +580,9 @@ class ManualControlWidget(QWidget):
         # 시그널 차단 (상태 복원 중 불필요한 이벤트 발생 방지)
         self.blockSignals(True)
         try:
-            self.command_edit.setPlainText(state.input_text)
+            self.command_txt.setPlainText(state.input_text)
             self.hex_chk.setChecked(state.hex_mode)
-            # self.command_edit.set_hex_mode(state.hex_mode)  # 에디터 내부 모드도 동기화
+            # self.command_txt.set_hex_mode(state.hex_mode)  # 에디터 내부 모드도 동기화
 
             self.prefix_chk.setChecked(state.prefix_enabled)
             self.suffix_chk.setChecked(state.suffix_enabled)
@@ -590,6 +592,6 @@ class ManualControlWidget(QWidget):
             self.broadcast_chk.setChecked(state.broadcast_enabled)
             self.auto_tx_chk.setChecked(state.auto_tx_enabled)
             # 정렬(우측)은 document defaultTextOption에 저장되어 setPlainText 후에도 유지됨
-            self.auto_tx_interval_edit.setPlainText(str(state.auto_tx_interval_ms))
+            self.auto_tx_interval_txt.setPlainText(str(state.auto_tx_interval_ms))
         finally:
             self.blockSignals(False)

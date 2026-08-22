@@ -72,7 +72,7 @@ class MacroControlWidget(QWidget):
         self.repeat_max_lbl: Optional[QLabel] = None
         self.macro_repeat_count_lbl: Optional[QLabel] = None
 
-        self.repeat_interval_ms_edit: Optional[QLineEdit] = None
+        self.repeat_interval_ms_input: Optional[QLineEdit] = None
         self.repeat_max_spin: Optional[QSpinBox] = None
         self.broadcast_chk: Optional[QCheckBox] = None
 
@@ -97,13 +97,13 @@ class MacroControlWidget(QWidget):
         # -----------------------------------------------------
         # Interval
         self.interval_lbl = QLabel(language_manager.get_text("macro_control_lbl_repeat_interval"))
-        self.repeat_interval_ms_edit = QLineEdit(str(DEFAULT_MACRO_INTERVAL_MS))
+        self.repeat_interval_ms_input = QLineEdit(str(DEFAULT_MACRO_INTERVAL_MS))
         # 고정폭(50px)이 16pt 폰트에서 "1000"을 ")00"으로 잘랐음(S-024 실측, S-025 조치).
         # 5자리(최대 99999ms) 기준 폰트 메트릭으로 최소 폭을 계산해 폰트 확대에도 안전하게 함.
-        min_width = self.repeat_interval_ms_edit.fontMetrics().horizontalAdvance("0" * 5) + 12
-        self.repeat_interval_ms_edit.setMinimumWidth(min_width)
-        self.repeat_interval_ms_edit.setAlignment(Qt.AlignRight)
-        self.repeat_interval_ms_edit.setToolTip(language_manager.get_text("macro_control_edit_repeat_interval_tooltip"))
+        min_width = self.repeat_interval_ms_input.fontMetrics().horizontalAdvance("0" * 5) + 12
+        self.repeat_interval_ms_input.setMinimumWidth(min_width)
+        self.repeat_interval_ms_input.setAlignment(Qt.AlignRight)
+        self.repeat_interval_ms_input.setToolTip(language_manager.get_text("macro_control_edit_repeat_interval_tooltip"))
 
         # Repeat Count
         self.repeat_max_lbl = QLabel(language_manager.get_text("macro_control_lbl_repeat_max"))
@@ -163,7 +163,7 @@ class MacroControlWidget(QWidget):
         # Row 0: 간격(ms) + 반복 횟수 + 브로드캐스트
         row0_layout = QHBoxLayout()
         row0_layout.addWidget(self.interval_lbl)
-        row0_layout.addWidget(self.repeat_interval_ms_edit)
+        row0_layout.addWidget(self.repeat_interval_ms_input)
         row0_layout.addWidget(self.repeat_max_lbl)
         row0_layout.addWidget(self.repeat_max_spin)
         row0_layout.addWidget(self.broadcast_chk)
@@ -248,7 +248,7 @@ class MacroControlWidget(QWidget):
             MacroRepeatOption: 실행 옵션 데이터 객체.
         """
         try:
-            interval_ms = int(self.repeat_interval_ms_edit.text())
+            interval_ms = int(self.repeat_interval_ms_input.text())
         except ValueError:
             interval_ms = DEFAULT_MACRO_INTERVAL_MS
 
@@ -362,7 +362,7 @@ class MacroControlWidget(QWidget):
             dict: 위젯 상태 데이터.
         """
         return {
-            "delay_ms": self.repeat_interval_ms_edit.text(),
+            "delay_ms": self.repeat_interval_ms_input.text(),
             "max_runs": self.repeat_max_spin.value(),
             "broadcast_enabled": self.broadcast_chk.isChecked()
         }
@@ -377,6 +377,6 @@ class MacroControlWidget(QWidget):
         if not state:
             return
 
-        self.repeat_interval_ms_edit.setText(str(state.get("delay_ms", DEFAULT_MACRO_INTERVAL_MS)))
+        self.repeat_interval_ms_input.setText(str(state.get("delay_ms", DEFAULT_MACRO_INTERVAL_MS)))
         self.repeat_max_spin.setValue(state.get("max_runs", 0))
         self.broadcast_chk.setChecked(state.get("broadcast_enabled", False))

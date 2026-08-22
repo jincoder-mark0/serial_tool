@@ -19,7 +19,9 @@ from PyQt5.QtCore import pyqtSignal
 from typing import Optional
 from view.managers.language_manager import language_manager
 from common.dtos import FileProgressState
-from common.constants import LAYOUT_MARGIN_DEFAULT, LAYOUT_SPACING_TIGHT
+from common.constants import (
+    LAYOUT_MARGIN_DEFAULT, LAYOUT_SPACING_TIGHT, CONTROL_WIDTH_FILE_PROGRESS_CANCEL_BTN
+)
 
 class FileProgressWidget(QWidget):
     """
@@ -68,7 +70,7 @@ class FileProgressWidget(QWidget):
 
         self.cancel_btn = QPushButton(language_manager.get_text("file_prog_btn_cancel"))
         self.cancel_btn.setToolTip(language_manager.get_text("file_prog_btn_cancel_tooltip"))
-        self.cancel_btn.setFixedWidth(60)
+        self.cancel_btn.setFixedWidth(CONTROL_WIDTH_FILE_PROGRESS_CANCEL_BTN)
         self.cancel_btn.clicked.connect(self.on_cancel_clicked)
         self.cancel_btn.setEnabled(False)
 

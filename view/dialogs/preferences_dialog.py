@@ -32,8 +32,7 @@ from common.constants import (
     DEFAULT_LOG_MAX_LINES,
     MIN_SCAN_INTERVAL_MS,
     MAX_SCAN_INTERVAL_MS,
-    MAX_PACKET_SIZE,
-    ConfigKeys
+    MAX_PACKET_SIZE
 )
 from common.enums import NewlineMode, ThemeType
 from common.dtos import PreferencesState
@@ -215,12 +214,12 @@ class PreferencesDialog(QDialog):
         file_layout = QFormLayout()
 
         path_layout = QHBoxLayout()
-        self.log_path_edit = QLabel(language_manager.get_text("pref_lbl_log_path_placeholder"))
-        self.log_path_edit.setFrameStyle(QLabel.Sunken | QLabel.Panel)
+        self.log_path_lbl = QLabel(language_manager.get_text("pref_lbl_log_path_placeholder"))
+        self.log_path_lbl.setFrameStyle(QLabel.Sunken | QLabel.Panel)
         self.browse_btn = QPushButton(language_manager.get_text("pref_btn_browse"))
         self.browse_btn.clicked.connect(self.browse_log_path)
 
-        path_layout.addWidget(self.log_path_edit)
+        path_layout.addWidget(self.log_path_lbl)
         path_layout.addWidget(self.browse_btn)
 
         self.max_lines_spin = QSpinBox()
@@ -240,7 +239,6 @@ class PreferencesDialog(QDialog):
     def create_packet_tab(self) -> QWidget:
         """Packet 설정 탭을 생성합니다."""
         widget = QWidget()
-        layout = QVBoxLayout()
 
         # Parser Type 그룹
         parser_type_group = QGroupBox(language_manager.get_text("pref_grp_parser_type"))
@@ -373,7 +371,7 @@ class PreferencesDialog(QDialog):
         """로그 저장 경로 선택 다이얼로그를 엽니다."""
         directory = QFileDialog.getExistingDirectory(self, language_manager.get_text("pref_dialog_title_select_dir"))
         if directory:
-            self.log_path_edit.setText(directory)
+            self.log_path_lbl.setText(directory)
 
     def _get_setting(self, key: str, default: Any = None) -> Any:
         """
@@ -433,7 +431,7 @@ class PreferencesDialog(QDialog):
         self.suffix_combo.setCurrentText(self.state.command_suffix)
 
         # Logging
-        self.log_path_edit.setText(self.state.log_dir or os.getcwd())
+        self.log_path_lbl.setText(self.state.log_dir or os.getcwd())
 
         # Packet
         btn = self.parser_type_button_group.button(self.state.parser_type)
@@ -476,7 +474,7 @@ class PreferencesDialog(QDialog):
             scan_interval_ms=self.port_scan_interval_ms_spin.value(),
             command_prefix=self.prefix_combo.currentText(),
             command_suffix=self.suffix_combo.currentText(),
-            log_dir=self.log_path_edit.text(),
+            log_dir=self.log_path_lbl.text(),
 
             # Packet Settings
             parser_type=self.parser_type_button_group.checkedId(),

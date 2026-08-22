@@ -224,6 +224,55 @@ LAYOUT_SPACING_TITLE: int = 8
 LAYOUT_SPACING_GROUP: int = 10
 
 # ==========================================
+# Timing Constants (S-047: 매직 넘버 상수화)
+# ==========================================
+# 로그 뷰 검색 필터 디바운스 (view/custom_qt/smart_list_view.py)
+# 정규식 입력마다 즉시 필터링하면 복잡한 패턴에서 UI가 멈출 수 있어 입력 정지 후 반영한다.
+FILTER_DEBOUNCE_MS: int = 300
+
+# 상태바(포트/속도/버퍼) 주기 갱신 간격 (presenter/lifecycle_manager.py)
+# 값이 DEFAULT_MACRO_INTERVAL_MS(1000)와 같지만 의미가 다르므로(매크로 반복 vs UI 갱신 주기)
+# 별도 상수로 관리한다 — 한쪽이 바뀌어도 다른 쪽에 영향이 없어야 한다.
+STATUS_BAR_UPDATE_INTERVAL_MS: int = 1000
+
+# 파일 전송 backpressure 대기 (model/file_transfer_service.py)
+# TX 큐가 임계값을 넘거나(전송 중) 완료 후 큐가 비워지길 기다릴 때 사용하는 폴링 간격.
+FILE_TRANSFER_BACKPRESSURE_WAIT_S: float = 0.01
+
+# ==========================================
+# Dialog & Widget Fixed Sizes (S-047: 매직 넘버 상수화)
+# 값이 같아도 위젯/용도가 다르면 재사용하지 않고 별도 상수로 관리한다.
+# ==========================================
+# About 다이얼로그 (view/dialogs/about_dialog.py)
+DIALOG_SIZE_ABOUT_WIDTH: int = 400
+DIALOG_SIZE_ABOUT_HEIGHT: int = 300
+DIALOG_SPACING_ABOUT: int = 20
+CONTROL_WIDTH_ABOUT_CLOSE_BTN: int = 100
+
+# 파일 전송 다이얼로그 (view/dialogs/file_transfer_dialog.py)
+DIALOG_SIZE_FILE_TRANSFER_WIDTH: int = 450
+DIALOG_SIZE_FILE_TRANSFER_HEIGHT: int = 250
+CONTROL_WIDTH_FILE_TRANSFER_SELECT_BTN: int = 100
+
+# 폰트 설정 다이얼로그 (view/dialogs/font_settings_dialog.py)
+DIALOG_SPACING_FONT_SETTINGS: int = 15
+
+# 포트 설정 위젯의 Serial 콤보박스 고정 폭 (view/widgets/port_settings.py)
+CONTROL_WIDTH_PORT_DATA_COMBO: int = 40
+CONTROL_WIDTH_PORT_PARITY_COMBO: int = 40
+CONTROL_WIDTH_PORT_STOP_COMBO: int = 45
+
+# 메인 상태바 (view/sections/main_status_bar.py)
+CONTROL_WIDTH_MAIN_STATUS_PORT_LBL: int = 100
+CONTROL_WIDTH_MAIN_STATUS_BUFFER_BAR: int = 100
+
+# 파일 전송 진행률 위젯 (view/widgets/file_progress.py)
+CONTROL_WIDTH_FILE_PROGRESS_CANCEL_BTN: int = 60
+
+# 데이터 로그 위젯의 개행 모드 콤보박스 (view/widgets/data_log.py)
+CONTROL_WIDTH_DATA_LOG_NEWLINE_COMBO: int = 100
+
+# ==========================================
 # System & File Constants
 # ==========================================
 PLATFORM_WINDOWS = "Windows"

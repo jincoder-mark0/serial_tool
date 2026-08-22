@@ -21,7 +21,7 @@ JSON 기반의 언어 리소스를 로드하고, 런타임 언어 변경 및 텍
 * Lazy Initialization: 초기화 시 경로가 없으면 로드를 지연하여 시작 속도 최적화
 """
 import os
-from typing import Dict, Optional, List, Any
+from typing import Dict, Optional, List
 
 # commentjson 라이브러리 지원 (주석이 포함된 JSON 파싱)
 try:

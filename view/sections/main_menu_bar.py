@@ -21,14 +21,13 @@
 * QActionGroup을 활용한 배타적(Radio) 선택 구현 (테마, 언어)
 * 람다(lambda) 함수를 사용하여 동적 생성된 액션에 데이터 바인딩
 """
-from typing import Dict, Optional
+from typing import Optional
 
-from PyQt5.QtWidgets import QMenuBar, QAction, QActionGroup, QApplication
+from PyQt5.QtWidgets import QMenuBar, QAction, QActionGroup
 from PyQt5.QtCore import pyqtSignal
 
 from view.managers.language_manager import language_manager
 from view.managers.theme_manager import theme_manager
-from core.logger import logger
 
 
 class MainMenuBar(QMenuBar):

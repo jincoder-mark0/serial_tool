@@ -30,3 +30,20 @@ jobs:
           python-version: "3.11"
       - name: Check language key integrity
         run: python tools/check_language_keys.py
+
+  lint:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install ruff
+        run: pip install ruff
+      # S-047 도입 시점 기준 프로젝트 전역에 44건의 기존 위반(대부분 tests/의 미사용
+      # import, core/model/presenter 일부)이 남아있어 즉시 강제하면 이 태스크와 무관한
+      # 이유로 CI가 막힌다. continue-on-error로 시작해 위반 로그는 남기되 전체를
+      # 막지 않고, 기존 위반이 정리되면 이 줄을 제거해 강제로 전환한다.
+      - name: Run ruff check
+        run: ruff check .
+        continue-on-error: true

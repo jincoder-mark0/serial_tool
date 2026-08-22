@@ -20,7 +20,7 @@ Presenter와 Widget 사이의 인터페이스(Facade) 역할을 수행합니다.
 * Presenter가 호출할 수 있는 Getter/Setter 메서드 정의
 * 시그널을 재발행(Re-emit)하여 계층 간 통신
 """
-from typing import Optional, Dict, Any
+from typing import Optional
 
 from PyQt5.QtWidgets import QWidget, QVBoxLayout, QLabel
 from PyQt5.QtCore import pyqtSignal

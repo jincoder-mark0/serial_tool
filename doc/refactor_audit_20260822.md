@@ -207,20 +207,25 @@ EventBus")가 합리적이다. Qt 시그널을 버스로 강제 우회시키면 
 
 ## 조치 계획
 
-| 태스크 | 대상 | 우선 |
+| 태스크 | 대상 | 상태 |
 |---|---|---|
-| [S-038](../tasks/S-038-log-view-duplicate-methods.md) ✅ | 로그 뷰 파손 (A-1) | P0 완료 |
-| [S-039](../tasks/S-039-tx-data-loss.md) | TX 큐 flush + write_timeout (A-2, A-3) | P0 |
-| [S-040](../tasks/S-040-port-tab-close-cleanup.md) | 포트 탭 좀비 연결 (A-4) | P0 |
-| [S-041](../tasks/S-041-parser-and-protocol-wiring.md) | 파서 설정 무효 + SPI 기만 (B-1, B-2) | P1 |
-| [S-042](../tasks/S-042-silent-failures.md) | 워커 잔존·전송 실패 무통보·매크로 알림 (B-3, B-4, C-1) | P1 |
-| [S-043](../tasks/S-043-settings-pollution.md) | 설정 기본값 오염 차단 (C-5) | P1 |
-| [S-044](../tasks/S-044-dead-code-and-dto.md) | dead code 3건 + DTO/enum 우회 (C-3, C-4) | P2 |
-| [S-045](../tasks/S-045-test-coverage-gaps.md) | 커버리지 공백 5모듈 + DataLogger 종료 (B-5, C-2) | P2 |
-| [S-046](../tasks/S-046-docs-and-rules-sync.md) | 문서·규칙 정합 일괄 (C-6 판정 반영, D 문서군) | P2 |
-| S-047 (미작성) | 매직 넘버·명명 규칙·lint 도입 (D) | P3 |
-| S-048 (미작성) | 싱글톤 테스트 격리, 언어 키 사용처 검증 도구 (C-7, D) | P3 |
-| S-049 (미작성) | God object 분해·로그 위젯 공통화 (C-7) | P3 |
+| [S-038](../tasks/S-038-log-view-duplicate-methods.md) | 로그 뷰 파손 (A-1) | ✅ P0 완료 (0336dcd) |
+| [S-039](../tasks/S-039-tx-data-loss.md) | TX 큐 flush + write_timeout (A-2, A-3) | ✅ P0 완료 (b29c2c5) |
+| [S-040](../tasks/S-040-port-tab-close-cleanup.md) | 포트 탭 좀비 연결 + 워커 잔존 (A-4, B-3) | ✅ P0 완료 (b29c2c5) |
+| [S-041](../tasks/S-041-parser-and-protocol-wiring.md) | 파서 설정 무효 + SPI 기만 (B-1, B-2) | ✅ P1 완료 (aeb8d1d) |
+| [S-042](../tasks/S-042-silent-failures.md) | 전송 실패 무통보 + 매크로 알림 (B-4, C-1) | ✅ P1 완료 (aeb8d1d) |
+| [S-043](../tasks/S-043-settings-pollution.md) | 설정 기본값 오염 차단 (C-5) | ✅ P1 완료 (9670242) |
+| [S-044](../tasks/S-044-dead-code-and-dto.md) | dead code 3건 + DTO/enum 우회 (C-3, C-4) | ✅ P2 완료 (32dd019) |
+| [S-045](../tasks/S-045-test-coverage-gaps.md) | 커버리지 공백 5모듈 + DataLogger 종료 (B-5, C-2) | ✅ P2 완료 (32dd019) |
+| [S-046](../tasks/S-046-docs-and-rules-sync.md) | 문서·규칙 정합 일괄 (C-6 판정 반영, D 문서군) | ✅ P2 완료 (32dd019) |
+| [S-047](../tasks/S-047-magic-numbers-naming-lint.md) | 매직 넘버·명명 규칙·lint 도입 (D) | P3 |
+| [S-048](../tasks/S-048-singleton-isolation-and-key-check.md) | 싱글톤 테스트 격리, 언어 키 사용처 검증 (C-7, D) | P3 |
+| [S-049](../tasks/S-049-god-object-decomposition.md) | God object 분해·로그 위젯 공통화 (C-7) | P3 |
+
+### 진행 경과 (2026-08-22)
+
+P0·P1·P2 전량 완료. **테스트 134 → 227**(신규 93건)로 안전망을 먼저 깔았고, 그 위에서
+P3 구조 개선을 착수한다. 감사에서 지목한 "조용히 틀린 결과를 내는" 결함은 모두 제거됐다.
 
 **원칙**: P0/P1은 "조용히 틀린 결과를 내는" 것들이라 먼저 없앤다. 구조 개선(God object 분해,
 중복 공통화)은 회귀 위험이 크므로 **커버리지 공백(S-045)을 메운 뒤** 착수한다 — 지금 상태에서

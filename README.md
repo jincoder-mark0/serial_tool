@@ -71,7 +71,7 @@
   선택 시 연결이 거부됩니다(명시적 에러, 조용한 Serial 대체 없음).
 * 패킷 파서(Raw/AT/Delimiter/FixedLength)는 Preferences에서 고른 설정이 연결 시 적용됩니다.
 * 처리량 수치는 자동 벤치마크가 도입되기 전까지 보장하지 않습니다.
-* 현재 자동화 테스트 기준선은 227개 테스트 통과입니다.
+* 현재 자동화 테스트 기준선은 243개 테스트 통과입니다.
 
 ---
 
@@ -536,3 +536,21 @@ python -m pytest -v -s
 ```
 
 Windows의 GUI 없는 환경에서는 실행 전에 `QT_QPA_PLATFORM=offscreen`을 설정합니다.
+
+### 7.2 Lint (ruff)
+
+`ruff`는 런타임 의존성이 아니므로 `requirements.txt`에는 포함하지 않습니다. 필요 시
+개발 환경에 직접 설치합니다.
+
+```bash
+# 설치
+pip install ruff
+
+# 전체 검사
+ruff check .
+```
+
+설정은 `pyproject.toml`의 `[tool.ruff]`에 있습니다(`line-length = 120`, 규칙은
+`E`/`F`로 시작). CI의 `lint` 잡은 현재 `continue-on-error`로 실행되어 위반을
+보고만 하고 빌드를 막지 않습니다(S-047 도입 시점 기존 위반이 남아있기 때문 —
+정리되는 대로 강제로 전환 예정).

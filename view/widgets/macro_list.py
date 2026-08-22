@@ -261,8 +261,6 @@ class MacroListWidget(QWidget):
             suffix_enabled = item_suffix.checkState() == Qt.Checked
             hex_mode = item_hex_mode.checkState() == Qt.Checked
 
-            delay_text = item_delay.text()
-
             try:
                 delay_ms = int(item_delay.text())
             except (ValueError, TypeError):

@@ -19,7 +19,7 @@
 * deque를 사용하여 고정 크기 버퍼(Ring Buffer) 구현
 * Presenter로부터 DTO(PacketViewData)를 받아 모델 업데이트
 """
-from typing import List, Any
+from typing import Any
 from collections import deque
 
 from PyQt5.QtWidgets import (
