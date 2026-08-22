@@ -1,6 +1,10 @@
 # S-012 — PyInstaller 패키징
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. onedir spec + resources 번들,
+  PyInstaller 6.22.2, hiddenimports 불요 확인. exe 스모크: 5초 생존 + 번들 로그로 전체 초기화
+  시퀀스 확인 + 실행 창 스크린샷(다크 테마·패널 렌더 확인). pytest 회귀 없음.
+  잔여 수동 항목: 언어 전환 클릭 확인. 후속 등재: .ico 아이콘 자산 없음(기본 아이콘),
+  번들 로그가 _internal\logs\에 쓰임 → S-029(사용자 디렉터리화))
 - Recommended model: 하위(Sonnet) 가능 — 단, 최종 실행 확인은 수동(GUI) 항목
 - 선행: **S-013(사용자 설정 분리), S-018(PyInstaller 감지 수정)** — 미완이면 시작 금지
 - Skills to load: task-done

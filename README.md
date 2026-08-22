@@ -104,6 +104,30 @@ pip install -r requirements.txt
 python main.py
 ```
 
+### 2.4 독립 실행 파일 빌드 (PyInstaller)
+
+`serial_tool.spec`은 onedir 모드로 빌드합니다 (onefile은 시작이 느리고 백신 오탐이
+잦아 채택하지 않음). 번들 실행 시 사용자 설정은 `%APPDATA%\SerialTool\`에 분리
+저장되며(§6.5 참고), 리소스는 `sys._MEIPASS` 기준으로 로드됩니다.
+
+```powershell
+# 1. pyinstaller 설치 (requirements.txt에는 포함하지 않음 — 빌드 시에만 필요)
+.venv\Scripts\pip install pyinstaller
+
+# 2. 빌드 (dist\SerialTool\ 에 결과물 생성)
+.venv\Scripts\pyinstaller serial_tool.spec --noconfirm
+
+# 3. 실행
+dist\SerialTool\SerialTool.exe
+```
+
+* 아이콘: `resources/icons/`에 `.ico` 파일이 없어 현재 spec은 기본 아이콘을 사용합니다.
+  아이콘을 지정하려면 `.ico` 파일을 추가하고 `serial_tool.spec`의 `EXE(icon=...)`을
+  채워 넣으세요.
+* 로그 파일은 개발 모드와 동일하게 `logs/` 하위에 생성되며, onedir 번들에서는
+  `dist\SerialTool\_internal\logs\`에 생성됩니다(PyInstaller 6.x가 onedir 종속성을
+  `_internal\`로 이동하면서 `sys._MEIPASS`가 그 경로를 가리키기 때문).
+
 ---
 
 ## 3. 프로젝트 구조 (Project Structure)

@@ -36,7 +36,8 @@
 | [S-009](tasks/S-009-plugin-system.md) | 플러그인 인프라 (base/loader/Example) | 7 | ⏸ 대기 | 인터페이스 설계 선행 (상위 전용) |
 | [S-010](tasks/S-010-virtual-serial-env.md) | 가상 시리얼 포트 실환경 검증 (com0com) | 8 | ⏸ 대기 | 사용자 설치 개입 필요. 실기기 미검증 해소 기반 |
 | [S-011](tasks/S-011-benchmark.md) | 성능 벤치마크 도구 | 8 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 실측: doc/benchmark_20260822.md. S-007 선행 해소 |
-| [S-012](tasks/S-012-packaging.md) | 패키징 (pyinstaller spec, 독립 실행 파일) | 8 | ⏸ 대기 | 선행: S-013, S-018 |
+| [S-012](tasks/S-012-packaging.md) | 패키징 (pyinstaller spec, 독립 실행 파일) | 8 | ✅ 완료 | 하위 모델 수행 (2026-08-22). exe 빌드·스모크·스크린샷 확인. 아이콘·언어 전환 수동 잔여 |
+| [S-029](tasks/S-029-bundle-log-path.md) | 번들 로그 경로 사용자 디렉터리화 | 8 | ⏸ 대기 | S-012 중 확인 — _internal\logs는 설치 위치 쓰기 불가 시 실패 |
 | [S-013](tasks/S-013-user-config-dir.md) | 설정 파일 사용자 디렉터리 분리 | 8 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 번들=APPDATA, 개발 모드 불변. S-012 선행 해소 |
 | [S-014](tasks/S-014-github-actions-ci.md) | GitHub Actions CI (pytest + 언어 키 검사) | 8 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 러너 실검증은 push 후 확인 필요 |
 | [S-015](tasks/S-015-spi-i2c-transport.md) | SPI/I2C Transport 확장 | 후속 | ⛔ 보류 | 요구 미확정 (대상 하드웨어·유스케이스) |
