@@ -14,7 +14,7 @@ description: SerialTool 태스크 완료 판정·마감 절차 — 검증 3단�
 # ① 변경과 가장 가까운 테스트
 $env:QT_QPA_PLATFORM="offscreen"; .venv\Scripts\python -m pytest tests/test_<관련>.py -q
 
-# ② 전체 테스트 (기준선 243개 — 늘었으면 RULES.md·README §1.4·tests/README·이 파일 숫자 갱신)
+# ② 전체 테스트 (기준선 282개 — 늘었으면 RULES.md·README §1.4·tests/README·이 파일 숫자 갱신)
 $env:QT_QPA_PLATFORM="offscreen"; .venv\Scripts\python -m pytest -q
 
 # ③ UI 문자열을 건드렸다면 (아니면 생략)
@@ -31,6 +31,9 @@ $env:QT_QPA_PLATFORM="offscreen"; .venv\Scripts\python -m pytest -q
 2. `doc/task.md` — 해당 Phase 체크리스트에 체크 추가 (이력 문서 — 기존 항목 재구성 금지).
 3. `doc/CHANGELOG.md` — 사용자 관점의 변경 한 줄.
 4. 기능·구조가 바뀌었으면 `README.md` 해당 절 현행화.
+   **UI 최소 크기(minimumSizeHint)가 바뀌었으면 `.agent/rules/ui_guide.md` §4의 회귀
+   기준선도 함께 갱신한다** — 빠뜨리면 다음 작업자가 실측치를 회귀로 오인한다
+   (doc/mistakes.md #5).
 5. 작업 중 실수가 있었다면 `doc/mistakes.md`에 기록.
 
 ## 3. 커밋

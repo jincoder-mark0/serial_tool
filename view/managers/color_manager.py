@@ -18,7 +18,8 @@
 ## HOW
 * Singleton 패턴으로 전역 접근 보장
 * 내부적으로 ColorRule DTO 리스트를 유지하며, 요청 시 Qt 객체로 변환하여 제공
-* ThemeManager와 연동하여 현재 테마에 맞는 색상 적용 (순환 참조 방지 적용)
+* 현재 테마가 dark 계열인지는 ThemeManager를 직접 참조하지 않고 공유 리프 모듈
+  `theme_state`를 통해 조회 (ThemeManager<->ColorManager 순환 참조 해소, S-050)
 """
 import json
 from typing import List, Optional, Tuple
@@ -31,6 +32,7 @@ from core.logger import logger
 from core.resource_path import ResourcePath
 from common.dtos import ColorRule
 from view.services.color_service import ColorService
+from view.managers import theme_state
 from common.constants import (
     LOG_COLOR_DARK_TIMESTAMP, LOG_COLOR_DARK_INFO, LOG_COLOR_DARK_ERROR,
     LOG_COLOR_DARK_WARN, LOG_COLOR_DARK_PROMPT, LOG_COLOR_DARK_SUCCESS,
@@ -352,9 +354,9 @@ class ColorManager(QObject):
         Returns:
             str: HTML 태그가 적용된 텍스트.
         """
-        # [중요] 순환 참조 방지
-        from view.managers.theme_manager import theme_manager
-        is_dark = theme_manager.is_dark_theme()
+        # theme_state는 ThemeManager/ColorManager 어느 쪽도 참조하지 않는 리프 모듈이라
+        # 순환 참조 없이 최상단에서 import해 사용한다 (S-050).
+        is_dark = theme_state.is_dark_theme()
 
         # ColorService가 rule.color(또는 light/dark)를 참조할 때 #이 붙은 값을 쓰게 됨
         return ColorService.apply_rules(text, self._rules, is_dark)

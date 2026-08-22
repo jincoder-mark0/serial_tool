@@ -29,9 +29,13 @@ from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
 from view.managers.language_manager import language_manager
 from view.managers.theme_manager import theme_manager
 from view.custom_qt.smart_list_view import QSmartListView
+from view.widgets.log_toolbar import (
+    create_search_bar, create_filter_checkbox, create_logging_toggle_button,
+    apply_recording_style, LogSearchController,
+)
 from common.constants import (
     DEFAULT_LOG_MAX_LINES,
-    LAYOUT_MARGIN_NONE, LAYOUT_SPACING_TIGHT, ICON_BUTTON_SIZE
+    LAYOUT_MARGIN_NONE, LAYOUT_SPACING_TIGHT
 )
 from common.dtos import ColorRule, SystemLogEvent
 from view.services.color_service import ColorService
@@ -115,43 +119,35 @@ class SystemLogWidget(QWidget):
         self.sys_log_title = QLabel(language_manager.get_text("sys_log_title"))
         self.sys_log_title.setProperty("class", "section-title")
 
-        # 도구 섹션 (검색, 옵션, 액션)
-        # Search Bar
-        self.sys_log_search_input = QLineEdit()
-        self.sys_log_search_input.setPlaceholderText(language_manager.get_text("sys_log_edit_search_placeholder"))
-        self.sys_log_search_input.setToolTip(language_manager.get_text("sys_log_edit_search_tooltip"))
-        self.sys_log_search_input.setMaximumWidth(200)
+        # 도구 섹션 (검색, 옵션, 액션) — 공통 팩토리(view/widgets/log_toolbar.py, S-049)
+        self.sys_log_search_input, self.sys_log_search_prev_btn, self.sys_log_search_next_btn = create_search_bar(
+            object_name_prefix="sys_log",
+            placeholder=language_manager.get_text("sys_log_edit_search_placeholder"),
+            input_tooltip=language_manager.get_text("sys_log_edit_search_tooltip"),
+            prev_tooltip=language_manager.get_text("sys_log_btn_search_prev_tooltip"),
+            next_tooltip=language_manager.get_text("sys_log_btn_search_next_tooltip"),
+        )
         self.sys_log_search_input.returnPressed.connect(self.on_sys_log_search_next_clicked)
         # 검색어 변경 시 실시간 하이라이트 갱신
         self.sys_log_search_input.textChanged.connect(self.on_sys_log_search_text_changed)
-
-        # Buttons
-        self.sys_log_search_prev_btn = QPushButton()
-        self.sys_log_search_prev_btn.setObjectName("sys_log_search_prev_btn")
-        self.sys_log_search_prev_btn.setText("<") # 아이콘이 없을 경우를 대비한 텍스트
-        self.sys_log_search_prev_btn.setToolTip(language_manager.get_text("sys_log_btn_search_prev_tooltip"))
-        self.sys_log_search_prev_btn.setFixedSize(ICON_BUTTON_SIZE, ICON_BUTTON_SIZE)
         self.sys_log_search_prev_btn.clicked.connect(self.on_sys_log_search_prev_clicked)
-
-        self.sys_log_search_next_btn = QPushButton()
-        self.sys_log_search_next_btn.setObjectName("sys_log_search_next_btn")
-        self.sys_log_search_next_btn.setText(">") # 아이콘이 없을 경우를 대비한 텍스트
-        self.sys_log_search_next_btn.setToolTip(language_manager.get_text("sys_log_btn_search_next_tooltip"))
-        self.sys_log_search_next_btn.setFixedSize(ICON_BUTTON_SIZE, ICON_BUTTON_SIZE)
         self.sys_log_search_next_btn.clicked.connect(self.on_sys_log_search_next_clicked)
 
         self.sys_log_clear_log_btn = QPushButton(language_manager.get_text("sys_log_btn_clear"))
         self.sys_log_clear_log_btn.setToolTip(language_manager.get_text("sys_log_btn_clear_tooltip"))
         self.sys_log_clear_log_btn.clicked.connect(self.on_clear_sys_log_clicked)
 
-        self.sys_log_toggle_logging_btn = QPushButton(language_manager.get_text("sys_log_btn_toggle_logging"))
-        self.sys_log_toggle_logging_btn.setToolTip(language_manager.get_text("sys_log_btn_toggle_logging_tooltip"))
-        self.sys_log_toggle_logging_btn.setCheckable(True)  # 토글 버튼으로 변경
+        self.sys_log_toggle_logging_btn = create_logging_toggle_button(
+            language_manager.get_text("sys_log_btn_toggle_logging"),
+            language_manager.get_text("sys_log_btn_toggle_logging_tooltip"),
+        )
         self.sys_log_toggle_logging_btn.toggled.connect(self.on_sys_log_logging_toggled)
 
         # Options
-        self.sys_log_filter_chk = QCheckBox(language_manager.get_text("sys_log_chk_filter"))
-        self.sys_log_filter_chk.setToolTip(language_manager.get_text("sys_log_chk_filter_tooltip"))
+        self.sys_log_filter_chk = create_filter_checkbox(
+            language_manager.get_text("sys_log_chk_filter"),
+            language_manager.get_text("sys_log_chk_filter_tooltip"),
+        )
         self.sys_log_filter_chk.stateChanged.connect(self.on_sys_log_filter_changed)
 
         # 2. 로그 뷰 영역
@@ -161,6 +157,9 @@ class SystemLogWidget(QWidget):
         self.sys_log_list.setPlaceholderText(language_manager.get_text("sys_log_list_log_placeholder"))
         self.sys_log_list.setToolTip(language_manager.get_text("sys_log_list_log_tooltip"))
         self.sys_log_list.setProperty("class", "fixed-font")
+
+        # 검색 다음/이전/실시간 하이라이트 배선 (공통 컨트롤러 — S-049)
+        self._search_controller = LogSearchController(self.sys_log_search_input, self.sys_log_list)
 
         # 레이아웃 배치
         # DataLogWidget과 동일하게 타이틀 뒤에 stretch를 두어 툴바 우측 정렬 규칙을 통일 (S-025)
@@ -249,23 +248,17 @@ class SystemLogWidget(QWidget):
     @pyqtSlot()
     def on_sys_log_search_next_clicked(self) -> None:
         """검색창의 텍스트로 다음 항목을 찾습니다."""
-        text = self.sys_log_search_input.text()
-        if text:
-            # 패턴 설정은 textChanged에서 실시간으로 되지만 안전을 위해 호출
-            self.sys_log_list.set_search_pattern(text)
-            self.sys_log_list.find_next(text)
+        self._search_controller.search_next()
 
     @pyqtSlot()
     def on_sys_log_search_prev_clicked(self) -> None:
         """검색창의 텍스트로 이전 항목을 찾습니다."""
-        text = self.sys_log_search_input.text()
-        if text:
-            self.sys_log_list.find_prev(text)
+        self._search_controller.search_prev()
 
     @pyqtSlot(str)
     def on_sys_log_search_text_changed(self, text: str) -> None:
         """검색어가 변경되면 하이라이트 패턴을 즉시 업데이트합니다."""
-        self.sys_log_list.set_search_pattern(text)
+        self._search_controller.on_text_changed(text)
 
     @pyqtSlot()
     def on_clear_sys_log_clicked(self) -> None:
@@ -281,12 +274,25 @@ class SystemLogWidget(QWidget):
             - 체크(True): 파일 저장 다이얼로그 표시 -> 성공 시 시그널 발행 및 UI 변경
             - 체크 해제(False): 로깅 중단 시그널 발행 및 UI 복구
 
+        Note (S-049, 통일하지 않고 기록만 남김):
+            이 위젯은 "자기 권위" 제어 흐름이다 — 토글 즉시 위젯 스스로 파일
+            다이얼로그를 띄우고 REC 스타일을 전환한다. 반면 `DataLogWidget`은
+            "Presenter 권위"로, 버튼 토글은 의도(시그널)만 내보내고 실제 스타일
+            전환은 Presenter가 `set_logging_active()`를 호출해야 일어난다
+            (`data_log.py`의 `on_data_log_logging_toggled` 참고). 같은 개념(REC
+            토글)을 반대 방향으로 구현한 기존 불일치이며, 이번 태스크의 범위는
+            중복 제거이지 흐름 통일이 아니므로 그대로 둔다. (Presenter가 파일명을
+            모른 채로 시작하는 게 MVP 원칙상 더 맞지만, 이 위젯은 파일명을 스스로
+            선택하므로 대안 검토가 필요 — 별도 판단 대상.)
+
         Args:
             checked (bool): 버튼 체크 상태.
         """
+        inactive_text = language_manager.get_text("sys_log_btn_toggle_logging")
+
         if checked:
             # 파일 저장 다이얼로그
-            title = language_manager.get_text("sys_log_btn_toggle_logging")
+            title = inactive_text
             if self.tab_name:
                 title = f"{self.tab_name}::{title}"
 
@@ -300,11 +306,8 @@ class SystemLogWidget(QWidget):
             if filename:
                 # 로깅 시작 시그널 발행
                 self.sys_logging_started.emit(filename)
-                # 버튼 스타일 변경
-                self.sys_log_toggle_logging_btn.setText("● REC")
-                self.sys_log_toggle_logging_btn.setProperty("state", "recording")
-                self.sys_log_toggle_logging_btn.style().unpolish(self.sys_log_toggle_logging_btn)
-                self.sys_log_toggle_logging_btn.style().polish(self.sys_log_toggle_logging_btn)
+                # 버튼 스타일 변경 (자기 권위 — 외부 호출 없이 즉시 전환)
+                apply_recording_style(self.sys_log_toggle_logging_btn, True, inactive_text)
             else:
                 # 취소 시 버튼 복구
                 self.sys_log_toggle_logging_btn.setChecked(False)
@@ -312,10 +315,7 @@ class SystemLogWidget(QWidget):
             # 로깅 중단 시그널 발행
             self.sys_logging_stopped.emit()
             # 버튼 스타일 복구
-            self.sys_log_toggle_logging_btn.setText(language_manager.get_text("sys_log_btn_toggle_logging"))
-            self.sys_log_toggle_logging_btn.setProperty("state", None)
-            self.sys_log_toggle_logging_btn.style().unpolish(self.sys_log_toggle_logging_btn)
-            self.sys_log_toggle_logging_btn.style().polish(self.sys_log_toggle_logging_btn)
+            apply_recording_style(self.sys_log_toggle_logging_btn, False, inactive_text)
 
     @pyqtSlot(int)
     def on_sys_log_filter_changed(self, state: int) -> None:

@@ -23,18 +23,22 @@ QSmartListView를 기반으로 하여 대량의 데이터 처리 성능을 최�
 
 from PyQt5.QtWidgets import (
     QWidget, QVBoxLayout, QHBoxLayout,
-    QPushButton, QCheckBox, QLabel, QLineEdit, QFileDialog, QComboBox
+    QPushButton, QCheckBox, QLabel, QFileDialog, QComboBox
 )
 from PyQt5.QtCore import QTimer, pyqtSignal, pyqtSlot, Qt
 from typing import Optional, List
 from view.managers.language_manager import language_manager
 
 from view.custom_qt.smart_list_view import QSmartListView
+from view.widgets.log_toolbar import (
+    create_search_bar, create_filter_checkbox, create_logging_toggle_button,
+    apply_recording_style, LogSearchController,
+)
 
 from common.constants import (
     DEFAULT_LOG_MAX_LINES,
     UI_REFRESH_INTERVAL_MS,
-    LAYOUT_MARGIN_NONE, LAYOUT_SPACING_TIGHT, ICON_BUTTON_SIZE,
+    LAYOUT_MARGIN_NONE, LAYOUT_SPACING_TIGHT,
     CONTROL_WIDTH_DATA_LOG_NEWLINE_COMBO
 )
 from common.enums import NewlineMode
@@ -142,44 +146,37 @@ class DataLogWidget(QWidget):
         self.data_log_tx_broadcast_allowed_chk.setToolTip(language_manager.get_text("data_log_chk_tx_broadcast_allowed_tooltip"))
         self.data_log_tx_broadcast_allowed_chk.stateChanged.connect(self.on_data_log_tx_broadcast_allowed_changed)
 
-        # Search Bar
-        self.data_log_search_input = QLineEdit()
-        self.data_log_search_input.setPlaceholderText(language_manager.get_text("data_log_edit_search_placeholder"))
-        self.data_log_search_input.setToolTip(language_manager.get_text("data_log_edit_search_tooltip"))
-        self.data_log_search_input.setMaximumWidth(200)
-        # 최소 폭 확보 (S-026) — 툴바 2행화 이전에는 stretch가 0으로 수렴해 35px까지 압착되었음
-        self.data_log_search_input.setMinimumWidth(120)
+        # Search Bar (공통 팩토리 — view/widgets/log_toolbar.py, S-049)
+        self.data_log_search_input, self.data_log_search_prev_btn, self.data_log_search_next_btn = create_search_bar(
+            object_name_prefix="data_log",
+            placeholder=language_manager.get_text("data_log_edit_search_placeholder"),
+            input_tooltip=language_manager.get_text("data_log_edit_search_tooltip"),
+            prev_tooltip=language_manager.get_text("data_log_btn_search_prev_tooltip"),
+            next_tooltip=language_manager.get_text("data_log_btn_search_next_tooltip"),
+            # 최소 폭 확보 (S-026) — 툴바 2행화 이전에는 stretch가 0으로 수렴해 35px까지 압착되었음
+            min_width=120,
+        )
         self.data_log_search_input.returnPressed.connect(self.on_data_log_search_next_clicked)
         # 검색어 변경 시 실시간 하이라이트 갱신
         self.data_log_search_input.textChanged.connect(self.on_data_log_search_text_changed)
-
-        # Buttons
-        self.data_log_search_prev_btn = QPushButton()
-        self.data_log_search_prev_btn.setObjectName("data_log_search_prev_btn")
-        self.data_log_search_prev_btn.setText("<") # 아이콘이 없을 경우를 대비한 텍스트
-        self.data_log_search_prev_btn.setToolTip(language_manager.get_text("data_log_btn_search_prev_tooltip"))
-        self.data_log_search_prev_btn.setFixedSize(ICON_BUTTON_SIZE, ICON_BUTTON_SIZE)
         self.data_log_search_prev_btn.clicked.connect(self.on_data_log_search_prev_clicked)
-
-        self.data_log_search_next_btn = QPushButton()
-        self.data_log_search_next_btn.setObjectName("data_log_search_next_btn")
-        self.data_log_search_next_btn.setText(">") # 아이콘이 없을 경우를 대비한 텍스트
-        self.data_log_search_next_btn.setToolTip(language_manager.get_text("data_log_btn_search_next_tooltip"))
-        self.data_log_search_next_btn.setFixedSize(ICON_BUTTON_SIZE, ICON_BUTTON_SIZE)
         self.data_log_search_next_btn.clicked.connect(self.on_data_log_search_next_clicked)
 
         self.data_log_clear_log_btn = QPushButton(language_manager.get_text("data_log_btn_clear"))
         self.data_log_clear_log_btn.setToolTip(language_manager.get_text("data_log_btn_clear_tooltip"))
         self.data_log_clear_log_btn.clicked.connect(self.on_clear_data_log_clicked)
 
-        self.data_log_toggle_logging_btn = QPushButton(language_manager.get_text("data_log_btn_toggle_logging"))
-        self.data_log_toggle_logging_btn.setToolTip(language_manager.get_text("data_log_btn_toggle_logging_tooltip"))
-        self.data_log_toggle_logging_btn.setCheckable(True)  # 토글 버튼으로 변경
+        self.data_log_toggle_logging_btn = create_logging_toggle_button(
+            language_manager.get_text("data_log_btn_toggle_logging"),
+            language_manager.get_text("data_log_btn_toggle_logging_tooltip"),
+        )
         self.data_log_toggle_logging_btn.toggled.connect(self.on_data_log_logging_toggled)
 
         # Options
-        self.data_log_filter_chk = QCheckBox(language_manager.get_text("data_log_chk_filter"))
-        self.data_log_filter_chk.setToolTip(language_manager.get_text("data_log_chk_filter_tooltip"))
+        self.data_log_filter_chk = create_filter_checkbox(
+            language_manager.get_text("data_log_chk_filter"),
+            language_manager.get_text("data_log_chk_filter_tooltip"),
+        )
         self.data_log_filter_chk.stateChanged.connect(self.on_data_log_filter_changed)
 
         self.data_log_hex_chk = QCheckBox(language_manager.get_text("data_log_chk_hex"))
@@ -213,6 +210,9 @@ class DataLogWidget(QWidget):
         self.data_log_list.setPlaceholderText(language_manager.get_text("data_log_list_log_placeholder"))
         self.data_log_list.setToolTip(language_manager.get_text("data_log_list_log_tooltip"))
         self.data_log_list.setProperty("class", "fixed-font")
+
+        # 검색 다음/이전/실시간 하이라이트 배선 (공통 컨트롤러 — S-049)
+        self._search_controller = LogSearchController(self.data_log_search_input, self.data_log_list)
 
         # 툴바 2행화 (S-026) — 1행(제목+옵션) / 2행(검색+액션)으로 나눠 가로 폭 압박 해소
         toolbar_row1_layout = QHBoxLayout()
@@ -341,24 +341,17 @@ class DataLogWidget(QWidget):
     @pyqtSlot()
     def on_data_log_search_next_clicked(self) -> None:
         """검색창의 텍스트로 다음 항목을 찾습니다."""
-        text = self.data_log_search_input.text()
-
-        if text:
-            # 패턴 설정은 textChanged에서 실시간으로 되지만 안전을 위해 호출
-            self.data_log_list.set_search_pattern(text)
-            self.data_log_list.find_next(text)
+        self._search_controller.search_next()
 
     @pyqtSlot()
     def on_data_log_search_prev_clicked(self) -> None:
         """검색창의 텍스트로 이전 항목을 찾습니다."""
-        text = self.data_log_search_input.text()
-        if text:
-            self.data_log_list.find_prev(text)
+        self._search_controller.search_prev()
 
     @pyqtSlot(str)
     def on_data_log_search_text_changed(self, text: str) -> None:
         """검색어가 변경되면 하이라이트 패턴을 즉시 업데이트합니다."""
-        self.data_log_list.set_search_pattern(text)
+        self._search_controller.on_text_changed(text)
 
     @pyqtSlot()
     def on_clear_data_log_clicked(self) -> None:
@@ -374,6 +367,14 @@ class DataLogWidget(QWidget):
         Logic:
             - UI 상태 변경 없이 오직 시그널만 발행
             - 실제 UI 변경은 Presenter가 set_logging_active를 호출할 때 수행
+
+        Note (S-049, 통일하지 않고 기록만 남김):
+            이 위젯은 "Presenter 권위" 제어 흐름이다 — REC 스타일 전환은
+            `set_logging_active()`를 통해서만 일어난다. 반면 `SystemLogWidget`은
+            "자기 권위"로, 토글 즉시 위젯 스스로 파일 다이얼로그를 띄우고 스타일을
+            전환한다(`system_log.py`의 `on_sys_log_logging_toggled` 참고). 같은
+            개념(REC 토글)을 반대 방향으로 구현한 기존 불일치이며, 이번 태스크의
+            범위는 중복 제거이지 흐름 통일이 아니므로 그대로 둔다.
         """
         if checked:
             self.logging_start_requested.emit()
@@ -392,14 +393,11 @@ class DataLogWidget(QWidget):
         self.data_log_toggle_logging_btn.setChecked(active)
         self.data_log_toggle_logging_btn.blockSignals(False)
 
-        if active:
-            self.data_log_toggle_logging_btn.setText("● REC")
-            self.data_log_toggle_logging_btn.setProperty("state", "recording")
-        else:
-            self.data_log_toggle_logging_btn.setText(language_manager.get_text("data_log_btn_toggle_logging"))
-            self.data_log_toggle_logging_btn.setProperty("state", None)
-        self.data_log_toggle_logging_btn.style().unpolish(self.data_log_toggle_logging_btn)
-        self.data_log_toggle_logging_btn.style().polish(self.data_log_toggle_logging_btn)
+        apply_recording_style(
+            self.data_log_toggle_logging_btn,
+            active,
+            inactive_text=language_manager.get_text("data_log_btn_toggle_logging"),
+        )
 
     def show_save_log_dialog(self) -> str:
         """

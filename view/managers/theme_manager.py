@@ -41,6 +41,10 @@ from common.constants import (
     FONT_FAMILY_SEGOE, FONT_FAMILY_UBUNTU, FONT_FAMILY_CONSOLAS,
     FONT_FAMILY_MONOSPACE, FONT_FAMILY_MENLO, ConfigKeys
 )
+from view.managers import theme_state
+# ColorManager는 theme_state만 참조하고 ThemeManager를 참조하지 않으므로(S-050),
+# 최상단에서 바로 import해도 순환 참조가 생기지 않는다.
+from view.managers.color_manager import color_manager
 
 
 class ThemeManager(QObject):
@@ -143,7 +147,7 @@ class ThemeManager(QObject):
         self._resource_path = resource_path
         self._settings = SettingsManager()  # 설정 매니저 인스턴스
 
-        # 기본값 초기화
+        # 기본값 초기화 (실제 저장은 theme_state 모듈 - _current_theme property 참고)
         self._current_theme = ThemeType.DARK.value
         self._app: Optional[QApplication] = None
 
@@ -165,6 +169,24 @@ class ThemeManager(QObject):
 
         # 초기화 완료 플래그 설정
         self._initialized = True
+
+    # -------------------------------------------------------------------------
+    # Shared Theme State (순환 참조 해소용 - S-050)
+    # -------------------------------------------------------------------------
+    @property
+    def _current_theme(self) -> str:
+        """
+        현재 테마 이름. 실제 저장 위치는 `theme_state` 모듈이다.
+
+        ColorManager와 값이 어긋날 수 없도록(캐시 동기화 문제 방지) 값 자체를
+        `theme_state`에 위임한다. 기존 코드(및 테스트)가 `self._current_theme`을
+        일반 속성처럼 읽고 쓰는 코드를 그대로 쓸 수 있도록 property로 감쌌다.
+        """
+        return theme_state.get_current_theme()
+
+    @_current_theme.setter
+    def _current_theme(self, value: str) -> None:
+        theme_state.set_current_theme(value)
 
     # -------------------------------------------------------------------------
     # Resource Access (Icon, Theme File)
@@ -517,9 +539,6 @@ class ThemeManager(QObject):
         Args:
             theme_name (str): 적용할 테마 이름.
         """
-        # [중요] 순환 참조 방지를 위해 함수 내부에서 import
-        from view.managers.color_manager import color_manager
-
         app = QApplication.instance()
         if not app:
             logger.warning("QApplication instance not found. Theme might not apply immediately.")
