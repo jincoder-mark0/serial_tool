@@ -403,8 +403,11 @@ QPushButton[state="disconnected"] {
     color: #f8f8f2;
 }
 
+/* S-065: 원래 hover 배경(#6272a4)이 흰 글씨 대비 미달(#f8f8f2 on #6272a4 = 4.41 FAIL -
+   tests/test_qss_contrast.py 실측)이라 같은 색조를 유지한 채 한 단계 낮춰 대비를 확보
+   (#53618b, 5.70 OK). */
 QPushButton[state="disconnected"]:hover {
-    background-color: #6272a4;
+    background-color: #53618b;
     border-color: #bd93f9;
 }
 

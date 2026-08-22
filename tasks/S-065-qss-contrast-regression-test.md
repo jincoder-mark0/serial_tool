@@ -1,6 +1,15 @@
 # S-065 — QSS 색 대비 회귀 테스트 + 포트 상태 색 점검
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행. `tests/test_qss_contrast.py` 신설, 4테마
+  QSS를 파싱해 accent/danger/warning + state=connected/disconnected/error/recording +
+  QLabel[state=connected/disconnected]의 대비를 계산·강제. 이 테스트가 실제 미달
+  5건(광의: 버튼 3케이스 세트 + 라벨 1건, 상세는 아래 A/B 섹션 결과 참조)을 새로
+  찾아내 수정했다 — light/classic state="connected"(2.78/2.36 FAIL), light/classic
+  state="error"(3.68/3.49 FAIL), dark state="connected":hover(4.12 FAIL), dracula
+  state="disconnected":hover(4.41 FAIL), classic QLabel[state="disconnected"]
+  (4.03 FAIL — 파일 자체 주석 표에 이미 적혀 있었으나 방치). 일부러 색을 되돌려
+  테스트가 실패함을 확인 후 복구(증거는 세션 보고 참조). pytest 393 passed(+3,
+  기준선 390은 병행 작업 S-064 포함 값), ruff 0건.
 - Recommended model: **하위(Sonnet) 가능**
 - 선행: S-063 (수정 완료 — 이 태스크는 그 결과를 고정한다)
 - Skills to load: task-done
@@ -59,7 +68,15 @@ S-063 수행자가 범위 밖으로 보고한 항목이다:
 
 ## Acceptance criteria (DoD)
 
-- [ ] QSS 대비가 테스트로 고정되고, 일부러 깨뜨리면 실패함이 확인된다.
-- [ ] 실패 메시지가 테마·셀렉터·상태·실제 대비값을 알려준다.
-- [ ] 포트 상태 색의 대비가 수치로 확인되고, 미달이면 수정된다.
-- [ ] 전체 pytest·ruff 통과.
+- [x] QSS 대비가 테스트로 고정되고, 일부러 깨뜨리면 실패함이 확인된다.
+- [x] 실패 메시지가 테마·셀렉터·상태·실제 대비값을 알려준다.
+- [x] 포트 상태 색의 대비가 수치로 확인되고, 미달이면 수정된다.
+- [x] 전체 pytest·ruff 통과.
+
+## 실행 결과 (하위 모델 수행, 2026-08-22)
+
+**네이티브 캡처 미검증**: `tools/ux_capture.py`가 포트 연결/에러 버튼 상태를 강제
+전환하는 기능이 없고(위젯 프로퍼티 `state`는 실제 연결 성공/실패 시에만 갱신),
+실제 포트 연결·에러를 재현하려면 Mock/실기기 연결 플로우까지 GUI로 조작해야 해
+이번 태스크 범위를 넘어선다 - 계산으로 갈음(태스크 문서에 명시된 예외 경로).
+`QLabel[state=...]`도 동일 사유로 캡처 대신 계산으로 확인.

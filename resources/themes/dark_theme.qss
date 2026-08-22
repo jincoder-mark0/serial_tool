@@ -384,7 +384,11 @@ QPushButton[class="warning"]:disabled {
     color: #e0be5c;
 }
 
-/* Port States */
+/* Port States
+   S-065: hover가 accent 수정 전 값(#388E3C)을 그대로 쓰고 있어 같은 대비 미달
+   (#ffffff on #388E3C = 4.12 FAIL - tests/test_qss_contrast.py 실측)이었다. dark
+   accent hover가 이미 검증한 값(#256029, 7.54 OK)을 그대로 재사용했다. normal은
+   accent normal과 같은 배경(#2E7D32)이라 이미 기준(5.13) 충족. */
 QPushButton[state="connected"] {
     background-color: #2E7D32;
     border-color: #4CAF50;
@@ -392,7 +396,7 @@ QPushButton[state="connected"] {
 }
 
 QPushButton[state="connected"]:hover {
-    background-color: #388E3C;
+    background-color: #256029;
     border-color: #66BB6A;
 }
 

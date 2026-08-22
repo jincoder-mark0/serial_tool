@@ -90,20 +90,34 @@
 
 | ID | 제목 | 상태 |
 |---|---|---|
-| [S-064](tasks/S-064-parser-buffer-truncation-loss.md) | **파서 버퍼 잘라내기로 완결 패킷 유실** (P1) | ⏸ 대기 |
-| [S-065](tasks/S-065-qss-contrast-regression-test.md) | QSS 대비 회귀 테스트 + 포트 상태 색 점검 | ⏸ 대기 |
+| [S-064](tasks/S-064-parser-buffer-truncation-loss.md) | **파서 버퍼 잘라내기로 완결 패킷 유실** (P1) | ✅ 완료 |
+| [S-065](tasks/S-065-qss-contrast-regression-test.md) | QSS 대비 회귀 테스트 + 포트 상태 색 점검 | ✅ 완료 |
 | [S-066](tasks/S-066-flaky-shutdown-datalogger-test.md) | 종료 시 DataLogger 테스트 간헐 실패 조사 | ⏸ 대기 |
 
 - S-064는 S-061이 고속 측정 중 발견했다. `DelimiterParser.parse()`가 구분자로 나누기
   **전에** 버퍼를 자르는데, 파서 상한(4096B)이 워커 배치 임계값(8192B)보다 작아
   **완결된 패킷까지 조용히 버려진다.** 전제는 상위가 코드로 확인했다.
+  **완료(2026-08-22)**: 수정 전 회귀 테스트로 3파서 모두 유실을 실측 확인
+  (Delimiter 1992개·AT 1494개·FixedLength 1192개 유실) 후 "완결 패킷 먼저 분리 → 남은
+  조각에만 상한 적용" 순서로 교정. FixedLengthParser도 동일 순서 버그가 있어 함께
+  고쳤다. 미완결 조각 폐기 시 경고 로그 추가, `max_buffer_size` 기본값을
+  `common/constants.py`의 `PARSER_MAX_BUFFER_SIZE`(=BATCH_SIZE_THRESHOLD*2=16384)로
+  단일 관리. pytest 393 passed(+8), ruff 0건. 상세는 태스크 파일 Status 참조.
+- **S-065 완료(2026-08-22)**: `tests/test_qss_contrast.py` 신설 — 4테마 QSS를 파싱해
+  의미색 버튼(accent/danger/warning)·포트 상태 버튼/라벨(state=connected/disconnected/
+  error/recording)의 대비를 계산하고 활성 ≥4.5:1·disabled ≥3.0:1을 강제한다.
+  `:hover`/`:pressed`가 `color`를 재선언하지 않으면 기본 규칙 글자색을 상속하도록 구현.
+  이 테스트가 **실제 미달 5건**을 새로 찾아냈다: light/classic
+  `state="connected"`(#ffffff on #4CAF50=2.78·hover 2.36 FAIL), light/classic
+  `state="error"`(#ffffff on #F44336=3.68·hover 3.49 FAIL), dark
+  `state="connected"`:hover(#ffffff on #388E3C=4.12 FAIL), dracula
+  `state="disconnected"`:hover(4.41 FAIL), classic `QLabel[state="disconnected"]`
+  (#616161 on #d4d0c8=4.03 FAIL — 이 파일 자체 주석 표에 값이 적혀 있었는데도 기준
+  미달인 채 방치돼 있었음). S-063이 검증한 accent/danger 값을 그대로 재사용해 수정
+  (connected→어두운 글씨 #1b1b1b, error→danger와 동일 배경 톤). 일부러 색을 되돌려
+  테스트가 실패하는 것을 확인 후 복구. pytest 393 passed(+3), ruff 0건.
 - S-066은 `doc/mistakes.md` #7이 "이름을 확보하라"고 남겨둔 간헐 실패다. 이번에
   특정됐다(6회 중 1회). 테스트만의 문제인지 **종료 시 실제 데이터 유실**인지 판정이 본체다.
-  **완료(2026-08-22)**: 4테마 × accent/danger/warning × 4상태(normal/hover/pressed/
-  disabled) 48개 조합 전부 대비 기준 충족(계산 확인) — light/classic accent는 어두운
-  글씨(`#1b1b1b`)로, danger는 배경을 한 단계 낮춰(`#C62828`계열) 흰 글씨 유지, warning
-  pressed의 배경 버그(danger 톤 혼입)도 함께 교정. dark/dracula는 disabled 상태 등
-  일부 상태만 보정. 상세는 `tasks/S-063-semantic-button-contrast.md` Status 참조.
 
 | ID | 제목 | Phase | 상태 | 비고 |
 |---|---|---|---|---|

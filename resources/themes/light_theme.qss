@@ -1,4 +1,4 @@
-/* ==================================================================================
+﻿/* ==================================================================================
    SerialTool Light Theme
    ==================================================================================
    [Color Palette Reference]
@@ -386,11 +386,17 @@ QPushButton[class="warning"]:disabled {
     color: #1b1b1b;
 }
 
-/* Port States */
+/* Port States
+   S-065: accent/danger와 같은 원색을 재사용해 같은 대비 문제를 가지고 있었다
+   (connected #ffffff on #4CAF50 = 2.78 FAIL, hover 2.36 FAIL; error #ffffff on
+   #F44336 = 3.68 FAIL, hover 3.49 FAIL - tests/test_qss_contrast.py 실측). S-063과
+   같은 원칙으로 accent/danger가 이미 검증한 값을 그대로 재사용해 고쳤다
+   (connected: 어두운 글씨 #1b1b1b, 6.20/7.28 OK; error: 배경을 danger 톤으로 낮추고
+   흰 글씨 유지, 5.62/4.98 OK). */
 QPushButton[state="connected"] {
     background-color: #4CAF50;
     border-color: #388E3C;
-    color: #ffffff;
+    color: #1b1b1b;
 }
 
 QPushButton[state="connected"]:hover {
@@ -410,13 +416,13 @@ QPushButton[state="disconnected"]:hover {
 }
 
 QPushButton[state="error"] {
-    background-color: #F44336;
+    background-color: #C62828;
     border-color: #D32F2F;
     color: #ffffff;
 }
 
 QPushButton[state="error"]:hover {
-    background-color: #EF5350;
+    background-color: #D32F2F;
     border-color: #C62828;
 }
 
