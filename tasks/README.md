@@ -18,7 +18,7 @@ Steps 그대로 수행할 수 있는 수준**으로 상세화한 문서 모음.
 ```powershell
 Set-Location e:\Python\serial_tool
 $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
-.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 109개)
+.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 112개)
 ```
 
 ## 태스크 목록 (의존 순서)
@@ -39,7 +39,8 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-013](S-013-user-config-dir.md) | 설정 파일 사용자 디렉터리 분리 | **하위 가능** | S-018 | DONE |
 | [S-014](S-014-github-actions-ci.md) | GitHub Actions CI | **하위 가능** | — | DONE (러너 확인 대기) |
 | [S-027](S-027-settings-namespace-migration.md) | 설정 네임스페이스 마이그레이션 (settings.* 정본화) | **하위 가능** | S-013 | DONE |
-| [S-028](S-028-right-width-key-conflict.md) | 우측 폭 저장 키 이중화 해소 | 상위 결정 후 하위 | S-027 | TODO |
+| [S-028](S-028-right-width-key-conflict.md) | 우측 폭 저장 키 이중화 해소 | 상위 결정 후 하위 | S-027 | DONE |
+| [S-030](S-030-flowctrl-key-resurrection.md) | serial.flowctrl 죽은 키 부활 차단 | **하위 가능** | S-028 | TODO |
 | [S-012](S-012-packaging.md) | PyInstaller 패키징 | 하위 가능 (수동 확인 항목 있음) | S-013, S-018 | DONE |
 | [S-029](S-029-bundle-log-path.md) | 번들 로그 경로 사용자 디렉터리화 | **하위 가능** | S-012 | TODO |
 | [S-016](S-016-settings-namespace.md) | 설정 키 네임스페이스 이중화 해소 | **상위 전용** (결정 필요) | — | DONE (결정 — 구현은 S-027) |

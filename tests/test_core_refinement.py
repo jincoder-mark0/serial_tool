@@ -486,7 +486,8 @@ class TestSettingsManager:
               settings.theme="dracula"/settings.language="en"인 파일 작성
             - SettingsManager 초기화
             - settings.theme/language가 기존 settings.* 값을 유지하는지 확인
-            - global 키가 사라지고 version이 1.1인지 확인
+            - global 키가 사라지고 version이 CURRENT_VERSION(1.2)인지 확인
+              (S-028: CURRENT_VERSION 1.1 -> 1.2 승격에 맞춰 갱신)
         """
         SettingsManager._instance = None
 
@@ -507,7 +508,7 @@ class TestSettingsManager:
             assert manager.get("settings.theme") == "dracula"
             assert manager.get("settings.language") == "en"
             assert manager.get("global") is None
-            assert manager.get("version") == "1.1"
+            assert manager.get("version") == "1.2"
 
             # 파일에도 반영되었는지 확인
             with open(manager.user_settings_path, 'r', encoding='utf-8') as f:
@@ -588,12 +589,13 @@ class TestSettingsManager:
         finally:
             SettingsManager._instance = None
 
-    def test_migration_v1_1_file_passes_unchanged(self, tmp_path):
+    def test_migration_v1_2_file_passes_unchanged(self, tmp_path):
         """
-        S-027: 이미 1.1 버전인 파일은 마이그레이션 없이 그대로 통과해야 한다.
+        S-028: 이미 1.2 버전(현재 버전)인 파일은 마이그레이션 없이 그대로 통과해야 한다.
+        (S-027 당시 1.1 기준으로 작성된 테스트를 CURRENT_VERSION 1.2 승격에 맞춰 갱신)
 
         Logic:
-            - version 1.1, settings.theme/language를 가진 정상 파일 작성
+            - version 1.2, settings.theme/language를 가진 정상 파일 작성
             - SettingsManager 초기화 후 값이 그대로 유지되는지 확인
             - _needs_migration이 False인지 확인(마이그레이션 미실행 방증)
         """
@@ -605,7 +607,7 @@ class TestSettingsManager:
         resource_path.config_dir.mkdir(parents=True)
 
         current_settings = create_fallback_settings()
-        current_settings["version"] = "1.1"
+        current_settings["version"] = "1.2"
         current_settings["settings"] = {"theme": "dracula", "language": "en"}
         with open(resource_path.settings_file, 'w', encoding='utf-8') as f:
             json.dump(current_settings, f)
@@ -613,10 +615,114 @@ class TestSettingsManager:
         try:
             manager = SettingsManager(resource_path)
 
-            assert manager._needs_migration({"version": "1.1"}) is False
+            assert manager._needs_migration({"version": "1.2"}) is False
             assert manager.get("settings.theme") == "dracula"
             assert manager.get("settings.language") == "en"
             assert manager.get("global") is None
+        finally:
+            SettingsManager._instance = None
+
+    def test_migration_v1_0_saved_right_width_not_renamed(self, tmp_path):
+        """
+        S-028 ①: 1.0 파일의 saved_right_section_width는 더 이상
+        right_section_width로 개명되지 않고 그대로 살아남아야 한다
+        (정본 키 = ui.saved_right_section_width, S-016과 동일 원칙).
+
+        Logic:
+            - version 1.0, ui.saved_right_section_width=598인 파일 작성
+            - SettingsManager 초기화 후 ui.saved_right_section_width==598 유지,
+              ui.right_section_width는 생기지 않아야 함
+            - version이 1.2로 갱신되었는지 확인
+        """
+        SettingsManager._instance = None
+
+        resource_path = ResourcePath(tmp_path)
+        resource_path.config_dir.mkdir(parents=True)
+
+        old_settings = {
+            "version": "1.0",
+            "global": {"theme": "dark", "language": "ko"},
+            "ui": {"saved_right_section_width": 598}
+        }
+        with open(resource_path.settings_file, 'w', encoding='utf-8') as f:
+            json.dump(old_settings, f)
+
+        try:
+            manager = SettingsManager(resource_path)
+
+            ui = manager.get("ui")
+            assert ui.get("saved_right_section_width") == 598
+            assert "right_section_width" not in ui
+            assert manager.get("version") == "1.2"
+        finally:
+            SettingsManager._instance = None
+
+    def test_migration_v1_1_stale_right_width_merged_and_removed(self, tmp_path):
+        """
+        S-028 ②: 1.1 파일에 잔존하는 ui.right_section_width는 값을
+        ui.saved_right_section_width로 이어받은 뒤 삭제되어야 한다
+        (saved_right_section_width가 없거나 None인 경우).
+
+        Logic:
+            - version 1.1, ui.right_section_width=651만 있고
+              saved_right_section_width는 없는 파일 작성
+            - SettingsManager 초기화 후 saved_right_section_width==651,
+              right_section_width는 사라짐을 확인
+        """
+        SettingsManager._instance = None
+
+        resource_path = ResourcePath(tmp_path)
+        resource_path.config_dir.mkdir(parents=True)
+
+        old_settings = {
+            "version": "1.1",
+            "settings": {"theme": "dark", "language": "ko"},
+            "ui": {"right_section_width": 651}
+        }
+        with open(resource_path.settings_file, 'w', encoding='utf-8') as f:
+            json.dump(old_settings, f)
+
+        try:
+            manager = SettingsManager(resource_path)
+
+            ui = manager.get("ui")
+            assert ui.get("saved_right_section_width") == 651
+            assert "right_section_width" not in ui
+            assert manager.get("version") == "1.2"
+        finally:
+            SettingsManager._instance = None
+
+    def test_migration_v1_1_stale_right_width_discarded_when_saved_already_set(self, tmp_path):
+        """
+        S-028 부가: saved_right_section_width에 이미 값이 있으면 잔존
+        right_section_width는 덮어쓰지 않고 버려져야 한다(정본 값 보호).
+
+        Logic:
+            - version 1.1, ui.saved_right_section_width=700과
+              ui.right_section_width=651이 공존하는 파일 작성
+            - 마이그레이션 후 saved_right_section_width는 700 그대로 유지,
+              right_section_width는 삭제됨을 확인
+        """
+        SettingsManager._instance = None
+
+        resource_path = ResourcePath(tmp_path)
+        resource_path.config_dir.mkdir(parents=True)
+
+        old_settings = {
+            "version": "1.1",
+            "settings": {"theme": "dark", "language": "ko"},
+            "ui": {"saved_right_section_width": 700, "right_section_width": 651}
+        }
+        with open(resource_path.settings_file, 'w', encoding='utf-8') as f:
+            json.dump(old_settings, f)
+
+        try:
+            manager = SettingsManager(resource_path)
+
+            ui = manager.get("ui")
+            assert ui.get("saved_right_section_width") == 700
+            assert "right_section_width" not in ui
+            assert manager.get("version") == "1.2"
         finally:
             SettingsManager._instance = None
 

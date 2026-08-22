@@ -101,7 +101,7 @@ def create_fallback_settings() -> dict:
     전체 기본 설정 딕셔너리를 생성하여 반환합니다.
     """
     return {
-        "version": "1.1",
+        "version": "1.2",
         "settings": DEFAULT_SETTINGS_BLOCK.copy(),
         "ui": DEFAULT_UI_SETTINGS.copy(),
         "serial": DEFAULT_SERIAL_SETTINGS.copy(),

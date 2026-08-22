@@ -47,7 +47,7 @@ class SettingsManager:
     _resource_path = None
 
     # 현재 애플리케이션 설정 버전
-    CURRENT_VERSION = "1.1"
+    CURRENT_VERSION = "1.2"
 
     def __new__(cls, *args, **kwargs):
         """
@@ -246,12 +246,6 @@ class SettingsManager:
                     ui["max_log_lines"] = val
                     logger.info(f"Migrated setting: rx_max_lines -> max_log_lines ({val})")
 
-            if "saved_right_section_width" in ui:
-                val = ui.pop("saved_right_section_width")
-                if "right_section_width" not in ui:
-                    ui["right_section_width"] = val
-                    logger.info(f"Migrated setting: saved_right_section_width -> right_section_width ({val})")
-
         # 3. Logging Migration
         if "logging" in migrated:
             log = migrated["logging"]
@@ -285,6 +279,26 @@ class SettingsManager:
                 if dead_key in ui:
                     ui.pop(dead_key)
                     logger.info(f"Removed dead ui setting: {dead_key}")
+
+        # 6. 우측 폭 저장 키 이중화 해소 (S-028, 1.1 -> 1.2)
+        # 정본은 ui.saved_right_section_width(코드 실태 기준) — 과거 1.0->1.1 리네임 매핑이
+        # 실사용 키를 지우고 런타임(main_presenter/lifecycle_manager)이 그 키를 다시 만들어
+        # 두 키가 공존했다. 잔존 right_section_width는 saved_right_section_width가
+        # 비어 있을 때만 값을 이어받은 뒤 제거한다(과거 이관으로 값이 옮겨간 사용자 폭 보전).
+        if "ui" in migrated:
+            ui = migrated["ui"]
+            if "right_section_width" in ui:
+                val = ui.pop("right_section_width")
+                if ui.get("saved_right_section_width") is None:
+                    ui["saved_right_section_width"] = val
+                    logger.info(
+                        f"Migrated setting: right_section_width -> saved_right_section_width ({val})"
+                    )
+                else:
+                    logger.info(
+                        f"Removed stale ui setting: right_section_width "
+                        f"(value {val} discarded; saved_right_section_width already set)"
+                    )
 
         migrated["version"] = self.CURRENT_VERSION
         return migrated
