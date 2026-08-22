@@ -1,6 +1,7 @@
 # S-018 — PyInstaller 감지 버그 수정 (`os._MEIPASS` → `sys._MEIPASS`)
 
-- Status: TODO
+- Status: DONE (2026-08-22 — 하위 모델 수행, 상위 리뷰 승인. pytest 85 passed,
+  개발 모드 경로 불변 확인. 코드상 os._MEIPASS 잔존 0건)
 - Recommended model: **하위(Sonnet) 가능**
 - 선행: 없음
 - Skills to load: task-done

@@ -24,6 +24,7 @@
 * validate_paths()로 경로 존재 여부 확인
 """
 import os
+import sys
 from pathlib import Path
 from typing import Dict
 
@@ -45,9 +46,9 @@ class ResourcePath:
         """
         # 프로젝트 루트 디렉토리 설정
         if base_dir is None:
-            if hasattr(os, '_MEIPASS'):
+            if hasattr(sys, '_MEIPASS'):
                 # PyInstaller 번들 환경
-                self.base_dir = Path(os._MEIPASS)
+                self.base_dir = Path(sys._MEIPASS)
             else:
                 # 개발 모드: resource_path.py가 있는 디렉토리가 루트
                 self.base_dir = Path(__file__).parent.parent
