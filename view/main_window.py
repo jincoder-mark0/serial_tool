@@ -101,6 +101,8 @@ class MainWindow(QMainWindow):
 
         # 우측 패널 숨김/복원 시 왼쪽 패널 너비 저장용 변수
         self._saved_left_width: Optional[int] = None
+        # 우측 패널을 숨기기 직전의 창 폭 (다시 켤 때 그대로 복원, S-074)
+        self._saved_window_width: Optional[int] = None
         self._right_section_width: Optional[int] = None
 
         # UI 초기화
@@ -612,10 +614,23 @@ class MainWindow(QMainWindow):
                 else:
                     target_right_width = max(int(self.width() * 0.3), 300)
 
-                # 현재 왼쪽 패널 너비 사용 (사용자가 조절했을 수 있으므로 저장된 값보다 현재 값 우선)
-                left_width = self.left_section.width()
+                # 숨기기 직전의 좌측 폭을 복원한다 (S-074).
+                # 지금 값을 쓰면 안 된다 — 숨길 때 좌측 패널이 남는 폭을 흡수해
+                # 넓어져 있기 때문이다.
+                if self._saved_left_width is not None:
+                    left_width = self._saved_left_width
+                else:
+                    left_width = self.left_section.width()
 
-                self.resize(current_width + target_right_width + handle_width, self.height())
+                # 창 폭도 숨기기 직전 값으로 되돌린다 (S-074 — 왕복을 항등으로).
+                # `현재 폭 + 우측 폭 + 핸들`로 계산하면 안 된다: 숨길 때는 창 최소
+                # 폭에 막혀 의도한 만큼 줄지 못하는데(실측 1400 -> 1274, -126만),
+                # 켤 때는 막힘없이 다 늘어나(+586) 켤 때마다 창이 커진다.
+                # 줄어든 양과 늘어나는 양이 다른 것이 이 결함의 뿌리다.
+                if self._saved_window_width is not None:
+                    self.resize(self._saved_window_width, self.height())
+                else:
+                    self.resize(current_width + target_right_width + handle_width, self.height())
                 self.right_section.setVisible(True)
 
                 # 스플리터 크기 설정: 왼쪽 패널 크기 유지, 오른쪽 패널 크기 설정
@@ -623,12 +638,18 @@ class MainWindow(QMainWindow):
 
                 # 복원 후 저장된 값 초기화
                 self._saved_left_width = None
+                self._saved_window_width = None
                 self._right_section_width = None
 
             else:
                 # 숨기기: 윈도우 폭 감소
                 # 현재 패널 너비 저장
                 self._right_section_width = self.right_section.width()
+                # 좌측 폭과 창 폭을 **지금** 저장한다 (S-074). 아래 resize가 창
+                # 최소 폭에 막혀 클램프되면 좌측 패널이 남는 폭을 흡수해 넓어지므로,
+                # 그 뒤에 읽으면 둘 다 원래 값이 아니다.
+                self._saved_left_width = self.left_section.width()
+                self._saved_window_width = self.width()
 
                 # 왼쪽 패널의 현재 너비를 기준으로 윈도우 크기 재조정
                 # 중앙 위젯의 좌우 마진을 동적으로 계산
