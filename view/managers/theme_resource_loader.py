@@ -26,8 +26,9 @@
 * `resource_path`를 인스턴스 속성으로 보관하되, 파생 경로(`icons_dir`/`themes_dir`)는
   캐싱하지 않고 프로퍼티로 매번 다시 계산한다.
 """
+import json
 import os
-from typing import Dict, List, Optional
+from typing import Dict, List, Optional, Any
 
 from PyQt5.QtGui import QPalette, QColor, QIcon
 from PyQt5.QtCore import Qt
@@ -294,6 +295,79 @@ class ThemeResourceLoader:
     # -------------------------------------------------------------------------
     # Fallback Palette / Stylesheet
     # -------------------------------------------------------------------------
+    # 로그 팔레트는 파일이 정본이므로 한 번 읽어 캐시한다 (테마 전환마다 디스크를
+    # 두드릴 이유가 없다). 파일이 없거나 깨지면 최후 폴백을 쓴다.
+    _log_palette_cache: Optional[Dict[str, Any]] = None
+
+    # 최후 폴백 — `resources/themes/palette.json`을 읽지 못할 때만 쓴다.
+    # 정본은 그 파일이며, 여기 값은 "앱이 아예 안 뜨는 것"을 막기 위한 최소한이다.
+    _LOG_PALETTE_FALLBACK = {
+        "dark": {"is_light": False, "background": "#1e1e1e",
+                 "log": {"timestamp": "#9E9E9E", "info": "#2196F3", "error": "#F44336",
+                         "warn": "#D4A017", "prompt": "#00BCD4", "success": "#4CAF50",
+                         "rx": "#2196F3", "tx": "#FF9800", "system": "#C654D9",
+                         "debug": "#00BCD4", "default": "#CCCCCC"}},
+        "light": {"is_light": True, "background": "#ffffff",
+                  "log": {"timestamp": "#767676", "info": "#0B79D0", "error": "#E91C0D",
+                          "warn": "#967110", "prompt": "#008293", "success": "#3A863D",
+                          "rx": "#0B79D0", "tx": "#AC6600", "system": "#9C27B0",
+                          "debug": "#008293", "default": "#000000"}},
+    }
+
+    def _load_log_palette(self) -> Dict[str, Any]:
+        """
+        테마별 로그 색 팔레트를 읽어 캐시한다 (`resources/themes/palette.json`).
+
+        Returns:
+            Dict[str, Any]: {테마명: {is_light, background, log{...}}}.
+        """
+        if ThemeResourceLoader._log_palette_cache is not None:
+            return ThemeResourceLoader._log_palette_cache
+
+        path = self.themes_dir / "palette.json"
+        try:
+            with open(path, "r", encoding="utf-8") as f:
+                data = json.load(f)
+            themes = data["themes"]
+        except Exception as e:
+            logger.error(f"Failed to load log palette ({path}): {e}. Using fallback.")
+            themes = self._LOG_PALETTE_FALLBACK
+
+        ThemeResourceLoader._log_palette_cache = themes
+        return themes
+
+    def get_log_colors(self, theme_name: str) -> Dict[str, str]:
+        """
+        지정 테마의 로그 텍스트 색 맵을 반환합니다.
+
+        Args:
+            theme_name (str): 테마 이름 (dark/light/classic/dracula).
+
+        Returns:
+            Dict[str, str]: 의미 이름 -> HEX 색상. 모르는 테마는 dark로 폴백한다.
+        """
+        themes = self._load_log_palette()
+        entry = themes.get(theme_name.lower()) or themes.get("dark", {})
+        return dict(entry.get("log", {}))
+
+    def is_light_theme(self, theme_name: str) -> bool:
+        """
+        테마가 밝은 계열인지 팔레트 파일이 선언한 값으로 판정합니다.
+
+        예전에는 코드에서 `theme_name == 'light'`로 판정해, 밝은 테마인 classic이
+        어두운 테마 취급을 받았다(흰 배경에 다크용 색 → 11개 중 10개 기준 미달).
+        밝기 분류는 테마의 성질이므로 테마 리소스가 답한다.
+
+        Args:
+            theme_name (str): 테마 이름.
+
+        Returns:
+            bool: 밝은 계열이면 True.
+        """
+        themes = self._load_log_palette()
+        entry = themes.get(theme_name.lower())
+        return bool(entry.get("is_light", False)) if entry else False
+
     def get_theme_colors(self, is_dark: bool) -> Dict[str, str]:
         """
         폴백용 색상 팔레트(Dict)를 반환합니다.

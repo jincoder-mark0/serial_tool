@@ -196,6 +196,7 @@
 | [S-075](tasks/S-075-port-settings-column-alignment.md) | 포트 설정 첫 열 정렬 + 언어 전환 시 이동 | ✅ 완료 |
 | [S-076](tasks/S-076-dialog-layout-and-i18n.md) | **서브 윈도우 레이아웃·다국어 점검** | ✅ 완료 |
 | [S-077](tasks/S-077-theme-uniformity-and-component-distinction.md) | **테마 파일 구조 통일 + 컴포넌트 구분** | ✅ 완료 |
+| [S-078](tasks/S-078-move-hardcoded-colors-to-theme.md) | **코드의 하드코딩 색을 테마 리소스로 이동** | ✅ 완료 |
 
 - S-073: `border-radius`가 테마 파일엔 0곳, **`common.qss`에 13곳**이라 클래식만
   빠져나갈 수 없었다(S-036과 같은 구조). 사용자 선택대로 **클래식만 동일 셀렉터로
@@ -217,6 +218,11 @@
   덧붙인 13줄로 92규칙까지 벌어져 있었다). 버튼·입력 구분은 테두리로 갈랐고
   (light·classic은 테두리 색까지 같아 대비 1.00이었다), 콤보는 입력 계열로 통일했다
   (dark·dracula는 버튼 쪽이라 테마마다 답이 달랐다).
+- S-078: 색을 옮기려다 **결함이 드러났다**. `LOG_COLOR_*` 상수가 light/dark 두 벌뿐인데
+  테마는 4개라, `theme_name == 'light'` 판정 탓에 밝은 테마인 **classic이 다크용 색을
+  받아 흰 배경에서 11개 중 10개가 4.5:1 미달**이었다(기본 텍스트 1.61). 정본을
+  `resources/themes/palette.json`으로 옮기고 밝기 분류도 테마가 답하게 했다.
+  대비 보정은 기존 값을 유지하고 미달 12건만 손봤다.
 
 - **체크섬을 1순위로 둔 이유**: SerialTool엔 체크섬 개념이 아예 없다(코드 0건). 패킷
   경계는 나눌 수 있는데 "이 패킷이 유효한가"를 답할 수단이 없어, 프로토콜 디버깅의

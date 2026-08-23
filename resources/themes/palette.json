@@ -1,0 +1,73 @@
+{
+  "_comment": "테마별 로그 텍스트 색 팔레트 (S-078). 위젯 코드에 색 리터럴을 두지 않기 위해 여기로 옮겼다. background는 그 테마의 로그 뷰 배경이며, log의 모든 색은 그 배경 위에서 WCAG 4.5:1 이상이어야 한다 (tests/test_log_palette.py가 강제). is_light는 테마 밝기 분류로 규칙 색(light_color/dark_color) 선택에 쓴다. 예전에는 코드에서 theme_name == 'light'로 판정해 밝은 테마인 classic이 다크용 색을 받았다.",
+  "themes": {
+    "dark": {
+      "is_light": false,
+      "background": "#1e1e1e",
+      "log": {
+        "timestamp": "#9E9E9E",
+        "info": "#2196F3",
+        "error": "#FF6B6B",
+        "warn": "#D4A017",
+        "prompt": "#00BCD4",
+        "success": "#4CAF50",
+        "rx": "#2196F3",
+        "tx": "#FF9800",
+        "system": "#C654D9",
+        "debug": "#00BCD4",
+        "default": "#CCCCCC"
+      }
+    },
+    "light": {
+      "is_light": true,
+      "background": "#ffffff",
+      "log": {
+        "timestamp": "#767676",
+        "info": "#0000FF",
+        "error": "#CC0000",
+        "warn": "#967110",
+        "prompt": "#008484",
+        "success": "#008000",
+        "rx": "#0000FF",
+        "tx": "#BA5D00",
+        "system": "#7B1FA2",
+        "debug": "#008391",
+        "default": "#000000"
+      }
+    },
+    "classic": {
+      "is_light": true,
+      "background": "#ffffff",
+      "log": {
+        "timestamp": "#767676",
+        "info": "#0000FF",
+        "error": "#CC0000",
+        "warn": "#967110",
+        "prompt": "#008484",
+        "success": "#008000",
+        "rx": "#0000FF",
+        "tx": "#BA5D00",
+        "system": "#7B1FA2",
+        "debug": "#008391",
+        "default": "#000000"
+      }
+    },
+    "dracula": {
+      "is_light": false,
+      "background": "#21222c",
+      "log": {
+        "timestamp": "#9E9E9E",
+        "info": "#2196F3",
+        "error": "#FF6B6B",
+        "warn": "#D4A017",
+        "prompt": "#00BCD4",
+        "success": "#4CAF50",
+        "rx": "#2196F3",
+        "tx": "#FF9800",
+        "system": "#C85CDB",
+        "debug": "#00BCD4",
+        "default": "#CCCCCC"
+      }
+    }
+  }
+}

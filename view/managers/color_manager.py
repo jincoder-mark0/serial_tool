@@ -35,12 +35,7 @@ from common.dtos import ColorRule
 from view.services.color_service import ColorService
 from view.managers import theme_state
 from view.managers.color_rule_repository import ColorRuleRepository
-from common.constants import (
-    LOG_COLOR_DARK_TIMESTAMP, LOG_COLOR_DARK_INFO, LOG_COLOR_DARK_ERROR,
-    LOG_COLOR_DARK_WARN,
-    LOG_COLOR_LIGHT_TIMESTAMP, LOG_COLOR_LIGHT_INFO, LOG_COLOR_LIGHT_ERROR,
-    LOG_COLOR_LIGHT_WARN,
-)
+from view.managers.theme_resource_loader import ThemeResourceLoader
 
 
 class ColorManager(QObject):
@@ -239,7 +234,11 @@ class ColorManager(QObject):
 
         if QColor.isValidColor(hex_color):
             return QColor(hex_color)
-        return QColor("#000000")
+
+        # 잘못된 색이 들어왔을 때의 폴백. 검은색을 박아 두면 어두운 테마에서
+        # 글씨가 배경에 묻혀 아예 보이지 않는다 (S-078). 현재 테마의 기본
+        # 텍스트 색을 쓰면 어느 테마에서도 읽힌다.
+        return QColor(self.COLOR_DEFAULT)
 
     def apply_theme(self, theme_name: str) -> None:
         """
@@ -249,29 +248,24 @@ class ColorManager(QObject):
         Args:
             theme_name (str): 테마 이름 ('dark' or 'light').
         """
-        is_light = (theme_name.lower() == 'light')
+        # 색과 밝기 분류는 **테마 리소스**(resources/themes/palette.json)가 답한다
+        # (S-078). 예전에는 여기서 `theme_name == 'light'`로 판정하고 색을 코드에
+        # 박아 뒀는데, 그 탓에 밝은 테마인 classic이 다크용 색을 받아 흰 배경에서
+        # 11개 중 10개가 WCAG 4.5:1 미달이었다(기본 텍스트는 1.61).
+        loader = ThemeResourceLoader(self._resource_path)
+        is_light = loader.is_light_theme(theme_name)
+        palette = loader.get_log_colors(theme_name)
 
-        # 1. 상수 팔레트 업데이트 (HEX 코드 보장)
-        if is_light:
-            self.COLOR_TIMESTAMP = self._ensure_hex(LOG_COLOR_LIGHT_TIMESTAMP)
-            self.COLOR_INFO = self._ensure_hex(LOG_COLOR_LIGHT_INFO)
-            self.COLOR_WARNING = self._ensure_hex(LOG_COLOR_LIGHT_WARN)
-            self.COLOR_ERROR = self._ensure_hex(LOG_COLOR_LIGHT_ERROR)
-            self.COLOR_RX = "#0000FF"
-            self.COLOR_TX = "#CC6600"
-            self.COLOR_SYSTEM = "#7B1FA2"
-            self.COLOR_DEBUG = "#0097A7"
-            self.COLOR_DEFAULT = "#000000"
-        else:
-            self.COLOR_TIMESTAMP = self._ensure_hex(LOG_COLOR_DARK_TIMESTAMP)
-            self.COLOR_INFO = self._ensure_hex(LOG_COLOR_DARK_INFO)
-            self.COLOR_WARNING = self._ensure_hex(LOG_COLOR_DARK_WARN)
-            self.COLOR_ERROR = self._ensure_hex(LOG_COLOR_DARK_ERROR)
-            self.COLOR_RX = "#2196F3"
-            self.COLOR_TX = "#FF9800"
-            self.COLOR_SYSTEM = "#9C27B0"
-            self.COLOR_DEBUG = "#00BCD4"
-            self.COLOR_DEFAULT = "#CCCCCC"
+        # 1. 팔레트 반영 (HEX 코드 보장)
+        self.COLOR_TIMESTAMP = self._ensure_hex(palette["timestamp"])
+        self.COLOR_INFO = self._ensure_hex(palette["info"])
+        self.COLOR_WARNING = self._ensure_hex(palette["warn"])
+        self.COLOR_ERROR = self._ensure_hex(palette["error"])
+        self.COLOR_RX = self._ensure_hex(palette["rx"])
+        self.COLOR_TX = self._ensure_hex(palette["tx"])
+        self.COLOR_SYSTEM = self._ensure_hex(palette["system"])
+        self.COLOR_DEBUG = self._ensure_hex(palette["debug"])
+        self.COLOR_DEFAULT = self._ensure_hex(palette["default"])
 
         # 2. 규칙 리스트 색상 동기화
         for rule in self._rules:

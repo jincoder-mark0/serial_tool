@@ -22,16 +22,39 @@ PyQt5를 import하지 않는 순수 데이터 로직 클래스로, `ColorManager
   책임이 아니다 — 그 부분은 `ColorManager`(Qt 어댑터)에 남는다.
 """
 import json
+from pathlib import Path
 from typing import List
 
 from common.dtos import ColorRule
 from core.logger import logger
-from common.constants import (
-    LOG_COLOR_DARK_TIMESTAMP, LOG_COLOR_DARK_INFO, LOG_COLOR_DARK_ERROR,
-    LOG_COLOR_DARK_WARN, LOG_COLOR_DARK_PROMPT, LOG_COLOR_DARK_SUCCESS,
-    LOG_COLOR_LIGHT_TIMESTAMP, LOG_COLOR_LIGHT_INFO, LOG_COLOR_LIGHT_ERROR,
-    LOG_COLOR_LIGHT_WARN, LOG_COLOR_LIGHT_PROMPT, LOG_COLOR_LIGHT_SUCCESS,
-)
+
+# 기본 규칙 색은 **테마 리소스**(resources/themes/palette.json)에서 읽는다 (S-078).
+# 예전에는 `common/constants.py`의 LOG_COLOR_* 상수를 썼는데, 같은 값이
+# `color_rules.json`에도 있어 "동일 값 유지"를 주석으로만 약속한 상태였다
+# (S-022 주석 참조). 정본을 한 곳으로 모아 그 약속을 없앤다.
+_PALETTE_PATH = Path(__file__).resolve().parents[2] / "resources" / "themes" / "palette.json"
+
+# 최후 폴백 — 팔레트 파일을 읽지 못할 때만 쓴다. 정본은 위 파일이다.
+_PALETTE_FALLBACK = {
+    "light": {"timestamp": "#767676", "info": "#0000FF", "error": "#CC0000",
+              "warn": "#967110", "prompt": "#008484", "success": "#008000"},
+    "dark": {"timestamp": "#9E9E9E", "info": "#2196F3", "error": "#FF6B6B",
+             "warn": "#D4A017", "prompt": "#00BCD4", "success": "#4CAF50"},
+}
+
+
+def _log_colors() -> dict:
+    """팔레트 파일에서 light/dark 로그 색 맵을 읽는다 (실패 시 최후 폴백)."""
+    try:
+        with open(_PALETTE_PATH, "r", encoding="utf-8") as f:
+            themes = json.load(f)["themes"]
+        return {"light": themes["light"]["log"], "dark": themes["dark"]["log"]}
+    except Exception as e:
+        logger.error(f"Failed to load color palette ({_PALETTE_PATH}): {e}. Using fallback.")
+        return _PALETTE_FALLBACK
+
+
+_C = _log_colors()
 
 
 class ColorRuleRepository:
@@ -48,34 +71,34 @@ class ColorRuleRepository:
     # -------------------------------------------------------------------------
     DEFAULT_COLOR_RULES = [
         ColorRule("AT_OK", r'\bOK\b',
-                  light_color=LOG_COLOR_LIGHT_SUCCESS,
-                  dark_color=LOG_COLOR_DARK_SUCCESS),
+                  light_color=_C["light"]["success"],
+                  dark_color=_C["dark"]["success"]),
         ColorRule("AT_ERROR", r'\bERROR\b',
-                  light_color=LOG_COLOR_LIGHT_ERROR,
-                  dark_color=LOG_COLOR_DARK_ERROR),
+                  light_color=_C["light"]["error"],
+                  dark_color=_C["dark"]["error"]),
         ColorRule("URC", r'(\+\w+:)',
-                  light_color=LOG_COLOR_LIGHT_WARN,
-                  dark_color=LOG_COLOR_DARK_WARN),
+                  light_color=_C["light"]["warn"],
+                  dark_color=_C["dark"]["warn"]),
         ColorRule("PROMPT", r'^>',
-                  light_color=LOG_COLOR_LIGHT_PROMPT,
-                  dark_color=LOG_COLOR_DARK_PROMPT),
+                  light_color=_C["light"]["prompt"],
+                  dark_color=_C["dark"]["prompt"]),
         # 시스템 로그 규칙
         ColorRule("SYS_INFO", r'\[INFO\]',
-                  light_color=LOG_COLOR_LIGHT_INFO,
-                  dark_color=LOG_COLOR_DARK_INFO),
+                  light_color=_C["light"]["info"],
+                  dark_color=_C["dark"]["info"]),
         ColorRule("SYS_ERROR", r'\[ERROR\]',
-                  light_color=LOG_COLOR_LIGHT_ERROR,
-                  dark_color=LOG_COLOR_DARK_ERROR),
+                  light_color=_C["light"]["error"],
+                  dark_color=_C["dark"]["error"]),
         ColorRule("SYS_WARN", r'\[WARN\]',
-                  light_color=LOG_COLOR_LIGHT_WARN,
-                  dark_color=LOG_COLOR_DARK_WARN),
+                  light_color=_C["light"]["warn"],
+                  dark_color=_C["dark"]["warn"]),
         ColorRule("SYS_SUCCESS", r'\[SUCCESS\]',
-                  light_color=LOG_COLOR_LIGHT_SUCCESS,
-                  dark_color=LOG_COLOR_DARK_SUCCESS),
+                  light_color=_C["light"]["success"],
+                  dark_color=_C["dark"]["success"]),
         # 타임스탬프 규칙
         ColorRule("TIMESTAMP", r'\[\d{2}:\d{2}:\d{2}\]',
-                  light_color=LOG_COLOR_LIGHT_TIMESTAMP,
-                  dark_color=LOG_COLOR_DARK_TIMESTAMP),
+                  light_color=_C["light"]["timestamp"],
+                  dark_color=_C["dark"]["timestamp"]),
     ]
 
     def __init__(self) -> None:

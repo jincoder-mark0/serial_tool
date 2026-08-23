@@ -215,21 +215,16 @@ MIN_AUTO_TX_INTERVAL_MS: int = 50  # 과도한 폴링으로 인한 TX 큐 포화
 MAX_COMMAND_HISTORY_SIZE: int = 50    # 수동 명령 History 최대 크기
 
 # ==========================================
-# Colors (For Text Logs)
+# Colors
 # ==========================================
-LOG_COLOR_DARK_TIMESTAMP: str = "#9E9E9E"
-LOG_COLOR_DARK_INFO: str = "#2196F3"
-LOG_COLOR_DARK_ERROR: str = "#FF6B6B"  # 다크/드라큘라 배경에서 WCAG 4.5:1 확보 (S-022, color_rules.json과 동일 값 유지)
-LOG_COLOR_DARK_WARN: str = "#D4A017"
-LOG_COLOR_DARK_PROMPT: str = '#00BCD4'
-LOG_COLOR_DARK_SUCCESS: str = "#4CAF50"
-
-LOG_COLOR_LIGHT_TIMESTAMP: str = "#808080"
-LOG_COLOR_LIGHT_INFO: str = "#0000FF"
-LOG_COLOR_LIGHT_ERROR: str = "#CC0000"
-LOG_COLOR_LIGHT_WARN: str = "#D4A017"
-LOG_COLOR_LIGHT_PROMPT: str = '#008B8B'
-LOG_COLOR_LIGHT_SUCCESS: str = "#008000"
+# 로그 텍스트 색은 여기 있지 않다. **테마 리소스**
+# `resources/themes/palette.json`이 정본이다 (S-078).
+#
+# 예전에는 LOG_COLOR_DARK_* / LOG_COLOR_LIGHT_* 상수 12개가 여기 있었는데,
+# 같은 값이 color_rules.json에도 있어 "동일 값 유지"를 주석으로만 약속한
+# 상태였고(S-022), 테마가 4개로 늘었는데 상수는 2벌뿐이라 밝은 테마인
+# classic이 다크용 색을 받아 흰 배경에서 11개 중 10개가 WCAG 4.5:1
+# 미달이었다. 색은 테마의 성질이므로 테마 리소스가 갖는다.
 
 # ==========================================
 # Layout & Sizing Constants (S-025: 위젯 간 여백/크기 상수화)
