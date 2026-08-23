@@ -48,6 +48,7 @@ QToolTip {
     background-color: #ffffff;
     color: #333333;
     border-color: #c0c0c0;
+    border-radius: 4px;
 }
 
 /* MainWindow */
@@ -88,6 +89,7 @@ QTabBar::tab:hover {
 
 QTabBar::close-button {
     image: url(resources/icons/light/close_light.svg);
+    border-radius: 2px;
 }
 
 QTabBar::close-button:hover {
@@ -97,8 +99,9 @@ QTabBar::close-button:hover {
 /* QPushButton */
 QPushButton {
     background-color: #e0e0e0;
-    border-color: #c0c0c0;
+    border-color: #979797;
     color: #333333;
+    border-radius: 4px;
 }
 
 QPushButton:hover {
@@ -138,6 +141,7 @@ QLineEdit, QTextEdit, QPlainTextEdit, QSmartTextEdit, QSmartListView {
     color: #333333;
     selection-background-color: #a0c8f0;
     selection-color: #000000;
+    border-radius: 4px;
 }
 
 QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QSmartTextEdit:focus, QSmartListView:focus {
@@ -161,6 +165,7 @@ QComboBox {
     background-color: #ffffff;
     border-color: #c0c0c0;
     color: #333333;
+    border-radius: 4px;
 }
 
 QComboBox:hover {
@@ -187,10 +192,12 @@ QProgressBar {
     background-color: #ffffff;
     border-color: #c0c0c0;
     color: #000000;
+    border-radius: 4px;
 }
 
 QProgressBar::chunk {
     background-color: #2196F3;
+    border-radius: 3px;
 }
 
 /* QScrollBar */
@@ -200,6 +207,7 @@ QScrollBar:vertical, QScrollBar:horizontal {
 
 QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
     background-color: #c0c0c0;
+    border-radius: 6px;
 }
 
 QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
@@ -232,6 +240,7 @@ QTableCornerButton::section {
 QCheckBox::indicator {
     border-color: #c0c0c0;
     background-color: #ffffff;
+    border-radius: 3px;
 }
 
 QCheckBox::indicator:checked {
@@ -248,6 +257,7 @@ QCheckBox::indicator:hover {
    (계산: tasks/S-022 스크립트 패턴, 실측값은 S-035 태스크 보고 참고). */
 QGroupBox {
     border-color: #8a8a8a;
+    border-radius: 4px;
 }
 
 QGroupBox::title, QLabel[class="section-title"] {
@@ -264,6 +274,7 @@ QLabel[class="file-path-box"] {
     color: #505050;
     border-color: #c0c0c0;
     background-color: #ffffff;
+    border-radius: 4px;
 }
 
 /* QStatusBar */
@@ -296,6 +307,10 @@ QMenu::item:selected {
 QToolBar {
     background-color: #f0f0f0;
     border-bottom-color: #d0d0d0;
+}
+
+QToolBar QToolButton {
+    border-radius: 4px;
 }
 
 QToolBar QToolButton:hover {

@@ -70,6 +70,7 @@ QToolTip {
     background-color: #ffffe1;
     color: #000000;
     border-color: #707070;
+    border-radius: 0px;
 }
 
 /* MainWindow */
@@ -110,6 +111,7 @@ QTabBar::tab:hover {
 
 QTabBar::close-button {
     image: url(resources/icons/light/close_light.svg);
+    border-radius: 0px;
 }
 
 QTabBar::close-button:hover {
@@ -119,8 +121,9 @@ QTabBar::close-button:hover {
 /* QPushButton */
 QPushButton {
     background-color: #d4d0c8;
-    border-color: #707070;
+    border-color: #515151;
     color: #000000;
+    border-radius: 0px;
 }
 
 QPushButton:hover {
@@ -161,6 +164,7 @@ QLineEdit, QTextEdit, QPlainTextEdit, QSmartTextEdit, QSmartListView {
     color: #000000;
     selection-background-color: #000080;
     selection-color: #ffffff;
+    border-radius: 0px;
 }
 
 QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QSmartTextEdit:focus, QSmartListView:focus {
@@ -184,6 +188,7 @@ QComboBox {
     background-color: #ffffff;
     border-color: #707070;
     color: #000000;
+    border-radius: 0px;
 }
 
 QComboBox:hover {
@@ -210,10 +215,12 @@ QProgressBar {
     background-color: #ffffff;
     border-color: #707070;
     color: #000000;
+    border-radius: 0px;
 }
 
 QProgressBar::chunk {
     background-color: #000080;
+    border-radius: 0px;
 }
 
 /* QScrollBar */
@@ -223,6 +230,7 @@ QScrollBar:vertical, QScrollBar:horizontal {
 
 QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
     background-color: #707070;
+    border-radius: 0px;
 }
 
 QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
@@ -255,6 +263,7 @@ QTableCornerButton::section {
 QCheckBox::indicator {
     border-color: #707070;
     background-color: #ffffff;
+    border-radius: 0px;
 }
 
 QCheckBox::indicator:checked {
@@ -271,6 +280,7 @@ QCheckBox::indicator:hover {
    (계산: tasks/S-022 스크립트 패턴, 실측값은 이 파일 상단 대비 표 참고). */
 QGroupBox {
     border-color: #707070;
+    border-radius: 0px;
 }
 
 QGroupBox::title, QLabel[class="section-title"] {
@@ -287,6 +297,7 @@ QLabel[class="file-path-box"] {
     color: #505050;
     border-color: #707070;
     background-color: #ffffff;
+    border-radius: 0px;
 }
 
 /* QStatusBar */
@@ -320,6 +331,10 @@ QMenu::item:selected {
 QToolBar {
     background-color: #d4d0c8;
     border-bottom-color: #707070;
+}
+
+QToolBar QToolButton {
+    border-radius: 0px;
 }
 
 QToolBar QToolButton:hover {
@@ -491,30 +506,3 @@ QTabBar::tab:disabled {
     background-color: #cac6be;
     color: #6d6d6d;
 }
-
-/* ==================================================================================
-   Classic: 사각 모서리 (S-073)
-   ==================================================================================
-   전통 Windows 룩은 모서리가 각져 있다. 그런데 border-radius는 테마 파일이 아니라
-   4테마가 공유하는 common.qss에 13곳 있어(사용자 보고), 클래식만 빠져나갈 수 없었다.
-
-   테마 QSS는 common.qss **뒤에** 이어 붙으므로(view/managers/theme_resource_loader.py),
-   같은 셀렉터로 다시 선언하면 나중 것이 이긴다. 셀렉터를 common.qss와 **정확히 같게**
-   유지해야 한다 — 다르면 특이도 싸움이 되어 의도대로 이기지 못한다(S-036 교훈).
-
-   common.qss에 border-radius 규칙이 추가되면 여기도 함께 늘려야 한다.
-   `tests/test_classic_square_corners.py`가 그 누락을 잡는다.
-   ================================================================================== */
-QToolTip { border-radius: 0px; }
-QTabBar::close-button { border-radius: 0px; }
-QPushButton { border-radius: 0px; }
-QLineEdit, QTextEdit, QPlainTextEdit, QSmartTextEdit, QSmartListView { border-radius: 0px; }
-QComboBox { border-radius: 0px; }
-QProgressBar { border-radius: 0px; }
-QProgressBar::chunk { border-radius: 0px; }
-QScrollBar::handle:vertical { border-radius: 0px; }
-QScrollBar::handle:horizontal { border-radius: 0px; }
-QCheckBox::indicator { border-radius: 0px; }
-QGroupBox { border-radius: 0px; }
-QLabel[class="file-path-box"] { border-radius: 0px; }
-QToolBar QToolButton { border-radius: 0px; }

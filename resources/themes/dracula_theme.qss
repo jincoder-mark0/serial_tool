@@ -52,6 +52,7 @@ QToolTip {
     background-color: #21222c;
     color: #f8f8f2;
     border-color: #6272a4;
+    border-radius: 4px;
 }
 
 /* MainWindow */
@@ -92,6 +93,7 @@ QTabBar::tab:hover {
 
 QTabBar::close-button {
     image: url(resources/icons/dracula/close_dracula.svg);
+    border-radius: 2px;
 }
 
 QTabBar::close-button:hover {
@@ -103,6 +105,7 @@ QPushButton {
     background-color: #44475a;
     border-color: #6272a4;
     color: #f8f8f2;
+    border-radius: 4px;
 }
 
 QPushButton:hover {
@@ -142,6 +145,7 @@ QLineEdit, QTextEdit, QPlainTextEdit, QSmartTextEdit, QSmartListView {
     color: #f8f8f2;
     selection-background-color: #bd93f9;
     selection-color: #282a36;
+    border-radius: 4px;
 }
 
 QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QSmartTextEdit:focus, QSmartListView:focus {
@@ -162,9 +166,10 @@ QSmartTextEdit {
 
 /* QComboBox */
 QComboBox {
-    background-color: #44475a;
-    border-color: #6272a4;
+    background-color: #21222c;
+    border-color: #44475a;
     color: #f8f8f2;
+    border-radius: 4px;
 }
 
 QComboBox:hover {
@@ -191,10 +196,12 @@ QProgressBar {
     background-color: #21222c;
     border-color: #44475a;
     color: #f8f8f2;
+    border-radius: 4px;
 }
 
 QProgressBar::chunk {
     background-color: #bd93f9;
+    border-radius: 3px;
 }
 
 /* QScrollBar */
@@ -204,6 +211,7 @@ QScrollBar:vertical, QScrollBar:horizontal {
 
 QScrollBar::handle:vertical, QScrollBar::handle:horizontal {
     background-color: #6272a4;
+    border-radius: 6px;
 }
 
 QScrollBar::handle:vertical:hover, QScrollBar::handle:horizontal:hover {
@@ -236,6 +244,7 @@ QTableCornerButton::section {
 QCheckBox::indicator {
     border-color: #6272a4;
     background-color: #21222c;
+    border-radius: 3px;
 }
 
 QCheckBox::indicator:checked {
@@ -253,6 +262,7 @@ QCheckBox::indicator:hover {
    (계산: tasks/S-022 스크립트 패턴, 실측값은 S-035 태스크 보고 참고). */
 QGroupBox {
     border-color: #6272a4;
+    border-radius: 4px;
 }
 
 QGroupBox::title, QLabel[class="section-title"] {
@@ -269,6 +279,7 @@ QLabel[class="file-path-box"] {
     color: #8a94c8;
     border-color: #44475a;
     background-color: #21222c;
+    border-radius: 4px;
 }
 
 /* QStatusBar */
@@ -301,6 +312,10 @@ QMenu::item:selected {
 QToolBar {
     background-color: #191a21;
     border-bottom-color: #44475a;
+}
+
+QToolBar QToolButton {
+    border-radius: 4px;
 }
 
 QToolBar QToolButton:hover {

@@ -18,7 +18,7 @@ Steps 그대로 수행할 수 있는 수준**으로 상세화한 문서 모음.
 ```powershell
 Set-Location e:\Python\serial_tool
 $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
-.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 473개)
+.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 483개)
 ```
 
 ## 태스크 목록 (의존 순서)
@@ -121,6 +121,7 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-074](S-074-right-panel-toggle-roundtrip.md) | 우측 패널 토글 왕복이 항등이 아님 | UX | DONE |
 | [S-075](S-075-port-settings-column-alignment.md) | 포트 설정 첫 열 정렬 + 언어 전환 시 이동 | UX | DONE |
 | [S-076](S-076-dialog-layout-and-i18n.md) | 서브 윈도우 레이아웃·다국어 점검 | UX | DONE |
+| [S-077](S-077-theme-uniformity-and-component-distinction.md) | 테마 파일 구조 통일 + 컴포넌트 구분 | UX | DONE |
 
 - **하위 가능**: Steps가 자족적으로 작성됨. Steps 밖 판단이 필요해지면 즉시 중단·보고.
 - **상위 전용/권장**: 설계·판단이 본체인 태스크. 하위 모델은 시작하지 않는다.

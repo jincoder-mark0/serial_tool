@@ -33,15 +33,23 @@ def _rules_with_border_radius(path: pathlib.Path) -> dict:
     """
     QSS에서 `border-radius`를 지정한 규칙을 {셀렉터: 값}으로 뽑는다.
 
+    쉼표로 묶인 셀렉터 목록(`A, B`)은 **개별 셀렉터로 펴서** 담는다. 파일마다
+    묶는 방식이 다르기 때문이다 — `common.qss`는 스크롤바 핸들을 세로/가로로
+    나눠 쓰고, 테마 파일들은 하나로 묶어 쓴다. 문자열 그대로 비교하면 같은 것을
+    다르다고 판정한다.
+
     같은 셀렉터가 여러 번 나오면 **마지막 값**을 쓴다 — QSS에서 나중 선언이 이긴다.
     """
     text = re.sub(r"/\*.*?\*/", "", path.read_text(encoding="utf-8"), flags=re.S)
     found = {}
     for match in re.finditer(r"([^{}]+)\{([^{}]*)\}", text):
-        selector = " ".join(match.group(1).split())
         radius = re.search(r"border-radius:\s*([^;]+)", match.group(2))
-        if radius:
-            found[selector] = radius.group(1).strip()
+        if not radius:
+            continue
+        for part in match.group(1).split(","):
+            selector = " ".join(part.split())
+            if selector:
+                found[selector] = radius.group(1).strip()
     return found
 
 
