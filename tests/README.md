@@ -36,7 +36,7 @@ source .venv/bin/activate
 
 Windows의 GUI 없는 환경에서는 먼저 `$env:QT_QPA_PLATFORM='offscreen'`을 설정합니다.
 
-현재 기준선은 **458 tests passed**입니다.
+현재 기준선은 **459 tests passed**입니다.
 
 ### 1.3 자주 사용하는 Pytest 옵션 (Arguments)
 
@@ -85,3 +85,22 @@ FAILED tests/test_model.py::test_macro_runner_basic_flow - TimeoutError...
 1.  **FAILURES 섹션**: 실패한 테스트의 상세 원인과 코드 위치를 보여줍니다.
 2.  **Summary Info**: 실패한 테스트의 목록을 요약해 줍니다.
 3.  **마지막 줄**: 전체 성공/실패 개수와 소요 시간을 보여줍니다. **초록색**이면 전체 성공, **빨간색**이면 하나 이상의 실패가 있음을 의미합니다.
+
+## View Mock 규율 (S-070)
+
+Presenter 테스트에서 View/Panel을 Mock으로 만들 때는 **반드시 `spec=`을 지정한다.**
+
+```python
+panel = MagicMock(spec=ManualControlPanel)   # O
+panel = MagicMock()                          # X — 없는 메서드도 통과한다
+```
+
+`spec` 없는 `MagicMock`은 어떤 이름이든 받아준다. Presenter가 존재하지 않는 View
+메서드를 불러도 테스트는 초록이고, 앱은 실행 시 `AttributeError`로 죽는다.
+실제로 그런 일이 있었다 — `panel.set_enabled()`(실제 이름은 `set_controls_enabled`)
+때문에 393개 테스트가 전부 통과하는 동안 앱은 포트 탭을 바꿀 때마다 죽었다(S-067).
+
+`spec`은 **테스트가 지나가는 경로만** 막는다. Presenter의 View 호출 대부분은 테스트가
+닿지 않으므로, `tests/test_presenter_view_contract.py`가 소스를 정적으로 훑어 전수
+확인한다(현재 147건). 새 Presenter를 만들 때 View 파라미터에 **타입 주석을 달고**
+`self.X = param` 형태로 보관하면 자동으로 검사 대상이 된다.

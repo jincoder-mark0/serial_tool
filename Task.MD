@@ -147,7 +147,7 @@
 | [S-067](tasks/S-067-port-tab-change-crash-and-theme-schema.md) | 포트 탭 전환 AttributeError + 클래식 테마 저장 불가 | ✅ 완료 |
 | [S-068](tasks/S-068-right-section-min-width.md) | 우측 패널 최소 폭 지정 (매크로 가로 스크롤 방지) | ✅ 완료 |
 | [S-069](tasks/S-069-port-tab-close-hard-crash.md) | **포트 탭 닫기·재연결 시 프로세스 하드 크래시** | ⏸ 대기 |
-| [S-070](tasks/S-070-mock-spec-interface-drift.md) | Presenter→View 인터페이스 드리프트를 Mock이 삼킴 | ⏸ 대기 |
+| [S-070](tasks/S-070-mock-spec-interface-drift.md) | Presenter→View 인터페이스 드리프트를 Mock이 삼킴 | ✅ 완료 |
 
 - **S-069(2026-08-23 갱신)**: 원인은 `serial.tools.list_ports.comports()`를 **워커
   스레드에서 호출**하는 것이었다(스텁 시 60회 중 0회, 스레드 수명 개입은 전부 무효).
@@ -155,8 +155,13 @@
   **실제 앱 종료 경로는 40회 전부 정상이라 사용자 영향은 없다**(등재 당시 P0 서술 철회).
   잔여 5%는 LOOPBACK 연결 개폐 경로로 좁혀졌다.
 - S-070은 S-067이 드러낸 구멍이다. Presenter 테스트가 View를 `spec` 없는 `MagicMock`으로
-  만들어 **존재하지 않는 메서드 호출도 통과**시킨다(프로젝트 전체 `spec=` 사용 0건).
+  만들어 **존재하지 않는 메서드 호출도 통과**시켰다(당시 프로젝트 전체 `spec=` 0건).
   그래서 393개가 초록인 동안 앱은 탭을 바꿀 때마다 죽고 있었다.
+  **완료(2026-08-23)**: View Mock 전수에 spec 적용 + `tests/test_presenter_view_contract.py`
+  신설 — 소스를 AST로 훑어 Presenter→View 접근 **147건**을 실제 View 인스턴스에서
+  `getattr`로 따라가며 존재를 확인한다(spec은 테스트가 지나가는 경로만 막으므로 부족).
+  **새 결함 0건** — S-067이 이 부류의 유일한 사례였다. 태스크 작성 시 "더 나올 것"이라
+  적었으나 빗나갔고, 그대로 기록한다.
 
 **아직 안 고친 사용자 보고 2건** (원인만 확정):
 - 클래식 테마의 둥근 모서리 — `border-radius`가 테마 파일엔 0곳, **`common.qss`에 13곳**.

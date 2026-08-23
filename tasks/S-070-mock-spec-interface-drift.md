@@ -1,6 +1,6 @@
 # S-070 — Presenter->View 인터페이스 드리프트를 Mock이 삼킨다
 
-- Status: TODO
+- Status: DONE (2026-08-23 — 상위 직접 수행. View Mock 전수에 spec 적용 + 정적 계약 검사 신설(147건 확인). 새 결함 0건 — S-067이 이 부류의 유일한 사례였다. pytest 459 passed, ruff 0건)
 - Recommended model: **하위(Sonnet) 가능**
 - 선행: S-067 (이 구멍으로 실제 결함이 새어 나간 사례)
 - Skills to load: task-done
@@ -46,8 +46,75 @@ S-067에서 `ManualControlPresenter.set_enabled()`가 패널에 **없는 메서�
 
 ## Acceptance criteria (DoD)
 
-- [ ] Presenter 테스트의 View Mock 전수에 `spec=`이 지정된다(예외는 사유 명시).
-- [ ] spec 적용으로 드러난 결함이 개수·내용과 함께 보고되고, 오타/개명 누락은 수정된다.
-- [ ] 일부러 깨뜨렸을 때 실패하는 것이 확인된다.
-- [ ] 규칙이 문서에 한 줄 남는다.
-- [ ] 전체 pytest·ruff 통과.
+- [x] Presenter 테스트의 View Mock 전수에 `spec=`이 지정된다.
+- [x] spec 적용으로 드러난 결함: **0건**. 정적 검사로 147건을 전수 확인한 결과도 0건 — S-067이 이 부류의 유일한 사례였다.
+- [x] S-067 결함(`panel.set_enabled`)을 되살려 정적 검사가 파일:라인·체인·클래스를 짚어 실패하는 것을 확인했다.
+- [x] `tests/README.md`에 "View Mock 규율" 절 추가.
+- [x] 전체 pytest·ruff 통과.
+
+
+## 수행 결과 (2026-08-23, 상위 직접)
+
+### 1. spec 적용 (테스트가 지나가는 경로)
+
+| 테스트 | Mock | spec |
+|---|---|---|
+| `test_presenter_manual_control.py` | `mock_panel` | `ManualControlPanel` (S-067에서 선적용) |
+| `test_presenter_packet.py` | `mock_panel` | `PacketPanel` |
+| `test_auto_tx.py` (2곳) | `panel` | `ManualControlPanel` |
+| `test_presenter_init.py` | 하위 패널 3종 | `ManualControlPanel`/`SystemLogWidget`/`PacketPanel` |
+| `test_port_scan_shutdown.py` | 하위 패널 3종 | 동일 |
+
+`MainWindow` 자체에는 spec을 걸지 않았다. `spec=MainWindow`는 **클래스 속성만**
+노출하는데 `left_section` 등은 `__init__`에서 만들어지는 인스턴스 속성이라, 픽스처의
+`view.left_section = MagicMock()` 대입이 막힌다. Presenter 호출이 실제로 닿는 곳은
+하위 패널이므로 거기에 거는 편이 값어치가 크다.
+
+### 2. 정적 계약 검사 — 여기서 진짜 값이 나온다
+
+spec은 **테스트가 실제로 지나가는 호출만** 막는다. Presenter의 View 호출은 대부분
+테스트가 닿지 않으므로, 그것만으로는 이 구멍을 닫았다고 할 수 없다.
+
+`tests/test_presenter_view_contract.py`를 만들어 소스를 AST로 훑는다. `__init__`
+파라미터 중 View 타입으로 주석된 것을 찾고, `self.X = param` 대입을 추적한 뒤,
+`self.X.a.b` 형태의 접근을 **실제 View 인스턴스에서 `getattr`로 따라간다.**
+
+클래스만 봐서는 부족했다 — `left_section` 같은 속성은 `__init__`에서 생겨 클래스에
+없다. 그래서 실제 인스턴스를 하나 만들어 체인을 걷는다.
+
+검사 규모:
+
+| Presenter | 확인한 접근 |
+|---|---|
+| `main_presenter.py` | 57 |
+| `manual_control_presenter.py` | 30 |
+| `macro_presenter.py` | 28 |
+| `port_presenter.py` | 19 |
+| `packet_presenter.py` | 12 |
+| `data_handler.py` | 1 |
+| **합계** | **147** |
+
+`checked >= 100` 하한을 걸어 두었다. 추적 로직(타입 주석 → 대입 형태)이 깨지면
+검사가 조용히 0건이 되어 통과해 버리기 때문이다. 메서드 호출 결과에 이어지는
+접근(`self.view.get_panel_at(0).foo`)은 반환 타입을 알 수 없어 검사하지 못하며,
+그 개수를 실패 메시지에 함께 보고한다 — 검사하지 못한 것을 통과로 위장하지 않는다.
+
+### 3. 결과: 새 결함 0건
+
+147건 전부 존재를 확인했다. spec 적용으로도 새로 깨진 테스트가 없었다.
+**S-067의 `set_enabled`가 이 부류의 유일한 사례였다.**
+
+태스크를 쓸 때는 "spec을 붙이면 조용히 통과하던 잘못된 호출이 더 드러날 가능성이
+높다"고 적었는데, 실제로는 없었다. 추정이 빗나간 것이므로 그대로 기록한다 —
+값어치는 "찾아낸 결함 수"가 아니라 **앞으로 같은 결함이 들어올 수 없게 된 것**에 있다.
+
+### 4. 검사의 실효성 확인
+
+`manual_control_presenter.py`의 호출을 `set_controls_enabled` → `set_enabled`로
+되돌리자 정적 검사가 다음과 같이 실패했다.
+
+```
+manual_control_presenter.py:125: self.panel.set_enabled — ManualControlPanel에 'set_enabled'이(가) 없다
+```
+
+파일·라인·체인·클래스를 모두 짚어 준다. 복원 후 통과를 확인했다.

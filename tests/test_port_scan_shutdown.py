@@ -36,6 +36,9 @@ from model.connection_controller import ConnectionController
 from presenter.port_presenter import PortPresenter
 from presenter.main_presenter import MainPresenter
 from view.sections.main_left_section import MainLeftSection
+from view.panels.packet_panel import PacketPanel
+from view.panels.manual_control_panel import ManualControlPanel
+from view.widgets.system_log import SystemLogWidget
 
 
 # -----------------------------------------------------------------------------
@@ -122,9 +125,9 @@ def mock_main_window():
     view.left_section.port_tab_panel = MagicMock()
     view.left_section.port_tab_panel.currentIndex.return_value = 0
     view.left_section.port_tab_panel.widget.return_value = MagicMock()
-    view.left_section.manual_control_panel = MagicMock()
-    view.left_section.system_log_widget = MagicMock()
-    view.right_section.packet_panel = MagicMock()
+    view.left_section.manual_control_panel = MagicMock(spec=ManualControlPanel)
+    view.left_section.system_log_widget = MagicMock(spec=SystemLogWidget)
+    view.right_section.packet_panel = MagicMock(spec=PacketPanel)
     view.macro_view = MagicMock()
     view.port_view = MagicMock()
 

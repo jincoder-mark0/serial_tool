@@ -24,6 +24,9 @@ import pytest
 from unittest.mock import MagicMock, patch
 
 from presenter.main_presenter import MainPresenter
+from view.panels.manual_control_panel import ManualControlPanel
+from view.panels.packet_panel import PacketPanel
+from view.widgets.system_log import SystemLogWidget
 
 
 @pytest.fixture
@@ -49,14 +52,18 @@ def mock_main_window():
     view.left_section.port_tab_panel.currentIndex.return_value = 0
     view.left_section.port_tab_panel.widget.return_value = MagicMock()  # PortPanel
 
+    # 하위 패널에는 spec을 지정한다 (S-070).
+    # Presenter가 실제로 메서드를 부르는 대상이 이 패널들이다. spec이 없으면
+    # 존재하지 않는 이름도 Mock이 삼켜, Presenter->View 오타가 테스트를 통과한다
+    # (S-067에서 그 틈으로 앱이 포트 탭마다 죽었다).
     # Manual Control Panel
-    view.left_section.manual_control_panel = MagicMock()
+    view.left_section.manual_control_panel = MagicMock(spec=ManualControlPanel)
 
     # System Log Widget
-    view.left_section.system_log_widget = MagicMock()
+    view.left_section.system_log_widget = MagicMock(spec=SystemLogWidget)
 
     # Packet Panel
-    view.right_section.packet_panel = MagicMock()
+    view.right_section.packet_panel = MagicMock(spec=PacketPanel)
 
     # Macro Views
     view.macro_view = MagicMock()

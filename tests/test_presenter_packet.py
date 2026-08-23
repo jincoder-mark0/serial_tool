@@ -25,6 +25,7 @@ import pytest
 from unittest.mock import MagicMock
 
 from presenter.packet_presenter import PacketPresenter
+from view.panels.packet_panel import PacketPanel
 from common.dtos import PacketEvent, PreferencesState, PacketViewData
 from common.constants import ConfigKeys
 from model.packet_parser import Packet
@@ -32,8 +33,15 @@ from model.packet_parser import Packet
 
 @pytest.fixture
 def mock_panel():
-    """PacketPanel(View)을 Mocking합니다."""
-    return MagicMock()
+    """
+    PacketPanel(View)을 Mocking합니다.
+
+    `spec`을 지정해 실제 `PacketPanel`에 없는 메서드 호출을 Mock이 삼키지 않게 한다
+    (S-070). spec 없는 MagicMock은 어떤 이름이든 받아주므로, Presenter가 존재하지
+    않는 View 메서드를 불러도 테스트가 통과한다 — S-067에서 실제로 그 틈으로
+    `set_enabled()` 오타가 새어 나가 앱이 포트 탭을 바꿀 때마다 죽었다.
+    """
+    return MagicMock(spec=PacketPanel)
 
 
 @pytest.fixture

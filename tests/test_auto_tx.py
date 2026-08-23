@@ -23,6 +23,7 @@ from unittest.mock import MagicMock
 
 from model.auto_tx import AutoTxScheduler
 from presenter.manual_control_presenter import ManualControlPresenter
+from view.panels.manual_control_panel import ManualControlPanel
 from common.constants import MIN_AUTO_TX_INTERVAL_MS
 from common.dtos import ManualCommand
 
@@ -168,7 +169,9 @@ def _make_mock_panel(text: str = "AT", interval_ms: int = 200) -> MagicMock:
     Returns:
         MagicMock: Panel Facade를 흉내내는 Mock 객체.
     """
-    panel = MagicMock()
+    # spec 지정 — 실제 ManualControlPanel에 없는 메서드 호출을 Mock이 삼키지
+    # 않게 한다 (S-070). S-067에서 그 틈으로 오타가 새어 앱이 죽은 전례가 있다.
+    panel = MagicMock(spec=ManualControlPanel)
     panel.get_input_text.return_value = text
     panel.is_hex_mode.return_value = False
     panel.is_prefix_enabled.return_value = False
@@ -220,7 +223,7 @@ class TestManualControlPresenterAutoTxWiring:
         체크박스를 다시 해제(UI 동기화)하는지 테스트.
         """
         # GIVEN: get_input_text 호출 시 예외 발생하도록 설정
-        panel = MagicMock()
+        panel = MagicMock(spec=ManualControlPanel)
         panel.get_input_text.side_effect = AttributeError("boom")
         controller = MagicMock()
         presenter = ManualControlPresenter(
