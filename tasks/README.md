@@ -18,7 +18,7 @@ Steps 그대로 수행할 수 있는 수준**으로 상세화한 문서 모음.
 ```powershell
 Set-Location e:\Python\serial_tool
 $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
-.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 434개)
+.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 458개)
 ```
 
 ## 태스크 목록 (의존 순서)
@@ -111,7 +111,7 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | ID | 제목 | 우선 | 상태 |
 |---|---|---|---|
 | [S-071](S-071-checksum-validation.md) | 패킷 체크섬 검증 (XOR/SUM/CRC 7종) | 기능 | DONE |
-| [S-072](S-072-framing-length-field-and-gap.md) | 프레이밍 확장 — 길이 필드 파서 + 갭 기반 파서 | 기능 | TODO |
+| [S-072](S-072-framing-length-field-and-gap.md) | 프레이밍 확장 — 길이 필드 파서 + 갭 기반 파서 | 기능 | DONE |
 
 - **하위 가능**: Steps가 자족적으로 작성됨. Steps 밖 판단이 필요해지면 즉시 중단·보고.
 - **상위 전용/권장**: 설계·판단이 본체인 태스크. 하위 모델은 시작하지 않는다.

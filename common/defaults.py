@@ -58,6 +58,14 @@ DEFAULT_PACKET_SETTINGS = {
     # 대부분의 프로토콜이 체크섬을 말미에 두므로 끝 기준이 안정적이다.
     # exclude_leading/trailing은 계산 대상에서 제외할 앞/뒤 바이트 수다
     # (SOF 헤더 제외, 체크섬 필드 자신 제외 등).
+    # 프레이밍 확장 (S-072). 길이 필드는 [LEN][PAYLOAD] 형태를 기본으로 잡는다.
+    "length_field_offset": 0,
+    "length_field_size": 1,
+    "length_field_endian": "big",
+    "length_includes_header": False,
+    # 갭 기반 프레이밍의 유휴 임계(ms). Modbus RTU의 3.5문자 유휴가 9600bps에서
+    # 약 4ms라 그보다 조금 큰 값을 기본으로 둔다.
+    "gap_ms": 5,
     "checksum_algorithm": "none",
     "checksum_offset": -1,
     "checksum_exclude_leading": 0,

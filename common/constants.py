@@ -99,6 +99,13 @@ class ConfigKeys:
     AT_COLOR_URC = "packet.at_color_urc"
     AT_COLOR_PROMPT = "packet.at_color_prompt"
 
+    # 프레이밍 확장 (S-072)
+    PACKET_LENGTH_FIELD_OFFSET = "packet.length_field_offset"
+    PACKET_LENGTH_FIELD_SIZE = "packet.length_field_size"
+    PACKET_LENGTH_FIELD_ENDIAN = "packet.length_field_endian"
+    PACKET_LENGTH_INCLUDES_HEADER = "packet.length_includes_header"
+    PACKET_GAP_MS = "packet.gap_ms"
+
     # 체크섬 검증 (S-071)
     PACKET_CHECKSUM_ALGORITHM = "packet.checksum_algorithm"
     PACKET_CHECKSUM_OFFSET = "packet.checksum_offset"

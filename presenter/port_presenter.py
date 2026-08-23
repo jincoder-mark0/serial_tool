@@ -299,6 +299,14 @@ class PortPresenter(QObject):
         delimiters = settings.get(ConfigKeys.PACKET_DELIMITERS, ["\\r\\n"])
         config.packet_delimiter = delimiters[0] if delimiters else ""
         config.packet_length = settings.get(ConfigKeys.PACKET_LENGTH, 64)
+        # 프레이밍 확장 (S-072)
+        config.length_field_offset = settings.get(ConfigKeys.PACKET_LENGTH_FIELD_OFFSET, 0)
+        config.length_field_size = settings.get(ConfigKeys.PACKET_LENGTH_FIELD_SIZE, 1)
+        config.length_field_endian = settings.get(ConfigKeys.PACKET_LENGTH_FIELD_ENDIAN, "big")
+        config.length_includes_header = settings.get(
+            ConfigKeys.PACKET_LENGTH_INCLUDES_HEADER, False
+        )
+        config.gap_ms = settings.get(ConfigKeys.PACKET_GAP_MS, 5)
 
     def handle_open_request(self, config: PortConfig) -> None:
         """

@@ -101,6 +101,11 @@ class PortConfig:
             `common.enums.ParserType.from_preference_index` 참조.
         packet_delimiter (str): DELIMITER 파서용 구분자 (이스케이프 문자열, 예: "\\r\\n").
         packet_length (int): FIXED_LENGTH 파서용 고정 길이 (bytes).
+        length_field_offset (int): LENGTH_FIELD 파서용 — 길이 필드까지의 오프셋 (S-072).
+        length_field_size (int): LENGTH_FIELD 파서용 — 길이 필드 크기 (1/2/4).
+        length_field_endian (str): LENGTH_FIELD 파서용 — 바이트 순서 ("big"/"little").
+        length_includes_header (bool): LENGTH_FIELD 파서용 — 길이 값이 헤더를 포함하는지.
+        gap_ms (int): GAP 파서용 — 프레임 경계로 볼 유휴 시간 (ms).
     """
     port: str
     protocol: str = "Serial"
@@ -121,6 +126,11 @@ class PortConfig:
     parser_type: int = 0
     packet_delimiter: str = "\\r\\n"
     packet_length: int = 64
+    length_field_offset: int = 0
+    length_field_size: int = 1
+    length_field_endian: str = "big"
+    length_includes_header: bool = False
+    gap_ms: int = 5
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'PortConfig':
@@ -616,6 +626,11 @@ class PreferencesState:
         parser_type (int): 파서 타입 인덱스.
         delimiters (List[str]): 구분자 목록.
         packet_length (int): 고정 패킷 길이.
+        length_field_offset (int): 길이 필드까지의 오프셋 (S-072).
+        length_field_size (int): 길이 필드 크기 (1/2/4).
+        length_field_endian (str): 길이 필드 바이트 순서 ("big"/"little").
+        length_includes_header (bool): 길이 값이 헤더를 포함하는지.
+        gap_ms (int): 갭 프레이밍의 유휴 임계 (ms).
         at_color_ok (bool): AT OK 색상 적용 여부.
         at_color_error (bool): AT ERROR 색상 적용 여부.
         at_color_urc (bool): AT URC 색상 적용 여부.
@@ -647,6 +662,11 @@ class PreferencesState:
     parser_type: int = 0
     delimiters: List[str] = field(default_factory=lambda: ["\\r\\n"])
     packet_length: int = 64
+    length_field_offset: int = 0
+    length_field_size: int = 1
+    length_field_endian: str = "big"
+    length_includes_header: bool = False
+    gap_ms: int = 5
     at_color_ok: bool = True
     at_color_error: bool = True
     at_color_urc: bool = True

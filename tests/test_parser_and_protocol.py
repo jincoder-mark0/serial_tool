@@ -29,7 +29,14 @@ from common.constants import LOOPBACK_PORT_NAME
 from common.dtos import PortConfig
 from common.enums import ConnectionProtocol
 from model.connection_controller import ConnectionController
-from model.packet_parser import ATParser, DelimiterParser, FixedLengthParser, RawParser
+from model.packet_parser import (
+    ATParser,
+    DelimiterParser,
+    FixedLengthParser,
+    GapParser,
+    LengthFieldParser,
+    RawParser,
+)
 
 
 def _loopback_config(**overrides) -> PortConfig:
@@ -52,6 +59,9 @@ class TestParserSettingsWiring:
             (2, {"packet_delimiter": "\\r\\n"}, DelimiterParser),
             (3, {"packet_length": 8}, FixedLengthParser),
             (4, {}, RawParser),
+            # S-072 — 프레이밍 확장
+            (5, {"length_field_offset": 0, "length_field_size": 1}, LengthFieldParser),
+            (6, {"gap_ms": 7}, GapParser),
         ],
     )
     def test_open_connection_creates_configured_parser(self, parser_type_index, extra_kwargs, expected_cls):

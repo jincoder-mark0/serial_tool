@@ -57,11 +57,15 @@ class ParserType:
         AT: AT 커맨드 (CRLF 기준)
         DELIMITER: 지정된 구분자 기준
         FIXED_LENGTH: 고정 길이 기준
+        LENGTH_FIELD: 헤더 안의 길이 필드 기준 (가변 길이, S-072)
+        GAP: 유휴 시간 기준 (Modbus RTU식 프레이밍, S-072)
     """
     RAW = "Raw"
     AT = "AT"
     DELIMITER = "Delimiter"
     FIXED_LENGTH = "FixedLength"
+    LENGTH_FIELD = "LengthField"
+    GAP = "Gap"
 
     # PreferencesState.parser_type / ConfigKeys.PACKET_PARSER_TYPE은 정수 인덱스로
     # 저장된다 (view/dialogs/preferences_dialog.py의 QButtonGroup 라디오 버튼 순서:
@@ -73,6 +77,8 @@ class ParserType:
         2: DELIMITER,
         3: FIXED_LENGTH,
         4: RAW,
+        5: LENGTH_FIELD,   # S-072
+        6: GAP,            # S-072
     }
 
     @classmethod

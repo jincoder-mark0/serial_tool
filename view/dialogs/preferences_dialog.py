@@ -251,12 +251,19 @@ class PreferencesDialog(QDialog):
         self.parser_type_delimiter = QRadioButton(language_manager.get_text("pref_parser_type_delimiter"))
         self.parser_type_fixed = QRadioButton(language_manager.get_text("pref_parser_type_fixed"))
         self.parser_type_raw = QRadioButton(language_manager.get_text("pref_parser_type_raw"))
+        # S-072 — 인덱스 5/6은 ParserType._PREFERENCE_INDEX_MAP과 짝을 이룬다.
+        self.parser_type_length_field = QRadioButton(
+            language_manager.get_text("pref_parser_type_length_field")
+        )
+        self.parser_type_gap = QRadioButton(language_manager.get_text("pref_parser_type_gap"))
 
         self.parser_type_button_group.addButton(self.parser_type_auto, 0)
         self.parser_type_button_group.addButton(self.parser_type_at, 1)
         self.parser_type_button_group.addButton(self.parser_type_delimiter, 2)
         self.parser_type_button_group.addButton(self.parser_type_fixed, 3)
         self.parser_type_button_group.addButton(self.parser_type_raw, 4)
+        self.parser_type_button_group.addButton(self.parser_type_length_field, 5)
+        self.parser_type_button_group.addButton(self.parser_type_gap, 6)
         self.parser_type_auto.setChecked(True)
 
         parser_type_layout.addWidget(self.parser_type_auto)
@@ -264,6 +271,8 @@ class PreferencesDialog(QDialog):
         parser_type_layout.addWidget(self.parser_type_delimiter)
         parser_type_layout.addWidget(self.parser_type_fixed)
         parser_type_layout.addWidget(self.parser_type_raw)
+        parser_type_layout.addWidget(self.parser_type_length_field)
+        parser_type_layout.addWidget(self.parser_type_gap)
         parser_type_group.setLayout(parser_type_layout)
 
         # Delimiter 설정 그룹
@@ -289,6 +298,53 @@ class PreferencesDialog(QDialog):
         delimiter_layout.addWidget(self.delimiter_list)
         delimiter_layout.addLayout(delimiter_btn_layout)
         delimiter_group.setLayout(delimiter_layout)
+
+        # 길이 필드 설정 그룹 (S-072)
+        length_field_group = QGroupBox(language_manager.get_text("pref_grp_length_field"))
+        length_field_layout = QFormLayout()
+
+        self.length_field_offset_spin = QSpinBox()
+        self.length_field_offset_spin.setRange(0, MAX_PACKET_SIZE)
+
+        self.length_field_size_combo = QComboBox()
+        for size in (1, 2, 4):
+            self.length_field_size_combo.addItem(str(size), size)
+
+        self.length_field_endian_combo = QComboBox()
+        # 항목 문구는 짧게 둔다. "Little Endian"은 폼 레이아웃의 좁은 필드 열에서
+        # "Little Er"로 잘렸다(캡처 확인). 라벨이 이미 "바이트 순서"라 항목까지
+        # 길 필요가 없다 — 고정 픽셀 폭을 주는 대신 문구를 줄여 해결한다.
+        self.length_field_endian_combo.addItem(language_manager.get_text("pref_endian_big"), "big")
+        self.length_field_endian_combo.addItem(
+            language_manager.get_text("pref_endian_little"), "little"
+        )
+
+        self.length_includes_header_chk = QCheckBox(
+            language_manager.get_text("pref_chk_length_includes_header")
+        )
+
+        length_field_layout.addRow(
+            language_manager.get_text("pref_lbl_length_field_offset"),
+            self.length_field_offset_spin,
+        )
+        length_field_layout.addRow(
+            language_manager.get_text("pref_lbl_length_field_size"),
+            self.length_field_size_combo,
+        )
+        length_field_layout.addRow(
+            language_manager.get_text("pref_lbl_length_field_endian"),
+            self.length_field_endian_combo,
+        )
+        length_field_layout.addRow(self.length_includes_header_chk)
+        length_field_group.setLayout(length_field_layout)
+
+        # 갭(유휴) 설정 그룹 (S-072)
+        gap_group = QGroupBox(language_manager.get_text("pref_grp_gap"))
+        gap_layout = QFormLayout()
+        self.gap_ms_spin = QSpinBox()
+        self.gap_ms_spin.setRange(1, 60000)
+        gap_layout.addRow(language_manager.get_text("pref_lbl_gap_ms"), self.gap_ms_spin)
+        gap_group.setLayout(gap_layout)
 
         # Fixed Length 설정 그룹
         fixed_length_group = QGroupBox(language_manager.get_text("pref_grp_fixed_length"))
@@ -342,6 +398,8 @@ class PreferencesDialog(QDialog):
         right_v_layout = QVBoxLayout()
 
         left_v_layout.addWidget(parser_type_group)
+        left_v_layout.addWidget(length_field_group)
+        left_v_layout.addWidget(gap_group)
         left_v_layout.addWidget(delimiter_group)
 
         right_v_layout.addWidget(fixed_length_group)
@@ -444,6 +502,17 @@ class PreferencesDialog(QDialog):
 
         self.packet_length_spin.setValue(self.state.packet_length)
 
+        # 프레이밍 확장 (S-072)
+        self.length_field_offset_spin.setValue(self.state.length_field_offset)
+        size_idx = self.length_field_size_combo.findData(self.state.length_field_size)
+        if size_idx >= 0:
+            self.length_field_size_combo.setCurrentIndex(size_idx)
+        endian_idx = self.length_field_endian_combo.findData(self.state.length_field_endian)
+        if endian_idx >= 0:
+            self.length_field_endian_combo.setCurrentIndex(endian_idx)
+        self.length_includes_header_chk.setChecked(self.state.length_includes_header)
+        self.gap_ms_spin.setValue(self.state.gap_ms)
+
         self.at_color_ok_chk.setChecked(self.state.at_color_ok)
         self.at_color_error_chk.setChecked(self.state.at_color_error)
         self.at_color_urc_chk.setChecked(self.state.at_color_urc)
@@ -481,6 +550,11 @@ class PreferencesDialog(QDialog):
             parser_type=self.parser_type_button_group.checkedId(),
             delimiters=delimiters,
             packet_length=self.packet_length_spin.value(),
+            length_field_offset=self.length_field_offset_spin.value(),
+            length_field_size=self.length_field_size_combo.currentData(),
+            length_field_endian=self.length_field_endian_combo.currentData(),
+            length_includes_header=self.length_includes_header_chk.checkState() == Qt.Checked,
+            gap_ms=self.gap_ms_spin.value(),
             at_color_ok=self.at_color_ok_chk.checkState() == Qt.Checked,
             at_color_error=self.at_color_error_chk.checkState() == Qt.Checked,
             at_color_urc=self.at_color_urc_chk.checkState() == Qt.Checked,

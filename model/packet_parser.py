@@ -24,7 +24,7 @@ import time
 import re
 
 from common.enums import ParserType
-from common.constants import PARSER_MAX_BUFFER_SIZE
+from common.constants import PARSER_MAX_BUFFER_SIZE, MAX_PACKET_SIZE
 from core.logger import logger
 
 @dataclass
@@ -65,6 +65,20 @@ class PacketParser(ABC):
     def reset(self) -> None:
         """파서 상태 초기화 (내부 버퍼 클리어)"""
         pass
+
+    def flush(self) -> List[Packet]:
+        """
+        더 이상 데이터가 오지 않을 때 남은 조각을 확정합니다 (S-072).
+
+        대부분의 파서는 완결 기준(구분자·길이)이 명확해 남은 조각이 패킷이 될 수
+        없으므로 기본 구현은 빈 리스트를 돌려준다. **유휴 시간으로 프레임을 나누는
+        `GapParser`만** 이 훅이 실제로 필요하다 — 데이터가 끊기면 `parse()` 호출
+        자체가 없어 마지막 조각이 영영 확정되지 않기 때문이다.
+
+        Returns:
+            List[Packet]: 확정된 잔여 패킷 (없으면 빈 리스트).
+        """
+        return []
 
 class RawParser(PacketParser):
     """바이너리 데이터를 그대로 전달하는 파서"""
@@ -235,6 +249,202 @@ class FixedLengthParser(PacketParser):
     def reset(self) -> None:
         self._buffer = b""
 
+class LengthFieldParser(PacketParser):
+    """
+    헤더 안의 길이 필드로 가변 길이 패킷을 분리하는 파서 (S-072)
+
+    `[SOF][LEN][PAYLOAD...][CRC]`처럼 패킷마다 길이가 달라지는 프로토콜을 다룬다.
+    `FixedLengthParser`는 상수 길이만 알아서 이런 형식을 나눌 수 없다.
+    """
+
+    def __init__(
+        self,
+        offset: int = 0,
+        size: int = 1,
+        endian: str = "big",
+        includes_header: bool = False,
+        max_packet_size: int = MAX_PACKET_SIZE,
+        max_buffer_size: int = PARSER_MAX_BUFFER_SIZE,
+    ):
+        """
+        LengthFieldParser 초기화
+
+        Args:
+            offset: 패킷 선두에서 길이 필드까지의 바이트 수.
+            size: 길이 필드 자체의 바이트 수 (1/2/4).
+            endian: 길이 필드의 바이트 순서 ("big" 또는 "little").
+            includes_header: 길이 값이 헤더를 포함한 전체 길이면 True,
+                길이 필드 뒤의 바이트 수만 세면 False.
+            max_packet_size: 정상으로 인정할 최대 패킷 크기 (기형 길이 값 방어).
+            max_buffer_size: 미완결 조각 버퍼 상한.
+
+        Raises:
+            ValueError: 인자가 유효 범위를 벗어난 경우.
+        """
+        if offset < 0:
+            raise ValueError("offset must be zero or greater")
+        if size not in (1, 2, 4):
+            raise ValueError("size must be one of 1, 2, 4")
+        if endian not in ("big", "little"):
+            raise ValueError("endian must be 'big' or 'little'")
+        if max_packet_size <= 0 or max_buffer_size <= 0:
+            raise ValueError("max sizes must be greater than zero")
+
+        self._offset = offset
+        self._size = size
+        self._endian = endian
+        self._includes_header = includes_header
+        self._max_packet_size = max_packet_size
+        self._max_buffer_size = max_buffer_size
+        self._buffer = b""
+
+    def _total_length(self, value: int) -> int:
+        """길이 필드 값으로부터 패킷 전체 길이를 계산한다."""
+        if self._includes_header:
+            return value
+        return self._offset + self._size + value
+
+    def parse(self, buffer: bytes) -> List[Packet]:
+        """
+        길이 필드를 읽어 가변 길이 패킷을 분리합니다.
+
+        Logic:
+            - 헤더(offset+size)가 다 오지 않았으면 더 기다린다.
+            - 길이 값이 기형(전체 길이가 헤더보다 짧거나 상한 초과)이면 **1바이트를
+              버리고 재동기화**한다. 그대로 두면 같은 위치에서 영원히 막힌다.
+            - 완결 패킷을 전부 분리한 **뒤에** 남은 조각에만 버퍼 상한을 적용한다
+              (S-064 — 순서를 뒤집으면 완결 패킷까지 잘려나간다).
+        """
+        self._buffer += buffer
+        packets: List[Packet] = []
+        header_size = self._offset + self._size
+
+        while len(self._buffer) >= header_size:
+            raw_len = self._buffer[self._offset:header_size]
+            total = self._total_length(int.from_bytes(raw_len, byteorder=self._endian))
+
+            if total < header_size or total > self._max_packet_size:
+                logger.warning(
+                    f"LengthFieldParser: invalid length {total} "
+                    f"(header={header_size}, max={self._max_packet_size}); resyncing by 1 byte."
+                )
+                self._buffer = self._buffer[1:]
+                continue
+
+            if len(self._buffer) < total:
+                break
+
+            packets.append(Packet(data=self._buffer[:total], timestamp=time.time()))
+            self._buffer = self._buffer[total:]
+
+        if len(self._buffer) > self._max_buffer_size:
+            dropped = len(self._buffer) - self._max_buffer_size
+            logger.warning(
+                f"LengthFieldParser: incomplete buffer exceeded max_buffer_size "
+                f"({self._max_buffer_size} bytes); dropping {dropped} oldest byte(s)."
+            )
+            self._buffer = self._buffer[-self._max_buffer_size:]
+
+        return packets
+
+    def reset(self) -> None:
+        self._buffer = b""
+
+
+class GapParser(PacketParser):
+    """
+    유휴 시간(gap)으로 프레임을 나누는 파서 (S-072)
+
+    구분자도 길이 필드도 없이 **일정 시간 침묵**으로 프레임을 구분하는 프로토콜용이다.
+    Modbus RTU의 3.5문자 유휴가 대표적이다.
+
+    ## 한계 (설계상 명시)
+    파서는 `parse()`가 호출될 때만 시간을 볼 수 있다. 따라서 유휴는 **다음 데이터가
+    도착했을 때** 소급 판정된다. 데이터가 완전히 끊기면 마지막 조각은 `flush()`를
+    호출해 줘야 확정된다(포트 종료·앱 종료 경로에서 호출). 살아 있는 유휴 타이머를
+    두려면 Model 계층에 타이머와 스레드 친화성 설계가 필요해 이번 범위에서 제외했다.
+
+    또한 한 번의 `parse()` 호출로 들어온 바이트 묶음 **안쪽의** 유휴는 감지할 수 없다.
+    바이트별 도착 시각이 남지 않기 때문이다(워커가 배치로 넘긴다).
+    """
+
+    def __init__(
+        self,
+        gap_ms: int = 5,
+        max_buffer_size: int = PARSER_MAX_BUFFER_SIZE,
+        time_source=None,
+    ):
+        """
+        GapParser 초기화
+
+        Args:
+            gap_ms: 이 시간(ms) 이상 데이터가 없으면 프레임 경계로 본다.
+            max_buffer_size: 미완결 조각 버퍼 상한.
+            time_source: 시각 조회 함수 (기본 `time.monotonic`). 테스트에서 시간을
+                주입하기 위한 것 — 실제 경과 시간에 의존하는 테스트는 느리고 불안정하다.
+
+        Raises:
+            ValueError: gap_ms 또는 max_buffer_size가 0 이하인 경우.
+        """
+        if gap_ms <= 0:
+            raise ValueError("gap_ms must be greater than zero")
+        if max_buffer_size <= 0:
+            raise ValueError("max_buffer_size must be greater than zero")
+
+        self._gap_s = gap_ms / 1000.0
+        self._max_buffer_size = max_buffer_size
+        self._now = time_source or time.monotonic
+        self._buffer = b""
+        self._last_seen = None
+
+    def parse(self, buffer: bytes) -> List[Packet]:
+        """
+        직전 수신 이후 유휴가 있었으면 그때까지 모인 바이트를 한 패킷으로 확정합니다.
+
+        Logic:
+            - **새 데이터를 붙이기 전에** 유휴를 판정한다. 유휴가 있었다면 이전
+              버퍼가 완결된 프레임이고, 새 데이터는 다음 프레임의 시작이다.
+            - 완결 처리 후 남은 조각에만 버퍼 상한을 적용한다 (S-064 순서 규칙).
+        """
+        now = self._now()
+        packets: List[Packet] = []
+
+        if self._buffer and self._last_seen is not None:
+            if (now - self._last_seen) >= self._gap_s:
+                packets.append(Packet(data=self._buffer, timestamp=time.time()))
+                self._buffer = b""
+
+        self._buffer += buffer
+        self._last_seen = now
+
+        if len(self._buffer) > self._max_buffer_size:
+            dropped = len(self._buffer) - self._max_buffer_size
+            logger.warning(
+                f"GapParser: incomplete buffer exceeded max_buffer_size "
+                f"({self._max_buffer_size} bytes); dropping {dropped} oldest byte(s)."
+            )
+            self._buffer = self._buffer[-self._max_buffer_size:]
+
+        return packets
+
+    def flush(self) -> List[Packet]:
+        """
+        남은 조각을 마지막 프레임으로 확정합니다 (포트 종료·앱 종료 시).
+
+        Returns:
+            List[Packet]: 잔여가 있으면 한 개, 없으면 빈 리스트.
+        """
+        if not self._buffer:
+            return []
+        packet = Packet(data=self._buffer, timestamp=time.time())
+        self._buffer = b""
+        return [packet]
+
+    def reset(self) -> None:
+        self._buffer = b""
+        self._last_seen = None
+
+
 class ParserFactory:
     """파서 생성 팩토리"""
 
@@ -258,6 +468,15 @@ class ParserFactory:
         elif parser_type == ParserType.FIXED_LENGTH:
             length = kwargs.get("length", 10)
             return FixedLengthParser(length)
+        elif parser_type == ParserType.LENGTH_FIELD:
+            return LengthFieldParser(
+                offset=kwargs.get("length_field_offset", 0),
+                size=kwargs.get("length_field_size", 1),
+                endian=kwargs.get("length_field_endian", "big"),
+                includes_header=kwargs.get("length_includes_header", False),
+            )
+        elif parser_type == ParserType.GAP:
+            return GapParser(gap_ms=kwargs.get("gap_ms", 5))
         else:
             return RawParser()
 

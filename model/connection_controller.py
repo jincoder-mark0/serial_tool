@@ -332,6 +332,14 @@ class ConnectionController(QObject):
         if was_registered:
             del self.workers[name]
         if name in self.parsers:
+            # 파서를 버리기 전에 남은 조각을 확정한다 (S-072).
+            # GapParser는 유휴로 프레임을 나누는데, 데이터가 끊기면 parse() 호출
+            # 자체가 없어 마지막 프레임이 영영 나오지 않는다. 여기서 flush하지
+            # 않으면 포트를 닫을 때 마지막 프레임이 조용히 사라진다 —
+            # S-039/S-045/S-059가 세운 "유실은 만들지 않는다" 원칙과 같은 계열.
+            # 다른 파서는 기본 구현이 빈 리스트라 아무 영향이 없다.
+            for packet in self.parsers[name].flush():
+                self.packet_received.emit(PacketEvent(port=name, packet=packet))
             del self.parsers[name]
         if name in self.connection_configs:
             del self.connection_configs[name]
@@ -386,6 +394,15 @@ class ConnectionController(QObject):
             return {"delimiter": ConnectionController._decode_delimiter(config.packet_delimiter)}
         if parser_type == ParserType.FIXED_LENGTH:
             return {"length": config.packet_length}
+        if parser_type == ParserType.LENGTH_FIELD:
+            return {
+                "length_field_offset": config.length_field_offset,
+                "length_field_size": config.length_field_size,
+                "length_field_endian": config.length_field_endian,
+                "length_includes_header": config.length_includes_header,
+            }
+        if parser_type == ParserType.GAP:
+            return {"gap_ms": config.gap_ms}
         return {}
 
     @staticmethod

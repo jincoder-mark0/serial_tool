@@ -178,7 +178,7 @@
 | ID | 제목 | 상태 |
 |---|---|---|
 | [S-071](tasks/S-071-checksum-validation.md) | 패킷 체크섬 검증 (XOR/SUM/CRC 7종) | ✅ 완료 |
-| [S-072](tasks/S-072-framing-length-field-and-gap.md) | 프레이밍 확장 — 길이 필드 + 갭 기반 파서 | ⏸ 대기 |
+| [S-072](tasks/S-072-framing-length-field-and-gap.md) | 프레이밍 확장 — 길이 필드 + 갭 기반 파서 | ✅ 완료 |
 
 - **체크섬을 1순위로 둔 이유**: SerialTool엔 체크섬 개념이 아예 없다(코드 0건). 패킷
   경계는 나눌 수 있는데 "이 패킷이 유효한가"를 답할 수단이 없어, 프로토콜 디버깅의
