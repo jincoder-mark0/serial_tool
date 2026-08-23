@@ -26,7 +26,6 @@ from model.connection_controller import ConnectionController
 from core.event_bus import event_bus
 from common.dtos import (
     FileProgressState,
-    FileProgressEvent,
     PortConfig,
     FileCompletionEvent,
     FileErrorEvent
@@ -148,13 +147,12 @@ class FileTransferService(QRunnable):
                         total_bytes=total_size,
                         status=FileStatus.SENDING.value
                     )
+                    # 진행률은 **직접 시그널로만** 알린다 (S-083).
+                    # 예전에는 EventBus로도 같은 사실을 발행했으나 구독자가 하나도
+                    # 없었다 — 진행률을 실제로 쓰는 FilePresenter는 이 시그널에
+                    # 붙어 있다. 완료/에러 같은 생명주기 이벤트는 버스에 남는다.
+                    # 고빈도로 발생하는 진행률만 중복을 걷어냈다.
                     self.signals.progress_updated.emit(state)
-
-                    # 2. EventBus용 이벤트 발행 (FileProgressEvent DTO)
-                    self.event_bus.publish(
-                        EventTopics.FILE_PROGRESS,
-                        FileProgressEvent(current=sent_bytes, total=total_size)
-                    )
 
                     # Speed Control (소프트웨어 흐름 제어)
                     # 하드웨어 흐름 제어가 없는 경우, Baudrate에 맞춰 인위적 지연 추가

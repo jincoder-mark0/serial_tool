@@ -20,7 +20,7 @@ from PyQt5.QtCore import QObject, pyqtSignal
 from core.event_bus import event_bus
 from common.dtos import (
     PortDataEvent, PortErrorEvent, PacketEvent,
-    FileProgressEvent, PreferencesState, PortConnectionEvent,
+    PreferencesState, PortConnectionEvent,
     FileErrorEvent, MacroErrorEvent, FileCompletionEvent
 )
 from common.constants import EventTopics
@@ -40,9 +40,15 @@ class EventRouter(QObject):
     port_opened = pyqtSignal(object)       # PortConnectionEvent
     port_closed = pyqtSignal(object)       # PortConnectionEvent
     port_error = pyqtSignal(object)        # PortErrorEvent
-    data_received = pyqtSignal(object)     # PortDataEvent
     data_sent = pyqtSignal(object)         # PortDataEvent
     packet_received = pyqtSignal(object)   # PacketEvent
+
+    # data_received / file_transfer_progress는 두지 않는다 (S-083).
+    # EventBus 토픽을 Qt 시그널로 복제해 두었으나 **연결한 소비자가 없었다.**
+    # RX 데이터는 Fast Path(ConnectionController → MainPresenter 직접 시그널)로,
+    # 파일 진행률은 FileTransferService의 직접 시그널로 이미 UI에 닿는다.
+    # 복제본은 RX 조각마다 UI 스레드에서 돌다가 아무 데도 도달하지 않았다.
+    # 필요해지면 EventBus 토픽을 직접 구독할 것 — 여기에 되살리지 말 것.
 
     # ---------------------------------------------------------
     # 2. Macro Events
@@ -54,7 +60,6 @@ class EventRouter(QObject):
     # ---------------------------------------------------------
     # 3. File Transfer Events
     # ---------------------------------------------------------
-    file_transfer_progress = pyqtSignal(object)   # FileProgressEvent
     file_transfer_completed = pyqtSignal(object)  # FileCompletionEvent
     file_transfer_error = pyqtSignal(object)      # FileErrorEvent
 
@@ -81,7 +86,6 @@ class EventRouter(QObject):
         self.bus.subscribe(EventTopics.PORT_OPENED, self._on_port_opened)
         self.bus.subscribe(EventTopics.PORT_CLOSED, self._on_port_closed)
         self.bus.subscribe(EventTopics.PORT_ERROR, self._on_port_error)
-        self.bus.subscribe(EventTopics.PORT_DATA_RECEIVED, self._on_data_received)
         self.bus.subscribe(EventTopics.PORT_DATA_SENT, self._on_data_sent)
         self.bus.subscribe(EventTopics.PORT_PACKET_RECEIVED, self._on_packet_received)
 
@@ -91,7 +95,6 @@ class EventRouter(QObject):
         self.bus.subscribe(EventTopics.MACRO_ERROR, self._on_macro_error)
 
         # File Transfer Events
-        self.bus.subscribe(EventTopics.FILE_PROGRESS, self._on_file_progress)
         self.bus.subscribe(EventTopics.FILE_COMPLETED, self._on_file_completed)
         self.bus.subscribe(EventTopics.FILE_ERROR, self._on_file_error)
 
@@ -128,15 +131,6 @@ class EventRouter(QObject):
         """
         self.port_error.emit(event)
 
-    def _on_data_received(self, event: PortDataEvent):
-        """
-        포트 데이터 수신 이벤트 처리
-
-        Args:
-            event (PortDataEvent): 데이터 이벤트 DTO.
-        """
-        self.data_received.emit(event)
-
     def _on_data_sent(self, event: PortDataEvent):
         """
         포트 데이터 송신 이벤트 처리
@@ -170,15 +164,6 @@ class EventRouter(QObject):
     # ---------------------------------------------------------
     # Event Handlers (File Transfer)
     # ---------------------------------------------------------
-    def _on_file_progress(self, event: FileProgressEvent):
-        """
-        파일 전송 진행률 이벤트 처리
-
-        Args:
-            event (FileProgressEvent): 진행률 이벤트 DTO.
-        """
-        self.file_transfer_progress.emit(event)
-
     def _on_file_completed(self, event: FileCompletionEvent):
         """
         파일 전송 완료 이벤트 처리

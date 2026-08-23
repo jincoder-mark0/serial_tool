@@ -129,9 +129,7 @@ def test_successful_transfer_over_loopback_delivers_bytes_in_order(qapp, tmp_pat
     errors = []
     progresses = []
     bus_completed = []
-    bus_progress = []
     event_bus.subscribe(EventTopics.FILE_COMPLETED, bus_completed.append)
-    event_bus.subscribe(EventTopics.FILE_PROGRESS, bus_progress.append)
 
     try:
         assert controller.open_connection(config) is True
@@ -171,9 +169,6 @@ def test_successful_transfer_over_loopback_delivers_bytes_in_order(qapp, tmp_pat
 
         assert len(bus_completed) == 1
         assert bus_completed[0].success is True
-        assert len(bus_progress) >= 1
-        assert bus_progress[-1].current == len(content)
-        assert bus_progress[-1].total == len(content)
     finally:
         controller.close_connection()
 

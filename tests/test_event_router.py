@@ -30,7 +30,6 @@ from common.dtos import (
     PortDataEvent,
     PacketEvent,
     MacroErrorEvent,
-    FileProgressEvent,
     FileCompletionEvent,
     FileErrorEvent,
     PreferencesState,
@@ -78,14 +77,20 @@ def test_port_error_topic_routes_to_signal(router):
     assert received == [event]
 
 
-def test_port_data_received_topic_routes_to_signal(router):
-    received = []
-    router.data_received.connect(received.append)
+def test_router_does_not_relay_rx_data(router):
+    """
+    라우터는 RX 데이터를 중계하지 않는다 (S-083).
 
-    event = PortDataEvent(port="COM1", data=b"\x01\x02")
-    event_bus.publish(EventTopics.PORT_DATA_RECEIVED, event)
+    예전에는 `PORT_DATA_RECEIVED`를 구독해 `data_received` 시그널로 다시
+    내보냈으나 **연결한 소비자가 없었다.** RX 데이터는 Fast Path
+    (ConnectionController → MainPresenter 직접 시그널)로 UI에 닿는다.
+    복제본은 조각마다 UI 스레드에서 돌다가 아무 데도 도달하지 않았다.
 
-    assert received == [event]
+    구독이 되살아나면 그 낭비도 함께 돌아오므로 여기서 막는다.
+    """
+    assert not hasattr(router, "data_received"), (
+        "RX 중계 시그널이 되살아났다 — 필요하면 EventBus 토픽을 직접 구독할 것."
+    )
 
 
 def test_port_data_sent_topic_routes_to_signal(router):
@@ -144,14 +149,16 @@ def test_macro_error_topic_routes_to_signal(router):
 # File Transfer Events
 # -----------------------------------------------------------------------------
 
-def test_file_progress_topic_routes_to_signal(router):
-    received = []
-    router.file_transfer_progress.connect(received.append)
+def test_router_does_not_relay_file_progress(router):
+    """
+    라우터는 파일 진행률을 중계하지 않는다 (S-083).
 
-    event = FileProgressEvent(current=10, total=100)
-    event_bus.publish(EventTopics.FILE_PROGRESS, event)
-
-    assert received == [event]
+    진행률은 `FileTransferService.signals.progress_updated` 직접 시그널로
+    FilePresenter에 닿는다. 라우터의 복제본에는 연결한 소비자가 없었다.
+    """
+    assert not hasattr(router, "file_transfer_progress"), (
+        "파일 진행률 중계 시그널이 되살아났다 — 실제 경로는 직접 시그널이다."
+    )
 
 
 def test_file_completed_topic_routes_to_signal(router):
@@ -197,6 +204,12 @@ def test_all_event_topics_have_at_least_one_subscriber_after_router_init(router)
     EventRouter 생성만으로 EventTopics에 정의된 모든 토픽이 최소 하나의
     구독자를 갖는지 확인한다. 토픽을 새로 추가하고 구독을 깜빡한 회귀를 잡는다.
     """
+    # 구독자가 라우터에만 있는 것은 아니다 (S-083).
+    # `port.data_received`의 실제 구독자는 MacroRunner(Model)다 — Expect 매칭에
+    # 쓴다. 라우터만 세우고 검사하면 "구독자 없음"으로 잘못 걸린다.
+    from model.macro_runner import MacroRunner
+    runner = MacroRunner()
+
     all_topics = [
         value for name, value in vars(EventTopics).items()
         if not name.startswith("_") and isinstance(value, str)
@@ -208,3 +221,5 @@ def test_all_event_topics_have_at_least_one_subscriber_after_router_init(router)
             f"토픽 '{topic}'을 구독하는 핸들러가 없습니다 (EventRouter._subscribe_events 누락 의심)"
         )
         assert len(event_bus._subscribers[topic]) >= 1
+
+    del runner   # 구독을 유지하기 위해 검사가 끝날 때까지 살려 둔다

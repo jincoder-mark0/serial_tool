@@ -42,7 +42,6 @@ class EventTopics:
     MACRO_ERROR = "macro.error"
 
     # File Transfer Events
-    FILE_PROGRESS = "file.progress"
     FILE_COMPLETED = "file.completed"
     FILE_ERROR = "file.error"
 
