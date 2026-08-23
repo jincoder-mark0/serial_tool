@@ -123,6 +123,7 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-076](S-076-dialog-layout-and-i18n.md) | 서브 윈도우 레이아웃·다국어 점검 | UX | DONE |
 | [S-077](S-077-theme-uniformity-and-component-distinction.md) | 테마 파일 구조 통일 + 컴포넌트 구분 | UX | DONE |
 | [S-078](S-078-move-hardcoded-colors-to-theme.md) | 코드의 하드코딩 색을 테마 리소스로 이동 | UX | DONE |
+| [S-079](S-079-remaining-screens-sweep.md) | 남은 화면 훑기 (매크로 패널 상세 / 포트 탭 다중 상태) | UX | DONE |
 
 - **하위 가능**: Steps가 자족적으로 작성됨. Steps 밖 판단이 필요해지면 즉시 중단·보고.
 - **상위 전용/권장**: 설계·판단이 본체인 태스크. 하위 모델은 시작하지 않는다.

@@ -249,6 +249,32 @@ class PortTabPanel(QTabWidget):
         if index == self.count() - 1:
             self.add_new_port_tab()
 
+    def _next_default_tab_name(self) -> str:
+        """
+        아직 쓰이지 않은 가장 작은 번호를 붙인 기본 탭 이름을 만듭니다.
+
+        탭 제목은 "{이름}:{포트}" 형식인데, 기본 이름이 모든 탭에서 같으면
+        포트 콤보가 첫 항목을 자동 선택하는 탓에 제목까지 전부 같아진다 —
+        탭을 넷 열면 넷 다 "포트:LOOPBACK"이 되어 구분이 불가능했다(S-079).
+
+        전역 카운터 대신 **현재 쓰이는 이름**을 보고 정한다. 카운터는 창을 다시
+        열거나 탭을 닫았을 때 번호를 건너뛰어 "포트 1, 포트 3, 포트 4"처럼 된다.
+
+        Returns:
+            str: 형제 탭과 겹치지 않는 기본 이름 (예: "포트 2").
+        """
+        used = set()
+        for index in range(self.count()):
+            widget = self.widget(index)
+            if isinstance(widget, PortPanel):
+                used.add(widget.get_custom_name())
+
+        base_name = language_manager.get_text("port_tab_default_name")
+        number = 1
+        while f"{base_name} {number}" in used:
+            number += 1
+        return f"{base_name} {number}"
+
     def add_new_port_tab(self) -> PortPanel:
         """
         새로운 포트 탭을 추가하고 생성된 패널을 반환합니다.
@@ -265,6 +291,7 @@ class PortTabPanel(QTabWidget):
         # 시그널 차단 (탭 조작 중 불필요한 이벤트 방지)
         self.blockSignals(True)
         panel = PortPanel()
+        panel.set_custom_name(self._next_default_tab_name())
 
         try:
             # 1. 기존 플러스 탭 제거 (항상 마지막에 있음)

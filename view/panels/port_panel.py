@@ -76,7 +76,10 @@ class PortPanel(QWidget):
         self._port_stats_widget: Optional[PortStatsWidget] = None
         self._port_settings_widget: Optional[PortSettingsWidget] = None
 
-        self.custom_name = language_manager.get_text("port_tab_default_name")  # 커스텀 이름 (기본값)
+        # 커스텀 이름 (기본값). 여러 탭을 구분할 번호는 형제 탭을 볼 수 있는
+        # PortTabPanel이 생성 직후 붙인다 (S-079) — 여기서 전역 카운터로 매기면
+        # 창을 여러 번 열거나 탭을 닫았을 때 번호가 건너뛴다.
+        self.custom_name = language_manager.get_text("port_tab_default_name")
 
         self.init_ui()
 

@@ -123,7 +123,7 @@ QPushButton:checked {
 
 QPushButton:disabled {
     background-color: #252525;
-    color: #606060;
+    color: #727272;
     border-color: #303030;
 }
 
@@ -151,7 +151,7 @@ QLineEdit:focus, QTextEdit:focus, QPlainTextEdit:focus, QSmartTextEdit:focus, QS
 
 QLineEdit:disabled, QTextEdit:disabled, QPlainTextEdit:disabled, QSmartTextEdit:disabled, QSmartListView:disabled {
     background-color: #252525;
-    color: #606060;
+    color: #727272;
 }
 
 /* QSmartTextEdit Properties */
@@ -462,7 +462,7 @@ QProgressBar[state="danger"]::chunk {
 /* Disabled States */
 QComboBox:disabled {
     background-color: #252525;
-    color: #606060;
+    color: #727272;
     border-color: #303030;
 }
 
@@ -473,5 +473,5 @@ QCheckBox::indicator:disabled {
 
 QTabBar::tab:disabled {
     background-color: #252525;
-    color: #606060;
+    color: #727272;
 }

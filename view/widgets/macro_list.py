@@ -29,6 +29,7 @@ from typing import Optional, List, Dict, Any
 from enum import IntEnum
 
 from PyQt5.QtWidgets import (
+    QStyle,
     QWidget, QVBoxLayout, QHBoxLayout, QTableView, QPushButton,
     QHeaderView, QCheckBox, QMenu, QAction
 )
@@ -185,10 +186,19 @@ class MacroListWidget(QWidget):
         header.setSectionResizeMode(MacroColumns.DELAY, QHeaderView.ResizeToContents)
         header.setSectionResizeMode(MacroColumns.SEND_BTN, QHeaderView.ResizeToContents)
 
-        # 최소 창 폭에서 헤더 텍스트가 Stretch/ResizeToContents 계산 폭보다 좁아 잘리는
-        # 것을 방지 (S-032, 실측: "Command"->"omman", "Delay(ms)" 헤더도 동일 결함 잠재).
-        # ResizeToContents는 헤더 텍스트 폭을 고려하지 않으므로 전역 최소 폭을 별도로 둔다.
-        header.setMinimumSectionSize(self._compute_header_min_section_size(header))
+        # 최소 섹션 폭은 **체크박스 한 칸**을 기준으로 잡는다 (S-079).
+        # 예전에는 "가장 넓은 헤더 텍스트"(지연(ms) 기준 78px)를 최소로 걸었는데,
+        # setMinimumSectionSize는 **전 열에 공통으로** 적용되는 값이라 정작 헤더가
+        # 없는 체크박스 열까지 78px로 부풀렸다. 실측하면 고정 열 4개가 312px를 먹고
+        # 유일한 Stretch 열인 명령 열은 586px 뷰포트에서 114px만 남았다 —
+        # 필요한 폭이 375px였으니 가장 중요한 열이 가장 좁았던 셈이다.
+        #
+        # 헤더 잘림(S-032)은 이 전역 최소값이 막아 주던 것이 아니다. 측정해 보면
+        # ResizeToContents가 이미 열마다 헤더 텍스트 폭 + QSS 패딩을 반영한다
+        # (접두사 64 / 지연(ms) 82 — 라벨 실측 폭과 일치). 전역 최소값은 좁은 열만
+        # 부풀리고 넓은 열에는 아무것도 더해 주지 않았다.
+        # 명령 열이 쓸 만한 폭을 갖는 것은 우측 패널 최소 폭(S-068)이 보장한다.
+        header.setMinimumSectionSize(self._compute_checkbox_min_section_size(header))
 
         layout.addLayout(header_layout)
         layout.addWidget(self.macro_table)
@@ -342,16 +352,17 @@ class MacroListWidget(QWidget):
     # UI 갱신 및 컨텍스트 메뉴 (UI Updates & Context Menu)
     # -------------------------------------------------------------------------
     @staticmethod
-    def _compute_header_min_section_size(header: QHeaderView) -> int:
+    def _compute_checkbox_min_section_size(header: QHeaderView) -> int:
         """
-        헤더 폰트 메트릭 기반 최소 섹션 폭을 계산합니다.
+        체크박스 한 칸이 들어갈 최소 섹션 폭을 계산합니다.
 
         Logic:
-            - 로드된 모든 언어(en/ko)의 헤더 텍스트 폭 중 가장 넓은 값을 구한다
-              (ResizeToContents는 헤더 텍스트 폭을 반영하지 않아 좁은 창에서
-              Command/Delay 등 헤더 문구가 잘리는 결함이 있었다 - S-032).
-            - QSS 패딩(양쪽 4px + 우측 테두리 1px, resources/themes/common.qss:158-164)을
-              더해 최소 섹션 폭을 반환한다. 픽셀을 직접 하드코딩하지 않는다(ui_guide.md §3).
+            - 스타일이 보고하는 체크박스 표시기(indicator) 폭에
+              QSS 패딩(양쪽 4px + 우측 테두리 1px, resources/themes/common.qss)을 더한다.
+            - 헤더 텍스트 폭은 여기서 고려하지 않는다. ResizeToContents가 열마다
+              이미 반영하고 있어(실측 확인) 전역 최소값으로 다시 걸면 헤더가 없는
+              열까지 함께 부풀어 Stretch 열이 굶는다.
+            - 픽셀을 직접 하드코딩하지 않는다 (ui_guide.md §3).
 
         Args:
             header (QHeaderView): 폭을 계산할 대상 헤더.
@@ -359,23 +370,10 @@ class MacroListWidget(QWidget):
         Returns:
             int: 최소 섹션 폭(px).
         """
-        header_text_keys = [
-            "macro_list_col_prefix",
-            "macro_list_col_command",
-            "macro_list_col_suffix",
-            "macro_list_col_hex",
-            "macro_list_col_delay",
-            "macro_list_col_send",
-        ]
-        fm = header.fontMetrics()
-        max_text_width = 0
-        for key in header_text_keys:
-            for lang in language_manager.get_supported_languages():
-                text = language_manager.get_text(key, language_code=lang)
-                max_text_width = max(max_text_width, fm.horizontalAdvance(text))
-
+        style = header.style()
+        indicator_width = style.pixelMetric(QStyle.PM_IndicatorWidth, None, header)
         section_padding = 4 + 4 + 1  # QHeaderView::section padding(4px x2) + border-right(1px)
-        return max_text_width + section_padding
+        return indicator_width + section_padding
 
     def update_header_labels(self) -> None:
         """테이블 헤더 라벨을 업데이트합니다."""
@@ -457,6 +455,13 @@ class MacroListWidget(QWidget):
         """
         if item.column() == MacroColumns.SELECT:
             self.update_select_all_state()
+
+        # 잘린 명령을 마우스만 올려도 읽을 수 있게 한다 (S-079).
+        # 명령 열은 좁은 우측 패널에서 긴 명령을 elide하는데, 표 전체 툴팁은
+        # 고정 안내 문구라 정작 무엇이 잘렸는지 알려 주지 않았다 — 셀을 편집
+        # 상태로 만들어야만 전문을 볼 수 있었다.
+        if item.column() == MacroColumns.COMMAND:
+            item.setToolTip(item.text())
 
         # 데이터 변경 시그널 발생 (Select 컬럼 제외)
         if item.column() != MacroColumns.SELECT:
@@ -591,6 +596,9 @@ class MacroListWidget(QWidget):
 
         # 2: Command
         item_command = QStandardItem(command)
+        # 잘린 명령을 마우스만 올려도 읽을 수 있게 한다 (S-079).
+        # 행을 만들 때 한 번, 이후 편집 때마다 on_item_changed에서 갱신한다.
+        item_command.setToolTip(command)
         items[MacroColumns.COMMAND] = item_command
 
         # 3: Suffix Checkbox

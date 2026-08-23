@@ -161,6 +161,15 @@ RECORDING_FAMILY: Tuple[str, List[Tuple[str, float]]] = (
     [(":checked", ACTIVE_MIN_RATIO)],
 )
 
+# 의미색이 붙지 않은 **평범한** 위젯의 비활성 상태 (S-079).
+# S-063은 accent/danger/warning만 훑어서, 정작 화면에 가장 많이 보이는 민짜 버튼·
+# 입력창·콤보·탭의 비활성 색이 검사 밖에 있었다. 실측하니 dark 2.44 / light 2.29로
+# 둘 다 기준 미달이었다 — 매크로 표의 "전송" 버튼이 실행 중에 거의 안 보였다.
+PLAIN_DISABLED_FAMILIES: List[Tuple[str, List[Tuple[str, float]]]] = [
+    (selector, [(":disabled", DISABLED_MIN_RATIO)])
+    for selector in ("QPushButton", "QComboBox", "QLineEdit", "QTabBar::tab")
+]
+
 # 상태바 포트 상태 점(●/○) 라벨: 배경이 없으므로 QStatusBar 배경과 짝짓는다.
 LABEL_STATE_SELECTORS: List[Tuple[str, float]] = [
     ('QLabel[state="connected"]', ACTIVE_MIN_RATIO),
@@ -193,6 +202,22 @@ def _check_families(families: List[Tuple[str, List[Tuple[str, float]]]]) -> List
                         f"(기준 {min_ratio}, 상태={pseudo or 'normal'})"
                     )
     return failures
+
+
+def test_plain_widget_disabled_contrast():
+    """
+    의미색이 없는 평범한 위젯의 비활성 글자도 읽을 수 있어야 한다 (S-079 고정).
+
+    Logic:
+        - 4테마 x 4셀렉터(버튼/콤보/입력/탭)의 `:disabled` 조합을 검사한다.
+        - 기준은 의미색 버튼과 같은 3.0:1 — 비활성이라고 안 보여도 되는 것은 아니다.
+          "지금은 못 누른다"와 "무엇을 못 누르는지 모르겠다"는 다르다.
+    """
+    failures = _check_families(PLAIN_DISABLED_FAMILIES)
+    assert not failures, (
+        "평범한 위젯의 비활성 대비 미달 - 테마/셀렉터/상태/실측값:\n"
+        + "\n".join(failures)
+    )
 
 
 def test_semantic_button_class_contrast():
