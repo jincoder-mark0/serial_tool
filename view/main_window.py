@@ -26,7 +26,7 @@ from PyQt5.QtWidgets import (
     QMainWindow, QWidget, QVBoxLayout, QSplitter, QApplication, QShortcut, QMessageBox
 )
 from PyQt5.QtGui import QKeySequence, QCloseEvent
-from PyQt5.QtCore import Qt, pyqtSignal, QByteArray
+from PyQt5.QtCore import Qt, pyqtSignal, QByteArray, QTimer
 
 from view.sections.main_left_section import MainLeftSection
 from view.sections.main_right_section import MainRightSection
@@ -376,11 +376,29 @@ class MainWindow(QMainWindow):
         """
         경고(Alert) 메시지 박스를 표시합니다.
 
+        Logic:
+            - **현재 호출 스택이 풀린 뒤**에 띄운다 (S-082).
+
+        Why:
+            모달 대화상자는 중첩 이벤트 루프를 돌린다. 그래서 이 메서드가 어딘가의
+            정리 작업 도중에 불리면, 그 작업이 끝나기 전에 다른 이벤트들이 끼어들어
+            정리 중이던 객체가 발밑에서 파괴된다.
+
+            실제로 그런 사슬이 있었다 — 포트를 닫으면
+            `close_connection()` → `on_worker_closed()` → `EventBus.publish()` →
+            (메인 스레드 발행은 **동기 재진입**이다) → `on_port_closed()` →
+            `_notify_macro_error()` → 여기. 즉 워커를 정리하는 함수의 스택 위에서
+            모달이 열렸다. offscreen 플랫폼에서는 이 경로가 8/8 access violation으로
+            죽었다(네이티브에서는 죽지 않았다).
+
+            반환값을 쓰는 호출자가 없으므로(순수 알림), 한 턴 미뤄도 의미가 바뀌지
+            않는다. 사용자에게는 같은 순간으로 보인다.
+
         Args:
             title (str): 다이얼로그 제목.
             message (str): 표시할 내용.
         """
-        QMessageBox.warning(self, title, message)
+        QTimer.singleShot(0, lambda: QMessageBox.warning(self, title, message))
 
     def manual_save_log(self) -> None:
         """
