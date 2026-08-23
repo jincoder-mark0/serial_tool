@@ -103,7 +103,7 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 |---|---|---|---|
 | [S-067](S-067-port-tab-change-crash-and-theme-schema.md) | 포트 탭 전환 AttributeError + 클래식 테마 저장 불가 | P0 | DONE |
 | [S-068](S-068-right-section-min-width.md) | 우측 패널 최소 폭 지정 (매크로 가로 스크롤 방지) | UX | DONE |
-| [S-069](S-069-port-tab-close-hard-crash.md) | 테스트 하네스 하드 크래시 (주원인 제거, 잔여 5%) | 안정성 | TODO |
+| [S-069](S-069-port-tab-close-hard-crash.md) | 테스트 하네스 하드 크래시 | 안정성 | DONE |
 | [S-070](S-070-mock-spec-interface-drift.md) | Presenter→View 인터페이스 드리프트를 Mock이 삼킴 | P1 | DONE |
 
 ### 프로토콜 분석 확장 (2026-08-23, WireScope 참고 — 개념만, AGPL 코드 복사 금지)

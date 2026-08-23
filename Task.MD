@@ -146,14 +146,16 @@
 |---|---|---|
 | [S-067](tasks/S-067-port-tab-change-crash-and-theme-schema.md) | 포트 탭 전환 AttributeError + 클래식 테마 저장 불가 | ✅ 완료 |
 | [S-068](tasks/S-068-right-section-min-width.md) | 우측 패널 최소 폭 지정 (매크로 가로 스크롤 방지) | ✅ 완료 |
-| [S-069](tasks/S-069-port-tab-close-hard-crash.md) | **포트 탭 닫기·재연결 시 프로세스 하드 크래시** | ⏸ 대기 |
+| [S-069](tasks/S-069-port-tab-close-hard-crash.md) | 테스트 하네스 하드 크래시 (원인: 워커 스레드의 comports 호출) | ✅ 완료 |
 | [S-070](tasks/S-070-mock-spec-interface-drift.md) | Presenter→View 인터페이스 드리프트를 Mock이 삼킴 | ✅ 완료 |
 
 - **S-069(2026-08-23 갱신)**: 원인은 `serial.tools.list_ports.comports()`를 **워커
   스레드에서 호출**하는 것이었다(스텁 시 60회 중 0회, 스레드 수명 개입은 전부 무효).
   `tests/conftest.py`에서 열거를 스텁해 주원인을 제거했다 — 20% → 5%.
   **실제 앱 종료 경로는 40회 전부 정상이라 사용자 영향은 없다**(등재 당시 P0 서술 철회).
-  잔여 5%는 LOOPBACK 연결 개폐 경로로 좁혀졌다.
+  **2026-08-23 종료**: 잔여 5%로 남겼던 것이 재현되지 않는다 — 단독 160회 +
+  전체 30회 비정상 0, **3차 수정 시점 커밋으로 되돌려도 0**. conftest 스텁으로
+  이미 해결돼 있었고 당시 관측한 2건은 재현 실패로 철회한다.
 - S-070은 S-067이 드러낸 구멍이다. Presenter 테스트가 View를 `spec` 없는 `MagicMock`으로
   만들어 **존재하지 않는 메서드 호출도 통과**시켰다(당시 프로젝트 전체 `spec=` 0건).
   그래서 393개가 초록인 동안 앱은 탭을 바꿀 때마다 죽고 있었다.
