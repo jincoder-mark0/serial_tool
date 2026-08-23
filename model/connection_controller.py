@@ -463,64 +463,98 @@ class ConnectionController(QObject):
             for packet in packets:
                 self.packet_received.emit(PacketEvent(port=name, packet=packet))
 
-    def send_data(self, port_name: str, data: bytes) -> None:
+    def send_data(self, port_name: str, data: bytes) -> bool:
         """
         특정 포트로 데이터 전송.
+
+        Logic:
+            - 실패는 에러 이벤트로 알리되, **호출자에게도 반환값으로 알린다**(S-080).
+              예전에는 None을 반환해 매크로가 전송 실패를 알 길이 없었다 — 포트가
+              하나도 열려 있지 않아도 모든 스텝이 "성공"으로 보고됐다.
 
         Args:
             port_name (str): 대상 포트 이름.
             data (bytes): 전송할 데이터.
+
+        Returns:
+            bool: 워커가 데이터를 수락했으면 True.
         """
         if not port_name:
             self._emit_error("", "Cannot send data: Port name is not specified.")
-            return
+            return False
 
         if not self.is_connection_open(port_name):
             self._emit_error(port_name, "Cannot send data: Port is not open.")
-            return
+            return False
 
-        self.send_data_to_connection(port_name, data)
+        return self.send_data_to_connection(port_name, data)
 
-    def send_broadcast_data(self, data: bytes) -> None:
+    def send_broadcast_data(self, data: bytes) -> bool:
         """
         브로드캐스트 활성화된 모든 포트로 데이터 전송.
 
         Logic:
             - 딕셔너리 변경 대비 리스트 복사본을 순회
             - 각 Worker의 broadcast_enabled 상태 확인 후 전송
+            - **대상 전부가 수락해야 성공으로 본다**(S-080). 세 포트에 뿌렸는데 한
+              포트만 조용히 실패하는 것을 성공이라 보고하면, 사용자는 그 포트의
+              장비가 명령을 받았다고 믿게 된다.
 
         Args:
             data (bytes): 전송할 데이터.
+
+        Returns:
+            bool: 대상이 하나 이상 있었고 전부 수락했으면 True.
         """
         if not self.workers:
             self._emit_error("", "No active connections.")
-            return
+            return False
 
-        sent_any = False
+        targets = 0
+        failed = []
         # Runtime Error 방지: list(items())로 복사하여 순회
         for name, worker in list(self.workers.items()):
             # Worker가 실행 중이고 브로드캐스트가 허용된 경우만 전송
             if worker.isRunning() and worker.broadcast_enabled():
-                self.send_data_to_connection(name, data)
-                sent_any = True
+                targets += 1
+                if not self.send_data_to_connection(name, data):
+                    failed.append(name)
 
-        if not sent_any:
+        if targets == 0:
             logger.warning("No active connections enabled for broadcasting.")
+            return False
 
-    def send_data_to_all(self, data: bytes) -> None:
+        if failed:
+            logger.warning(f"Broadcast failed on {len(failed)}/{targets} port(s): {failed}")
+            return False
+
+        return True
+
+    def send_data_to_all(self, data: bytes) -> bool:
         """
         모든 활성 포트로 데이터 전송 (강제 브로드캐스트).
 
         Args:
             data (bytes): 전송할 데이터.
+
+        Returns:
+            bool: 대상이 하나 이상 있었고 전부 수락했으면 True (S-080).
         """
         if not self.workers:
             self._emit_error("", "No active connections.")
-            return
+            return False
 
+        targets = 0
+        failed = []
         for name, worker in list(self.workers.items()):
             if worker.isRunning():
-                self.send_data_to_connection(name, data)
+                targets += 1
+                if not self.send_data_to_connection(name, data):
+                    failed.append(name)
+
+        if failed:
+            logger.warning(f"Send-to-all failed on {len(failed)}/{targets} port(s): {failed}")
+        return targets > 0 and not failed
 
     def send_data_to_connection(self, name: str, data: bytes) -> bool:
         """

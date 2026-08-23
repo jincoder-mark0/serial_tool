@@ -22,7 +22,7 @@
 * (RowIndex, Entry) 튜플 구조를 사용하여 UI 필터링 상황에서도 정확한 행 추적
 """
 import time
-from typing import List, Optional, Tuple
+from typing import Callable, List, Optional, Tuple
 
 from PyQt5.QtCore import QThread, pyqtSignal, QMutex, QWaitCondition
 
@@ -31,7 +31,8 @@ from common.dtos import (
     ManualCommand,
     MacroStepEvent,
     PortDataEvent,
-    MacroErrorEvent
+    MacroErrorEvent,
+    MacroSendResult
 )
 from common.constants import EventTopics
 from model.packet_parser import ExpectMatcher
@@ -98,6 +99,26 @@ class MacroRunner(QThread):
         self.event_bus = event_bus
         # 데이터 수신 이벤트 구독 (Expect 매칭용)
         self.event_bus.subscribe(EventTopics.PORT_DATA_RECEIVED, self._on_data_received)
+
+        # 전송 핸들러 (S-080). 없으면 전송을 시도하지 않고 실패로 본다 —
+        # "보내지 못했는데 성공"이 이번 결함의 정체였으므로, 미주입 상태를
+        # 조용한 성공으로 넘기지 않는다.
+        self._send_handler: Optional[Callable[[ManualCommand], MacroSendResult]] = None
+
+    def set_send_handler(
+        self, handler: Optional[Callable[[ManualCommand], MacroSendResult]]
+    ) -> None:
+        """
+        명령 전송을 수행하고 **결과를 돌려줄** 핸들러를 등록합니다 (S-080).
+
+        핸들러는 매크로 스레드에서 동기 호출되므로 위젯을 만지면 안 된다.
+        결과를 시그널로 되받을 수는 없다 — `stop()`이 메인 스레드에서 `wait()`로
+        이 스레드를 기다리므로, 이 스레드가 메인 스레드를 기다리면 교착한다.
+
+        Args:
+            handler: `ManualCommand`를 받아 `MacroSendResult`를 반환하는 호출가능 객체.
+        """
+        self._send_handler = handler
 
     def load_macro(self, entries: List[Tuple[int, MacroEntry] | MacroEntry]) -> None:
         """
@@ -220,6 +241,26 @@ class MacroRunner(QThread):
             self._cond.wakeAll()
         self._mutex.unlock()
 
+    def _send(self, command: ManualCommand) -> MacroSendResult:
+        """
+        등록된 핸들러로 명령을 보내고 결과를 반환합니다 (매크로 스레드에서 호출).
+
+        Args:
+            command (ManualCommand): 전송할 명령어 DTO.
+
+        Returns:
+            MacroSendResult: 전송 결과. 핸들러가 없으면 실패로 본다.
+        """
+        handler = self._send_handler
+        if handler is None:
+            return MacroSendResult(False, "No send handler is registered.")
+
+        try:
+            return handler(command)
+        except Exception as e:
+            logger.error(f"Send handler raised: {e}", exc_info=True)
+            return MacroSendResult(False, f"Send handler error: {e}")
+
     def send_single_command(self, command: ManualCommand) -> None:
         """
         단일 명령 전송을 요청합니다 (Presenter에서 사용).
@@ -313,11 +354,16 @@ class MacroRunner(QThread):
                         broadcast_enabled=self.broadcast_enabled
                     )
 
-                    # 2-1. 명령 전송 요청 (Signal)
-                    self.send_requested.emit(manual_command)
+                    # 2-1. 명령 전송 — **결과를 받아 스텝 판정에 쓴다** (S-080).
+                    # 예전에는 반환값 없는 시그널만 쏘고 무조건 성공으로 넘어가,
+                    # 포트가 하나도 열려 있지 않아도 모든 스텝이 성공으로 보고됐다.
+                    send_result = self._send(manual_command)
+                    if not send_result.success:
+                        step_success = False
+                        error_msg = send_result.message or "Send failed."
 
-                    # 2-2. Expect 처리 (응답 대기)
-                    if entry.expect:
+                    # 2-2. Expect 처리 (응답 대기) — 보내지 못했으면 기다릴 것도 없다
+                    if step_success and entry.expect:
                         # 브로드캐스트 모드에서는 동기화 문제로 인해 Expect를 무시
                         if self.broadcast_enabled:
                             logger.debug(f"Row {row_idx}: Expect pattern ignored in broadcast mode.")

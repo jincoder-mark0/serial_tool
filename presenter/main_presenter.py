@@ -64,7 +64,8 @@ from common.dtos import (
     MacroErrorEvent,
     FileErrorEvent,
     FileCompletionEvent,
-    SystemLogEvent
+    SystemLogEvent,
+    MacroSendResult
 )
 
 class MainPresenter(QObject):
@@ -166,7 +167,12 @@ class MainPresenter(QObject):
         self.event_router.settings_changed.connect(self.on_settings_change_requested)
 
         # 내부 Model 연결
+        # 단발 전송(send_single_command)은 시그널 경로 그대로 — 메인 스레드에서 온다.
         self.macro_runner.send_requested.connect(self.on_macro_send_requested)
+
+        # 매크로 실행 루프는 **결과가 필요한** 동기 경로를 쓴다 (S-080).
+        # 시그널은 반환값이 없어, 전송 실패를 스텝 판정에 반영할 수 없었다.
+        self.macro_runner.set_send_handler(self.deliver_macro_command)
 
         # View 연결 (Facade Signal 사용)
         self.view.settings_save_requested.connect(self.on_settings_change_requested)
@@ -475,18 +481,31 @@ class MainPresenter(QObject):
         self._log_error(msg)
         self.view.show_status_message(msg, 5000)
 
-    def on_macro_send_requested(self, manual_command: ManualCommand) -> None:
+    def deliver_macro_command(self, manual_command: ManualCommand) -> MacroSendResult:
         """
-        매크로 전송 요청 처리 (Runner -> Controller)
+        매크로 명령을 실제로 전송하고 **결과를 돌려줍니다** (S-080).
 
         Logic:
-            - Prefix/Suffix 등 설정 조회 및 데이터 가공
-            - 전송 대상 포트의 유효성 검사
-            - Broadcast 여부에 따른 전송 분기
-            - 전송 성공 시 Local Echo 출력
+            1. Prefix/Suffix 조회 및 데이터 가공
+            2. 전송 대상 유효성 검사
+            3. Broadcast 여부에 따라 전송하고 수락 여부를 받는다
+            4. Local Echo는 여기서 하지 않는다 — 위젯 접근이기 때문이다
+
+        Threading:
+            **매크로 스레드에서 직접 호출된다.** 그래서 이 메서드는 위젯을 만지지
+            않고, 스레드 안전한 것만 쓴다(SettingsManager 조회, 뮤텍스로 보호된
+            워커 큐). Local Echo처럼 UI를 건드리는 일은 호출자가 시그널로
+            메인 스레드에 넘긴다.
+
+            결과를 시그널로 되받는 방식(BlockingQueuedConnection)은 쓸 수 없다 —
+            `MacroRunner.stop()`이 메인 스레드에서 `wait()`로 매크로 스레드를
+            기다리므로, 매크로 스레드가 메인 스레드를 기다리면 교착한다.
 
         Args:
             manual_command (ManualCommand): 전송할 명령어 DTO.
+
+        Returns:
+            MacroSendResult: 성공 여부, 실패 사유, 전송된 바이트.
         """
         # 1. 설정값 조회 (Prefix/Suffix)
         prefix = self.settings_manager.get(ConfigKeys.COMMAND_PREFIX) if manual_command.prefix_enabled else None
@@ -501,40 +520,62 @@ class MainPresenter(QObject):
                 suffix=suffix
             )
         except ValueError as e:
-            self._notify_macro_error(f"Command processing error: {e}")
-            return
+            return MacroSendResult(False, f"Command processing error: {e}")
 
         # 3. 전송 (Broadcast vs Single)
-        sent_success = False
-
         if manual_command.broadcast_enabled:
             # 브로드캐스트 가능한 활성 포트가 하나도 없는 경우 중단
             if not self.connection_controller.has_active_broadcast_ports():
-                self._notify_macro_error("No active ports available for broadcast.")
-                return
+                return MacroSendResult(False, "No active ports available for broadcast.")
 
-            self.connection_controller.send_broadcast_data(data)
-            sent_success = True
-        else:
-            # 단일 포트 전송
-            active_port = self.port_presenter.get_active_port_name()
+            if not self.connection_controller.send_broadcast_data(data):
+                return MacroSendResult(False, "Broadcast send failed on one or more ports.")
+            return MacroSendResult(True, "", data)
 
-            if not active_port:
-                self._notify_macro_error("No port selected.")
-                return
+        # 단일 포트 전송
+        active_port = self.port_presenter.get_active_port_name()
 
-            if not self.connection_controller.is_connection_open(active_port):
-                self._notify_macro_error(f"Port '{active_port}' is disconnected.")
-                return
+        if not active_port:
+            return MacroSendResult(False, "No port selected.")
 
-            self.connection_controller.send_data(active_port, data)
-            sent_success = True
+        if not self.connection_controller.is_connection_open(active_port):
+            return MacroSendResult(False, f"Port '{active_port}' is disconnected.")
 
-        # 4. Local Echo 처리
-        if sent_success:
-            local_echo_enabled = self.settings_manager.get(ConfigKeys.PORT_LOCAL_ECHO, False)
-            if local_echo_enabled:
-                self.view.append_local_echo_data(data)
+        if not self.connection_controller.send_data(active_port, data):
+            return MacroSendResult(False, f"Send failed on port '{active_port}'.")
+
+        return MacroSendResult(True, "", data)
+
+    def on_macro_send_requested(self, manual_command: ManualCommand) -> None:
+        """
+        매크로 단발 전송 요청 처리 (Runner -> Controller, 메인 스레드 슬롯)
+
+        Logic:
+            - 실제 전송은 `deliver_macro_command`가 한다
+            - 여기서는 실패 알림과 Local Echo 등 **UI 쪽 뒷일**만 맡는다
+
+        Args:
+            manual_command (ManualCommand): 전송할 명령어 DTO.
+        """
+        result = self.deliver_macro_command(manual_command)
+
+        if not result.success:
+            self._notify_macro_error(result.message)
+            return
+
+        self.show_local_echo(result.data)
+
+    def show_local_echo(self, data: bytes) -> None:
+        """
+        설정이 켜져 있으면 송신 데이터를 수신창에 표시합니다 (메인 스레드 전용).
+
+        Args:
+            data (bytes): 방금 보낸 바이트.
+        """
+        if not data:
+            return
+        if self.settings_manager.get(ConfigKeys.PORT_LOCAL_ECHO, False):
+            self.view.append_local_echo_data(data)
 
     def _notify_macro_error(self, message: str) -> None:
         """

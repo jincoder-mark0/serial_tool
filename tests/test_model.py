@@ -26,7 +26,7 @@ from unittest.mock import MagicMock
 from model.packet_parser import ParserFactory
 from model.connection_controller import ConnectionController
 from model.macro_runner import MacroRunner
-from common.dtos import MacroEntry
+from common.dtos import MacroEntry, MacroSendResult
 from common.enums import ParserType
 
 
@@ -253,21 +253,26 @@ class TestMacroRunner:
 
     def test_macro_start_and_signal(self, qapp, sample_macro_entry):
         """
-        매크로 시작 및 시그널 발생 테스트
+        매크로 시작 및 전송 호출 테스트
 
         Logic:
             - Runner 생성 및 엔트리 로드
-            - send_requested 시그널에 Spy 연결
+            - 전송 핸들러에 Spy 연결 (S-080: 시그널이 아니라 결과를 돌려주는 호출)
             - start() 호출 (QThread 시작)
-            - 약간의 대기 후 시그널 발생 확인
+            - 약간의 대기 후 호출 확인
             - stop() 호출
+
+        Note:
+            예전에는 `send_requested` 시그널을 관찰했다. 그 시그널은 반환값이
+            없어 전송 실패가 스텝 판정에 반영되지 않는 결함의 원인이었다(S-080).
+            지금 실행 루프는 결과를 돌려주는 핸들러를 동기 호출한다.
         """
         # GIVEN: Runner 및 Spy 설정
         runner = MacroRunner()
         runner.load_macro([sample_macro_entry])
 
-        send_spy = MagicMock()
-        runner.send_requested.connect(send_spy)
+        send_spy = MagicMock(return_value=MacroSendResult(True))
+        runner.set_send_handler(send_spy)
 
         step_spy = MagicMock()
         runner.step_started.connect(step_spy)
@@ -282,7 +287,7 @@ class TestMacroRunner:
         # THEN: 시작 시그널 및 전송 요청 확인
         assert runner.isRunning() or runner.isFinished()
 
-        # 엔트리가 하나 있으므로 send_requested가 최소 1회 발생해야 함
+        # 엔트리가 하나 있으므로 전송 핸들러가 최소 1회 호출돼야 함
         if send_spy.call_count == 0:
             # CI/CD 환경 등 느린 환경 대비 추가 대기
             time.sleep(0.2)
@@ -307,6 +312,9 @@ class TestMacroRunner:
         """
         # GIVEN: Runner 실행 (Mock entries)
         runner = MacroRunner()
+        # 전송 핸들러가 없으면 첫 스텝이 실패해 매크로가 곧바로 멈춘다 (S-080) —
+        # 일시정지를 보려면 스텝이 성공해서 루프가 살아 있어야 한다.
+        runner.set_send_handler(lambda command: MacroSendResult(True))
         # 긴 딜레이를 주어 바로 끝나지 않게 설정
         entry = MacroEntry(enabled=True, command="CMD", delay_ms=1000)
         runner.load_macro([entry])

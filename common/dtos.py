@@ -746,3 +746,22 @@ class ErrorContext:
     traceback: str
     level: str = "CRITICAL"
     timestamp: float = field(default_factory=time.time)
+
+
+@dataclass
+class MacroSendResult:
+    """
+    매크로 명령 1건의 전송 결과 DTO (S-080)
+
+    매크로 스텝의 성공/실패 판정이 **실제 전송 결과와 이어지도록** 하기 위한
+    반환 타입이다. 예전에는 전송을 반환값 없는 시그널로 요청해서, 포트가 하나도
+    열려 있지 않아도 모든 스텝이 "성공"으로 보고됐다.
+
+    Attributes:
+        success (bool): 워커가 데이터를 수락했는지 여부.
+        message (str): 실패 사유 (성공 시 빈 문자열).
+        data (bytes): 실제로 보낸 바이트 (Local Echo 표시에 쓴다).
+    """
+    success: bool
+    message: str = ""
+    data: bytes = b""
