@@ -22,8 +22,15 @@
 """
 try:
     import commentjson as json
+    # commentjson은 파싱 실패를 **자체 예외**(JSONLibraryException)로 감싼다.
+    # 이것은 ValueError의 하위 클래스가 아니다 — 그래서 "저장 중 잘린 파일"이
+    # ValueError 갈래가 아니라 맨 끝 `except Exception`으로 떨어져, 백업도
+    # 복구 저장도 없이 조용히 기본값으로 초기화됐다 (S-081, 실측 확인).
+    _PARSE_ERRORS = (ValueError, json.JSONLibraryException)
 except ImportError:
     import json
+    _PARSE_ERRORS = (ValueError,)
+import os
 from jsonschema import validate, ValidationError
 from pathlib import Path
 from typing import Dict, Any, Optional
@@ -162,12 +169,18 @@ class SettingsManager:
 
             logger.info("Settings loaded and validated successfully.")
 
-        except (FileNotFoundError, ValueError) as e:
-            # json.JSONDecodeError 대신 ValueError를 사용하여
-            # commentjson 라이브러리 사용 시 발생하는 AttributeError 방지
-            # (JSONDecodeError는 ValueError의 하위 클래스임)
+        except (FileNotFoundError, *_PARSE_ERRORS) as e:
+            # 파싱 실패는 라이브러리마다 예외 타입이 다르다 — 표준 json은
+            # JSONDecodeError(ValueError 하위), commentjson은 자체
+            # JSONLibraryException(ValueError와 무관)을 던진다. 둘 다 여기서
+            # 받아야 손상된 파일이 백업되고 복구 저장까지 이어진다 (S-081).
             logger.warning(f"Settings load failed ({type(e).__name__}): {e}. Using fallback.")
             self.settings = fallback_settings
+            # 읽지 못한 파일도 백업해 둔다 (S-081).
+            # 예전에는 스키마 검증 실패 갈래에만 백업이 있었다. 정작 흔한 손상은
+            # "저장 중 중단되어 잘린 파일"인데, 그건 파싱에서 걸려 이 갈래로 오므로
+            # 사용자 설정이 흔적 없이 사라졌다. 손으로라도 건질 여지를 남긴다.
+            self._backup_corrupted_settings(read_path)
             self.save_settings() # 복구된 설정 저장 (사용자 경로)
 
             # 리셋 플래그 설정
@@ -355,8 +368,29 @@ class SettingsManager:
         """
         if not self.user_settings_path.parent.exists():
             self.user_settings_path.parent.mkdir(parents=True, exist_ok=True)
-        with open(self.user_settings_path, 'w', encoding='utf-8') as f:
-            json.dump(data, f, indent=2, ensure_ascii=False)
+
+        # 임시 파일에 다 쓴 뒤 한 번에 갈아 끼운다 (S-081).
+        # 대상 파일에 직접 쓰면, 쓰는 도중 전원이 나가거나 디스크가 차는 순간
+        # 설정이 반쪽짜리로 남는다. 실측했더니 그 파일로 재기동하면 파싱에
+        # 실패해 기본값으로 되돌아갔다 — 매크로도 포트 탭 구성도 사라졌다.
+        # os.replace는 같은 볼륨에서 원자적이므로, 실패해도 이전 파일이 온전히 남는다.
+        temp_path = self.user_settings_path.with_suffix('.json.tmp')
+        try:
+            with open(temp_path, 'w', encoding='utf-8') as f:
+                json.dump(data, f, indent=2, ensure_ascii=False)
+                # 디스크까지 내려간 것을 확인하고 나서 갈아 끼운다.
+                # flush만으로는 OS 버퍼에 남아 있어, 여기서 전원이 나가면
+                # 내용이 빈 새 파일이 원본을 대체할 수 있다.
+                f.flush()
+                os.fsync(f.fileno())
+            os.replace(temp_path, self.user_settings_path)
+        except Exception:
+            # 갈아 끼우기 전에 실패했다면 원본은 그대로다. 찌꺼기만 지운다.
+            try:
+                temp_path.unlink(missing_ok=True)
+            except OSError:
+                pass
+            raise
 
     def save_settings(self) -> None:
         """
