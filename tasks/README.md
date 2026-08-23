@@ -124,6 +124,10 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 | [S-077](S-077-theme-uniformity-and-component-distinction.md) | 테마 파일 구조 통일 + 컴포넌트 구분 | UX | DONE |
 | [S-078](S-078-move-hardcoded-colors-to-theme.md) | 코드의 하드코딩 색을 테마 리소스로 이동 | UX | DONE |
 | [S-079](S-079-remaining-screens-sweep.md) | 남은 화면 훑기 (매크로 패널 상세 / 포트 탭 다중 상태) | UX | DONE |
+| [S-080](S-080-macro-send-result.md) | 매크로 스텝 판정을 실제 전송 결과에 연결 | 설계 | DONE |
+| [S-081](S-081-settings-durability.md) | 설정 저장 원자화 + 손상 파일 백업 | 설계 | DONE |
+| [S-082](S-082-modal-not-reentrant.md) | 모달 알림 재진입 제거 | 설계 | DONE |
+| [S-083](S-083-remove-dead-event-legs.md) | 소비자 없는 EventBus 갈래 제거 | 설계 | DONE |
 
 - **하위 가능**: Steps가 자족적으로 작성됨. Steps 밖 판단이 필요해지면 즉시 중단·보고.
 - **상위 전용/권장**: 설계·판단이 본체인 태스크. 하위 모델은 시작하지 않는다.
