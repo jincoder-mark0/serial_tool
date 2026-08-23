@@ -341,3 +341,117 @@ class TestPacketPresenterThrottle:
         # Clear 시점에 지연 중이던 패킷들이 이후 flush에서 되살아나면 안 됨
         mock_panel.append_packet.assert_not_called()
         mock_panel.clear_view.assert_called_once()
+
+
+class TestPacketChecksumVerification:
+    """
+    패킷 체크섬 검증 배선 (S-071).
+
+    계산 자체의 정확성은 `tests/test_checksum.py`가 표준 시험 벡터로 고정한다.
+    여기서는 **설정 → 오프셋 해석 → View DTO 반영** 경로만 본다.
+    """
+
+    @staticmethod
+    def _settings(algorithm, offset=-1, lead=0, trail=0):
+        """체크섬 설정을 돌려주는 SettingsManager Mock."""
+        manager = MagicMock()
+
+        def get_side_effect(key, default=None):
+            mapping = {
+                ConfigKeys.PACKET_BUFFER_SIZE: 100,
+                ConfigKeys.PACKET_AUTOSCROLL: True,
+                ConfigKeys.PACKET_REALTIME: True,
+                ConfigKeys.PACKET_CHECKSUM_ALGORITHM: algorithm,
+                ConfigKeys.PACKET_CHECKSUM_OFFSET: offset,
+                ConfigKeys.PACKET_CHECKSUM_EXCLUDE_LEADING: lead,
+                ConfigKeys.PACKET_CHECKSUM_EXCLUDE_TRAILING: trail,
+            }
+            return mapping.get(key, default)
+
+        manager.get.side_effect = get_side_effect
+        return manager
+
+    def _make(self, mock_panel, mock_event_router, settings):
+        from presenter.packet_presenter import PacketPresenter
+
+        return PacketPresenter(mock_panel, mock_event_router, settings)
+
+    def test_none_algorithm_reports_not_verified(self, mock_panel, mock_event_router):
+        """알고리즘이 none이면 '검증하지 않음'(None)이어야 한다 — 통과로 위장하지 않는다."""
+        p = self._make(mock_panel, mock_event_router, self._settings("none"))
+        try:
+            assert p._verify_checksum(b"\x01\x02\x03") is None
+        finally:
+            p.stop()
+
+    def test_xor_trailing_byte_pass_and_fail(self, mock_panel, mock_event_router):
+        """말미 1바이트 XOR 체크섬: 맞으면 True, 한 비트만 틀려도 False."""
+        payload = b"\x01\x02\x03"
+        # 주의: 0x01^0x02^0x03 == 0x00 이라 "틀린 값"으로 0x00을 쓰면 정답과 같아진다.
+        # 이 테스트를 처음 쓸 때 실제로 그 실수를 했고, 테스트가 구현이 아니라
+        # 데이터가 틀렸다고 알려줬다. 틀린 값은 정답에서 한 비트를 뒤집어 만든다.
+        good = payload + bytes([0x01 ^ 0x02 ^ 0x03])
+        bad = payload + bytes([0x01 ^ 0x02 ^ 0x03 ^ 0x01])
+
+        # 체크섬 필드 자신은 계산에서 빼야 하므로 trailing 1바이트 제외
+        p = self._make(mock_panel, mock_event_router, self._settings("xor", offset=-1, trail=1))
+        try:
+            assert p._verify_checksum(good) is True
+            assert p._verify_checksum(bad) is False
+        finally:
+            p.stop()
+
+    def test_leading_bytes_can_be_excluded(self, mock_panel, mock_event_router):
+        """SOF 헤더를 계산에서 제외할 수 있어야 한다."""
+        sof = b"\xAA\x55"
+        body = b"\x10\x20\x30"
+        packet = sof + body + bytes([0x10 ^ 0x20 ^ 0x30])
+
+        p = self._make(
+            mock_panel, mock_event_router, self._settings("xor", offset=-1, lead=2, trail=1)
+        )
+        try:
+            assert p._verify_checksum(packet) is True
+        finally:
+            p.stop()
+
+    def test_packet_too_short_is_not_verified_rather_than_failed(
+        self, mock_panel, mock_event_router
+    ):
+        """
+        체크섬 필드를 담기에 짧은 패킷은 '불일치'가 아니라 '검증 불가'여야 한다.
+
+        파서 설정이 프로토콜과 안 맞을 때 모든 행이 빨갛게 물들면, 진짜 깨진 패킷을
+        찾을 수 없다.
+        """
+        p = self._make(mock_panel, mock_event_router, self._settings("crc32", offset=-1))
+        try:
+            assert p._verify_checksum(b"\x01") is None
+        finally:
+            p.stop()
+
+    def test_unknown_algorithm_is_not_verified(self, mock_panel, mock_event_router):
+        """설정에 알 수 없는 알고리즘이 들어와도 죽지 않고 '검증 안 함'으로 넘어간다."""
+        p = self._make(mock_panel, mock_event_router, self._settings("not_a_real_algorithm"))
+        try:
+            assert p._verify_checksum(b"\x01\x02\x03\x04") is None
+        finally:
+            p.stop()
+
+    def test_result_reaches_view_dto(self, mock_panel, mock_event_router):
+        """검증 결과가 PacketViewData까지 실려야 한다 (배선 확인)."""
+        from model.packet_parser import Packet
+
+        payload = b"\x01\x02\x03"
+        wrong = (0x01 ^ 0x02 ^ 0x03) ^ 0x01  # 정답(0x00)에서 한 비트 뒤집기
+        packet = Packet(data=payload + bytes([wrong]), timestamp=0.0)
+
+        p = self._make(mock_panel, mock_event_router, self._settings("xor", offset=-1, trail=1))
+        try:
+            p.on_packet_received(PacketEvent(port="COM1", packet=packet))
+            p._flush_pending_packets()
+            mock_panel.append_packet.assert_called_once()
+            view_data = mock_panel.append_packet.call_args[0][0]
+            assert view_data.checksum_ok is False
+        finally:
+            p.stop()

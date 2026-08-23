@@ -493,11 +493,17 @@ class PacketViewData:
         packet_type (str): 패킷 타입 문자열.
         data_hex (str): 데이터의 HEX 문자열 표현.
         data_ascii (str): 데이터의 ASCII 문자열 표현.
+        checksum_ok (Optional[bool]): 체크섬 검증 결과 (S-071).
+            True=통과, False=불일치, None=검증하지 않음(알고리즘 미설정이거나
+            패킷이 체크섬 필드를 담기에 너무 짧음). "검증했는데 통과"와
+            "아예 검증하지 않음"은 화면에서 구분돼야 하므로 bool이 아니라
+            3-상태로 둔다.
     """
     time_str: str
     packet_type: str
     data_hex: str
     data_ascii: str
+    checksum_ok: Optional[bool] = None
 
 
 @dataclass

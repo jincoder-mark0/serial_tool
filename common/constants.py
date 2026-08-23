@@ -99,6 +99,12 @@ class ConfigKeys:
     AT_COLOR_URC = "packet.at_color_urc"
     AT_COLOR_PROMPT = "packet.at_color_prompt"
 
+    # 체크섬 검증 (S-071)
+    PACKET_CHECKSUM_ALGORITHM = "packet.checksum_algorithm"
+    PACKET_CHECKSUM_OFFSET = "packet.checksum_offset"
+    PACKET_CHECKSUM_EXCLUDE_LEADING = "packet.checksum_exclude_leading"
+    PACKET_CHECKSUM_EXCLUDE_TRAILING = "packet.checksum_exclude_trailing"
+
     # Inspector Options
     PACKET_BUFFER_SIZE = "packet.buffer_size"
     PACKET_REALTIME = "packet.realtime"

@@ -27,13 +27,15 @@
   30ms 배치 패턴을 재사용 — 새 방식을 발명하지 않음)
 * SettingsManager를 통해 초기 설정 로드 및 변경 사항 반영
 """
-from typing import List
+from typing import List, Optional
 
 from PyQt5.QtCore import QObject, QDateTime, QTimer
 
 from view.panels.packet_panel import PacketPanel
 from presenter.event_router import EventRouter
 from core.settings_manager import SettingsManager
+from core import checksum
+from core.checksum import ChecksumAlgorithm
 from core.logger import logger
 from common.constants import ConfigKeys, UI_REFRESH_INTERVAL_MS
 from common.dtos import (
@@ -152,12 +154,61 @@ class PacketPresenter(QObject):
             time_str=timestamp,
             packet_type=packet_type,
             data_hex=data_hex,
-            data_ascii=data_ascii
+            data_ascii=data_ascii,
+            checksum_ok=self._verify_checksum(raw_data),
         )
 
         # View 업데이트 버퍼링 (Throttling, S-061) — 즉시 panel.append_packet을
         # 호출하지 않고 큐에 쌓는다. 실제 반영은 _flush_pending_packets가 담당.
         self._pending_packets.append(view_data)
+
+    def _verify_checksum(self, raw_data: bytes) -> Optional[bool]:
+        """
+        수신 패킷의 체크섬을 검증합니다 (S-071).
+
+        Logic:
+            - 알고리즘이 `none`이면 검증하지 않고 None을 돌려준다.
+            - 설정된 오프셋에서 체크섬 필드를 읽고, 계산 대상 범위(앞/뒤 제외
+              바이트를 뺀 구간)로 값을 계산해 비교한다.
+            - 패킷이 체크섬 필드를 담기에 짧으면 "불일치"가 아니라 **검증 불가**
+              (None)로 본다 — 파서 설정이 프로토콜과 안 맞을 때 모든 행이 빨갛게
+              물드는 것보다, 검증하지 않았음을 그대로 보여주는 쪽이 정직하다.
+
+        Args:
+            raw_data (bytes): 패킷 원본 바이트열.
+
+        Returns:
+            Optional[bool]: True=통과, False=불일치, None=검증하지 않음.
+        """
+        algorithm = self.settings_manager.get(
+            ConfigKeys.PACKET_CHECKSUM_ALGORITHM, ChecksumAlgorithm.NONE.value
+        )
+        try:
+            algo = ChecksumAlgorithm(algorithm)
+        except ValueError:
+            logger.warning(f"Unknown checksum algorithm in settings: {algorithm}")
+            return None
+
+        if algo is ChecksumAlgorithm.NONE:
+            return None
+
+        size = checksum.byte_length(algo)
+        offset = int(self.settings_manager.get(ConfigKeys.PACKET_CHECKSUM_OFFSET, -1))
+        lead = int(self.settings_manager.get(ConfigKeys.PACKET_CHECKSUM_EXCLUDE_LEADING, 0))
+        trail = int(self.settings_manager.get(ConfigKeys.PACKET_CHECKSUM_EXCLUDE_TRAILING, 0))
+
+        # 음수 오프셋은 "끝에서부터" — 체크섬은 대개 말미에 있다.
+        start = (len(raw_data) + offset + 1 - size) if offset < 0 else offset
+        if start < 0 or start + size > len(raw_data):
+            return None
+
+        expected = int.from_bytes(raw_data[start:start + size], byteorder="big")
+
+        target = raw_data[lead:len(raw_data) - trail] if trail else raw_data[lead:]
+        if not target:
+            return None
+
+        return checksum.verify(algo, target, expected)
 
     def _flush_pending_packets(self) -> None:
         """

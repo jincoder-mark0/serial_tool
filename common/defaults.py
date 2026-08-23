@@ -52,7 +52,16 @@ DEFAULT_PACKET_SETTINGS = {
     "at_color_prompt": True,
     "buffer_size": 100,
     "realtime": True,
-    "autoscroll": True
+    "autoscroll": True,
+    # 체크섬 검증 (S-071). algorithm="none"이면 검증하지 않는다(기본값).
+    # offset은 패킷 끝에서 체크섬 필드가 시작하는 위치를 음수로 센다 —
+    # 대부분의 프로토콜이 체크섬을 말미에 두므로 끝 기준이 안정적이다.
+    # exclude_leading/trailing은 계산 대상에서 제외할 앞/뒤 바이트 수다
+    # (SOF 헤더 제외, 체크섬 필드 자신 제외 등).
+    "checksum_algorithm": "none",
+    "checksum_offset": -1,
+    "checksum_exclude_leading": 0,
+    "checksum_exclude_trailing": 0
 }
 
 DEFAULT_PORTS_STATE = {

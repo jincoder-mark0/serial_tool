@@ -41,8 +41,20 @@ class PacketModel(QAbstractTableModel):
     최대 버퍼 크기를 관리하여 메모리 사용량을 제어합니다.
     """
 
-    # 컬럼 정의
-    COLUMNS = ["Time", "Type", "HEX", "ASCII"]
+    # 컬럼 정의 — 표시 문자열은 언어 키 경유 (S-071에서 CHK 추가하며 전환).
+    # 헤더는 언어 전환 시 `headerDataChanged`로 다시 그려야 하므로 상수 문자열을
+    # 갖지 않고 키만 갖는다.
+    COLUMN_KEYS = [
+        "packet_col_time",
+        "packet_col_type",
+        "packet_col_hex",
+        "packet_col_ascii",
+        "packet_col_checksum",
+    ]
+
+    # 체크섬 검증 결과 표시 문자열 (언어 무관 기술 표기 — 로그/스크린샷 대조 용이)
+    CHECKSUM_PASS_TEXT = "OK"
+    CHECKSUM_FAIL_TEXT = "FAIL"
 
     def __init__(self, buffer_size: int = 100):
         """
@@ -61,7 +73,7 @@ class PacketModel(QAbstractTableModel):
 
     def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
         """열 개수 반환"""
-        return len(self.COLUMNS)
+        return len(self.COLUMN_KEYS)
 
     def data(self, index: QModelIndex, role: int = Qt.DisplayRole) -> Any:
         """
@@ -88,13 +100,23 @@ class PacketModel(QAbstractTableModel):
             return packet.data_hex
         elif col == 3:
             return packet.data_ascii
+        elif col == 4:
+            # None(검증 안 함)은 빈칸으로 둔다 — "통과"와 "검증하지 않음"을
+            # 같은 모양으로 보여주면 설정이 안 걸린 것을 통과로 오인한다.
+            if packet.checksum_ok is None:
+                return ""
+            return self.CHECKSUM_PASS_TEXT if packet.checksum_ok else self.CHECKSUM_FAIL_TEXT
         return QVariant()
 
     def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole) -> Any:
         """헤더 데이터 반환"""
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:
-            return self.COLUMNS[section]
+            return language_manager.get_text(self.COLUMN_KEYS[section])
         return QVariant()
+
+    def retranslate_headers(self) -> None:
+        """언어 전환 시 헤더를 다시 그리도록 알린다."""
+        self.headerDataChanged.emit(Qt.Horizontal, 0, len(self.COLUMN_KEYS) - 1)
 
     def append_packet(self, packet: PacketViewData) -> None:
         """
@@ -221,6 +243,7 @@ class PacketPanel(QWidget):
         # 2. 패킷 테이블 (Table View)
         self._packet_table = QTableView()
         self._packet_model = PacketModel()
+        self._columns_sized = False  # 시각 컬럼 폭 1회 보정 여부 (S-071)
         self._packet_table.setModel(self._packet_model)
 
         # 테이블 스타일 설정
@@ -235,6 +258,7 @@ class PacketPanel(QWidget):
         header.setSectionResizeMode(1, QHeaderView.ResizeToContents) # Type
         header.setSectionResizeMode(2, QHeaderView.Stretch)          # HEX (가변)
         header.setSectionResizeMode(3, QHeaderView.Stretch)          # ASCII (가변)
+        header.setSectionResizeMode(4, QHeaderView.ResizeToContents) # 체크섬 검증 (S-071)
 
         layout.addLayout(toolbar_layout)
         layout.addWidget(self._packet_table)
@@ -249,6 +273,8 @@ class PacketPanel(QWidget):
         self._capture_chk.setToolTip(language_manager.get_text("packet_chk_capture_tooltip"))
         self._autoscroll_chk.setText(language_manager.get_text("packet_chk_autoscroll"))
         self._autoscroll_chk.setToolTip(language_manager.get_text("packet_chk_autoscroll_tooltip"))
+        # 표 헤더도 다시 그린다 (S-071 — 생성자에서 한 번만 넣으면 전환 시 남는다)
+        self._packet_model.retranslate_headers()
 
     # -------------------------------------------------------------------------
     # Public Methods (Presenter에서 호출 - Facade Interface)
@@ -290,12 +316,22 @@ class PacketPanel(QWidget):
         """
         self._packet_model.append_packet(data)
 
+        # 첫 행이 들어온 시점에 한 번만 시각 컬럼 폭을 내용에 맞춘다 (S-071).
+        # `ResizeToContents`는 표가 비어 있을 때 헤더 라벨 폭으로 정해지는데, 그 뒤
+        # Stretch 컬럼(HEX/ASCII)이 남는 폭을 모두 가져가 버려 데이터가 도착해도
+        # 시각 컬럼이 최소 폭(49px)에 눌린 채 "12:0…"으로 잘렸다(실측 확인).
+        # 매 행마다 재계산하면 S-061이 없앤 비용이 되살아나므로 최초 1회로 제한한다.
+        if not self._columns_sized:
+            self._columns_sized = True
+            self._packet_table.resizeColumnToContents(0)
+
         if self._autoscroll_enabled:
             self._packet_table.scrollToBottom()
 
     def clear_view(self) -> None:
         """테이블 뷰를 초기화합니다."""
         self._packet_model.clear()
+        self._columns_sized = False
 
     # -------------------------------------------------------------------------
     # Internal Slots
