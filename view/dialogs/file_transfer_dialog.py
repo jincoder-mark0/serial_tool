@@ -53,7 +53,14 @@ class FileTransferDialog(QDialog):
         """
         super().__init__(parent)
         self.setWindowTitle(language_manager.get_text("manual_control_grp_file"))
-        self.setFixedSize(DIALOG_SIZE_FILE_TRANSFER_WIDTH, DIALOG_SIZE_FILE_TRANSFER_HEIGHT)
+        # 고정 크기 대신 **초기 크기 제안 + 최소 폭**으로 둔다 (S-076).
+        # setFixedSize(450, 250)이었는데 내용이 요구하는 높이가 266px이라(offscreen
+        # 실측, 네이티브는 더 크다) 파일 선택 행과 전송 버튼·진행률이 25px 남짓에
+        # 겹쳐 뭉개졌다 — 캡처로 4테마 x 2언어 모두에서 확인했다.
+        # resize()는 레이아웃이 요구하는 최소 크기 아래로는 클램프되지 않으므로
+        # 번역이 길어져도 잘리지 않는다 (ui_guide: 고정 크기로 인한 잘림 금지, S-024).
+        self.resize(DIALOG_SIZE_FILE_TRANSFER_WIDTH, DIALOG_SIZE_FILE_TRANSFER_HEIGHT)
+        self.setMinimumWidth(DIALOG_SIZE_FILE_TRANSFER_WIDTH)
         self.setModal(True)
 
         # UI Components

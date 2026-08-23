@@ -31,7 +31,11 @@ class AboutDialog(QDialog):
     def __init__(self, parent=None):
         super().__init__(parent)
         self.setWindowTitle(language_manager.get_text("about_title"))
-        self.setFixedSize(DIALOG_SIZE_ABOUT_WIDTH, DIALOG_SIZE_ABOUT_HEIGHT)
+        # 고정 크기 대신 초기 크기 제안으로 둔다 (S-076).
+        # 번역이 길어지거나 폰트 크기를 키우면 고정 크기는 내용을 수용하지 못하고
+        # 위젯을 겹쳐 그린다 — 파일 전송 다이얼로그에서 실제로 그 일이 있었다.
+        self.resize(DIALOG_SIZE_ABOUT_WIDTH, DIALOG_SIZE_ABOUT_HEIGHT)
+        self.setMinimumWidth(DIALOG_SIZE_ABOUT_WIDTH)
         self.init_ui()
 
     def init_ui(self):

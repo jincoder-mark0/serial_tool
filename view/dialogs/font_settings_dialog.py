@@ -140,6 +140,19 @@ class FontSettingsDialog(QDialog):
         self.button_box.accepted.connect(self.accept_changes)
         self.button_box.rejected.connect(self.reject)
         self.button_box.button(QDialogButtonBox.Apply).clicked.connect(self.apply_changes)
+
+        # 표준 버튼은 Qt 기본 문구(영문)를 쓰므로 직접 번역해 넣는다 (S-076).
+        # Preferences는 이미 그렇게 하고 있었는데 여기만 빠져 있어, 한국어에서도
+        # OK / Cancel / Apply가 영문으로 남았다(캡처 확인).
+        self.button_box.button(QDialogButtonBox.Ok).setText(
+            language_manager.get_text("font_btn_ok")
+        )
+        self.button_box.button(QDialogButtonBox.Cancel).setText(
+            language_manager.get_text("font_btn_cancel")
+        )
+        self.button_box.button(QDialogButtonBox.Apply).setText(
+            language_manager.get_text("font_btn_apply")
+        )
         button_layout.addWidget(self.button_box)
 
         layout.addLayout(button_layout)

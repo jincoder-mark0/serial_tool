@@ -167,6 +167,58 @@ class PortSettingsWidget(QGroupBox):
         main_layout.addWidget(self.settings_stack)
         self.setLayout(main_layout)
 
+        # 행마다 첫 라벨의 글자 폭이 달라 그 뒤 필드의 시작 x가 어긋난다
+        # (실측: ko 프로토콜 콤보 x=71 / 보드레이트 콤보 x=86 → 15px, en은 22px).
+        # 언어를 바꾸면 라벨 길이가 달라져 같은 이유로 필드가 통째로 이동한다
+        # (보드레이트 콤보 ko 86 → en 45). 첫 열 라벨 폭을 서로 맞춘다.
+        self._align_first_column_labels()
+
+    def _first_column_labels(self) -> list:
+        """
+        정렬 대상인 첫 열 라벨들을 모은다 — 상단 행 + **현재 보이는 페이지**의 첫 라벨.
+
+        상단 행과 하단 스택 페이지는 서로 다른 레이아웃이라 하나의 QGridLayout으로
+        묶을 수 없다. 대신 이 라벨들의 폭을 같게 만들어 뒤따르는 필드의 시작 x를
+        일치시킨다.
+
+        Note:
+            숨어 있는 페이지의 라벨까지 포함하면 그 폭에 끌려가 **보이지도 않는
+            라벨 때문에 항상 여백이 낭비된다**(실측: SPI 라벨이 가장 넓어 Serial
+            화면에서 ko 기준 ~50px 손해). 그래서 현재 페이지만 본다. 프로토콜을
+            바꾸면 `on_protocol_changed`가 다시 맞춘다.
+
+        Returns:
+            list: 정렬 대상 라벨 위젯 목록.
+        """
+        page_first_label = (
+            self.spi_controls_ui.get('speed_lbl')
+            if self.settings_stack.currentIndex() == 1
+            else self.serial_controls_ui.get('baud_lbl')
+        )
+        return [lbl for lbl in (self.protocol_lbl, page_first_label) if lbl is not None]
+
+    def _align_first_column_labels(self) -> None:
+        """
+        첫 열 라벨들의 폭을 가장 넓은 것에 맞춘다.
+
+        Logic:
+            - 고정 픽셀을 박지 않고 **현재 언어의 실제 글자 폭**에서 최댓값을 구한다.
+              고정값을 쓰면 번역이 길어질 때 잘리고 짧아질 때 빈 공간이 남는다
+              (ui_guide: 고정 크기로 인한 잘림 금지).
+            - 언어 전환 시 `retranslate_ui`에서 다시 부른다 — 한 번만 계산하면
+              전환 후 옛 언어 기준 폭이 남는다.
+        """
+        labels = self._first_column_labels()
+        if not labels:
+            return
+
+        # 기존 하한을 지우고 새로 잰다 (전환 시 이전 언어 폭이 남지 않도록)
+        for lbl in labels:
+            lbl.setMinimumWidth(0)
+        widest = max(lbl.sizeHint().width() for lbl in labels)
+        for lbl in labels:
+            lbl.setMinimumWidth(widest)
+
     def _create_serial_settings_widget(self) -> QWidget:
         """
         시리얼 통신 설정 위젯 생성
@@ -279,6 +331,9 @@ class PortSettingsWidget(QGroupBox):
         """
         self.port_scan_requested.emit()
         self.settings_stack.setCurrentIndex(index)
+
+        # 페이지가 바뀌면 첫 열 기준 라벨도 바뀐다 (S-075)
+        self._align_first_column_labels()
 
     def on_port_combo_clicked(self) -> None:
         """
@@ -502,6 +557,9 @@ class PortSettingsWidget(QGroupBox):
     # -------------------------------------------------------------------------
     # State Persistence
     # -------------------------------------------------------------------------
+        # 번역 길이가 달라지면 첫 열 폭도 다시 맞춘다 (S-075)
+        self._align_first_column_labels()
+
     def get_state(self) -> dict:
         """
         현재 설정을 딕셔너리로 반환
