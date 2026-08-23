@@ -130,6 +130,39 @@ def mock_settings_manager(tmp_path):
 
 
 @pytest.fixture(autouse=True)
+def stub_serial_port_enumeration(monkeypatch):
+    """
+    시스템의 실제 시리얼 포트 열거를 차단한다 (S-069).
+
+    ## WHY
+    `PortScanWorker.run()`이 `serial.tools.list_ports.comports()`를 호출하는데,
+    이건 Windows에서 ctypes로 SetupAPI를 두드리는 실제 하드웨어 열거다. 테스트가
+    실기기 없이 돌아야 한다는 프로젝트 규칙(CLAUDE.md)에 어긋날 뿐 아니라,
+    실측 결과 **워커 스레드에서 이 호출을 하면 프로세스가 종료 중 abort**한다
+    (`tests/test_port_tab_cleanup.py`의 탭 닫기 테스트가 단독 실행 60회 중 12회
+    exit 0xC0000409로 사망 — 파이썬 예외가 아니라 네이티브 크래시라 pytest 요약도
+    남지 않는다).
+
+    실측으로 원인을 갈랐다: comports()를 스텁하면 60회 중 0회, 메인 스레드에서
+    부르면 60회 중 1회, 워커 스레드에서 그대로 부르면 60회 중 12회다. 반면
+    스레드 수명·참조 유지·종료 대기 같은 개입은 모두 기준선과 차이가 없었다.
+
+    **실제 앱은 영향받지 않는다** — `MainPresenter.on_close_requested()`가 도는
+    정상 종료 경로는 40회 전부 정상 종료했다. 즉 이건 테스트 하네스 문제다.
+
+    ## WHAT
+    빈 목록을 반환하도록 대체한다. LOOPBACK 항목은 `PortScanWorker.run()`이
+    열거 결과와 무관하게 항상 덧붙이므로, LOOPBACK을 쓰는 테스트는 영향받지 않는다.
+    실제 열거 결과에 의존하는 테스트는 현재 없다.
+
+    특정 포트 목록이 필요한 테스트는 이 픽스처 위에 다시 monkeypatch하면 된다.
+    """
+    import serial.tools.list_ports
+
+    monkeypatch.setattr(serial.tools.list_ports, "comports", lambda: [])
+
+
+@pytest.fixture(autouse=True)
 def reset_event_bus():
     """
     각 테스트 실행 전후에 EventBus를 초기화합니다 (자동 적용).

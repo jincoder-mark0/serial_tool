@@ -143,13 +143,27 @@ class TestClosingUnconnectedTabIsHarmless:
     """연결된 적 없는 탭을 닫아도 예외 없이 통과해야 한다."""
 
     def test_closing_tab_without_connection_does_not_raise(self, wired_presenter):
+        """
+        한 번도 `open_connection()`을 하지 않은 탭을 닫아도 무해해야 한다.
+
+        Note:
+            예전에는 여기서 `get_port_name() == ""`(아무 포트도 선택 안 됨)을
+            전제로 걸었는데, 그건 **스캔 타이밍에 기댄 우연**이었다. 실제
+            `comports()` 열거가 느려서 단언 시점에 콤보가 아직 비어 있었을 뿐이다.
+            S-069로 열거를 스텁해 결정론적으로 만들자 목록이 즉시 채워지고 첫
+            항목이 자동 선택되면서 이 전제가 무너졌다 — 즉 "아무것도 선택되지 않은
+            상태"는 목록이 있는 한 도달할 수 없다.
+
+            그래서 도달 불가능한 전제를 확인하는 대신, 이 테스트가 실제로 지키려던
+            계약만 남긴다: **연결한 적 없는 탭을 닫는 것은 예외 없이 무해하다.**
+            포트가 선택돼 있는 경우는 아래 형제 테스트가 따로 덮는다.
+        """
         left_section, _presenter, controller = wired_presenter
 
         left_section.add_new_port_tab()
 
-        panel0 = left_section.get_port_panel_at(0)
-        # 아무 포트도 선택/연결하지 않은 기본 상태
-        assert panel0.get_port_name() == ""
+        # 연결은 한 번도 하지 않았다 (open_connection 호출 없음)
+        assert controller.has_active_connection is False
 
         # WHEN/THEN: 예외 없이 탭이 닫혀야 함
         left_section.port_tab_panel.close_port_tab(0)

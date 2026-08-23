@@ -149,9 +149,11 @@
 | [S-069](tasks/S-069-port-tab-close-hard-crash.md) | **포트 탭 닫기·재연결 시 프로세스 하드 크래시** | ⏸ 대기 |
 | [S-070](tasks/S-070-mock-spec-interface-drift.md) | Presenter→View 인터페이스 드리프트를 Mock이 삼킴 | ⏸ 대기 |
 
-- **S-069는 테스트 실패가 아니라 프로세스가 죽는다** (`0xC0000409`, C++ 레벨).
-  `test_closing_tab_closes_loopback_connection_and_allows_reopen` **단독 25회 중 5회**
-  재현된다. 같은 경로를 실사용에서 타면 탭을 닫을 때 앱이 종료될 수 있다.
+- **S-069(2026-08-23 갱신)**: 원인은 `serial.tools.list_ports.comports()`를 **워커
+  스레드에서 호출**하는 것이었다(스텁 시 60회 중 0회, 스레드 수명 개입은 전부 무효).
+  `tests/conftest.py`에서 열거를 스텁해 주원인을 제거했다 — 20% → 5%.
+  **실제 앱 종료 경로는 40회 전부 정상이라 사용자 영향은 없다**(등재 당시 P0 서술 철회).
+  잔여 5%는 LOOPBACK 연결 개폐 경로로 좁혀졌다.
 - S-070은 S-067이 드러낸 구멍이다. Presenter 테스트가 View를 `spec` 없는 `MagicMock`으로
   만들어 **존재하지 않는 메서드 호출도 통과**시킨다(프로젝트 전체 `spec=` 사용 0건).
   그래서 393개가 초록인 동안 앱은 탭을 바꿀 때마다 죽고 있었다.
