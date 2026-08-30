@@ -43,10 +43,9 @@ class PortPresenter(QObject):
         self.settings_manager = settings_manager or SettingsManager()
         self._scan_worker: Optional[PortScanWorker] = None
 
-        max_lines = self.settings_manager.get(ConfigKeys.RX_MAX_LINES, DEFAULT_LOG_MAX_LINES)
-        current_panel = self.left_section.get_current_port_panel()
-        if current_panel:
-            current_panel.set_max_log_lines(max_lines)
+        self.apply_max_log_lines(
+            self.settings_manager.get(ConfigKeys.RX_MAX_LINES, DEFAULT_LOG_MAX_LINES)
+        )
 
         self.scan_ports()
         for panel in self.left_section.get_port_panels():
@@ -61,6 +60,11 @@ class PortPresenter(QObject):
     def get_active_port_name(self) -> Optional[str]:
         panel = self.left_section.get_current_port_panel()
         return panel.get_port_name() if panel else None
+
+    def apply_max_log_lines(self, max_lines: int) -> None:
+        """모든 PortPanel의 표시 로그 상한을 동일하게 적용합니다."""
+        for panel in self.left_section.get_port_panels():
+            panel.set_max_log_lines(max_lines)
 
     def _connect_tab_signals(self, panel: PortPanel) -> None:
         try:
@@ -94,6 +98,9 @@ class PortPresenter(QObject):
 
     def _on_port_tab_added(self, panel: PortPanel) -> None:
         self._connect_tab_signals(panel)
+        panel.set_max_log_lines(
+            self.settings_manager.get(ConfigKeys.RX_MAX_LINES, DEFAULT_LOG_MAX_LINES)
+        )
         self.scan_ports()
 
     def scan_ports(self) -> None:
