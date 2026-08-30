@@ -35,19 +35,16 @@ def mock_main_window(qapp):
 
 @pytest.fixture
 def integration_system(mock_main_window, mock_serial_port, mock_settings_manager):
-    components = ApplicationBootstrapper(
-        mock_main_window,
-        mock_settings_manager,
-    ).build()
+    components = ApplicationBootstrapper(mock_main_window, mock_settings_manager).build()
     presenter = MainPresenter(
         mock_main_window,
         settings_manager=mock_settings_manager,
         dependencies=components.main_presenter_dependencies,
     )
-    yield presenter, mock_main_window, mock_serial_port
+    yield presenter, components, mock_main_window, mock_serial_port
 
     components.status_coordinator.stop()
-    components.main_presenter_dependencies.data_handler.stop()
+    components.data_handler.stop()
     components.main_presenter_dependencies.packet_presenter.stop()
     components.file_transfer_manager.shutdown()
     components.macro_script_manager.stop()
@@ -56,7 +53,7 @@ def integration_system(mock_main_window, mock_serial_port, mock_settings_manager
 
 
 def test_system_initialization_wires_facade_views(integration_system):
-    presenter, window, _ = integration_system
+    presenter, _, window, _ = integration_system
     assert presenter.port_presenter is not None
     assert presenter.macro_presenter is not None
     assert presenter.manual_control_presenter is not None
@@ -64,6 +61,7 @@ def test_system_initialization_wires_facade_views(integration_system):
     assert presenter.macro_execution_coordinator is not None
     assert presenter.shutdown_coordinator is not None
     assert not hasattr(presenter, "event_router")
+    assert not hasattr(presenter, "data_handler")
     assert not hasattr(presenter, "status_coordinator")
     assert not hasattr(presenter, "file_transfer_manager")
     window.connect_port_tab_changed.assert_called_once()
@@ -71,7 +69,7 @@ def test_system_initialization_wires_facade_views(integration_system):
 
 
 def test_connection_send_and_close_flow(integration_system, sample_port_config):
-    presenter, _, mock_serial = integration_system
+    presenter, _, _, mock_serial = integration_system
     controller = presenter.connection_controller
     assert controller.open_connection(sample_port_config) is True
     controller.send_data(sample_port_config.port, b"TEST_MSG")
@@ -82,17 +80,17 @@ def test_connection_send_and_close_flow(integration_system, sample_port_config):
 
 
 def test_data_reception_fast_path_batches_for_view(integration_system):
-    presenter, window, _ = integration_system
+    presenter, components, window, _ = integration_system
     event = PortDataEvent(port="COM1", data=b"HELLO_WORLD")
     presenter.connection_controller.data_received.emit(event)
-    presenter.data_handler._flush_rx_buffer_to_ui()
+    components.data_handler._flush_rx_buffer_to_ui()
     batch = window.append_rx_data.call_args[0][0]
     assert batch.port == "COM1"
     assert batch.data == b"HELLO_WORLD"
 
 
 def test_packet_event_is_formatted_for_packet_view(integration_system):
-    presenter, window, _ = integration_system
+    presenter, _, window, _ = integration_system
     event = PacketEvent(
         port="COM1",
         packet=Packet(
