@@ -44,7 +44,7 @@ class ApplicationBootstrapper:
         self._settings_manager = settings_manager
 
     def build(self) -> ApplicationComponents:
-        """의존 순서에 따라 Model/Service/Presenter를 생성합니다."""
+        """의존 순서에 따라 Model/Service/Presenter를 생성하고 정적 배선을 구성합니다."""
         connection_controller = ConnectionController()
         command_transmission_service = CommandTransmissionService(
             connection_controller,
@@ -71,6 +71,11 @@ class ApplicationBootstrapper:
             self._view.port_view,
             connection_controller,
             command_transmission_service,
+        )
+
+        # View 간 횡단 출력은 Presenter callback 대신 명시적 signal wiring으로 연결합니다.
+        manual_control_presenter.local_echo_requested.connect(
+            self._view.append_local_echo_data
         )
 
         return ApplicationComponents(
