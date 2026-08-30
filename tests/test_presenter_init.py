@@ -1,9 +1,4 @@
-"""
-MainPresenter 초기화/배선 회귀 테스트.
-
-Production과 동일하게 ApplicationBootstrapper가 View state를 먼저 복원하고 runtime
-component를 조립한 뒤 MainPresenter에는 최소 dependency contract를 명시적으로 주입합니다.
-"""
+"""MainPresenter 초기화/배선 회귀 테스트."""
 import inspect
 from unittest.mock import MagicMock, patch
 
@@ -47,35 +42,23 @@ def mock_main_window():
 
 def _build_presenter(view, settings):
     components = ApplicationBootstrapper(view, settings).build()
-    return MainPresenter(
-        view,
-        settings_manager=settings,
-        dependencies=components.main_presenter_dependencies,
-    )
+    return MainPresenter(view, dependencies=components.main_presenter_dependencies)
 
 
 class TestMainPresenterInit:
     def test_component_injection(self, mock_main_window, mock_settings_manager):
         presenter = _build_presenter(mock_main_window, mock_settings_manager)
-        assert presenter.connection_controller is not None
-        assert presenter.macro_runner is not None
-        assert presenter.macro_execution_coordinator is not None
-        assert presenter.logging_coordinator is not None
-        assert presenter.shutdown_coordinator is not None
-        assert presenter.port_presenter is not None
-        assert presenter.macro_presenter is not None
-        assert presenter.file_presenter is not None
-        assert presenter.packet_presenter is not None
-        assert presenter.manual_control_presenter is not None
-        assert presenter.lifecycle_manager is not None
-        assert not hasattr(presenter, "event_router")
+        for attr in (
+            "connection_controller", "macro_runner", "macro_execution_coordinator",
+            "logging_coordinator", "shutdown_coordinator", "port_presenter",
+            "macro_presenter", "file_presenter", "packet_presenter",
+            "manual_control_presenter", "lifecycle_manager",
+        ):
+            assert getattr(presenter, attr) is not None
         for internal_owner in (
-            "data_handler",
-            "file_transfer_manager",
-            "port_scan_manager",
-            "macro_script_manager",
-            "traffic_monitor",
-            "status_coordinator",
+            "event_router", "settings_manager", "data_handler", "file_transfer_manager",
+            "port_scan_manager", "macro_script_manager", "traffic_monitor",
+            "status_coordinator", "settings_coordinator",
         ):
             assert not hasattr(presenter, internal_owner)
 
@@ -84,28 +67,28 @@ class TestMainPresenterInit:
         restore_pos = source.index("lifecycle_manager.initialize_view()")
         assert restore_pos < source.index("port_presenter = PortPresenter(")
         assert restore_pos < source.index("macro_presenter = MacroPresenter(")
-        assert "AppLifecycleManager(" in source
 
-    def test_main_presenter_owns_dependency_contract_not_bootstrap_contract(self):
+    def test_main_presenter_owns_only_presenter_dependency_contract(self):
         source = inspect.getsource(MainPresenter)
+        signature = inspect.signature(MainPresenter.__init__)
         assert "ApplicationBootstrapper" not in source
         assert "ApplicationComponents" not in source
+        assert "SettingsManager" not in source
         assert "MainPresenterDependencies" in source
-        assert "initialize_view()" not in source
+        assert set(signature.parameters) == {"self", "view", "dependencies"}
 
     def test_signal_connections(self, mock_main_window, mock_settings_manager):
         presenter = _build_presenter(mock_main_window, mock_settings_manager)
-        mock_main_window.close_requested.connect.assert_called()
+        # Settings 관련 signal은 SettingsCoordinator가, 전역 command는 MainPresenter가 연결합니다.
         mock_main_window.settings_save_requested.connect.assert_called()
         mock_main_window.theme_change_requested.connect.assert_called()
         mock_main_window.language_change_requested.connect.assert_called()
+        mock_main_window.close_requested.connect.assert_called()
         mock_main_window.connect_port_tab_changed.assert_called()
         assert presenter.connection_controller.connection_opened is not None
-        assert presenter.connection_controller.data_received is not None
         assert presenter.macro_runner.macro_started is not None
-        assert presenter.file_presenter.transfer_completed is not None
 
-    def test_bootstrapper_owns_data_handler_init_and_static_wiring(
+    def test_bootstrapper_owns_data_handler_and_static_wiring(
         self, mock_main_window, mock_settings_manager
     ):
         with patch("presenter.data_handler.QTimer") as timer_cls:
