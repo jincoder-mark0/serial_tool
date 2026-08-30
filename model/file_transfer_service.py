@@ -1,10 +1,11 @@
 """
-파일 전송 서비스 모듈
+파일 전송 서비스 모듈.
 
-QRunnable 기반 파일 전송 엔진입니다. 진행/완료/에러는 FileTransferSignals로 직접 전달합니다.
+QRunnable 기반 파일 전송 엔진입니다. 진행/완료/에러는 FileTransferSignals로 직접
+전달하고, backpressure/baudrate 대기는 cancel 요청으로 즉시 깨울 수 있습니다.
 """
 import os
-import time
+from threading import Event
 
 from PyQt5.QtCore import QObject, QRunnable, pyqtSignal
 
@@ -35,37 +36,49 @@ class FileTransferService(QRunnable):
         self.config = config
         self.port_name = config.port
         self.signals = FileTransferSignals()
-        self._is_cancelled = False
+        self._cancel_event = Event()
 
         self.chunk_size = 4096 if self.config.baudrate > 115200 else 1024
         self.queue_threshold = 50
 
+    @property
+    def is_cancelled(self) -> bool:
+        return self._cancel_event.is_set()
+
     def cancel(self) -> None:
-        self._is_cancelled = True
+        """전송 취소를 요청하고 현재 대기 중인 wait를 즉시 깨웁니다."""
+        self._cancel_event.set()
+
+    def _wait_or_cancel(self, seconds: float) -> bool:
+        """
+        지정 시간까지 기다리되 cancel되면 즉시 반환합니다.
+
+        Returns:
+            bool: cancel 요청으로 깨어났으면 True.
+        """
+        return self._cancel_event.wait(max(0.0, seconds))
 
     def run(self) -> None:
         try:
             self.connection_controller.register_file_transfer(self.port_name, self)
 
             if not os.path.exists(self.file_path):
-                msg = f"File not found: {self.file_path}"
-                self._emit_failure(msg)
+                self._emit_failure(f"File not found: {self.file_path}")
                 return
 
             total_size = os.path.getsize(self.file_path)
             sent_bytes = 0
 
             with open(self.file_path, "rb") as file_obj:
-                while not self._is_cancelled:
+                while not self.is_cancelled:
                     while (
                         self.connection_controller.get_write_queue_size(self.port_name)
                         > self.queue_threshold
                     ):
-                        time.sleep(FILE_TRANSFER_BACKPRESSURE_WAIT_S)
-                        if self._is_cancelled:
+                        if self._wait_or_cancel(FILE_TRANSFER_BACKPRESSURE_WAIT_S):
                             break
 
-                    if self._is_cancelled:
+                    if self.is_cancelled:
                         break
 
                     chunk = file_obj.read(self.chunk_size)
@@ -94,18 +107,19 @@ class FileTransferService(QRunnable):
                         SerialFlowControl.RTS_CTS.value,
                         SerialFlowControl.XON_XOFF.value,
                     ):
-                        wait_time = (len(chunk) * 10) / self.config.baudrate
-                        time.sleep(wait_time)
+                        baudrate = max(1, self.config.baudrate)
+                        wait_time = (len(chunk) * 10) / baudrate
+                        if self._wait_or_cancel(wait_time):
+                            break
 
-            if self._is_cancelled:
+            if self.is_cancelled:
                 self._emit_failure("Transfer cancelled by user.")
                 return
 
             while self.connection_controller.get_write_queue_size(self.port_name) > 0:
-                if self._is_cancelled:
+                if self._wait_or_cancel(FILE_TRANSFER_BACKPRESSURE_WAIT_S):
                     self._emit_failure("Transfer cancelled by user.")
                     return
-                time.sleep(FILE_TRANSFER_BACKPRESSURE_WAIT_S)
 
             self.signals.transfer_completed.emit(
                 FileCompletionEvent(
