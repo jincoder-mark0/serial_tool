@@ -56,6 +56,16 @@ def test_bootstrapper_restores_view_before_view_aware_presenters():
     assert restore < source.index("manual_control_presenter = ManualControlPresenter(")
 
 
+def test_main_presenter_requires_explicit_runtime_graph():
+    source = inspect.getsource(MainPresenter)
+    signature = inspect.signature(MainPresenter.__init__)
+
+    assert "ApplicationBootstrapper" not in source
+    assert "SettingsManager()" not in source
+    assert signature.parameters["settings_manager"].default is inspect.Parameter.empty
+    assert signature.parameters["components"].default is inspect.Parameter.empty
+
+
 def test_main_presenter_does_not_construct_concrete_runtime_components():
     source = inspect.getsource(MainPresenter)
 
@@ -82,13 +92,11 @@ def test_main_presenter_does_not_construct_concrete_runtime_components():
     ):
         assert constructor not in source
 
-    assert "ApplicationBootstrapper(" in source  # 남은 test compatibility fallback
-    assert "self._apply_components(runtime)" in source
+    assert "self._apply_components(components)" in source
     assert "self.lifecycle_manager = components.lifecycle_manager" in source
     assert "self.logging_coordinator = components.logging_coordinator" in source
     assert "self.shutdown_coordinator = components.shutdown_coordinator" in source
 
-    # 내부 lifecycle owner는 MainPresenter를 서비스 locator로 만들지 않도록 숨깁니다.
     for internal_owner in (
         "self.file_transfer_manager =",
         "self.port_scan_manager =",
