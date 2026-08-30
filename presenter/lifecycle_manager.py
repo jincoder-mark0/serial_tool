@@ -1,9 +1,11 @@
 """
-애플리케이션 생명주기 관리자 모듈
+애플리케이션 초기 상태 복원 지원 모듈
 
-MainPresenter의 초기화 순서를 분리하고 주입된 SettingsManager로 상태를 복원합니다.
+View 초기 상태, 수동 제어 복원 상태, 상태바 타이머 생성만 담당합니다.
+객체 생성/Presenter 배선 순서는 MainPresenter가 소유하며 이 클래스는 MainPresenter의
+private 메서드를 역호출하지 않습니다.
 """
-from typing import Any, Dict, TYPE_CHECKING
+from typing import Any, Callable, Dict
 
 from PyQt5.QtCore import QTimer
 
@@ -22,91 +24,79 @@ from common.dtos import FontConfig, MainWindowState, ManualControlState, SystemL
 from common.enums import LogLevel
 from core.logger import logger
 from core.settings_manager import SettingsManager
+from view.main_window import MainWindow
 from view.managers.language_manager import language_manager
-
-if TYPE_CHECKING:
-    from presenter.main_presenter import MainPresenter
 
 
 class AppLifecycleManager:
-    """애플리케이션 초기화 및 View 상태 복원을 관리합니다."""
+    """설정 기반 초기 View/Presenter 상태 복원을 담당합니다."""
 
-    def __init__(
-        self,
-        main_presenter: "MainPresenter",
-        settings_manager: SettingsManager,
-    ) -> None:
-        self.mp = main_presenter
-        self.view = main_presenter.view
+    def __init__(self, view: MainWindow, settings_manager: SettingsManager) -> None:
+        self.view = view
         self.settings_manager = settings_manager
 
-    def initialize_app(self) -> None:
-        logger.info("Starting application initialization sequence...")
-        self._init_settings_and_view()
-        self.mp._init_core_systems()
-        self.mp._init_sub_presenters()
-        self._restore_sub_presenter_states()
-        self.mp.connection_controller.data_received.connect(
-            self.mp.data_handler.on_fast_data_received
-        )
-        self.mp._connect_signals()
-        self._start_services()
-        logger.debug("Application initialization sequence completed.")
-
-    def _init_settings_and_view(self) -> None:
+    def initialize_view(self) -> None:
+        """설정 파일을 기준으로 MainWindow 초기 상태를 적용합니다."""
+        logger.info("Starting application view initialization...")
         if self.settings_manager.config_was_reset:
             reason = self.settings_manager.reset_reason
             self.view.show_alert_message(
                 language_manager.get_text("lifecycle_title_settings_reset"),
                 language_manager.get_text("lifecycle_msg_settings_reset").format(reason),
             )
-        self._initialize_view_from_settings()
 
-    def _initialize_view_from_settings(self) -> None:
         window_state, font_config = self._create_initial_states(
             self.settings_manager.get_all_settings()
         )
         self.view.apply_state(window_state, font_config)
 
-    def _restore_sub_presenter_states(self) -> None:
-        window_state, _ = self._create_initial_states(self.settings_manager.get_all_settings())
+    def create_manual_control_state(self) -> ManualControlState:
+        """저장된 설정에서 ManualControlState DTO를 생성합니다."""
+        window_state, _ = self._create_initial_states(
+            self.settings_manager.get_all_settings()
+        )
         manual_settings = window_state.left_section_state.get("manual_control", {}).get(
             "manual_control_widget", {}
         )
         defaults = DEFAULT_MANUAL_CONTROL_STATE["manual_control_widget"]
-        self.mp.manual_control_presenter.apply_state(
-            ManualControlState(
-                input_text=manual_settings.get("input_text", defaults["input_text"]),
-                hex_mode=manual_settings.get("hex_mode", defaults["hex_mode"]),
-                prefix_enabled=manual_settings.get("prefix_enabled", defaults["prefix_enabled"]),
-                suffix_enabled=manual_settings.get("suffix_enabled", defaults["suffix_enabled"]),
-                rts_enabled=manual_settings.get("rts_enabled", defaults["rts_enabled"]),
-                dtr_enabled=manual_settings.get("dtr_enabled", defaults["dtr_enabled"]),
-                local_echo_enabled=manual_settings.get(
-                    "local_echo_enabled", defaults["local_echo_enabled"]
-                ),
-                broadcast_enabled=manual_settings.get(
-                    "broadcast_enabled", defaults["broadcast_enabled"]
-                ),
-                auto_tx_enabled=manual_settings.get(
-                    "auto_tx_enabled", defaults["auto_tx_enabled"]
-                ),
-                auto_tx_interval_ms=manual_settings.get(
-                    "auto_tx_interval_ms", DEFAULT_MACRO_INTERVAL_MS
-                ),
-            )
+
+        return ManualControlState(
+            input_text=manual_settings.get("input_text", defaults["input_text"]),
+            hex_mode=manual_settings.get("hex_mode", defaults["hex_mode"]),
+            prefix_enabled=manual_settings.get("prefix_enabled", defaults["prefix_enabled"]),
+            suffix_enabled=manual_settings.get("suffix_enabled", defaults["suffix_enabled"]),
+            rts_enabled=manual_settings.get("rts_enabled", defaults["rts_enabled"]),
+            dtr_enabled=manual_settings.get("dtr_enabled", defaults["dtr_enabled"]),
+            local_echo_enabled=manual_settings.get(
+                "local_echo_enabled", defaults["local_echo_enabled"]
+            ),
+            broadcast_enabled=manual_settings.get(
+                "broadcast_enabled", defaults["broadcast_enabled"]
+            ),
+            auto_tx_enabled=manual_settings.get(
+                "auto_tx_enabled", defaults["auto_tx_enabled"]
+            ),
+            auto_tx_interval_ms=manual_settings.get(
+                "auto_tx_interval_ms", DEFAULT_MACRO_INTERVAL_MS
+            ),
         )
 
-    def _start_services(self) -> None:
-        self.mp.status_timer = QTimer()
-        self.mp.status_timer.timeout.connect(self.mp.update_status_bar)
-        self.mp.status_timer.start(STATUS_BAR_UPDATE_INTERVAL_MS)
+    def create_status_timer(self, callback: Callable[[], None]) -> QTimer:
+        """상태바 갱신용 QTimer를 생성하고 시작합니다."""
+        timer = QTimer()
+        timer.timeout.connect(callback)
+        timer.start(STATUS_BAR_UPDATE_INTERVAL_MS)
+        return timer
+
+    def log_initialized(self) -> None:
+        """초기화 완료 메시지를 View의 시스템 로그에 기록합니다."""
         self.view.log_system_message(
             SystemLogEvent(
                 message="Application initialized",
                 level=LogLevel.INFO.value,
             )
         )
+        logger.debug("Application initialization sequence completed.")
 
     def _create_initial_states(
         self, settings: Dict[str, Any]
