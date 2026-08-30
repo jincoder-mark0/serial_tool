@@ -1,15 +1,16 @@
 """
 매크로 실행의 cross-component 전송 조정자.
 
-MacroPresenter는 매크로 UI와 Runner 제어에 집중하고, MainPresenter는 전역 표시만
-담당합니다. 반복 실행 target snapshot, worker-thread send handler, 단일 Row send,
-대상 포트 종료 시 중단 정책은 이 coordinator가 소유합니다.
+반복 실행 target snapshot, worker-thread send handler, 단일 Row send, 대상 포트 종료 시
+중단 정책과 Macro 단일 전송의 Local Echo 여부를 이 coordinator가 소유합니다.
 """
 from typing import Optional
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
+from common.constants import ConfigKeys
 from common.dtos import MacroSendResult, ManualCommand, PortConnectionEvent
+from core.settings_manager import SettingsManager
 from model.command_transmission_service import CommandTransmissionService
 from model.connection_controller import ConnectionController
 from model.macro_runner import MacroRunner
@@ -28,12 +29,14 @@ class MacroExecutionCoordinator(QObject):
         connection_controller: ConnectionController,
         transmission_service: CommandTransmissionService,
         port_view: MainLeftSection,
+        settings_manager: SettingsManager,
     ) -> None:
         super().__init__()
         self._runner = runner
         self._connection_controller = connection_controller
         self._transmission_service = transmission_service
         self._port_view = port_view
+        self._settings = settings_manager
         self._target_port: Optional[str] = None
 
         # macro_started는 MacroRunner.start() 호출 thread(UI thread)에서 QThread 시작 전에
@@ -50,21 +53,15 @@ class MacroExecutionCoordinator(QObject):
         return self._target_port
 
     def _on_macro_started(self) -> None:
-        """반복 실행 시작 시 현재 포트를 UI thread에서 문자열로 snapshot합니다."""
         self._target_port = self._port_view.get_current_port_name() or None
 
     def _on_macro_finished(self) -> None:
         self._target_port = None
 
     def deliver_repeated_command(self, command: ManualCommand) -> MacroSendResult:
-        """
-        MacroRunner worker thread에서 View 접근 없이 snapshot target으로 전송합니다.
-        """
+        """Worker thread에서 View 접근 없이 snapshot target으로 전송합니다."""
         active_port = None if command.broadcast_enabled else self._target_port
-        result = self._transmission_service.send(
-            command,
-            active_port=active_port,
-        )
+        result = self._transmission_service.send(command, active_port=active_port)
         return MacroSendResult(
             success=result.success,
             message=result.message,
@@ -81,7 +78,11 @@ class MacroExecutionCoordinator(QObject):
         if not result.success:
             self._interrupt(result.message)
             return
-        if result.data:
+
+        if (
+            result.data
+            and self._settings.get(ConfigKeys.PORT_LOCAL_ECHO, False)
+        ):
             self.local_echo_requested.emit(result.data)
 
     def on_connection_closed(self, event: PortConnectionEvent) -> None:
@@ -100,6 +101,5 @@ class MacroExecutionCoordinator(QObject):
             self._interrupt("No active ports left. Macro stopped.")
 
     def _interrupt(self, message: str) -> None:
-        """Runner를 중지한 뒤 presentation 계층에 중단 사유를 알립니다."""
         self._runner.stop()
         self.execution_interrupted.emit(message)
