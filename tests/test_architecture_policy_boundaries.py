@@ -2,6 +2,7 @@
 import inspect
 
 from application_bootstrap import ApplicationBootstrapper
+from presenter.macro_execution_coordinator import MacroExecutionCoordinator
 from presenter.main_presenter import MainPresenter
 from presenter.manual_control_presenter import ManualControlPresenter
 from presenter.port_presenter import PortPresenter
@@ -23,13 +24,24 @@ def test_manual_control_enabled_policy_is_not_owned_by_view():
     assert "has_any_connection" in presenter_source
 
 
-def test_macro_port_lookup_does_not_depend_on_port_presenter():
-    started_source = inspect.getsource(MainPresenter.on_macro_started)
-    single_source = inspect.getsource(MainPresenter.on_macro_send_requested)
+def test_macro_transmission_policy_is_not_owned_by_main_presenter():
+    source = inspect.getsource(MainPresenter)
 
-    for source in (started_source, single_source):
-        assert "port_presenter.get_active_port_name" not in source
-        assert "view.port_view.get_current_port_name" in source
+    assert "_macro_target_port" not in source
+    assert "deliver_macro_command" not in source
+    assert "on_macro_send_requested" not in source
+    assert "set_send_handler" not in source
+    assert "send_requested.connect" not in source
+
+
+def test_macro_execution_coordinator_owns_target_snapshot_and_send_handler():
+    source = inspect.getsource(MacroExecutionCoordinator)
+
+    assert "_target_port" in source
+    assert "_port_view.get_current_port_name()" in source
+    assert "set_send_handler(self.deliver_repeated_command)" in source
+    assert "send_requested.connect(self.on_single_send_requested)" in source
+    assert "connection_closed.connect(self.on_connection_closed)" in source
 
 
 def test_manual_presenter_has_no_cross_presenter_or_view_callbacks():
@@ -46,6 +58,7 @@ def test_bootstrapper_wires_local_echo_signal_explicitly():
 
     assert "manual_control_presenter.local_echo_requested.connect" in source
     assert "self._view.append_local_echo_data" in source
+    assert "MacroExecutionCoordinator(" in source
 
 
 def test_shutdown_coordinator_does_not_depend_on_port_presenter():
