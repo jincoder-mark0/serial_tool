@@ -57,3 +57,18 @@ def test_controller_removes_parser_session_if_worker_factory_fails():
     assert not parser_manager.has_parser("COM9")
     assert len(errors) == 1
     assert "connection session" in errors[0].message.lower()
+
+
+def test_connection_closing_is_emitted_before_worker_stop():
+    controller = ConnectionController()
+    worker = MagicMock()
+    order = []
+    controller.workers["COM1"] = worker
+    controller.connection_configs["COM1"] = PortConfig(port="COM1")
+    controller.connection_closing.connect(lambda port: order.append(f"closing:{port}"))
+    worker.stop.side_effect = lambda: order.append("worker.stop")
+
+    controller.close_connection("COM1")
+
+    assert order[:2] == ["closing:COM1", "worker.stop"]
+    assert "COM1" not in controller.workers
