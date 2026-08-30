@@ -1,7 +1,7 @@
 # Extension Platform Plan
 
 > 우선순위: P3
-> 대상: Plugin, SPI/I2C, TCP/UDP, Packet Filter, Trigger, Annotation/Export
+> 대상: Plugin, SPI/I2C, Packet Filter, Trigger, Annotation/Export
 
 ---
 
@@ -81,9 +81,9 @@ PluginLoader는 composition root에서 생성하고 strong reference를 유지�
 
 ---
 
-# 3. Transport Capability Model
+# 3. SPI / I2C Capability Model
 
-SPI/I2C/TCP/UDP를 추가하기 전에 Serial 중심 PortConfig가 모든 protocol에 적합한지 재검토한다.
+SPI/I2C를 추가하기 전에 Serial 중심 `PortConfig`와 `BaseTransport`가 transaction protocol에 적합한지 재검토한다.
 
 ## 3.1 문제
 
@@ -94,25 +94,17 @@ Serial:
 - parity
 - stopbits
 - flow control
-
-TCP:
-
-- host
-- port
-- connect timeout
-
-UDP:
-
-- local/remote endpoint
-- connectionless semantics
+- continuous stream semantics
 
 SPI/I2C:
 
 - bus/device/address
 - clock/speed
 - mode
+- transaction/request-response semantics
+- backend별 capability 차이
 
-모든 값을 하나의 거대한 PortConfig에 optional field로 넣는 것은 피한다.
+모든 값을 하나의 거대한 `PortConfig`에 optional field로 넣는 것은 피한다.
 
 ## 3.2 권장 방향
 
@@ -121,13 +113,11 @@ SPI/I2C:
 ```text
 ConnectionConfig
   + SerialConfig
-  + TcpConfig
-  + UdpConfig
   + SpiConfig
   + I2cConfig
 ```
 
-기존 PortConfig migration 비용을 검토해 점진적으로 도입한다.
+기존 `PortConfig` migration 비용을 검토해 점진적으로 도입한다.
 
 ---
 
@@ -150,7 +140,7 @@ backend 없이 abstract transport만 먼저 만들지 않는다.
 
 Serial처럼 continuous RX stream이 아닐 수 있다.
 
-따라서 `BaseTransport.read/in_waiting/write` contract가 transaction protocol에 적합한지 검토해야 한다.
+따라서 `BaseTransport.read/in_waiting/write` contract가 transaction protocol에 적합한지 먼저 검토한다.
 
 필요하면:
 
@@ -161,28 +151,28 @@ TransactionTransport
 
 분리를 고려한다.
 
+## 4.3 구현 순서
+
+1. 실제 backend 선정
+2. backend capability 표 작성
+3. `SpiConfig` / `I2cConfig` DTO 정의
+4. 기존 `BaseTransport` 재사용 가능성 평가
+5. 필요하면 transaction-oriented interface 분리
+6. `ConnectionSessionFactory`에 protocol 생성 경로 추가
+7. UI에서 Serial-only 설정과 SPI/I2C 설정을 명확히 분리
+8. Mock backend + 실제 adapter 검증
+
+## 4.4 완료 조건
+
+- Serial 안정 경로 회귀 0
+- Serial optional field soup를 만들지 않음
+- backend 미존재/분리/timeout 오류가 명확히 surface됨
+- transaction cancellation/shutdown path 정의
+- 실제 지원 backend 최소 1개 검증
+
 ---
 
-# 5. TCP / UDP Session
-
-## TCP
-
-- connect/disconnect lifecycle
-- remote close propagation
-- socket timeout
-- reconnect policy는 초기 scope에서 제외 가능
-
-## UDP
-
-- connectionless receive
-- peer metadata
-- broadcast/multicast 여부
-
-현재 `connection_name: str`만으로 peer identity가 충분한지 검토한다.
-
----
-
-# 6. Structured Packet Filter
+# 5. Structured Packet Filter
 
 ## 목표
 
@@ -210,7 +200,7 @@ Filter 후보:
 
 ---
 
-# 7. Trigger-Based Transmission
+# 6. Trigger-Based Transmission
 
 ## 위험
 
@@ -237,7 +227,7 @@ TriggerEngine이 ConnectionController를 직접 호출하지 않는다.
 
 ---
 
-# 8. Packet Annotation / Selected-Range Export
+# 7. Packet Annotation / Selected-Range Export
 
 ## Annotation
 
@@ -265,7 +255,7 @@ export 입력은 View selection을 DTO snapshot으로 변환해 Service에 넘�
 
 ---
 
-# 9. Plugin과 Built-in Feature 경계
+# 8. Plugin과 Built-in Feature 경계
 
 모든 새 기능을 Plugin으로 만들 필요는 없다.
 
@@ -286,7 +276,7 @@ Plugin 적합:
 
 ---
 
-# 10. 단계별 Delivery
+# 9. 단계별 Delivery
 
 ### Phase 1 — Plugin Foundation
 
@@ -295,36 +285,37 @@ Plugin 적합:
 - failure isolation
 - example plugin
 
-### Phase 2 — Transport Config Refactor
+### Phase 2 — SPI/I2C Backend & Config Decision
 
-- capability/config model
-- Serial compatibility
+- 실제 backend 선정
+- capability 표 작성
+- protocol-specific config model
+- Serial compatibility 영향 분석
 
-### Phase 3 — TCP first
+### Phase 3 — Transport Contract Decision
 
-두 번째 stream transport로 abstraction 검증.
+- `BaseTransport` 재사용 가능성 검증
+- 필요 시 `StreamTransport` / `TransactionTransport` 분리
+- ConnectionSessionFactory ownership 유지
 
-SPI/I2C보다 TCP를 먼저 권장한다. Serial과 stream semantics가 유사해 `BaseTransport` abstraction의 실제 재사용성을 검증하기 쉽다.
+### Phase 4 — SPI/I2C Implementation
 
-### Phase 4 — UDP
+- 최소 1개 실제 backend 지원
+- Mock backend 기반 unit/integration test
+- 실제 adapter smoke test
 
-connectionless semantics 반영.
-
-### Phase 5 — SPI/I2C
-
-transaction transport abstraction 필요 여부 최종 결정.
-
-### Phase 6 — Filter / Trigger / Annotation / Export
+### Phase 5 — Filter / Trigger / Annotation / Export
 
 Packet DTO와 transmission service가 안정된 상태에서 추가.
 
 ---
 
-# 11. Acceptance Criteria
+# 10. Acceptance Criteria
 
 - 기존 Serial 기능 회귀 0
 - Plugin failure가 app startup/runtime을 치명적으로 종료하지 않음
 - protocol-specific config가 UI/Model에 optional field soup를 만들지 않음
+- SPI/I2C backend 및 transaction lifecycle이 명확함
 - Trigger infinite loop 방지 테스트 존재
 - export background I/O lifecycle 명확
 - architecture contract / full pytest / CI Green
