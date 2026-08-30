@@ -2,7 +2,8 @@
 import inspect
 from unittest.mock import MagicMock, patch
 
-from common.dtos import FileCompletionEvent, FileProgressState, PortConfig
+from common.dtos import FileCompletionEvent, FileProgressState, PortConfig, PortConnectionEvent
+from model.connection_controller import ConnectionController
 from model.file_transfer_manager import FileTransferManager
 from presenter.file_presenter import FilePresenter
 
@@ -22,6 +23,15 @@ def test_file_presenter_does_not_create_or_schedule_transfer_engine():
     assert "ConnectionController" not in source
     assert "transfer_manager.start_transfer" in source
     assert "transfer_manager.cancel_transfer" in source
+
+
+def test_connection_controller_does_not_know_file_transfer_feature():
+    source = inspect.getsource(ConnectionController)
+
+    assert "FileTransferService" not in source
+    assert "register_file_transfer" not in source
+    assert "unregister_file_transfer" not in source
+    assert "_active_file_transfers" not in source
 
 
 def test_manager_rejects_missing_target_before_service_creation():
@@ -70,6 +80,7 @@ def test_manager_creates_and_schedules_service_once():
     service_cls.assert_called_once_with(controller, "a.bin", config)
     thread_pool.start.assert_called_once_with(service)
     assert manager.is_active is True
+    assert manager._active_port == "COM1"
 
     assert manager.start_transfer("b.bin", "COM1") is False
     assert service_cls.call_count == 1
@@ -86,11 +97,36 @@ def test_cancel_is_delegated_to_active_service():
     service.cancel.assert_called_once()
 
 
+def test_target_connection_close_cancels_active_transfer():
+    controller = _controller()
+    manager = FileTransferManager(controller, MagicMock())
+    service = MagicMock()
+    manager._active_service = service
+    manager._active_port = "COM1"
+
+    manager._on_connection_closed(PortConnectionEvent(port="COM1", state="closed"))
+
+    service.cancel.assert_called_once()
+
+
+def test_other_connection_close_does_not_cancel_active_transfer():
+    controller = _controller()
+    manager = FileTransferManager(controller, MagicMock())
+    service = MagicMock()
+    manager._active_service = service
+    manager._active_port = "COM1"
+
+    manager._on_connection_closed(PortConnectionEvent(port="COM2", state="closed"))
+
+    service.cancel.assert_not_called()
+
+
 def test_shutdown_cancels_then_waits_for_owned_pool():
     thread_pool = MagicMock()
     manager = FileTransferManager(_controller(), thread_pool)
     service = MagicMock()
     manager._active_service = service
+    manager._active_port = "COM1"
     order = []
     service.cancel.side_effect = lambda: order.append("cancel")
     thread_pool.waitForDone.side_effect = lambda: order.append("wait")
@@ -99,12 +135,12 @@ def test_shutdown_cancels_then_waits_for_owned_pool():
 
     assert order == ["cancel", "wait"]
     assert manager.is_active is False
+    assert manager._active_port is None
 
 
 def test_default_manager_owns_a_non_global_thread_pool(qapp):
     manager = FileTransferManager(_controller())
 
-    # 전용 pool이어야 shutdown()이 다른 기능의 QRunnable을 기다리지 않습니다.
     from PyQt5.QtCore import QThreadPool
 
     assert manager._thread_pool is not QThreadPool.globalInstance()
@@ -113,6 +149,7 @@ def test_default_manager_owns_a_non_global_thread_pool(qapp):
 def test_completion_releases_service_before_reemitting():
     manager = FileTransferManager(_controller(), MagicMock())
     manager._active_service = MagicMock()
+    manager._active_port = "COM1"
     observed = []
     manager.transfer_completed.connect(
         lambda event: observed.append((manager.is_active, event.success))
@@ -123,6 +160,7 @@ def test_completion_releases_service_before_reemitting():
     )
 
     assert observed == [(False, True)]
+    assert manager._active_port is None
 
 
 def test_progress_speed_and_eta_are_calculated_by_manager():
