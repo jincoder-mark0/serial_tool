@@ -1,10 +1,10 @@
 """
 연결 컨트롤러 모듈.
 
-다중 연결 worker/transport 생명주기와 송수신 요청을 관리합니다. Packet parser 세션의
-생성/registry/feed/flush는 PacketParserManager에 위임합니다.
+다중 연결 worker/transport 생명주기와 송수신 요청을 관리합니다. Packet parser 세션은
+PacketParserManager에 위임하고, 파일 전송 같은 상위 기능은 Controller가 알지 않습니다.
 """
-from typing import Dict, List, Optional, TYPE_CHECKING
+from typing import Dict, List, Optional
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
@@ -16,9 +16,6 @@ from core.transport.loopback_transport import LoopbackTransport
 from core.transport.serial_transport import SerialTransport
 from model.connection_worker import ConnectionWorker
 from model.packet_parser_manager import PacketParserManager
-
-if TYPE_CHECKING:
-    from model.file_transfer_service import FileTransferService
 
 
 class ConnectionController(QObject):
@@ -39,20 +36,6 @@ class ConnectionController(QObject):
         self.workers: Dict[str, ConnectionWorker] = {}
         self.connection_configs: Dict[str, PortConfig] = {}
         self.packet_parser_manager = packet_parser_manager or PacketParserManager()
-        self._active_file_transfers: Dict[str, "FileTransferService"] = {}
-
-    def register_file_transfer(
-        self,
-        port_name: str,
-        file_transfer_service: "FileTransferService",
-    ) -> None:
-        self._active_file_transfers[port_name] = file_transfer_service
-        logger.debug(f"File transfer registered for port {port_name}")
-
-    def unregister_file_transfer(self, port_name: str) -> None:
-        if port_name in self._active_file_transfers:
-            del self._active_file_transfers[port_name]
-            logger.debug(f"File transfer unregistered for port {port_name}")
 
     @property
     def has_active_connection(self) -> bool:
@@ -128,14 +111,6 @@ class ConnectionController(QObject):
 
     def close_connection(self, name: Optional[str] = None) -> None:
         if name:
-            transfer_engine = self._active_file_transfers.get(name)
-            if transfer_engine:
-                logger.warning(
-                    f"Closing port {name} while file transfer is active. "
-                    "Cancelling transfer..."
-                )
-                transfer_engine.cancel()
-
             worker = self.workers.get(name)
             if worker:
                 worker.stop()
