@@ -1,12 +1,14 @@
 """
 MainPresenter 초기화/배선 회귀 테스트.
 
-현재 direct-signal topology와 composition 계약을 검증합니다.
+Production과 동일하게 ApplicationBootstrapper가 runtime component를 조립하고
+MainPresenter에는 완성된 component graph를 명시적으로 주입합니다.
 """
 from unittest.mock import MagicMock, patch
 
 import pytest
 
+from application_bootstrap import ApplicationBootstrapper
 from presenter.main_presenter import MainPresenter
 from view.panels.manual_control_panel import ManualControlPanel
 from view.panels.packet_panel import PacketPanel
@@ -41,24 +43,29 @@ def mock_main_window():
     view.shortcut_disconnect_requested = MagicMock()
     view.shortcut_clear_requested = MagicMock()
     view.file_transfer_dialog_opened = MagicMock()
-    view.port_tab_added = MagicMock()
     view.get_port_tabs_count.return_value = 0
     return view
 
 
+def _build_presenter(view, settings):
+    components = ApplicationBootstrapper(view, settings).build()
+    return MainPresenter(
+        view,
+        settings_manager=settings,
+        components=components,
+    )
+
+
 class TestMainPresenterInit:
-    def test_component_creation(self, mock_main_window, mock_settings_manager):
-        presenter = MainPresenter(
-            mock_main_window,
-            settings_manager=mock_settings_manager,
-        )
+    def test_component_injection(self, mock_main_window, mock_settings_manager):
+        presenter = _build_presenter(mock_main_window, mock_settings_manager)
 
         assert presenter.connection_controller is not None
-        assert presenter.command_transmission_service is not None
         assert presenter.file_transfer_manager is not None
         assert presenter.port_scan_manager is not None
         assert presenter.macro_runner is not None
         assert presenter.macro_script_manager is not None
+        assert presenter.macro_execution_coordinator is not None
         assert presenter.traffic_monitor is not None
         assert presenter.data_handler is not None
         assert not hasattr(presenter, "event_router")
@@ -74,6 +81,11 @@ class TestMainPresenterInit:
     def test_lifecycle_has_no_reverse_main_presenter_orchestration(
         self, mock_main_window, mock_settings_manager
     ):
+        components = ApplicationBootstrapper(
+            mock_main_window,
+            mock_settings_manager,
+        ).build()
+
         with patch("presenter.main_presenter.AppLifecycleManager") as lifecycle_cls:
             lifecycle = lifecycle_cls.return_value
             lifecycle.create_manual_control_state.return_value = MagicMock()
@@ -82,6 +94,7 @@ class TestMainPresenterInit:
             MainPresenter(
                 mock_main_window,
                 settings_manager=mock_settings_manager,
+                components=components,
             )
 
         lifecycle_cls.assert_called_once_with(
@@ -95,10 +108,7 @@ class TestMainPresenterInit:
         assert not hasattr(lifecycle, "initialize_app") or not lifecycle.initialize_app.called
 
     def test_signal_connections(self, mock_main_window, mock_settings_manager):
-        presenter = MainPresenter(
-            mock_main_window,
-            settings_manager=mock_settings_manager,
-        )
+        presenter = _build_presenter(mock_main_window, mock_settings_manager)
 
         mock_main_window.close_requested.connect.assert_called()
         mock_main_window.settings_save_requested.connect.assert_called()
@@ -113,10 +123,7 @@ class TestMainPresenterInit:
 
     def test_data_handler_init(self, mock_main_window, mock_settings_manager):
         with patch("presenter.data_handler.QTimer") as timer_cls:
-            presenter = MainPresenter(
-                mock_main_window,
-                settings_manager=mock_settings_manager,
-            )
+            presenter = _build_presenter(mock_main_window, mock_settings_manager)
 
         assert presenter.data_handler.view == mock_main_window
         timer_cls.return_value.start.assert_called()
