@@ -3,7 +3,7 @@
 > 기준일: 2026-08-30  
 > 기준 브랜치: `refactor/presenter-view-boundary`  
 > 비교 기준: `main` (`c2963eea7fdab64dfd40b1d5bcd4cbfc006ecb92`)  
-> GitHub compare 기준: **265 commits ahead / 0 behind**
+> GitHub compare 기준: **277 commits ahead / 0 behind**
 
 ---
 
@@ -28,7 +28,7 @@
 
 ## 2. `main` 대비 변경 규모 요약
 
-GitHub compare 기준 현재 브랜치는 `main`보다 **265 commits ahead, 0 behind**이다.
+GitHub compare 기준 현재 브랜치는 `main`보다 **277 commits ahead, 0 behind**이다.
 
 변경량이 큰 주요 파일은 다음과 같다.
 
@@ -1039,7 +1039,7 @@ logger를 먼저 닫아 테스트를 통과시키는 수정은 금지한다.
 
 ## 15. 브랜치 history
 
-현재 브랜치는 `main` 대비 265 commits ahead이다.
+현재 브랜치는 `main` 대비 **277 commits ahead / 0 behind**이다.
 
 리팩토링 과정의 intermediate/revert/contract-test 커밋이 많이 포함되어 있으므로 PR merge 전 history 정리가 필요하다.
 
