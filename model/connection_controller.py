@@ -2,16 +2,15 @@
 연결 컨트롤러 모듈
 
 개별 연결 세션의 생명주기, Parser, Worker 및 데이터 흐름을 관리합니다.
-계층 간 이벤트는 DTO로 전달하며 연결 상태 문자열은 common enum을 정본으로 사용합니다.
+계층 간 이벤트는 DTO를 담은 Qt Signal로 직접 전달합니다.
 """
 from typing import Any, Dict, List, Optional, TYPE_CHECKING
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
-from common.constants import EventTopics, LOOPBACK_PORT_NAME
+from common.constants import LOOPBACK_PORT_NAME
 from common.dtos import PacketEvent, PortConfig, PortConnectionEvent, PortDataEvent, PortErrorEvent
 from common.enums import ConnectionEventState, ConnectionProtocol, ParserType
-from core.event_bus import event_bus
 from core.logger import logger
 from core.transport.loopback_transport import LoopbackTransport
 from core.transport.serial_transport import SerialTransport
@@ -38,16 +37,6 @@ class ConnectionController(QObject):
         self.parsers: Dict[str, PacketParser] = {}
         self.connection_configs: Dict[str, PortConfig] = {}
         self._active_file_transfers: Dict[str, "FileTransferService"] = {}
-        self.event_bus = event_bus
-        self._connect_signals_to_eventbus()
-
-    def _connect_signals_to_eventbus(self) -> None:
-        self.connection_opened.connect(lambda e: self.event_bus.publish(EventTopics.PORT_OPENED, e))
-        self.connection_closed.connect(lambda e: self.event_bus.publish(EventTopics.PORT_CLOSED, e))
-        self.error_occurred.connect(lambda e: self.event_bus.publish(EventTopics.PORT_ERROR, e))
-        self.data_received.connect(lambda e: self.event_bus.publish(EventTopics.PORT_DATA_RECEIVED, e))
-        self.data_sent.connect(lambda e: self.event_bus.publish(EventTopics.PORT_DATA_SENT, e))
-        self.packet_received.connect(lambda e: self.event_bus.publish(EventTopics.PORT_PACKET_RECEIVED, e))
 
     def register_file_transfer(self, port_name: str, file_transfer_service: "FileTransferService") -> None:
         self._active_file_transfers[port_name] = file_transfer_service
@@ -140,11 +129,10 @@ class ConnectionController(QObject):
         was_registered = name in self.workers
         self.workers.pop(name, None)
 
-        parser = self.parsers.get(name)
+        parser = self.parsers.pop(name, None)
         if parser:
             for packet in parser.flush():
                 self.packet_received.emit(PacketEvent(port=name, packet=packet))
-            self.parsers.pop(name, None)
 
         self.connection_configs.pop(name, None)
         return was_registered
@@ -189,6 +177,7 @@ class ConnectionController(QObject):
 
     def _handle_data_received(self, name: str, data: bytes) -> None:
         self.data_received.emit(PortDataEvent(port=name, data=data))
+
         parser = self.parsers.get(name)
         if parser:
             for packet in parser.parse(data):
