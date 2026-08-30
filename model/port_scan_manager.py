@@ -45,18 +45,34 @@ class PortScanManager(QObject):
         worker.start()
         return True
 
-    def stop(self, timeout_ms: int = 2000) -> None:
-        """실행 중인 단명 scan worker가 끝날 때까지 기다리고 참조를 정리합니다."""
+    def stop(self, timeout_ms: Optional[int] = None) -> bool:
+        """
+        실행 중인 scan worker 종료를 기다립니다.
+
+        앱 shutdown의 기본 호출(`stop()`)은 timeout 없이 완료를 기다려 실행 중인
+        QThread가 QObject 파괴 시점까지 남지 않도록 합니다. 진단/테스트에서만
+        명시적 timeout을 줄 수 있습니다.
+
+        Returns:
+            bool: worker가 완전히 종료됐거나 처음부터 없었으면 True.
+        """
         worker = self._worker
         if worker is None:
-            return
+            return True
 
         if worker.isRunning():
             logger.debug("Waiting for pending port scan to finish before shutdown...")
-            worker.wait(timeout_ms)
+            if timeout_ms is None:
+                worker.wait()
+            else:
+                worker.wait(timeout_ms)
 
-        if not worker.isRunning():
-            self._worker = None
+        if worker.isRunning():
+            logger.warning("Port scan worker did not finish before the requested timeout.")
+            return False
+
+        self._worker = None
+        return True
 
     def _on_ports_found(self, port_list) -> None:
         """worker 결과를 manager public signal로 중계합니다."""
