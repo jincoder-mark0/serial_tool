@@ -30,7 +30,7 @@
         ↓
 확장 point 안정화
         ↓
-Plugin / Transport 확장
+Plugin / SPI-I2C 확장
         ↓
 Packet / Trigger 고급 기능
 ```
@@ -39,7 +39,7 @@ Packet / Trigger 고급 기능
 
 - 성능 문제를 구조 개편과 동시에 다루면 원인 분리가 어려워진다.
 - 구조 cleanup을 Plugin system 이후에 하면 public extension API가 내부 debt에 고정된다.
-- Transport 확장은 Serial contract와 connection/session ownership이 충분히 안정된 뒤 진행해야 한다.
+- SPI/I2C는 Serial과 달리 transaction semantics가 강하므로 backend와 capability model을 먼저 확정한 뒤 abstraction을 설계해야 한다.
 
 ---
 
@@ -90,19 +90,25 @@ Packet / Trigger 고급 기능
 - plugin load 실패가 application startup을 깨지 않음
 - plugin disable/unload 또는 최소한 restart-safe failure policy 정의
 
-### Wave D — Transport Expansion
+### Wave D — SPI/I2C Expansion
 
 대상:
 
-- SPI/I2C Transport
-- TCP/UDP session
+- SPI Transport
+- I2C Transport
+
+선행 조건:
+
+- 실제 사용할 backend 선정
+- stream/transaction capability 차이 명시
+- protocol-specific config DTO 방향 확정
 
 완료 조건:
 
-- `BaseTransport` contract 재검토
+- `BaseTransport` contract를 억지로 확장하지 않음
+- 필요하면 `StreamTransport` / `TransactionTransport` 분리
 - ConnectionSessionFactory가 protocol별 생성 책임 유지
 - Serial-only UI assumption 제거
-- transport별 capability 차이를 명시적으로 표현
 
 ### Wave E — Packet / Automation Features
 
@@ -160,9 +166,9 @@ targeted tests
 다음 조건이면 구현을 중단하거나 scope를 줄인다.
 
 - 성능 개선이 측정 오차 수준
-- API abstraction이 실제 두 번째 구현 없이 지나치게 일반화됨
+- API abstraction이 실제 구현 요구보다 지나치게 일반화됨
 - Plugin system 때문에 core ownership이 불명확해짐
-- Transport 공통화를 위해 Serial의 안정 경로를 훼손해야 함
+- SPI/I2C 공통화를 위해 Serial의 안정 경로를 훼손해야 함
 - UI 고급 기능이 RX Fast Path latency를 유의미하게 증가시킴
 
 ---
@@ -183,8 +189,8 @@ P2 Architecture
 
 P3 Extension
   8. Plugin foundation
-  9. SPI/I2C capability model
- 10. TCP/UDP session model
+  9. SPI/I2C backend 및 capability model 결정
+ 10. SPI/I2C Transport 구현
  11. packet filter / trigger / annotation / export
 ```
 
