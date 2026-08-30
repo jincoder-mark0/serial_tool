@@ -20,8 +20,8 @@
 """
 from typing import Optional, Dict, Any, Callable, List
 
-from PyQt5.QtWidgets import QWidget, QVBoxLayout
-from PyQt5.QtCore import pyqtSignal
+from PyQt5.QtWidgets import QWidget, QVBoxLayout, QMessageBox
+from PyQt5.QtCore import pyqtSignal, QTimer
 
 from view.managers.language_manager import language_manager
 from view.panels.port_panel import PortPanel
@@ -241,6 +241,23 @@ class MainLeftSection(QWidget):
             event (SystemLogEvent): 시스템 로그 이벤트 DTO.
         """
         self._system_log_widget.append_log(event)
+
+    def show_error_message(self, title: str, message: str) -> None:
+        """
+        사용자에게 오류 메시지를 비재진입 방식으로 표시합니다.
+
+        WHY:
+            - Presenter가 QMessageBox/QWidget parent 같은 QtWidgets 구현 세부사항을
+              알지 않도록 View 경계 안에 모달 표시 책임을 둡니다.
+            - 포트 워커 정리 도중 즉시 모달을 열면 중첩 이벤트 루프가 실행되어
+              정리 중인 객체가 파괴될 수 있으므로(S-082), 현재 호출 스택이
+              종료된 뒤 다이얼로그를 표시합니다.
+
+        Args:
+            title (str): 다이얼로그 제목.
+            message (str): 사용자에게 표시할 오류 상세 메시지.
+        """
+        QTimer.singleShot(0, lambda: QMessageBox.critical(self, title, message))
 
     def set_system_log_color_rules(self, rules: List[ColorRule]) -> None:
         """
