@@ -139,6 +139,8 @@ class MainPresenter(QObject):
 
         self.view.settings_save_requested.connect(self.on_settings_change_requested)
         self.view.font_settings_changed.connect(self.on_font_settings_changed)
+        self.view.theme_change_requested.connect(self.on_theme_change_requested)
+        self.view.language_change_requested.connect(self.on_language_change_requested)
         self.view.close_requested.connect(self.on_close_requested)
         self.view.preferences_requested.connect(self.on_preferences_requested)
         self.view.shortcut_connect_requested.connect(self.on_shortcut_connect)
@@ -197,6 +199,19 @@ class MainPresenter(QObject):
         )
         self.view.show_status_message(settings_updated_msg, 2000)
         self._log_info(settings_updated_msg)
+
+    def on_theme_change_requested(self, theme_name: str) -> None:
+        """메뉴/단축 UI의 테마 변경 요청을 저장하고 View에 적용합니다."""
+        normalized = theme_name.lower()
+        self.settings_manager.set(ConfigKeys.THEME, normalized)
+        self.settings_manager.save_settings()
+        self.view.switch_theme(normalized)
+
+    def on_language_change_requested(self, language_code: str) -> None:
+        """메뉴의 언어 변경 요청을 저장한 뒤 LanguageManager에 적용합니다."""
+        self.settings_manager.set(ConfigKeys.LANGUAGE, language_code)
+        self.settings_manager.save_settings()
+        language_manager.set_language(language_code)
 
     def on_font_settings_changed(self, font_config: FontConfig) -> None:
         settings = self.settings_manager
