@@ -2,7 +2,7 @@
 애플리케이션 최상위 Presenter.
 
 하위 Presenter/Service를 조율하고 전역 UI 상태를 연결합니다. 초기 상태 복원,
-명령 전송, 로그 저장, 종료 시퀀스 같은 독립 유스케이스는 전용 객체에 위임합니다.
+명령 전송, 로그 저장, 파일 전송, 종료 시퀀스 같은 독립 유스케이스는 전용 객체에 위임합니다.
 """
 from typing import Optional
 
@@ -28,6 +28,7 @@ from core.logger import logger
 from core.settings_manager import SettingsManager
 from model.command_transmission_service import CommandTransmissionService
 from model.connection_controller import ConnectionController
+from model.file_transfer_manager import FileTransferManager
 from model.macro_runner import MacroRunner
 from view.main_window import MainWindow
 from view.managers.color_manager import color_manager
@@ -121,6 +122,7 @@ class MainPresenter(QObject):
             self.connection_controller,
             self.settings_manager,
         )
+        self.file_transfer_manager = FileTransferManager(self.connection_controller)
         self.macro_runner = MacroRunner()
         self.data_handler = DataTrafficHandler(self.view)
 
@@ -132,7 +134,7 @@ class MainPresenter(QObject):
             self.settings_manager,
         )
         self.macro_presenter = MacroPresenter(self.view.macro_view, self.macro_runner)
-        self.file_presenter = FilePresenter(self.connection_controller)
+        self.file_presenter = FilePresenter(self.file_transfer_manager)
         self.packet_presenter = PacketPresenter(
             self.view.packet_view,
             self.connection_controller,
