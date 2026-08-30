@@ -142,6 +142,18 @@ class ApplicationBootstrapper:
         macro_execution_coordinator.local_echo_requested.connect(
             self._view.append_local_echo_data
         )
+        self._view.shortcut_connect_requested.connect(
+            port_presenter.connect_current_port
+        )
+        self._view.shortcut_disconnect_requested.connect(
+            port_presenter.disconnect_current_port
+        )
+        self._view.shortcut_clear_requested.connect(
+            port_presenter.clear_log_current_port
+        )
+        self._view.file_transfer_dialog_opened.connect(
+            file_presenter.on_file_transfer_dialog_opened
+        )
         settings_coordinator.info_requested.connect(
             logging_coordinator.info_requested.emit
         )
@@ -168,7 +180,6 @@ class ApplicationBootstrapper:
             macro_execution_coordinator=macro_execution_coordinator,
             logging_coordinator=logging_coordinator,
             shutdown_coordinator=shutdown_coordinator,
-            port_presenter=port_presenter,
             file_presenter=file_presenter,
             manual_control_presenter=manual_control_presenter,
         )
