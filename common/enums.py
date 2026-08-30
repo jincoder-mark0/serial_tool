@@ -168,6 +168,17 @@ class NewlineMode(Enum):
     CR = "CR"      # \r
     CRLF = "CRLF"  # \r\n
 
+class ByteOrder(Enum):
+    """
+    다중 바이트 정수 필드의 바이트 순서.
+
+    LengthFieldParser, Preferences 및 체크섬 해석처럼 계층을 넘나드는 값은
+    문자열 "big"/"little"을 각 파일에서 직접 정의하지 않고 이 enum을 사용합니다.
+    """
+    BIG = "big"
+    LITTLE = "little"
+
+
 class ThemeType(Enum):
     """
     테마 타입
@@ -182,6 +193,13 @@ class ThemeType(Enum):
     LIGHT = "light"
     DRACULA = "dracula"
     CLASSIC = "classic"
+
+
+class LanguageType(Enum):
+    """애플리케이션 기본 제공 언어 코드."""
+    ENGLISH = "en"
+    KOREAN = "ko"
+
 
 class FileStatus(Enum):
     """
