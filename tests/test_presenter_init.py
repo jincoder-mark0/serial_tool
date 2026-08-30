@@ -60,17 +60,17 @@ class TestMainPresenterInit:
         assert presenter.connection_controller is not None
         assert presenter.macro_runner is not None
         assert presenter.macro_execution_coordinator is not None
-        assert presenter.data_handler is not None
         assert presenter.logging_coordinator is not None
         assert presenter.shutdown_coordinator is not None
-        assert not hasattr(presenter, "event_router")
         assert presenter.port_presenter is not None
         assert presenter.macro_presenter is not None
         assert presenter.file_presenter is not None
         assert presenter.packet_presenter is not None
         assert presenter.manual_control_presenter is not None
         assert presenter.lifecycle_manager is not None
+        assert not hasattr(presenter, "event_router")
         for internal_owner in (
+            "data_handler",
             "file_transfer_manager",
             "port_scan_manager",
             "macro_script_manager",
@@ -105,8 +105,13 @@ class TestMainPresenterInit:
         assert presenter.macro_runner.macro_started is not None
         assert presenter.file_presenter.transfer_completed is not None
 
-    def test_data_handler_init(self, mock_main_window, mock_settings_manager):
+    def test_bootstrapper_owns_data_handler_init_and_static_wiring(
+        self, mock_main_window, mock_settings_manager
+    ):
         with patch("presenter.data_handler.QTimer") as timer_cls:
-            presenter = _build_presenter(mock_main_window, mock_settings_manager)
-        assert presenter.data_handler.view == mock_main_window
+            ApplicationBootstrapper(mock_main_window, mock_settings_manager).build()
         timer_cls.return_value.start.assert_called()
+        source = inspect.getsource(ApplicationBootstrapper.build)
+        assert "connection_controller.data_received.connect(data_handler.on_fast_data_received)" in source
+        assert "connection_controller.data_sent.connect(data_handler.on_data_sent)" in source
+        assert "connection_controller.data_received.connect(macro_runner.on_data_received)" in source
