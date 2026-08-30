@@ -64,8 +64,15 @@ WHY:
    - 기준 문서: [`doc/runtime_benchmark_baseline_spec_20260830.md`](doc/runtime_benchmark_baseline_spec_20260830.md)
    - PR #4 최신 검증: Python 3.11 `643 passed, 2 warnings`, GitHub Actions 4/4 Green
    - 실제 개발 머신 runtime baseline 숫자는 후보 비교 착수 시 동일 환경에서 별도 기록
-4. [-] RxLogView `BatchRenderer` 후보안 비교
-   - 측정 이득이 명확할 때만 도입
+4. [x] RxLogView `BatchRenderer` 필요성 benchmark 기반 재평가
+   - 결론: **별도 BatchRenderer 도입하지 않음 / 현재 DataTrafficHandler + LogModel batching 유지**
+   - `LogModel.add_logs()` batch insert는 single-row control 대비 약 `5.5~5.8x` 처리량
+   - ASCII decode/formatting overhead는 약 `0~3%`로 dominant bottleneck 아님
+   - event-loop/paint servicing overhead는 약 `21~28%`
+   - flush-size matrix: `4 KiB=0.813 MB/s`, `16 KiB=3.191 MB/s`, `64 KiB=11.935 MB/s`
+   - update 횟수 `16x` 감소 시 처리량 `14.675x` 증가 -> 병목은 update fixed cost이며 upstream batching이 올바른 해결 위치
+   - 기준 결과: [`doc/benchmarks/rx_view_baseline_20260830.md`](doc/benchmarks/rx_view_baseline_20260830.md)
+   - 실제 2/4-port 고속 RX, 실제 화면/HEX bottleneck이 확인될 때만 재검토
 5. [-] Serial non-blocking I/O loop 후보안 비교/최적화
    - CPU / throughput / latency / shutdown responsiveness 함께 평가
    - 완료 전 실제 USB Serial 최소 smoke + reconnect/disconnect 확인

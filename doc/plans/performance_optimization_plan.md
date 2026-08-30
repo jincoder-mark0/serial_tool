@@ -30,73 +30,117 @@ Runtime-path benchmark
   -> DataTrafficHandler RX aggregation/flush
   -> ConnectionWorker mixed RX/TX loop + stop latency
 
+Rx View benchmark
+  -> tools/rx_view_benchmark.py
+  -> tools/rx_view_batch_matrix.py
+  -> LogModel / QSmartListView / event-loop update cost
+
 실제 hardware validation
   -> 실제 USB Serial smoke
   -> driver / reconnect / disconnect 특성
 ```
 
 GitHub-hosted runner의 성능 수치를 제품 threshold로 사용하지 않는다. CI는 benchmark
-scenario 실행 가능 여부, byte-preservation, result schema만 고정한다.
+scenario 실행 가능 여부와 기능 회귀를 확인하고, 실제 성능 수치는 같은 환경에서 후보 비교 evidence로만 사용한다.
 
 ---
 
-# 2. RxLogView `BatchRenderer` 재평가
+# 2. RxLogView `BatchRenderer` 재평가 — 완료
 
-현재 RX path는 `DataTrafficHandler`가 UI 업데이트를 batching한다. `BatchRenderer` 도입은 추가 abstraction이므로 실제 병목이 View rendering인지 먼저 증명해야 한다.
+## 2.1 결론
 
-P2-B #3에서 `DataTrafficHandler`의 aggregation/flush 비용은 runtime benchmark 기준선을 만들었다.
-P2-B #4에서는 그 위의 실제 `QSmartListView` rendering/model path를 별도 측정해
-DataTrafficHandler 비용과 QWidget rendering 비용을 섞지 않는다.
+**별도 `BatchRenderer`를 도입하지 않는다.**
 
-검증 질문:
+현재 구조 유지:
 
-1. signal delivery
-2. string formatting
-3. model append
-4. viewport repaint
-5. max-line trimming
-6. search/highlight bookkeeping
+```text
+ConnectionController
+    -> DataTrafficHandler (30 ms byte aggregation)
+    -> LogDataBatch
+    -> QSmartListView.append_bytes()
+    -> LogModel.add_logs() (range insertion)
+```
 
-Benchmark matrix:
+근거 문서:
 
-- 32~128 B burst
-- 1~4 KB stream
-- 8~64 KB high-rate stream
-- burst + idle
-- 2 / 4 port simultaneous RX
-- ASCII / HEX / highlight mode
+- [`../rx_view_benchmark_spec_20260830.md`](../rx_view_benchmark_spec_20260830.md)
+- [`../benchmarks/rx_view_baseline_20260830.md`](../benchmarks/rx_view_baseline_20260830.md)
 
-측정:
+## 2.2 측정 결과
 
-- input bytes/s
-- rendered lines/s
-- p50/p95 UI latency
-- main/process CPU
-- peak RSS
-- backlog high-water mark
-- dropped/coalesced update count
+Windows hosted runner / Python 3.11 / offscreen / repeat=3의 반복 run에서:
 
-비교 후보:
+```text
+LogModel batch vs single insert
+  ~= 5.5 ~ 5.8 x
 
-- Current baseline
-- BatchRenderer
-- QAbstractItemModel range append 최적화
-- autoscroll/highlight/repaint cadence 제한
+ASCII formatting cost ratio
+  ~= 1.00 ~ 1.03 x
 
-데이터 자체를 버리는 정책은 기본값으로 허용하지 않는다.
+Event-loop cost ratio
+  ~= 1.21 ~ 1.28 x
+```
 
-도입 조건:
+즉:
 
-- p95 UI latency 유의미한 개선
-- CPU 감소 또는 처리량 증가
-- memory/backlog 악화 없음
-- 복잡도 증가 대비 효과 명확
+- `LogModel.add_logs()` batching은 이미 큰 효과를 제공
+- ASCII decode/formatter는 dominant bottleneck 아님
+- Qt View update마다 발생하는 fixed cost가 더 큼
 
-도입하지 않는 조건:
+Flush-size matrix:
 
-- 차이가 5~10% 이내의 측정 노이즈 수준
-- bottleneck이 formatting/model 쪽으로 확인
-- shutdown/state ownership 복잡도만 증가
+```text
+4 KiB   / 512 updates ->  0.813 MB/s
+16 KiB  / 128 updates ->  3.191 MB/s
+64 KiB  /  32 updates -> 11.935 MB/s
+```
+
+```text
+update count reduction = 16.000 x
+throughput improvement = 14.675 x
+```
+
+View update 횟수 감소와 처리량 개선이 거의 비례한다.
+
+## 2.3 Architecture 판단
+
+View update fixed cost를 줄이는 책임은 새 renderer가 아니라 이미 존재하는 `DataTrafficHandler`의 aggregation에 두는 것이 맞다.
+
+현재 최고 지원 baudrate 4,000,000 baud를 일반적인 8N1(약 10 bit/byte)로 단순 상한 계산하면:
+
+```text
+4,000,000 / 10 ~= 400,000 byte/s
+400,000 * 30 ms ~= 12 KiB / refresh
+```
+
+따라서 30 ms cadence는 최고 baudrate에서도 대략 16 KiB matrix 근처의 View update 크기를 형성한다.
+
+별도 BatchRenderer를 추가하면:
+
+```text
+DataTrafficHandler batching
+    + BatchRenderer batching
+    + LogModel range insertion
+```
+
+처럼 동일 책임의 buffering/scheduling 계층이 중복되고 lifecycle/flush ownership만 복잡해질 가능성이 높다.
+
+## 2.4 재검토 Trigger
+
+다음이 실제로 관찰될 때만 다시 검토한다.
+
+- 2/4 port 동시 고속 RX에서 visible UI freeze
+- UI event latency/backlog 지속 증가
+- 실제 display 환경에서 severe delegate paint bottleneck
+- HEX mode가 실제 요구 throughput을 충족하지 못함
+
+그 경우에도 우선순위:
+
+1. DataTrafficHandler cadence/flush size 측정
+2. autoscroll/repaint cadence
+3. delegate QTextDocument layout
+4. HEX conversion
+5. 위 항목으로 부족할 때만 BatchRenderer
 
 ---
 
@@ -185,12 +229,13 @@ WHY:
 기능 회귀:
 
 - `tests/test_runtime_benchmark_smoke.py`
+- `tests/test_rx_view_benchmark_smoke.py`
 - `tests/test_tx_flush.py`
 - connection lifecycle tests
 - file transfer tests
 - high-speed parser/RX tests
 
-추가 권장:
+Serial I/O 후보 비교 추가 권장:
 
 - simultaneous RX/TX fairness
 - 4-port sustained synthetic load
@@ -214,5 +259,6 @@ actual USB Serial smoke result (Serial I/O 변경 시)
 ```
 
 - benchmark 정의/비교 규칙: `doc/runtime_benchmark_baseline_spec_20260830.md`
+- Rx View 판정 결과: `doc/benchmarks/rx_view_baseline_20260830.md`
 - 과거 Core micro 결과: `doc/benchmark_20260822.md`
-- 새 실제 측정 결과: `doc/benchmarks/` 아래 날짜별 보존
+- 이후 실제 측정 결과: `doc/benchmarks/` 아래 날짜별 보존
