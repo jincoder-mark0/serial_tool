@@ -1,11 +1,12 @@
 """ConnectionSessionFactory / ConnectionController 생성 책임 경계 테스트."""
 import inspect
-from unittest.mock import patch
+from unittest.mock import MagicMock, patch
 
 from common.constants import LOOPBACK_PORT_NAME
 from common.dtos import PortConfig
 from model.connection_controller import ConnectionController
 from model.connection_session_factory import ConnectionSessionFactory
+from model.packet_parser_manager import PacketParserManager
 
 
 def test_controller_does_not_import_or_construct_concrete_transports():
@@ -44,10 +45,8 @@ def test_factory_builds_serial_worker_for_regular_port():
 
 
 def test_controller_removes_parser_session_if_worker_factory_fails():
-    parser_manager = __import__(
-        "model.packet_parser_manager", fromlist=["PacketParserManager"]
-    ).PacketParserManager()
-    factory = __import__("unittest.mock", fromlist=["MagicMock"]).MagicMock()
+    parser_manager = PacketParserManager()
+    factory = MagicMock()
     factory.create_worker.side_effect = OSError("cannot create worker")
     controller = ConnectionController(parser_manager, factory)
     errors = []
