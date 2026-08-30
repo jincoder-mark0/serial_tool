@@ -29,7 +29,6 @@ def mock_main_window(qapp):
     window.macro_view = MagicMock()
     window.manual_control_view = MagicMock()
     window.packet_view = MagicMock()
-    window.get_port_tabs_count.return_value = 0
     return window
 
 
@@ -44,7 +43,7 @@ def integration_system(mock_main_window, mock_serial_port, mock_settings_manager
 
     components.status_coordinator.stop()
     components.data_handler.stop()
-    components.main_presenter_dependencies.packet_presenter.stop()
+    components.packet_presenter.stop()
     components.file_transfer_manager.shutdown()
     components.macro_script_manager.stop()
     components.port_scan_manager.stop()
@@ -52,16 +51,23 @@ def integration_system(mock_main_window, mock_serial_port, mock_settings_manager
 
 
 def test_system_initialization_wires_facade_views(integration_system):
-    presenter, _, window, _ = integration_system
+    presenter, components, window, _ = integration_system
     assert presenter.port_presenter is not None
-    assert presenter.macro_presenter is not None
     assert presenter.manual_control_presenter is not None
-    assert presenter.packet_presenter is not None
     assert presenter.macro_execution_coordinator is not None
     assert presenter.shutdown_coordinator is not None
-    for hidden in ("event_router", "settings_manager", "data_handler", "status_coordinator", "file_transfer_manager"):
+    for hidden in (
+        "event_router",
+        "settings_manager",
+        "data_handler",
+        "status_coordinator",
+        "file_transfer_manager",
+        "macro_presenter",
+        "packet_presenter",
+    ):
         assert not hasattr(presenter, hidden)
-    window.connect_port_tab_changed.assert_called_once()
+    assert components.control_state_coordinator is not None
+    assert components.settings_coordinator is not None
     window.manual_control_view.send_requested.connect.assert_called()
 
 
@@ -87,13 +93,13 @@ def test_data_reception_fast_path_batches_for_view(integration_system):
 
 
 def test_packet_event_is_formatted_for_packet_view(integration_system):
-    presenter, _, window, _ = integration_system
+    presenter, components, window, _ = integration_system
     event = PacketEvent(
         port="COM1",
         packet=Packet(data=b"\xaa\xbb", timestamp=0, metadata={"type": "TEST_PKT"}),
     )
     presenter.connection_controller.packet_received.emit(event)
-    presenter.packet_presenter._flush_pending_packets()
+    components.packet_presenter._flush_pending_packets()
     view_data = window.packet_view.append_packet.call_args[0][0]
     assert view_data.data_hex == "AA BB"
     assert view_data.packet_type == "TEST_PKT"
