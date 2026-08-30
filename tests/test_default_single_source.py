@@ -10,12 +10,22 @@
 * create_fallback_settings()가 canonical scalar default를 조립하는지 검증
 * PreferencesCoordinator의 설정 fallback이 canonical default를 사용하는지 검증
 * AppLifecycleManager의 누락 설정 fallback이 같은 창/폰트 기본값을 사용하는지 검증
+* SettingsManager의 버전 값과 defaults.py의 설정 버전이 어긋나지 않는지 검증
+* SerialTransport가 이미 존재하는 timeout/flow-control 정의를 우회하지 않는지 검증
 
 ## HOW
 실제 설정 파일이나 GUI를 띄우지 않고 빈 설정/간단한 FakeSettings를 주입해
-각 경로가 반환하는 DTO 값을 직접 비교한다.
+각 경로가 반환하는 DTO 값을 직접 비교한다. 구현 상수 우회는 소스 AST가 아니라
+명시적인 모듈 의존성과 런타임 인자를 검사해 주석/문자열 오탐을 피한다.
 """
-from common.constants import DEFAULT_BAUDRATE, DEFAULT_LOG_MAX_LINES
+from unittest.mock import patch
+
+from common.constants import (
+    DEFAULT_BAUDRATE,
+    DEFAULT_LOG_MAX_LINES,
+    DEFAULT_PORT_TIMEOUT,
+    WRITE_TIMEOUT_S,
+)
 from common.defaults import (
     DEFAULT_FIXED_FONT_FAMILY,
     DEFAULT_FIXED_FONT_SIZE,
@@ -42,6 +52,10 @@ from common.defaults import (
     SETTINGS_VERSION,
     create_fallback_settings,
 )
+from common.dtos import PortConfig
+from common.enums import SerialFlowControl
+from core.settings_manager import SettingsManager
+from core.transport.serial_transport import SerialTransport
 from presenter.lifecycle_manager import AppLifecycleManager
 from presenter.preferences_coordinator import PreferencesCoordinator
 
@@ -71,6 +85,11 @@ def test_fallback_configuration_is_built_from_canonical_defaults():
     assert settings["ui"]["window_height"] == DEFAULT_WINDOW_HEIGHT
     assert settings["ui"]["right_section_visible"] is DEFAULT_RIGHT_PANEL_VISIBLE
     assert settings["logging"]["path"] == ""
+
+
+def test_settings_manager_version_matches_canonical_default_version():
+    """마이그레이션 버전과 fallback 파일 버전이 서로 갈라지면 안 된다."""
+    assert SettingsManager.CURRENT_VERSION == SETTINGS_VERSION
 
 
 def test_preferences_coordinator_uses_canonical_packet_defaults():
@@ -110,3 +129,19 @@ def test_lifecycle_missing_settings_uses_canonical_window_and_font_defaults():
     assert font_config.prop_size == DEFAULT_PROP_FONT_SIZE
     assert font_config.fixed_family == DEFAULT_FIXED_FONT_FAMILY
     assert font_config.fixed_size == DEFAULT_FIXED_FONT_SIZE
+
+
+def test_serial_transport_uses_common_timeout_and_flow_control_values():
+    """SerialTransport가 constants/enums의 정본을 실제 pyserial 인자로 사용해야 한다."""
+    config = PortConfig(port="COM_TEST", flowctrl=SerialFlowControl.RTS_CTS.value)
+
+    with patch("core.transport.serial_transport.serial.Serial") as serial_ctor:
+        serial_ctor.return_value.is_open = True
+        transport = SerialTransport(config)
+        assert transport.open() is True
+
+    kwargs = serial_ctor.call_args.kwargs
+    assert kwargs["timeout"] == DEFAULT_PORT_TIMEOUT
+    assert kwargs["write_timeout"] == WRITE_TIMEOUT_S
+    assert kwargs["rtscts"] is True
+    assert kwargs["xonxoff"] is False
