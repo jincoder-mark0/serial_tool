@@ -5,7 +5,7 @@ ConnectionController에서 parser 생성 옵션 변환, parser registry, feed/fl
 분리합니다. 연결 계층은 raw data와 PortConfig만 전달하고 parser 구현 세부사항을
 알지 않습니다.
 """
-from typing import Any, Dict, List
+from typing import Any, Dict, List, Optional
 
 from common.dtos import PortConfig
 from common.enums import ParserType
@@ -38,8 +38,12 @@ class PacketParserManager:
             return []
         return list(parser.flush())
 
+    def get_parser(self, port_name: str) -> Optional[PacketParser]:
+        """테스트/진단 시 현재 포트 parser를 읽기 전용으로 조회합니다."""
+        return self._parsers.get(port_name)
+
     def has_parser(self, port_name: str) -> bool:
-        """테스트/진단용으로 parser 세션 존재 여부를 반환합니다."""
+        """parser 세션 존재 여부를 반환합니다."""
         return port_name in self._parsers
 
     @staticmethod
