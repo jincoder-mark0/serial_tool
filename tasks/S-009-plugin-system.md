@@ -7,8 +7,8 @@
 
 ## 목적 (Why)
 
-`doc/task.md` Phase 7 계획: `core/plugin_base.py`(인터페이스) + `core/plugin_loader.py`
-(동적 임포트) + ExamplePlugin. 현재 **코드에 플러그인 관련 구현은 전혀 없다**
+루트 `Task.MD` Post-merge backlog: `PluginBase` interface + `PluginLoader`
+(동적 임포트) + Example plugin. 현재 **코드에 플러그인 관련 구현은 전혀 없다**
 (core/에 두 파일 모두 부재, EventTopics에 플러그인 토픽 없음 — 2026-08-22 조사).
 
 ## 설계 재료

@@ -4,6 +4,17 @@
 
 ---
 
+### 작업 보드 단일화 (2026-08-30)
+
+- `doc/task.md`에서 현재도 유효한 제품 기능 기준선, 성능·Plugin·환경 검증
+  backlog를 루트 `Task.MD`로 통합했습니다.
+- EventRouter/EventBus와 과거 ownership·경로처럼 현재 architecture와 충돌하는
+  legacy 항목은 이관하지 않았습니다.
+- 중복 작업 보드인 `doc/task.md`를 삭제하고 현재 문서·완료 절차·후속 S-xxx
+  태스크의 활성 참조를 루트 `Task.MD`와 역사 문서 체계로 갱신했습니다.
+
+---
+
 ### 전체 diff 감사 잔여 lifecycle·전송 finding 해결 (2026-08-30)
 
 - Port scan과 Macro script load의 blocking OS/file I/O를 daemon I/O thread로

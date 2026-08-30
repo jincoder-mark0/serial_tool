@@ -214,7 +214,7 @@ squash/rebase/force update는 destructive operation이다.
 ## 8. Task / 문서 운영
 
 - 현재 해야 할 일은 `Task.MD`에 체크리스트로 관리한다.
-- 과거 S-xxx 상세 이력은 `tasks/`, `doc/task.md`, `doc/CHANGELOG.md`에 보존한다.
+- 과거 S-xxx 상세 이력은 `tasks/`, `doc/history/`, `doc/CHANGELOG.md`에 보존한다.
 - 중요한 구조 변경은 `doc/CHANGELOG.md`에 기록한다.
 - 반복 실수는 `doc/mistakes.md`에 기록한다.
 - 현재 리팩토링 판단 근거는 `doc/refactoring_validation_report_20260830.md`를 참조한다.

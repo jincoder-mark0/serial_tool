@@ -6,8 +6,8 @@
 > 리팩토링 보고서: [`doc/refactoring_validation_report_20260830.md`](doc/refactoring_validation_report_20260830.md)
 > 에이전트 규칙: [`AGENTS.md`](AGENTS.md)
 
-이 문서는 **현재 완료된 것과 앞으로 해야 할 것**만 관리한다. 과거 Phase/S-xxx 상세 이력은
-`doc/task.md`, `doc/CHANGELOG.md`, `tasks/`에 보존한다.
+이 문서는 **현재 완료된 것과 앞으로 해야 할 것**을 관리하는 유일한 작업 보드다.
+과거 S-xxx 상세 이력은 `doc/CHANGELOG.md`, `doc/history/`, `tasks/`에 보존한다.
 
 상태 표기: `[x]` 완료 / `[ ]` 해야 함 / `[-]` 보류
 
@@ -36,7 +36,23 @@ PR #1의 GitHub Actions Python 3.11 CI까지 4/4 job Green을 확인했다.
 
 ---
 
-# 2. 구조 리팩토링 — 완료
+# 2. 제품 기능 및 구조 리팩토링 — 완료
+
+## 제품 기능 기준선
+
+- [x] 다중 Serial port tab과 연결/해제/설정
+- [x] Manual TX/RX, Local Echo, Prefix/Suffix, Newline mode, Broadcast
+- [x] Manual command history와 Auto Tx scheduler
+- [x] Macro list/load/save/run, Delay/Expect, 반복 실행
+- [x] Packet Inspector와 Raw/AT/Delimiter/Fixed-Length parser
+- [x] File Transfer chunk 전송, progress, cancel, backpressure
+- [x] RX/TX/System logging과 BIN/HEX/PCAP format
+- [x] QSmartListView 기반 대용량 log view와 검색
+- [x] Theme, SVG icon, dual font, 한국어/영어 localization
+- [x] GlobalErrorHandler, RingBuffer, ThreadSafeQueue
+- [x] RX/UI benchmark (`tools/benchmark.py`, `doc/benchmark_20260822.md`)
+- [x] Windows PyInstaller executable build와 smoke test
+- [x] GitHub Actions Windows CI
 
 ## Composition Root / DI
 
@@ -331,8 +347,14 @@ SerialTool CI: 4/4 Green
 - [x] `main` 대비 최종 diff 재감사
 - [x] PR 생성/업데이트 — PR #1
 - [x] GitHub Actions CI Green — 4/4 jobs
-- [ ] Mock/LOOPBACK/실기기 검증 범위 기록
-- [ ] 알려진 제한사항 기록
+- [x] Mock/LOOPBACK/실기기 검증 범위 기록
+  - 자동 검증: Mock Serial, LoopbackTransport, offscreen Qt
+  - 미검증: Windows com0com, Linux socat, 실제 USB Serial 장치
+- [x] 알려진 제한사항 기록
+  - Port scan/Macro load의 blocking daemon helper는 강제 종료하지 않음
+  - manager가 outstanding helper를 작업별 최대 1개로 제한하고 process 종료 시 OS가 정리
+  - language key 동적 표현식 7건은 정적 검사 불가
+  - Python 3.13에서 외부 `lark` dependency warning 2건
 
 ## Commit history
 
@@ -342,13 +364,31 @@ SerialTool CI: 4/4 Green
 
 ---
 
-# 9. 후속 기능 후보
+# 9. Post-merge backlog
 
 리팩토링 merge 판단 전에는 착수하지 않는다.
 
-- [-] SPI/I2C Transport
+## 성능
+
+- [-] RxLogView `BatchRenderer` 도입 필요성 benchmark 기반 재평가
+- [-] Serial non-blocking I/O loop 최적화
+
+## Plugin
+
 - [-] Plugin system
-- [-] com0com 실환경 검증
+  - [-] `PluginBase` interface
+  - [-] `PluginLoader` dynamic import
+  - [-] Example plugin
+
+## 환경 검증
+
+- [-] Windows com0com 가상 Serial 검증
+- [-] Linux socat 가상 Serial 검증
+- [-] 실제 USB Serial 장치 검증
+
+## Protocol / Packet
+
+- [-] SPI/I2C Transport
 - [-] 구조화 packet filter
 - [-] trigger-based transmission
 - [-] packet annotation / selected-range export
