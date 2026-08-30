@@ -43,13 +43,15 @@ class LoggingCoordinator:
         self._system_signals_connected = False
 
     def connect_signals(self) -> None:
-        """기존 포트 패널과 시스템 로그의 recording signal을 연결합니다."""
+        """기존/신규 포트 패널과 시스템 로그 recording signal을 연결합니다."""
         for panel in self._port_view.get_port_panels():
             self.connect_port_panel(panel)
 
         if self._system_signals_connected:
             return
 
+        # 신규 탭의 logging wiring도 coordinator가 직접 소유합니다.
+        self._port_view.port_tab_added.connect(self.on_port_tab_added)
         self._port_view.sys_logging_start_requested.connect(
             self.on_system_logging_start_requested
         )
@@ -135,7 +137,6 @@ class LoggingCoordinator:
             )
             return
 
-        # 중복 시작 요청에서도 이전 handle을 누수시키지 않습니다.
         self.close_system_log()
         self._system_log_writer = writer
         self._port_view.set_logging_active(True)
@@ -163,7 +164,6 @@ class LoggingCoordinator:
         try:
             writer.write_line(text)
         except OSError as exc:
-            # 에러 로그가 다시 이 슬롯으로 들어와 재귀하는 것을 막기 위해 먼저 해제합니다.
             self._system_log_writer = None
             writer.close()
             self._port_view.set_logging_active(False)
