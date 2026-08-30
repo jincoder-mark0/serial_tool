@@ -47,11 +47,10 @@ def mock_main_window():
 
 class TestMainPresenterInit:
     def test_component_creation(self, mock_main_window, mock_settings_manager):
-        with patch(
-            "presenter.main_presenter.SettingsManager",
-            return_value=mock_settings_manager,
-        ):
-            presenter = MainPresenter(mock_main_window)
+        presenter = MainPresenter(
+            mock_main_window,
+            settings_manager=mock_settings_manager,
+        )
 
         assert presenter.connection_controller is not None
         assert presenter.command_transmission_service is not None
@@ -65,42 +64,52 @@ class TestMainPresenterInit:
         assert presenter.packet_presenter is not None
         assert presenter.manual_control_presenter is not None
         assert presenter.lifecycle_manager is not None
+        assert presenter.shutdown_coordinator is not None
 
-    def test_lifecycle_delegation(self, mock_main_window, mock_settings_manager):
+    def test_lifecycle_has_no_reverse_main_presenter_orchestration(
+        self, mock_main_window, mock_settings_manager
+    ):
         with patch("presenter.main_presenter.AppLifecycleManager") as lifecycle_cls:
-            with patch(
-                "presenter.main_presenter.SettingsManager",
-                return_value=mock_settings_manager,
-            ):
-                MainPresenter(mock_main_window)
+            lifecycle = lifecycle_cls.return_value
+            lifecycle.create_manual_control_state.return_value = MagicMock()
+            lifecycle.create_status_timer.return_value = MagicMock()
 
-        lifecycle_cls.assert_called_once()
-        lifecycle_cls.return_value.initialize_app.assert_called_once()
+            MainPresenter(
+                mock_main_window,
+                settings_manager=mock_settings_manager,
+            )
+
+        lifecycle_cls.assert_called_once_with(
+            mock_main_window,
+            mock_settings_manager,
+        )
+        lifecycle.initialize_view.assert_called_once()
+        lifecycle.create_manual_control_state.assert_called_once()
+        lifecycle.create_status_timer.assert_called_once()
+        lifecycle.log_initialized.assert_called_once()
+        assert not hasattr(lifecycle, "initialize_app") or not lifecycle.initialize_app.called
 
     def test_signal_connections(self, mock_main_window, mock_settings_manager):
-        with patch(
-            "presenter.main_presenter.SettingsManager",
-            return_value=mock_settings_manager,
-        ):
-            presenter = MainPresenter(mock_main_window)
+        presenter = MainPresenter(
+            mock_main_window,
+            settings_manager=mock_settings_manager,
+        )
 
         mock_main_window.close_requested.connect.assert_called()
         mock_main_window.settings_save_requested.connect.assert_called()
         mock_main_window.connect_port_tab_changed.assert_called()
 
-        # EventRouter가 아니라 Model/Presenter의 direct Qt signal을 사용한다.
         assert presenter.connection_controller.connection_opened is not None
         assert presenter.connection_controller.data_received is not None
         assert presenter.macro_runner.macro_started is not None
         assert presenter.file_presenter.transfer_completed is not None
 
     def test_data_handler_init(self, mock_main_window, mock_settings_manager):
-        with patch(
-            "presenter.main_presenter.SettingsManager",
-            return_value=mock_settings_manager,
-        ):
-            with patch("presenter.data_handler.QTimer") as timer_cls:
-                presenter = MainPresenter(mock_main_window)
+        with patch("presenter.data_handler.QTimer") as timer_cls:
+            presenter = MainPresenter(
+                mock_main_window,
+                settings_manager=mock_settings_manager,
+            )
 
         assert presenter.data_handler.view == mock_main_window
         timer_cls.return_value.start.assert_called()
