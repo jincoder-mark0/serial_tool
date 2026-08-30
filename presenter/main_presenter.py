@@ -1,9 +1,8 @@
 """
-애플리케이션 최상위 Presenter
+애플리케이션 최상위 Presenter.
 
-하위 Presenter를 조율하고 전역 UI 상태/생명주기 이벤트를 연결합니다.
-객체 생성/배선 순서는 MainPresenter가 직접 소유하고, 초기 상태 복원과 종료 시퀀스는
-각각 AppLifecycleManager와 ShutdownCoordinator에 위임합니다.
+하위 Presenter/Service를 조율하고 전역 UI 상태를 연결합니다. 초기 상태 복원,
+명령 전송, 로그 저장, 종료 시퀀스 같은 독립 유스케이스는 전용 객체에 위임합니다.
 """
 from typing import Optional
 
@@ -25,10 +24,8 @@ from common.dtos import (
     SystemLogEvent,
 )
 from common.enums import LogLevel
-from core.data_logger import data_logger_manager
 from core.logger import logger
 from core.settings_manager import SettingsManager
-from core.text_log_writer import TextLogWriter
 from model.command_transmission_service import CommandTransmissionService
 from model.connection_controller import ConnectionController
 from model.macro_runner import MacroRunner
@@ -40,7 +37,7 @@ from view.panels.port_panel import PortPanel
 from .data_handler import DataTrafficHandler
 from .file_presenter import FilePresenter
 from .lifecycle_manager import AppLifecycleManager
-from .logging_format_resolver import LoggingFormatResolver
+from .logging_coordinator import LoggingCoordinator
 from .macro_presenter import MacroPresenter
 from .manual_control_presenter import ManualControlPresenter
 from .packet_presenter import PacketPresenter
@@ -61,21 +58,20 @@ class MainPresenter(QObject):
         self.view = view
         self.settings_manager = settings_manager or SettingsManager()
         self.status_timer: Optional[QTimer] = None
-        self._sys_log_writer: Optional[TextLogWriter] = None
         self._macro_target_port: Optional[str] = None
 
-        # 1. 저장 설정을 View에 먼저 적용한다.
+        # 1. 저장 설정을 View에 먼저 적용합니다.
         self.lifecycle_manager = AppLifecycleManager(
             self.view,
             self.settings_manager,
         )
         self.lifecycle_manager.initialize_view()
 
-        # 2. Model/Service/Presenter를 생성한다. 생성 순서는 MainPresenter가 소유한다.
+        # 2. Model/Application Service/Presenter를 생성합니다.
         self._init_core_systems()
         self._init_sub_presenters()
 
-        # 3. Presenter 상태 복원 및 direct signal fast path 구성.
+        # 3. Presenter 상태와 RX fast path를 복원/연결합니다.
         self.manual_control_presenter.apply_state(
             self.lifecycle_manager.create_manual_control_state()
         )
@@ -83,7 +79,14 @@ class MainPresenter(QObject):
             self.data_handler.on_fast_data_received
         )
 
-        # 4. 상태바 서비스/종료 coordinator 생성 후 이벤트를 연결한다.
+        # 4. 독립 coordinator를 구성합니다.
+        self.logging_coordinator = LoggingCoordinator(
+            port_view=self.view.port_view,
+            log_info=self._log_info,
+            log_error=self._log_error,
+        )
+        self.logging_coordinator.connect_signals()
+
         self.status_timer = self.lifecycle_manager.create_status_timer(
             self.update_status_bar
         )
@@ -96,15 +99,23 @@ class MainPresenter(QObject):
             manual_control_presenter=self.manual_control_presenter,
             packet_presenter=self.packet_presenter,
             data_handler=self.data_handler,
-            close_system_log=self._close_sys_log_writer,
+            close_system_log=self.logging_coordinator.close_system_log,
             status_timer=self.status_timer,
         )
+
+        # 5. public signal을 배선하고 초기화 완료를 기록합니다.
         self._connect_signals()
         self.view.connect_port_tab_changed(self._on_port_tab_changed)
         self.lifecycle_manager.log_initialized()
 
+    @property
+    def _sys_log_writer(self):
+        """S-055 기존 테스트/외부 코드 호환용 읽기 전용 alias."""
+        coordinator = getattr(self, "logging_coordinator", None)
+        return coordinator._system_log_writer if coordinator is not None else None
+
     def _init_core_systems(self) -> None:
-        """MainPresenter가 직접 소유하는 Model/Application Service를 생성합니다."""
+        """MainPresenter가 조립하는 Model/Application Service를 생성합니다."""
         self.connection_controller = ConnectionController()
         self.command_transmission_service = CommandTransmissionService(
             self.connection_controller,
@@ -114,7 +125,7 @@ class MainPresenter(QObject):
         self.data_handler = DataTrafficHandler(self.view)
 
     def _init_sub_presenters(self) -> None:
-        """하위 Presenter를 공용 Model/Settings 의존성과 함께 생성합니다."""
+        """공유 Model/Settings 의존성과 함께 하위 Presenter를 생성합니다."""
         self.port_presenter = PortPresenter(
             self.view.port_view,
             self.connection_controller,
@@ -136,7 +147,7 @@ class MainPresenter(QObject):
         )
 
     def _connect_signals(self) -> None:
-        """Model/Presenter/View의 public signal을 direct topology로 연결합니다."""
+        """Model/Presenter/View public signal을 direct topology로 연결합니다."""
         self.connection_controller.connection_opened.connect(self.on_port_opened)
         self.connection_controller.connection_closed.connect(self.on_port_closed)
         self.connection_controller.error_occurred.connect(self.on_port_error)
@@ -164,8 +175,6 @@ class MainPresenter(QObject):
         )
         self.view.port_tab_added.connect(self._on_port_tab_added)
 
-        self._connect_logging_signals()
-
         self.manual_control_presenter.broadcast_changed.connect(
             lambda _: self._update_controls_state_for_current_tab()
         )
@@ -174,6 +183,9 @@ class MainPresenter(QObject):
             lambda _: self._update_controls_state_for_current_tab()
         )
 
+    # ------------------------------------------------------------------
+    # System log presentation helpers
+    # ------------------------------------------------------------------
     def _log_info(self, message: str) -> None:
         self.view.log_system_message(
             SystemLogEvent(message=message, level=LogLevel.INFO.value)
@@ -189,6 +201,9 @@ class MainPresenter(QObject):
             SystemLogEvent(message=message, level=LogLevel.SUCCESS.value)
         )
 
+    # ------------------------------------------------------------------
+    # Settings / lifecycle
+    # ------------------------------------------------------------------
     def on_preferences_requested(self) -> None:
         self.view.open_preferences_dialog(
             PreferencesCoordinator.build_state(self.settings_manager)
@@ -204,14 +219,7 @@ class MainPresenter(QObject):
 
         self.view.switch_theme(new_state.theme.lower())
         language_manager.set_language(new_state.language)
-
-        # TODO(refactor): 포트 컬렉션 순회는 MainWindow/MainLeftSection facade로 이동.
-        count = self.view.get_port_tabs_count()
-        for index in range(count):
-            widget = self.view.get_port_tab_widget(index)
-            if hasattr(widget, "set_max_log_lines"):
-                widget.set_max_log_lines(new_state.max_log_lines)
-
+        self.port_presenter.apply_max_log_lines(new_state.max_log_lines)
         self.manual_control_presenter.update_local_echo_setting(
             new_state.local_echo_enabled
         )
@@ -232,6 +240,9 @@ class MainPresenter(QObject):
         settings.save_settings()
         logger.info("Font settings saved successfully.")
 
+    # ------------------------------------------------------------------
+    # Port / data
+    # ------------------------------------------------------------------
     def _on_data_sent(self, event: PortDataEvent) -> None:
         self.data_handler.on_data_sent(event)
 
@@ -242,7 +253,6 @@ class MainPresenter(QObject):
 
     def on_port_closed(self, event: PortConnectionEvent) -> None:
         port_name = event.port
-
         if self.macro_runner.isRunning():
             if (
                 not self.macro_runner.broadcast_enabled
@@ -286,6 +296,9 @@ class MainPresenter(QObject):
                 is_current_connected or (is_broadcast and has_any_connection)
             )
 
+    # ------------------------------------------------------------------
+    # Macro
+    # ------------------------------------------------------------------
     def on_macro_started(self) -> None:
         self._macro_target_port = self.port_presenter.get_active_port_name()
         self._log_info("Macro started")
@@ -364,6 +377,9 @@ class MainPresenter(QObject):
         if show_dialog:
             self.view.show_alert_message(title, message)
 
+    # ------------------------------------------------------------------
+    # File transfer
+    # ------------------------------------------------------------------
     def on_file_transfer_completed(self, event: FileCompletionEvent) -> None:
         status_key = (
             "file_prog_lbl_status_completed"
@@ -375,7 +391,6 @@ class MainPresenter(QObject):
             status_text,
             event.message,
         )
-
         if event.success:
             self._log_success(msg)
         else:
@@ -391,6 +406,9 @@ class MainPresenter(QObject):
     def on_file_transfer_error(self, event: FileErrorEvent) -> None:
         self._log_error(f"File Transfer Error: {event.message}")
 
+    # ------------------------------------------------------------------
+    # UI status / shortcuts
+    # ------------------------------------------------------------------
     def update_status_bar(self) -> None:
         stats = PortStatistics(
             rx_bytes=self.data_handler.rx_byte_count,
@@ -412,120 +430,34 @@ class MainPresenter(QObject):
     def on_shortcut_clear(self) -> None:
         self.port_presenter.clear_log_current_port()
 
-    def _connect_logging_signals(self) -> None:
-        count = self.view.get_port_tabs_count()
-        for index in range(count):
-            self._connect_single_port_logging(self.view.get_port_tab_widget(index))
-        self._connect_system_logging_signals()
-
-    def _connect_system_logging_signals(self) -> None:
-        left_view = self.view.port_view
-        left_view.sys_logging_start_requested.connect(
-            self._on_sys_logging_start_requested
-        )
-        left_view.sys_logging_stop_requested.connect(
-            self._on_sys_logging_stop_requested
-        )
-        left_view.system_log_line_appended.connect(
-            self._on_system_log_line_appended
-        )
-
     def _on_port_tab_added(self, panel: PortPanel) -> None:
-        self._connect_single_port_logging(panel)
+        """새 포트 패널의 횡단 관심사(logging/color)를 각 소유자에 전달합니다."""
+        self.logging_coordinator.on_port_tab_added(panel)
         panel.set_data_log_color_rules(color_manager.rules)
 
+    # ------------------------------------------------------------------
+    # Compatibility delegates — 구현 책임은 LoggingCoordinator가 소유합니다.
+    # ------------------------------------------------------------------
+    def _connect_logging_signals(self) -> None:
+        self.logging_coordinator.connect_signals()
+
     def _connect_single_port_logging(self, panel: PortPanel) -> None:
-        if not hasattr(panel, "logging_start_requested"):
-            return
-
-        try:
-            panel.logging_start_requested.disconnect()
-            panel.logging_stop_requested.disconnect()
-        except TypeError:
-            pass
-
-        panel.logging_start_requested.connect(
-            lambda: self._on_logging_start_requested(panel)
-        )
-        panel.logging_stop_requested.connect(
-            lambda: self._on_logging_stop_requested(panel)
-        )
-
-    @staticmethod
-    def _start_log_capture_dialog(widget) -> Optional[str]:
-        file_path = widget.show_save_log_dialog()
-        if not file_path:
-            widget.set_logging_active(False)
-            return None
-        return file_path
+        self.logging_coordinator.connect_port_panel(panel)
 
     def _on_logging_start_requested(self, panel: PortPanel) -> None:
-        file_path = self._start_log_capture_dialog(panel)
-        if file_path is None:
-            return
-
-        port = panel.get_port_name()
-        if not port:
-            panel.set_logging_active(False)
-            return
-
-        log_format = LoggingFormatResolver.resolve(file_path)
-        if data_logger_manager.start_logging(port, file_path, log_format):
-            panel.set_logging_active(True)
-            self._log_info(
-                f"[{port}] Logging started ({log_format.value}): {file_path}"
-            )
-        else:
-            panel.set_logging_active(False)
-            self._log_error(f"[{port}] Failed to start logging")
+        self.logging_coordinator.on_port_logging_start_requested(panel)
 
     def _on_logging_stop_requested(self, panel: PortPanel) -> None:
-        port = panel.get_port_name()
-        if port:
-            data_logger_manager.stop_logging(port)
-        panel.set_logging_active(False)
-        self._log_info(f"[{port}] Logging stopped")
+        self.logging_coordinator.on_port_logging_stop_requested(panel)
 
     def _on_sys_logging_start_requested(self) -> None:
-        left_view = self.view.port_view
-        file_path = self._start_log_capture_dialog(left_view)
-        if file_path is None:
-            return
-
-        writer = TextLogWriter()
-        try:
-            writer.open(file_path)
-        except OSError as exc:
-            left_view.set_logging_active(False)
-            self._log_error(
-                f"Failed to start system log recording ({file_path}): {exc}"
-            )
-            return
-
-        self._sys_log_writer = writer
-        left_view.set_logging_active(True)
-        self._log_info(f"System log recording enabled: {file_path}")
+        self.logging_coordinator.on_system_logging_start_requested()
 
     def _on_sys_logging_stop_requested(self) -> None:
-        left_view = self.view.port_view
-        self._close_sys_log_writer()
-        left_view.set_logging_active(False)
-        self._log_info("System log recording stopped")
+        self.logging_coordinator.on_system_logging_stop_requested()
 
     def _close_sys_log_writer(self) -> None:
-        if self._sys_log_writer is not None:
-            self._sys_log_writer.close()
-            self._sys_log_writer = None
+        self.logging_coordinator.close_system_log()
 
     def _on_system_log_line_appended(self, text: str) -> None:
-        if self._sys_log_writer is None:
-            return
-
-        writer = self._sys_log_writer
-        try:
-            writer.write_line(text)
-        except OSError as exc:
-            self._sys_log_writer = None
-            writer.close()
-            self.view.port_view.set_logging_active(False)
-            self._log_error(f"System log write failed, recording stopped: {exc}")
+        self.logging_coordinator.on_system_log_line_appended(text)
