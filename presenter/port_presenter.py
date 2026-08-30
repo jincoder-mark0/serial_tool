@@ -86,12 +86,9 @@ class PortPresenter(QObject):
         self.scan_ports()
 
         # 기존 탭들에 대한 시그널 연결 (초기화 시점에 이미 존재하는 탭들)
-        # LoD 준수: View가 제공하는 접근자 사용
-        count = self.left_section.get_port_tabs_count()
-        for i in range(count):
-            widget = self.left_section.get_port_panel_at(i)
-            if widget:
-                self._connect_tab_signals(widget)
+        # MainLeftSection이 탭 개수/인덱스를 감추고 PortPanel 컬렉션만 제공한다.
+        for panel in self.left_section.get_port_panels():
+            self._connect_tab_signals(panel)
 
         # 새 탭 추가 시그널 연결 (View의 시그널 사용)
         self.left_section.port_tab_added.connect(self._on_port_tab_added)
@@ -255,7 +252,7 @@ class PortPresenter(QObject):
         포트 스캔 완료 핸들러 (UI 업데이트).
 
         Logic:
-            - View 인터페이스를 통해 모든 포트 패널의 목록 갱신
+            - View Facade를 통해 모든 포트 패널의 목록 갱신
             - DTO(PortInfo) 리스트를 View에 전달
 
         Args:
@@ -265,12 +262,8 @@ class PortPresenter(QObject):
         port_names = [p.device for p in port_list]
         logger.debug(f"Scan finished. Found ports: {port_names}")
 
-        # LoD 준수: LeftSection을 통해 모든 패널 업데이트 (순회는 View가 하거나 여기서 getter로 순회)
-        count = self.left_section.get_port_tabs_count()
-        for i in range(count):
-            panel = self.left_section.get_port_panel_at(i)
-            if panel:
-                panel.set_port_list(port_list)
+        # 탭 개수/인덱스 순회는 View 컨테이너가 소유한다.
+        self.left_section.set_port_list_for_all(port_list)
 
         # 워커 참조 해제
         self._scan_worker = None
@@ -365,23 +358,14 @@ class PortPresenter(QObject):
         포트 열림 이벤트 처리.
 
         Logic:
-            - 해당 포트 이름을 사용하는 탭을 검색
-            - UI 연결 상태(버튼 스타일 등)를 'Connected'로 업데이트
+            - View Facade가 해당 포트 이름을 사용하는 탭을 찾아 연결 상태를 갱신
             - 시스템 로그에 성공 메시지 기록 (SystemLogEvent)
 
         Args:
             event (PortConnectionEvent): 포트 연결 이벤트 DTO.
         """
         port_name = event.port
-
-        # LoD 준수: LeftSection을 통해 패널 검색
-        count = self.left_section.get_port_tabs_count()
-        for i in range(count):
-            panel = self.left_section.get_port_panel_at(i)
-            if panel and panel.get_port_name() == port_name:
-                panel.set_connected(True)
-                # 탭 제목 업데이트는 Panel 내부 시그널 -> LeftSection 흐름으로 자동 처리됨
-                break
+        self.left_section.set_port_connection_state(port_name, True)
 
         # 시스템 로그 기록
         self._log_event(f"[{port_name}] Port opened", "SUCCESS")
@@ -391,22 +375,14 @@ class PortPresenter(QObject):
         포트 닫힘 이벤트 처리.
 
         Logic:
-            - 해당 포트 이름을 사용하는 탭 검색
-            - UI 연결 상태를 'Disconnected'로 업데이트
+            - View Facade가 해당 포트 이름을 사용하는 탭을 찾아 연결 상태를 갱신
             - 시스템 로그 기록 (SystemLogEvent)
 
         Args:
             event (PortConnectionEvent): 포트 연결 이벤트 DTO.
         """
         port_name = event.port
-
-        # LoD 준수: LeftSection을 통해 패널 검색
-        count = self.left_section.get_port_tabs_count()
-        for i in range(count):
-            panel = self.left_section.get_port_panel_at(i)
-            if panel and panel.get_port_name() == port_name:
-                panel.set_connected(False)
-                break
+        self.left_section.set_port_connection_state(port_name, False)
 
         # 시스템 로그 기록
         self._log_event(f"[{port_name}] Port closed", "INFO")
@@ -427,12 +403,7 @@ class PortPresenter(QObject):
         logger.error(f"Port Error ({event.port}): {event.message}")
 
         # 연결 시도 중 에러 발생 시 UI 버튼 상태를 'Disconnected'로 강제 복구
-        count = self.left_section.get_port_tabs_count()
-        for i in range(count):
-            panel = self.left_section.get_port_panel_at(i)
-            if panel and panel.get_port_name() == event.port:
-                panel.set_connected(False)
-                break
+        self.left_section.set_port_connection_state(event.port, False)
 
         # Presenter는 표시 정책만 결정하고, Qt 모달 생성/지연 호출은 View가 소유한다.
         if self.left_section:
