@@ -14,6 +14,7 @@
 * SerialTransport가 이미 존재하는 timeout/flow-control 정의를 우회하지 않는지 검증
 * settings schema의 theme/language 허용값이 common enum과 일치하는지 검증
 * ConnectionWorker가 이미 존재하는 sleep 타이밍 상수를 사용하는지 검증
+* PortConfig에서 사용할 protocol/bytesize/SPI 기본 정책과 공통 상태 enum을 고정
 """
 import inspect
 from unittest.mock import patch
@@ -39,11 +40,15 @@ from common.defaults import (
     DEFAULT_PACKET_LENGTH_INCLUDES_HEADER,
     DEFAULT_PACKET_PARSER_TYPE,
     DEFAULT_PACKET_REALTIME,
+    DEFAULT_PORT_BYTESIZE,
     DEFAULT_PORT_NEWLINE,
+    DEFAULT_PORT_PROTOCOL,
     DEFAULT_PORT_SCAN_INTERVAL_MS,
     DEFAULT_PROP_FONT_FAMILY,
     DEFAULT_PROP_FONT_SIZE,
     DEFAULT_RIGHT_PANEL_VISIBLE,
+    DEFAULT_SPI_MODE,
+    DEFAULT_SPI_SPEED,
     DEFAULT_THEME,
     DEFAULT_WINDOW_HEIGHT,
     DEFAULT_WINDOW_WIDTH,
@@ -51,7 +56,15 @@ from common.defaults import (
     create_fallback_settings,
 )
 from common.dtos import PortConfig
-from common.enums import LanguageType, SerialFlowControl, ThemeType
+from common.enums import (
+    ConnectionEventState,
+    ConnectionProtocol,
+    LanguageType,
+    LogLevel,
+    MacroStepType,
+    SerialFlowControl,
+    ThemeType,
+)
 from core.settings_manager import SettingsManager
 from core.settings_schema import CORE_SETTINGS_SCHEMA
 from core.transport.serial_transport import SerialTransport
@@ -160,3 +173,23 @@ def test_connection_worker_uses_common_sleep_timing_constants():
 
     assert "msleep(WORKER_IDLE_WAIT_MS)" in source
     assert "usleep(WORKER_BUSY_WAIT_US)" in source
+
+
+def test_port_dto_policy_defaults_are_named_and_protocol_backed():
+    """PortConfig용 기본 정책값이 의미 없는 literal이 아니라 이름 있는 정본을 갖는다."""
+    assert DEFAULT_PORT_PROTOCOL == ConnectionProtocol.SERIAL
+    assert DEFAULT_PORT_BYTESIZE == 8
+    assert DEFAULT_SPI_SPEED == 1_000_000
+    assert DEFAULT_SPI_MODE == 0
+
+
+def test_common_event_state_values_are_stable():
+    """DTO/event producer가 사용할 공통 문자열 상태의 저장 형식을 고정한다."""
+    assert ConnectionEventState.OPENED.value == "opened"
+    assert ConnectionEventState.CLOSED.value == "closed"
+    assert MacroStepType.STARTED.value == "started"
+    assert MacroStepType.COMPLETED.value == "completed"
+    assert LogLevel.INFO.value == "INFO"
+    assert LogLevel.ERROR.value == "ERROR"
+    assert LogLevel.SUCCESS.value == "SUCCESS"
+    assert LogLevel.CRITICAL.value == "CRITICAL"
