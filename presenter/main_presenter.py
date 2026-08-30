@@ -67,18 +67,13 @@ class MainPresenter(QObject):
         self.lifecycle_manager.log_initialized()
 
     def _apply_components(self, components: ApplicationComponents) -> None:
-        """Bootstrapper가 생성한 runtime component를 Presenter 필드에 배치합니다."""
+        """MainPresenter가 실제로 사용하는 runtime component만 보관합니다."""
         self.lifecycle_manager = components.lifecycle_manager
         self.connection_controller = components.connection_controller
-        self.file_transfer_manager = components.file_transfer_manager
-        self.port_scan_manager = components.port_scan_manager
         self.macro_runner = components.macro_runner
-        self.macro_script_manager = components.macro_script_manager
         self.macro_execution_coordinator = components.macro_execution_coordinator
-        self.traffic_monitor = components.traffic_monitor
         self.data_handler = components.data_handler
         self.logging_coordinator = components.logging_coordinator
-        self.status_coordinator = components.status_coordinator
         self.shutdown_coordinator = components.shutdown_coordinator
         self.port_presenter = components.port_presenter
         self.macro_presenter = components.macro_presenter
