@@ -2,6 +2,8 @@
 
 > 우선순위: P3
 > 대상: Packet Filter, Annotation/Export, SPI/I2C, Plugin, Trigger
+> SPI/I2C backend decision: [`spi_i2c_backend_decision_20260831.md`](spi_i2c_backend_decision_20260831.md)
+> SPI/I2C adapter architecture: [`spi_i2c_adapter_architecture.md`](spi_i2c_adapter_architecture.md)
 
 ---
 
@@ -67,7 +69,7 @@ semicolon(`;`)으로 분리된 모든 clause를 AND 조건으로 평가한다.
 
 ```text
 port=COM3
- type=AT
+type=AT
 len=8
 len=8..32
 hex*=DE AD
@@ -331,75 +333,209 @@ Acceptance:
 
 ---
 
-# 4. Phase 3 — SPI/I2C Backend & Capability Model
+# 4. Phase 3 — SPI/I2C Backend / Adapter Wrapper Model — 결정 완료
 
-SPI/I2C는 Serial과 transaction semantics가 다르므로 backend를 먼저 확정한다.
+상세:
 
-## 4.1 Backend 후보
+- [`spi_i2c_backend_decision_20260831.md`](spi_i2c_backend_decision_20260831.md)
+- [`spi_i2c_adapter_architecture.md`](spi_i2c_adapter_architecture.md)
 
-- USB bridge
-- FTDI
-- vendor adapter
-- Linux `/dev/spidev` / `/dev/i2c-*`
+## 4.1 핵심 구조
 
-실제 사용할 backend 없이 abstract transport만 먼저 만들지 않는다.
+특정 chip/library를 SPI/I2C Transport contract로 만들지 않는다.
 
-## 4.2 Config 방향
+```text
+Transaction Service
+        |
+        v
+SpiController / I2cController
+        |
+        v
+AdapterHandle
+        |
+        v
+AdapterProvider + Capability + Registry
+        |
+        +-- PyFtdi Backend -> FT232H / FT2232H
+        +-- CH347 Backend   -> 후속
+        +-- MCP2210 Backend -> 후속, SPI only
+```
 
-하나의 거대한 `PortConfig`에 optional field를 계속 추가하지 않는다.
+상위 계층은 PyFtdi URL, CH347 handle, HID path 같은 vendor-specific detail을 모른다.
+
+## 4.2 Tier-1 Target
+
+```text
+FT232H
+  -> SPI Master
+  -> I2C Master
+
+FT2232H
+  -> SPI Master
+  -> I2C Master
+  -> dual channel selector / lifecycle
+```
+
+**FT2232H는 첫 implementation 및 hardware acceptance에 포함한다.**
+
+대표 검증 topology:
+
+```text
+FT2232H channel A -> SPI
+FT2232H channel B -> I2C
+```
+
+FT232H single-channel과 FT2232H multi-channel을 함께 구현해야 wrapper의 adapter/channel identity가 실제 요구를 견디는지 초기에 검증할 수 있다.
+
+## 4.3 Backend 확장 후보
+
+CH347:
+
+- SPI + I2C
+- USB 2.0 High Speed
+- WCH 공식 자료상 SPI 최대 60 MHz, I2C 최대 1 MHz class
+- Windows/Linux vendor driver/API
+
+MCP2210:
+
+- SPI Master only
+- USB HID
+- mode 0..3
+- 최대 12 Mbps class
+- I2C 없음
+
+MCP2210은 capability-driven 구조에서 `protocols={SPI}`만 광고하면 되며 I2C special-case를 Core에 추가하지 않는다.
+
+## 4.4 Adapter Wrapper 정본 개념
+
+#11에서 코드 contract로 확정할 대상:
+
+```text
+AdapterIdentity
+AdapterDescriptor
+AdapterCapabilities
+AdapterProvider
+AdapterHandle
+AdapterBackendRegistry
+SpiController
+I2cController
+```
+
+상위 계층은 `backend_id + stable_id + channel_id`를 사용하고 USB enumeration index에 의존하지 않는다.
+
+## 4.5 Capability-driven Validation
+
+기능 enable 여부를 backend name이 아니라 capability로 판단한다.
+
+```text
+MCP2210 + SPI
+  -> allowed
+
+MCP2210 + I2C
+  -> UnsupportedCapabilityError
+
+FT2232H channel A + SPI
+  -> allowed
+
+FT2232H channel B + I2C
+  -> allowed when channel capability advertises I2C
+```
+
+## 4.6 Config 방향 — 다음 작업 #11
+
+기존 `PortConfig`에 vendor-specific optional field를 추가하지 않는다.
 
 ```text
 ConnectionConfig
-  + SerialConfig
-  + SpiConfig
-  + I2cConfig
+  protocol
+  adapter: AdapterIdentity
+
+SerialConfig
+  ...
+
+SpiConfig
+  frequency_hz
+  mode
+  chip_select
+  bit_order
+  duplex policy
+
+I2cConfig
+  frequency_hz
+  address
+  address_bits
+  clock_stretching request
 ```
 
-기존 `PortConfig` migration 비용을 검토해 점진적으로 도입한다.
+PyFtdi URL / CH347 device index / MCP HID path는 protocol config 바깥 backend implementation에서 해석한다.
 
-## 4.3 Transport contract
+## 4.7 Error / Dependency Isolation
 
-기존:
+공통 오류 surface 후보:
 
 ```text
-read / in_waiting / write
+BackendUnavailableError
+AdapterNotFoundError
+AdapterBusyError
+UnsupportedCapabilityError
+ProtocolConfigurationError
+TransactionTimeoutError
+TransactionIoError
+AdapterDisconnectedError
 ```
 
-이 contract가 transaction protocol에 부적합하면 억지로 확장하지 않는다.
+vendor package/DLL가 없어도 해당 provider만 unavailable 처리하고 앱 전체 startup은 유지해야 한다.
 
-필요하면:
+## 4.8 FTDI 제한사항
 
-```text
-StreamTransport
-TransactionTransport
-```
+PyFtdi/FTDI는 reference backend이지 Core contract가 아니다.
 
-분리를 고려한다.
+- SPI Mode 1/3은 MPSSE workaround 제약 존재
+- precise time-controlled sequence에는 USB latency/jitter 제약
+- FT2232H I2C clock stretching은 wiring/diode 고려 필요
+- I2C medium/high-speed write는 USB round-trip 구조상 부적합할 수 있음
+
+초기 I2C 목표는 register/config/bring-up/test transaction이다.
+
+Acceptance:
+
+- chip/vendor-neutral wrapper 방향 — 완료
+- FT232H Tier-1 — 완료
+- FT2232H Tier-1 — 완료
+- CH347 extension target 정의 — 완료
+- MCP2210 SPI-only extension target 정의 — 완료
+- stable adapter/channel identity 방향 — 완료
+- capability-driven validation 방향 — 완료
+- #11 contract 입력 확정 — 완료
 
 ---
 
-# 5. Phase 4 — SPI/I2C Transport 구현
+# 5. Phase 4 — SPI/I2C Contract / Backend 구현
 
-권장 순서:
+현재 권장 순서:
 
-1. 실제 필요한 protocol/backend 하나 선정
-2. backend capability 표 확정
-3. config DTO
-4. Transport interface 결정
-5. ConnectionSessionFactory 생성 경로
-6. protocol-specific UI settings
-7. Mock backend tests
-8. 실제 adapter smoke
+1. [완료] backend family / capability / wrapper architecture
+2. `AdapterIdentity / Descriptor / Capabilities` DTO
+3. `AdapterProvider / Handle / Registry` contract
+4. `SpiConfig / I2cConfig`
+5. SPI/I2C Request / Result / timeout / cancellation contract
+6. current `PortConfig` migration
+7. PyFtdi provider implementation
+8. FT232H hardware acceptance
+9. FT2232H channel A/B hardware acceptance
+10. protocol-specific UI/session integration
 
-SPI와 I2C를 동시에 구현하는 것을 목표로 하지 않는다. 실제 제품/업무 요구가 높은 쪽부터 구현한다.
+첫 backend implementation은 PyFtdi지만 상위 contract에 `pyftdi` type을 노출하지 않는다.
 
 Acceptance:
 
 - 기존 Serial 회귀 0
-- optional field soup 없음
-- backend missing/disconnect/timeout error surface 명확
+- vendor-specific optional field soup 없음
+- FT232H + FT2232H 같은 provider에서 동작
+- FT2232H channel identity/lifecycle 명확
+- backend unavailable/disconnect/timeout error surface 명확
 - transaction cancellation/shutdown path 정의
-- 실제 지원 backend 최소 1개 검증
+- CH347/MCP2210 mock provider를 붙여도 상위 API 변경 없음
 
 ---
 
@@ -512,6 +648,7 @@ Acceptance:
 Built-in 권장:
 
 - core Transport
+- adapter/backend registry
 - packet filter engine
 - trigger engine
 
@@ -522,7 +659,7 @@ Plugin 적합 후보:
 - device-specific command pack
 - optional analysis extension
 
-안정적인 core abstraction이 생기기 전에 Plugin API에 내부 세부사항을 노출하지 않는다.
+SPI/I2C hardware backend는 초기에는 Built-in infrastructure extension으로 취급하고 일반 Plugin API와 섞지 않는다.
 
 ---
 
@@ -531,10 +668,11 @@ Plugin 적합 후보:
 ```text
 1. Structured Packet Filter [완료]
 2. Packet Annotation / Selected-range Export [완료]
-3. SPI/I2C backend & capability model
-4. SPI/I2C Transport implementation
-5. Plugin system
-6. Trigger-based transmission
+3. SPI/I2C backend family + adapter wrapper model [완료]
+4. SPI/I2C Config / Adapter / Transaction contract
+5. FT232H + FT2232H PyFtdi backend implementation
+6. Plugin system
+7. Trigger-based transmission
 ```
 
 이 순서는 low-side-effect 기능 → hardware abstraction → 실제 사례 기반 extension API → high-side-effect automation 순이다.
@@ -545,7 +683,8 @@ Plugin 적합 후보:
 
 - 기존 Serial 기능 회귀 0
 - architecture contract / full pytest / CI Green
-- hardware 기능은 실제 backend smoke 포함
+- SPI/I2C Tier-1 hardware는 FT232H + FT2232H 모두 smoke
+- backend import leakage / capability mismatch regression test 존재
 - Plugin failure isolation test 존재
 - Trigger loop/reentrancy 방지 test 존재
-- background file I/O lifecycle 명확
+- background I/O lifecycle 명확

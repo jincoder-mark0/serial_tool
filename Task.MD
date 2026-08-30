@@ -1,10 +1,12 @@
 # Task.MD — SerialTool 현재 작업 보드
 
-> 최종 갱신: 2026-08-30
+> 최종 갱신: 2026-08-31
 > 기준 브랜치: `main`
 > Presenter/View Boundary 리팩토링: PR #1 squash merge 완료
 > Post-merge 통합 로드맵: [`doc/plans/roadmap_post_merge.md`](doc/plans/roadmap_post_merge.md)
 > 최종 환경 검증 계획: [`doc/plans/environment_validation_plan.md`](doc/plans/environment_validation_plan.md)
+> SPI/I2C backend 결정: [`doc/plans/spi_i2c_backend_decision_20260831.md`](doc/plans/spi_i2c_backend_decision_20260831.md)
+> SPI/I2C adapter architecture: [`doc/plans/spi_i2c_adapter_architecture.md`](doc/plans/spi_i2c_adapter_architecture.md)
 > 에이전트 규칙: [`AGENTS.md`](AGENTS.md)
 
 이 문서는 **현재 완료 상태와 앞으로 해야 할 일을 실제 권장 착수 순서대로 관리하는 유일한 작업 보드**다.
@@ -135,7 +137,7 @@ WHY:
    - `PacketExportManager`가 background QThread worker lifecycle을 소유하고 UI thread file I/O 제거
    - export는 immutable selection snapshot을 사용하고 temporary file + atomic `os.replace` 적용
    - `ApplicationBootstrapper`가 AnnotationStore / ExportManager를 생성하여 PacketPresenter에 explicit injection
-   - PR #11 구현 HEAD: Windows Python 3.11 full pytest `695 passed, 2 external warnings`, GitHub Actions 4/4 Green
+   - PR #11 Windows Python 3.11 full pytest `695 passed, 2 external warnings`, GitHub Actions 4/4 Green
 
 WHY:
 
@@ -144,17 +146,42 @@ WHY:
 
 ## P3-B — SPI/I2C Transport 확장
 
-10. [-] 실제 SPI/I2C backend 선정 및 capability 표 작성
-11. [-] protocol-specific config DTO 및 Transport contract 결정
-12. [-] SPI/I2C Transport 구현
-   - 실제 필요한 protocol/backend 하나부터 시작
-   - 필요 시 `StreamTransport` / `TransactionTransport` 분리
-   - 구현 단계 자체에서 실제 adapter 검증 필수
+상세 결정:
+
+- [`spi_i2c_backend_decision_20260831.md`](doc/plans/spi_i2c_backend_decision_20260831.md)
+- [`spi_i2c_adapter_architecture.md`](doc/plans/spi_i2c_adapter_architecture.md)
+
+10. [x] SPI/I2C backend family / capability / wrapper architecture 결정
+   - 특정 chip/library에 Transport를 고정하지 않는 **capability-driven Adapter Wrapper** 구조 채택
+   - `AdapterProvider / AdapterHandle / AdapterDescriptor / AdapterIdentity / AdapterCapabilities / BackendRegistry` 경계 확정
+   - 1차 Tier-1 target: **FT232H + FT2232H**
+   - FT2232H dual-channel identity/lifecycle을 첫 구현에서 검증
+   - reference FTDI backend: PyFtdi 0.57.x + MPSSE
+   - CH347: SPI+I2C 후속 backend target
+   - MCP2210: SPI-only 후속 backend target; I2C special-case 없이 capability mismatch로 처리
+   - stable identity는 USB index가 아니라 backend_id + serial/stable_id + optional channel_id
+   - vendor library object / DLL handle / PyFtdi URL은 backend implementation 밖으로 노출 금지
+   - SPI/I2C 공통 capability model과 Windows/Linux driver risk 분리
+   - PyFtdi I2C medium/high-speed write 한계를 명시하고 초기 목표를 register/config/control transaction으로 제한
+11. [-] protocol config DTO + Adapter Wrapper / Transaction contract 결정
+   - `AdapterIdentity`, `AdapterDescriptor`, `AdapterCapabilities`
+   - `AdapterProvider`, `AdapterHandle`, `AdapterBackendRegistry`
+   - `SpiConfig`, `I2cConfig`
+   - SPI/I2C Request/Result DTO
+   - cancellation / timeout / common error surface
+   - current `PortConfig` migration strategy
+12. [-] SPI/I2C Transport / backend 구현
+   - Tier-1: FT232H + FT2232H 모두 구현/검증
+   - PyFtdi backend는 wrapper 뒤에 격리
+   - `requirements.txt` dependency 추가는 #12 implementation branch에서 수행
+   - CH347/MCP2210 backend가 없어도 상위 contract는 변경하지 않는 architecture test 추가
 
 WHY:
 
-- backend 없이 추상화부터 만들지 않음
+- backend 없이 추상화부터 만들지 않되, 특정 backend를 Core contract로 굳히지도 않음
 - Serial stream semantics를 transaction protocol에 억지로 맞추지 않음
+- FT232H single-channel + FT2232H multi-channel을 첫 단계에서 함께 검증해 wrapper의 실제 확장성을 확보
+- CH347/MCP2210 등 후속 chip은 provider/capability 추가만으로 수용하는 구조를 목표로 함
 
 ## P3-C — Plugin system
 
@@ -220,6 +247,7 @@ WHY:
 - [x] Service/Manager/Coordinator ownership 분리
 - [x] SettingsManager class-level Singleton 제거 / composition-root ownership
 - [x] Coordinator package 이동 현재 보류 결정 / 재평가 trigger 명시
+- [x] SPI/I2C multi-backend Adapter Wrapper 방향 / FT232H+FT2232H Tier-1 결정
 - [x] reconnect stale-signal race 및 shutdown/data preservation 교정
 
 ---
@@ -242,6 +270,10 @@ WHY:
 - 외부 `lark` dependency warning 2건
 - Serial worker scheduling 변경은 실제 USB Serial 장치 acceptance 미완료
 - Packet annotation은 현재 runtime-only이며 persistent session 저장은 지원하지 않음
+- PyFtdi Windows 사용은 공식 지원 대상이 아니며 FTDI protocol adapter에 libusb driver setup 필요
+- FT2232H I2C clock stretching은 hardware wiring limitation 검증 필요
+- PyFtdi I2C는 medium/high-speed write 용도로 적합하지 않을 수 있음
+- CH347/MCP2210은 architecture target이며 아직 production backend 구현 전
 
 ---
 
@@ -262,7 +294,8 @@ targeted tests
 
 - 성능 작업: benchmark evidence 필수
 - Serial I/O 최적화: 실제 USB Serial 최소 smoke 필수
-- SPI/I2C: 실제 backend/adapter 검증 필수
+- SPI/I2C Tier-1: 실제 **FT232H + FT2232H** adapter 검증 필수
+- SPI/I2C wrapper: vendor backend import leakage / capability mismatch regression test 필수
 - Plugin: load failure isolation test 필수
 - Trigger: loop/reentrancy test 필수
 
