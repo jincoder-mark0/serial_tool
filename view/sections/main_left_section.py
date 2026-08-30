@@ -46,6 +46,7 @@ class MainLeftSection(QWidget):
     # 하위 패널의 이벤트를 상위(MainWindow/Presenter)로 전달하기 위한 시그널
     send_requested = pyqtSignal(object)  # ManualCommand DTO 전달
     port_tab_added = pyqtSignal(object)  # 생성된 PortPanel 객체 전달
+    port_tab_closed = pyqtSignal(str)    # 닫힌 탭의 포트 이름 전달
     current_tab_changed = pyqtSignal()   # 탭 변경 알림 (Presenter 동기화용)
 
     # 시스템 로그 REC 토글 요청 (S-052: SystemLogWidget 시그널을 그대로 재발행 —
@@ -98,6 +99,7 @@ class MainLeftSection(QWidget):
         self._port_tab_panel.port_tab_added.connect(self._on_port_tab_added)
         # 외부 전달용 시그널 연결
         self._port_tab_panel.port_tab_added.connect(self.port_tab_added.emit)
+        self._port_tab_panel.port_tab_closed.connect(self.port_tab_closed.emit)
 
         # 탭 변경 시 시그널 연결
         self._port_tab_panel.currentChanged.connect(self._on_tab_changed)
