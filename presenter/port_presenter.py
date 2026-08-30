@@ -2,9 +2,9 @@
 포트 프레젠터 모듈.
 
 MainLeftSection(View)과 ConnectionController(Model) 사이에서 포트 연결/상태와 스캔 결과를
-중재합니다. 스캔 QThread 생명주기는 PortScanManager가 소유합니다.
+중재합니다. SettingsManager와 PortScanManager는 composition root가 명시적으로 주입합니다.
 """
-from typing import List, Optional
+from typing import List
 from weakref import WeakSet
 
 from PyQt5.QtCore import QObject
@@ -38,14 +38,14 @@ class PortPresenter(QObject):
         self,
         left_section: MainLeftSection,
         connection_controller: ConnectionController,
-        settings_manager: Optional[SettingsManager] = None,
-        port_scan_manager: Optional[PortScanManager] = None,
+        settings_manager: SettingsManager,
+        port_scan_manager: PortScanManager,
     ) -> None:
         super().__init__()
         self.left_section = left_section
         self.connection_controller = connection_controller
-        self.settings_manager = settings_manager or SettingsManager()
-        self.port_scan_manager = port_scan_manager or PortScanManager()
+        self.settings_manager = settings_manager
+        self.port_scan_manager = port_scan_manager
         self._connected_panels: WeakSet[PortPanel] = WeakSet()
 
         self.port_scan_manager.ports_found.connect(self._on_scan_finished)
@@ -64,22 +64,13 @@ class PortPresenter(QObject):
         self.connection_controller.connection_closed.connect(self.on_connection_closed)
         self.connection_controller.error_occurred.connect(self.on_error)
 
-    def get_active_port_name(self) -> Optional[str]:
-        """레거시 호출 호환용 현재 포트 이름 facade."""
-        return self.left_section.get_current_port_name() or None
-
     def apply_max_log_lines(self, max_lines: int) -> None:
         """모든 PortPanel의 표시 로그 상한을 동일하게 적용합니다."""
         for panel in self.left_section.get_port_panels():
             panel.set_max_log_lines(max_lines)
 
     def _connect_tab_signals(self, panel: PortPanel) -> None:
-        """
-        이 Presenter가 아직 연결하지 않은 PortPanel에만 signal을 연결합니다.
-
-        `signal.disconnect()`로 모든 listener를 제거하지 않습니다. 다른 Presenter나 향후
-        확장 기능이 같은 public signal을 구독하더라도 PortPresenter가 침범하지 않습니다.
-        """
+        """이 Presenter가 아직 연결하지 않은 PortPanel에만 signal을 연결합니다."""
         if panel in self._connected_panels:
             return
 
@@ -108,10 +99,6 @@ class PortPresenter(QObject):
     def scan_ports(self) -> None:
         """비동기 스캔 시작 여부/worker 소유권은 PortScanManager에 위임합니다."""
         self.port_scan_manager.request_scan()
-
-    def stop_pending_scan(self) -> None:
-        """레거시 종료 호출 호환용 delegate."""
-        self.port_scan_manager.stop()
 
     def _on_scan_finished(self, port_list: List[PortInfo]) -> None:
         logger.debug(f"Scan finished. Found ports: {[item.device for item in port_list]}")
@@ -151,7 +138,9 @@ class PortPresenter(QObject):
 
     def _log_event(self, message: str, level: LogLevel) -> None:
         if hasattr(self.left_section, "log_system_message"):
-            self.left_section.log_system_message(SystemLogEvent(message=message, level=level.value))
+            self.left_section.log_system_message(
+                SystemLogEvent(message=message, level=level.value)
+            )
 
     def on_connection_opened(self, event: PortConnectionEvent) -> None:
         self.left_section.set_port_connection_state(event.port, True)
@@ -165,7 +154,9 @@ class PortPresenter(QObject):
         logger.error(f"Port Error ({event.port}): {event.message}")
         self.left_section.set_port_connection_state(event.port, False)
         title = language_manager.get_text("port_title_error")
-        detail = language_manager.get_text("port_msg_error_detail").format(event.port, event.message)
+        detail = language_manager.get_text("port_msg_error_detail").format(
+            event.port, event.message
+        )
         self.left_section.show_error_message(title, detail)
         self._log_event(f"[{event.port}] Error: {event.message}", LogLevel.ERROR)
 
