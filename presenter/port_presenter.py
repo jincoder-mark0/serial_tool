@@ -1,10 +1,11 @@
 """
-포트 프레젠터 모듈
+포트 프레젠터 모듈.
 
 MainLeftSection(View)과 ConnectionController(Model) 사이에서 포트 스캔/연결/상태 갱신을 중재합니다.
 Production에서는 composition root의 SettingsManager를 주입받고, None은 레거시 테스트 호환용입니다.
 """
 from typing import List, Optional
+from weakref import WeakSet
 
 from PyQt5.QtCore import QObject
 
@@ -31,6 +32,8 @@ from view.sections.main_left_section import MainLeftSection
 
 
 class PortPresenter(QObject):
+    """PortPanel collection과 연결 Model 사이의 중재자."""
+
     def __init__(
         self,
         left_section: MainLeftSection,
@@ -42,6 +45,7 @@ class PortPresenter(QObject):
         self.connection_controller = connection_controller
         self.settings_manager = settings_manager or SettingsManager()
         self._scan_worker: Optional[PortScanWorker] = None
+        self._connected_panels: WeakSet[PortPanel] = WeakSet()
 
         self.apply_max_log_lines(
             self.settings_manager.get(ConfigKeys.RX_MAX_LINES, DEFAULT_LOG_MAX_LINES)
@@ -67,29 +71,24 @@ class PortPresenter(QObject):
             panel.set_max_log_lines(max_lines)
 
     def _connect_tab_signals(self, panel: PortPanel) -> None:
-        try:
-            panel.port_scan_requested.disconnect(self.scan_ports)
-            panel.connect_requested.disconnect(self.handle_open_request)
-        except TypeError:
-            pass
-        try:
-            panel.disconnect_requested.disconnect()
-        except TypeError:
-            pass
+        """
+        이 Presenter가 아직 연결하지 않은 PortPanel에만 signal을 연결합니다.
+
+        `signal.disconnect()`로 모든 listener를 제거하지 않습니다. 다른 Presenter나 향후
+        확장 기능이 같은 public signal을 구독하더라도 PortPresenter가 침범하지 않습니다.
+        """
+        if panel in self._connected_panels:
+            return
 
         panel.port_scan_requested.connect(self.scan_ports)
         panel.connect_requested.connect(self.handle_open_request)
         panel.disconnect_requested.connect(
-            lambda w=panel: self.handle_close_request(w.get_port_config())
+            lambda p=panel: self.handle_close_request(p.get_port_config())
         )
-
-        try:
-            panel.tx_broadcast_allowed_changed.disconnect()
-        except TypeError:
-            pass
         panel.tx_broadcast_allowed_changed.connect(
-            lambda state, w=panel: self.on_tx_broadcast_allowed_changed(w, state)
+            lambda state, p=panel: self.on_tx_broadcast_allowed_changed(p, state)
         )
+        self._connected_panels.add(panel)
 
     def on_tx_broadcast_allowed_changed(self, panel: PortPanel, state: bool) -> None:
         port_name = panel.get_port_name()
