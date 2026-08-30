@@ -44,6 +44,7 @@ class ApplicationComponents:
     file_transfer_manager: FileTransferManager
     port_scan_manager: PortScanManager
     macro_script_manager: MacroScriptManager
+    packet_presenter: PacketPresenter
     settings_coordinator: SettingsCoordinator
     control_state_coordinator: ControlStateCoordinator
     status_coordinator: StatusCoordinator
@@ -175,6 +176,7 @@ class ApplicationBootstrapper:
             file_transfer_manager=file_transfer_manager,
             port_scan_manager=port_scan_manager,
             macro_script_manager=macro_script_manager,
+            packet_presenter=packet_presenter,
             settings_coordinator=settings_coordinator,
             control_state_coordinator=control_state_coordinator,
             status_coordinator=status_coordinator,
