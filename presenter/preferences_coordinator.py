@@ -73,13 +73,10 @@ class PreferencesCoordinator:
     """
 
     _FIELDS: List[_FieldSpec] = [
-        _FieldSpec(
-            "theme",
-            ConfigKeys.THEME,
-            DEFAULT_THEME,
-            to_state=lambda v: v.capitalize(),
-            to_settings=lambda v: v.lower(),
-        ),
+        # Theme 값은 DTO/설정 모두 ThemeType.value 형식(lowercase)을 사용한다.
+        # View가 표시할 때만 필요한 대소문자 변환을 수행해야 하며, 상태 계층에서
+        # `dark` -> `Dark`로 바꾸면 PreferencesState() 직접 생성과 표현이 갈라진다.
+        _FieldSpec("theme", ConfigKeys.THEME, DEFAULT_THEME),
         _FieldSpec("language", ConfigKeys.LANGUAGE, DEFAULT_LANGUAGE),
         _FieldSpec("font_size", ConfigKeys.PROP_FONT_SIZE, DEFAULT_PROP_FONT_SIZE),
         _FieldSpec("max_log_lines", ConfigKeys.RX_MAX_LINES, DEFAULT_LOG_MAX_LINES),
