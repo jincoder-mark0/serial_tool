@@ -12,24 +12,18 @@ from typing import TYPE_CHECKING
 
 from PyQt5.QtCore import QObject
 
-from common.constants import ConfigKeys
 from common.dtos import (
     FileCompletionEvent,
     FileErrorEvent,
-    FontConfig,
     MacroErrorEvent,
     PortConnectionEvent,
     PortErrorEvent,
-    PreferencesState,
     SystemLogEvent,
 )
 from common.enums import LogLevel
 from core.logger import logger
-from core.settings_manager import SettingsManager
 from view.main_window import MainWindow
 from view.managers.language_manager import language_manager
-
-from .preferences_coordinator import PreferencesCoordinator
 
 if TYPE_CHECKING:
     from model.connection_controller import ConnectionController
@@ -68,12 +62,10 @@ class MainPresenter(QObject):
     def __init__(
         self,
         view: MainWindow,
-        settings_manager: SettingsManager,
         dependencies: MainPresenterDependencies,
     ) -> None:
         super().__init__()
         self.view = view
-        self.settings_manager = settings_manager
         self._apply_dependencies(dependencies)
 
         self.manual_control_presenter.apply_state(
@@ -110,9 +102,6 @@ class MainPresenter(QObject):
         self.macro_runner.macro_started.connect(self.on_macro_started)
         self.macro_runner.macro_finished.connect(self.on_macro_finished)
         self.macro_runner.error_occurred.connect(self.on_macro_error)
-        self.macro_execution_coordinator.local_echo_requested.connect(
-            self.show_local_echo
-        )
         self.macro_execution_coordinator.execution_interrupted.connect(
             self._notify_macro_error
         )
@@ -120,12 +109,7 @@ class MainPresenter(QObject):
         self.file_presenter.transfer_completed.connect(self.on_file_transfer_completed)
         self.file_presenter.transfer_error.connect(self.on_file_transfer_error)
 
-        self.view.settings_save_requested.connect(self.on_settings_change_requested)
-        self.view.font_settings_changed.connect(self.on_font_settings_changed)
-        self.view.theme_change_requested.connect(self.on_theme_change_requested)
-        self.view.language_change_requested.connect(self.on_language_change_requested)
         self.view.close_requested.connect(self.on_close_requested)
-        self.view.preferences_requested.connect(self.on_preferences_requested)
         self.view.shortcut_connect_requested.connect(self.on_shortcut_connect)
         self.view.shortcut_disconnect_requested.connect(self.on_shortcut_disconnect)
         self.view.shortcut_clear_requested.connect(self.on_shortcut_clear)
@@ -156,51 +140,8 @@ class MainPresenter(QObject):
             SystemLogEvent(message=message, level=LogLevel.SUCCESS.value)
         )
 
-    def on_preferences_requested(self) -> None:
-        self.view.open_preferences_dialog(
-            PreferencesCoordinator.build_state(self.settings_manager)
-        )
-
     def on_close_requested(self) -> None:
         self.shutdown_coordinator.shutdown()
-
-    def on_settings_change_requested(self, new_state: PreferencesState) -> None:
-        PreferencesCoordinator.apply_state(self.settings_manager, new_state)
-        self.settings_manager.save_settings()
-
-        self.view.switch_theme(new_state.theme.lower())
-        language_manager.set_language(new_state.language)
-        self.port_presenter.apply_max_log_lines(new_state.max_log_lines)
-        self.manual_control_presenter.update_local_echo_setting(
-            new_state.local_echo_enabled
-        )
-        self.packet_presenter.on_settings_changed(new_state)
-
-        settings_updated_msg = language_manager.get_text(
-            "main_status_msg_settings_updated"
-        )
-        self.view.show_status_message(settings_updated_msg, 2000)
-        self._log_info(settings_updated_msg)
-
-    def on_theme_change_requested(self, theme_name: str) -> None:
-        normalized = theme_name.lower()
-        self.settings_manager.set(ConfigKeys.THEME, normalized)
-        self.settings_manager.save_settings()
-        self.view.switch_theme(normalized)
-
-    def on_language_change_requested(self, language_code: str) -> None:
-        self.settings_manager.set(ConfigKeys.LANGUAGE, language_code)
-        self.settings_manager.save_settings()
-        language_manager.set_language(language_code)
-
-    def on_font_settings_changed(self, font_config: FontConfig) -> None:
-        settings = self.settings_manager
-        settings.set(ConfigKeys.PROP_FONT_FAMILY, font_config.prop_family)
-        settings.set(ConfigKeys.PROP_FONT_SIZE, font_config.prop_size)
-        settings.set(ConfigKeys.FIXED_FONT_FAMILY, font_config.fixed_family)
-        settings.set(ConfigKeys.FIXED_FONT_SIZE, font_config.fixed_size)
-        settings.save_settings()
-        logger.info("Font settings saved successfully.")
 
     def on_port_opened(self, event: PortConnectionEvent) -> None:
         self.view.update_status_bar_port(event.port, True)
@@ -254,12 +195,6 @@ class MainPresenter(QObject):
         msg = f"Macro Error {row_info}: {event.message}"
         self._log_error(msg)
         self.view.show_status_message(msg, 5000)
-
-    def show_local_echo(self, data: bytes) -> None:
-        if not data:
-            return
-        if self.settings_manager.get(ConfigKeys.PORT_LOCAL_ECHO, False):
-            self.view.append_local_echo_data(data)
 
     def _notify_macro_error(self, message: str) -> None:
         logger.error(f"Macro stopped: {message}")
