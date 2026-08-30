@@ -1,11 +1,10 @@
 """
-수동 제어 프레젠터
+수동 제어 프레젠터.
 
-View의 사용자 의도를 받아 DTO를 만들고, 명령 전송 유스케이스는
-CommandTransmissionService에 위임합니다. Presenter는 UI 상태/알림 정책과
-RTS/DTR/Auto Tx orchestration만 담당합니다.
+ManualControlPanel의 사용자 의도를 받아 CommandTransmissionService에 전송을 위임합니다.
+현재 포트는 MainLeftSection facade에서 명시적으로 조회하고 Local Echo는 signal로 요청합니다.
 """
-from typing import Callable, Optional
+from typing import Optional
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
@@ -17,6 +16,7 @@ from model.command_transmission_service import CommandTransmissionService, Trans
 from model.connection_controller import ConnectionController
 from view.managers.language_manager import language_manager
 from view.panels.manual_control_panel import ManualControlPanel
+from view.sections.main_left_section import MainLeftSection
 
 
 class ManualControlPresenter(QObject):
@@ -24,23 +24,22 @@ class ManualControlPresenter(QObject):
 
     broadcast_changed = pyqtSignal(bool)
     send_error = pyqtSignal(str, str, bool)
+    local_echo_requested = pyqtSignal(bytes)
 
     def __init__(
         self,
         panel: ManualControlPanel,
+        port_view: MainLeftSection,
         connection_controller: ConnectionController,
         transmission_service: CommandTransmissionService,
-        local_echo_callback: Callable[[bytes], None],
-        get_active_port_callback: Callable[[], Optional[str]],
     ) -> None:
         super().__init__()
         self.panel = panel
+        self.port_view = port_view
         self.connection_controller = connection_controller
         self.transmission_service = transmission_service
-        self.local_echo_callback = local_echo_callback
-        self.get_active_port_callback = get_active_port_callback
 
-        # 로컬 에코는 View/Preferences 상태이며 전송 서비스의 책임이 아니다.
+        # 로컬 에코는 View/Preferences 상태이며 전송 서비스의 책임이 아닙니다.
         self.local_echo_enabled = self.panel.is_local_echo_enabled()
 
         self.auto_tx_scheduler = AutoTxScheduler()
@@ -52,7 +51,6 @@ class ManualControlPresenter(QObject):
         self.panel.rts_changed.connect(self.on_rts_changed)
         self.panel.broadcast_changed.connect(self.broadcast_changed.emit)
         self.panel.auto_tx_toggled.connect(self.on_auto_tx_toggled)
-
         self.connection_controller.connection_closed.connect(self._on_connection_closed)
 
     def set_enabled(self, enabled: bool) -> None:
@@ -82,12 +80,12 @@ class ManualControlPresenter(QObject):
             return None
 
     def _process_and_send(self, command: ManualCommand, is_auto_tx: bool = False) -> bool:
-        """
-        전송 유스케이스를 서비스에 위임하고 성공/실패의 UI 후처리만 담당합니다.
-        """
-        active_port = None if command.broadcast_enabled else self.get_active_port_callback()
-        result = self.transmission_service.send(command, active_port=active_port)
+        """전송 유스케이스 결과에 대한 UI 정책만 담당합니다."""
+        active_port = None
+        if not command.broadcast_enabled:
+            active_port = self.port_view.get_current_port_name() or None
 
+        result = self.transmission_service.send(command, active_port=active_port)
         if not result.success:
             logger.warning(f"Command transmission failed: {result.message}")
             self._report_send_error(
@@ -101,7 +99,7 @@ class ManualControlPresenter(QObject):
             self._auto_tx_failing = False
 
         if self.local_echo_enabled and result.data:
-            self.local_echo_callback(result.data)
+            self.local_echo_requested.emit(result.data)
 
         return True
 
