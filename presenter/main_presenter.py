@@ -53,22 +53,18 @@ class MainPresenter(QObject):
         self.status_timer: Optional[QTimer] = None
         self._macro_target_port: Optional[str] = None
 
-        # 1. 저장 설정을 View에 먼저 적용합니다.
         self.lifecycle_manager = AppLifecycleManager(
             self.view,
             self.settings_manager,
         )
         self.lifecycle_manager.initialize_view()
 
-        # 2. Production은 main.py가 조립한 component를 주입합니다.
-        # None fallback은 기존 단위 테스트/외부 생성 코드의 단계적 마이그레이션용입니다.
         runtime = components or ApplicationBootstrapper(
             self.view,
             self.settings_manager,
         ).build()
         self._apply_components(runtime)
 
-        # 3. Presenter 상태와 RX fast path를 복원/연결합니다.
         self.manual_control_presenter.apply_state(
             self.lifecycle_manager.create_manual_control_state()
         )
@@ -76,7 +72,6 @@ class MainPresenter(QObject):
             self.data_handler.on_fast_data_received
         )
 
-        # 4. 독립 coordinator를 구성합니다.
         self.logging_coordinator = LoggingCoordinator(
             port_view=self.view.port_view,
             log_info=self._log_info,
@@ -92,6 +87,7 @@ class MainPresenter(QObject):
             settings_manager=self.settings_manager,
             connection_controller=self.connection_controller,
             macro_runner=self.macro_runner,
+            macro_script_manager=self.macro_script_manager,
             port_scan_manager=self.port_scan_manager,
             manual_control_presenter=self.manual_control_presenter,
             packet_presenter=self.packet_presenter,
@@ -100,7 +96,6 @@ class MainPresenter(QObject):
             status_timer=self.status_timer,
         )
 
-        # 5. public signal을 배선하고 초기화 완료를 기록합니다.
         self._connect_signals()
         self.view.connect_port_tab_changed(self._on_port_tab_changed)
         self.lifecycle_manager.log_initialized()
@@ -112,6 +107,7 @@ class MainPresenter(QObject):
         self.file_transfer_manager = components.file_transfer_manager
         self.port_scan_manager = components.port_scan_manager
         self.macro_runner = components.macro_runner
+        self.macro_script_manager = components.macro_script_manager
         self.data_handler = components.data_handler
         self.port_presenter = components.port_presenter
         self.macro_presenter = components.macro_presenter
@@ -126,7 +122,6 @@ class MainPresenter(QObject):
         return coordinator._system_log_writer if coordinator is not None else None
 
     def _connect_signals(self) -> None:
-        """Model/Presenter/View public signal을 direct topology로 연결합니다."""
         self.connection_controller.connection_opened.connect(self.on_port_opened)
         self.connection_controller.connection_closed.connect(self.on_port_closed)
         self.connection_controller.error_occurred.connect(self.on_port_error)
@@ -162,9 +157,6 @@ class MainPresenter(QObject):
             lambda _: self._update_controls_state_for_current_tab()
         )
 
-    # ------------------------------------------------------------------
-    # System log presentation helpers
-    # ------------------------------------------------------------------
     def _log_info(self, message: str) -> None:
         self.view.log_system_message(
             SystemLogEvent(message=message, level=LogLevel.INFO.value)
@@ -180,16 +172,12 @@ class MainPresenter(QObject):
             SystemLogEvent(message=message, level=LogLevel.SUCCESS.value)
         )
 
-    # ------------------------------------------------------------------
-    # Settings / lifecycle
-    # ------------------------------------------------------------------
     def on_preferences_requested(self) -> None:
         self.view.open_preferences_dialog(
             PreferencesCoordinator.build_state(self.settings_manager)
         )
 
     def on_close_requested(self) -> None:
-        """종료 세부 순서는 ShutdownCoordinator에 위임합니다."""
         self.shutdown_coordinator.shutdown()
 
     def on_settings_change_requested(self, new_state: PreferencesState) -> None:
@@ -219,9 +207,6 @@ class MainPresenter(QObject):
         settings.save_settings()
         logger.info("Font settings saved successfully.")
 
-    # ------------------------------------------------------------------
-    # Port / data
-    # ------------------------------------------------------------------
     def _on_data_sent(self, event: PortDataEvent) -> None:
         self.data_handler.on_data_sent(event)
 
@@ -275,11 +260,7 @@ class MainPresenter(QObject):
                 is_current_connected or (is_broadcast and has_any_connection)
             )
 
-    # ------------------------------------------------------------------
-    # Macro
-    # ------------------------------------------------------------------
     def on_macro_started(self) -> None:
-        # UI thread에서 현재 View 상태를 문자열로 스냅샷하고 worker thread에는 값만 전달합니다.
         self._macro_target_port = self.view.port_view.get_current_port_name() or None
         self._log_info("Macro started")
         self.view.show_status_message(
@@ -356,9 +337,6 @@ class MainPresenter(QObject):
         if show_dialog:
             self.view.show_alert_message(title, message)
 
-    # ------------------------------------------------------------------
-    # File transfer
-    # ------------------------------------------------------------------
     def on_file_transfer_completed(self, event: FileCompletionEvent) -> None:
         status_key = (
             "file_prog_lbl_status_completed"
@@ -385,9 +363,6 @@ class MainPresenter(QObject):
     def on_file_transfer_error(self, event: FileErrorEvent) -> None:
         self._log_error(f"File Transfer Error: {event.message}")
 
-    # ------------------------------------------------------------------
-    # UI status / shortcuts
-    # ------------------------------------------------------------------
     def update_status_bar(self) -> None:
         stats = PortStatistics(
             rx_bytes=self.data_handler.rx_byte_count,
@@ -410,13 +385,9 @@ class MainPresenter(QObject):
         self.port_presenter.clear_log_current_port()
 
     def _on_port_tab_added(self, panel: PortPanel) -> None:
-        """새 포트 패널의 횡단 관심사(logging/color)를 각 소유자에 전달합니다."""
         self.logging_coordinator.on_port_tab_added(panel)
         panel.set_data_log_color_rules(color_manager.rules)
 
-    # ------------------------------------------------------------------
-    # Compatibility delegates — 구현 책임은 LoggingCoordinator가 소유합니다.
-    # ------------------------------------------------------------------
     def _connect_logging_signals(self) -> None:
         self.logging_coordinator.connect_signals()
 
