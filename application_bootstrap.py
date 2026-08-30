@@ -11,6 +11,7 @@ from model.command_transmission_service import CommandTransmissionService
 from model.connection_controller import ConnectionController
 from model.file_transfer_manager import FileTransferManager
 from model.macro_runner import MacroRunner
+from model.macro_script_manager import MacroScriptManager
 from model.port_scan_manager import PortScanManager
 from presenter.data_handler import DataTrafficHandler
 from presenter.file_presenter import FilePresenter
@@ -30,6 +31,7 @@ class ApplicationComponents:
     file_transfer_manager: FileTransferManager
     port_scan_manager: PortScanManager
     macro_runner: MacroRunner
+    macro_script_manager: MacroScriptManager
     data_handler: DataTrafficHandler
     port_presenter: PortPresenter
     macro_presenter: MacroPresenter
@@ -55,6 +57,7 @@ class ApplicationBootstrapper:
         file_transfer_manager = FileTransferManager(connection_controller)
         port_scan_manager = PortScanManager()
         macro_runner = MacroRunner()
+        macro_script_manager = MacroScriptManager()
         data_handler = DataTrafficHandler(self._view)
 
         port_presenter = PortPresenter(
@@ -63,7 +66,11 @@ class ApplicationBootstrapper:
             self._settings_manager,
             port_scan_manager,
         )
-        macro_presenter = MacroPresenter(self._view.macro_view, macro_runner)
+        macro_presenter = MacroPresenter(
+            self._view.macro_view,
+            macro_runner,
+            macro_script_manager,
+        )
         file_presenter = FilePresenter(file_transfer_manager)
         packet_presenter = PacketPresenter(
             self._view.packet_view,
@@ -88,6 +95,7 @@ class ApplicationBootstrapper:
             file_transfer_manager=file_transfer_manager,
             port_scan_manager=port_scan_manager,
             macro_runner=macro_runner,
+            macro_script_manager=macro_script_manager,
             data_handler=data_handler,
             port_presenter=port_presenter,
             macro_presenter=macro_presenter,
