@@ -21,7 +21,8 @@ import serial
 from typing import Optional
 from core.transport.base_transport import BaseTransport
 from common.dtos import PortConfig
-from common.constants import WRITE_TIMEOUT_S
+from common.constants import DEFAULT_PORT_TIMEOUT, WRITE_TIMEOUT_S
+from common.enums import SerialFlowControl
 
 class SerialTransport(BaseTransport):
     """
@@ -47,7 +48,7 @@ class SerialTransport(BaseTransport):
         Logic:
             - DTO에서 설정값 로드
             - 흐름 제어 설정 (RTS/CTS)
-            - Non-blocking I/O 설정 (timeout=0)
+            - Non-blocking I/O 설정 (DEFAULT_PORT_TIMEOUT)
             - Write Timeout 설정 (WRITE_TIMEOUT_S — 쓰기 완료 확인, S-039)
               워커 스레드(ConnectionWorker)에서만 블로킹되므로 UI는 멈추지 않음
             - serial.Serial 객체 생성
@@ -62,8 +63,8 @@ class SerialTransport(BaseTransport):
         try:
             # DTO 속성 사용 (타입 안전성 확보)
             flowctrl = self.config.flowctrl
-            rtscts = (flowctrl == 'RTS/CTS')
-            xonxoff = (flowctrl == 'XON/XOFF')
+            rtscts = (flowctrl == SerialFlowControl.RTS_CTS.value)
+            xonxoff = (flowctrl == SerialFlowControl.XON_XOFF.value)
 
             self._serial = serial.Serial(
                 port=self.config.port,
@@ -71,7 +72,7 @@ class SerialTransport(BaseTransport):
                 bytesize=self.config.bytesize,
                 parity=self.config.parity,
                 stopbits=self.config.stopbits,
-                timeout=0,                    # Read timeout (Non-blocking)
+                timeout=DEFAULT_PORT_TIMEOUT,  # Read timeout (Non-blocking)
                 write_timeout=WRITE_TIMEOUT_S, # Write timeout (완료 확인, S-039)
                 xonxoff=xonxoff,
                 rtscts=rtscts,
