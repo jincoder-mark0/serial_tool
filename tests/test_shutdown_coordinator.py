@@ -87,10 +87,31 @@ def test_shutdown_stops_runtime_services_and_saves_state():
     data.stop.assert_called_once()
     packet.stop.assert_called_once()
     status.stop.assert_called_once()
+    manual.stop_auto_tx.assert_called_once()
     close_system_log.assert_called_once()
     collect.assert_called_once_with(settings, window_state, manual_state)
     settings.save_settings.assert_called_once()
     controller.close_connection.assert_called_once_with()
+
+
+def test_auto_tx_is_stopped_before_manual_state_is_collected():
+    coordinator, _, _, controller, _, macro, _, _, manual, *_ = _make_coordinator()
+    macro.isRunning.return_value = False
+    controller.has_active_connection = False
+    order = []
+    manual.stop_auto_tx.side_effect = lambda: order.append("stop_auto_tx")
+    manual.get_state.side_effect = lambda: order.append("get_state") or MagicMock()
+
+    with patch(
+        "presenter.shutdown_coordinator.ShutdownStateCollector.collect_and_apply"
+    ), patch(
+        "presenter.shutdown_coordinator.QCoreApplication.processEvents"
+    ), patch(
+        "presenter.shutdown_coordinator.data_logger_manager.stop_all"
+    ):
+        coordinator.shutdown()
+
+    assert order.index("stop_auto_tx") < order.index("get_state")
 
 
 def test_connection_closes_before_queued_events_and_data_logger_stop():
