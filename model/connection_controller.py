@@ -1,19 +1,17 @@
 """
 연결 컨트롤러 모듈.
 
-다중 연결 worker/transport 생명주기와 송수신 요청을 관리합니다. Packet parser 세션은
-PacketParserManager에 위임하고, 파일 전송 같은 상위 기능은 Controller가 알지 않습니다.
+다중 연결 worker 생명주기/registry와 송수신 요청을 관리합니다. 구체 Transport/Worker
+생성은 ConnectionSessionFactory, packet parser 세션은 PacketParserManager에 위임합니다.
 """
 from typing import Dict, List, Optional
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
-from common.constants import LOOPBACK_PORT_NAME
 from common.dtos import PacketEvent, PortConfig, PortConnectionEvent, PortDataEvent, PortErrorEvent
 from common.enums import ConnectionEventState, ConnectionProtocol
 from core.logger import logger
-from core.transport.loopback_transport import LoopbackTransport
-from core.transport.serial_transport import SerialTransport
+from model.connection_session_factory import ConnectionSessionFactory
 from model.connection_worker import ConnectionWorker
 from model.packet_parser_manager import PacketParserManager
 
@@ -31,11 +29,13 @@ class ConnectionController(QObject):
     def __init__(
         self,
         packet_parser_manager: Optional[PacketParserManager] = None,
+        session_factory: Optional[ConnectionSessionFactory] = None,
     ) -> None:
         super().__init__()
         self.workers: Dict[str, ConnectionWorker] = {}
         self.connection_configs: Dict[str, PortConfig] = {}
         self.packet_parser_manager = packet_parser_manager or PacketParserManager()
+        self.session_factory = session_factory or ConnectionSessionFactory()
 
     @property
     def has_active_connection(self) -> bool:
@@ -78,18 +78,13 @@ class ConnectionController(QObject):
 
         try:
             self.packet_parser_manager.configure(name, config)
-        except ValueError as exc:
-            self._emit_error(name, f"Invalid packet parser configuration: {exc}")
+            worker = self.session_factory.create_worker(config)
+        except (ValueError, OSError) as exc:
+            self.packet_parser_manager.remove(name)
+            self._emit_error(name, f"Invalid connection configuration: {exc}")
             return False
 
-        transport = (
-            LoopbackTransport(config)
-            if name == LOOPBACK_PORT_NAME
-            else SerialTransport(config)
-        )
-        worker = ConnectionWorker(transport, name)
         self.connection_configs[name] = config
-
         worker.connection_opened.connect(
             lambda n=name: self.connection_opened.emit(
                 PortConnectionEvent(
