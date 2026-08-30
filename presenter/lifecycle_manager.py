@@ -1,31 +1,12 @@
 """
 애플리케이션 생명주기 관리자 모듈
 
-MainPresenter의 비대화를 방지하기 위해 초기화 및 종료 로직을 전담합니다.
-
-## WHY
-* MainPresenter가 GOD 클래스가 되는 것을 방지
-* 초기화 순서 및 로직의 명확한 분리
-* 테스트 용이성 향상 (초기화 로직만 별도 테스트 가능)
-
-## WHAT
-* AppLifecycleManager 클래스 정의
-* 설정 로드 및 View 초기 상태 복원
-* Model/Core 시스템 및 하위 Presenter 초기화
-* Fast Path 및 시그널 연결 설정
-* 백그라운드 서비스 시작
-
-## HOW
-* MainPresenter 인스턴스를 주입받아 위임(Delegation) 처리
-* 단계별 초기화 메서드(_init_*)를 순차적으로 호출
-* DTO를 사용하여 설정 데이터를 View에 주입
+MainPresenter의 초기화 순서를 분리하고 설정/상태 복원을 담당합니다.
 """
-from typing import TYPE_CHECKING, Dict, Any
+from typing import Any, Dict, TYPE_CHECKING
+
 from PyQt5.QtCore import QTimer
 
-from core.settings_manager import SettingsManager
-from core.logger import logger
-from view.managers.language_manager import language_manager
 from common.constants import ConfigKeys, DEFAULT_MACRO_INTERVAL_MS, STATUS_BAR_UPDATE_INTERVAL_MS
 from common.defaults import (
     DEFAULT_FIXED_FONT_FAMILY,
@@ -37,180 +18,101 @@ from common.defaults import (
     DEFAULT_WINDOW_HEIGHT,
     DEFAULT_WINDOW_WIDTH,
 )
-from common.dtos import (
-    MainWindowState,
-    FontConfig,
-    ManualControlState,
-    SystemLogEvent
-)
+from common.dtos import FontConfig, MainWindowState, ManualControlState, SystemLogEvent
+from common.enums import LogLevel
+from core.logger import logger
+from core.settings_manager import SettingsManager
+from view.managers.language_manager import language_manager
 
-# Circular Import 방지를 위해 TYPE_CHECKING 사용
 if TYPE_CHECKING:
     from presenter.main_presenter import MainPresenter
 
 
 class AppLifecycleManager:
-    """
-    애플리케이션 초기화 및 종료를 관리하는 클래스입니다.
+    """애플리케이션 초기화 및 View 상태 복원을 관리합니다."""
 
-    MainPresenter의 생성자에서 호출되어 앱의 구동에 필요한 모든 요소를
-    순서대로 준비시킵니다.
-    """
-
-    def __init__(self, main_presenter: 'MainPresenter') -> None:
-        """
-        AppLifecycleManager 초기화
-
-        Args:
-            main_presenter (MainPresenter): 메인 프레젠터 인스턴스.
-        """
+    def __init__(self, main_presenter: "MainPresenter") -> None:
         self.mp = main_presenter
         self.view = main_presenter.view
         self.settings_manager = SettingsManager()
 
     def initialize_app(self) -> None:
-        """
-        애플리케이션 전체 초기화 시퀀스를 실행합니다.
-
-        Logic:
-            1. 설정 로드 및 View 초기 구성 (테마, 폰트, 윈도우 크기)
-            2. Core 시스템 및 Model 초기화 (Controller, Runner)
-            3. 하위 Presenter 초기화
-            4. 하위 Presenter 상태 복원 (Manual Control 등)
-            5. Fast Path 데이터 수신 경로 연결
-            6. 이벤트 및 시그널 연결
-            7. 백그라운드 서비스 시작
-        """
         logger.info("Starting application initialization sequence...")
-
-        # 1. 설정 로드 및 View 초기 구성
         self._init_settings_and_view()
-
-        # 2. Model 및 Handler 초기화 (MainPresenter 메서드 호출)
         self.mp._init_core_systems()
-
-        # 3. Sub-Presenter 초기화 (MainPresenter 메서드 호출)
         self.mp._init_sub_presenters()
-
-        # 4. 하위 Presenter 상태 복원
         self._restore_sub_presenter_states()
-
-        # 5. Fast Path 연결 (ConnectionController -> DataHandler)
-        # EventBus를 거치지 않고 직접 연결하여 성능 최적화
         self.mp.connection_controller.data_received.connect(
             self.mp.data_handler.on_fast_data_received
         )
-
-        # 6. 이벤트 및 시그널 연결 (MainPresenter 메서드 호출)
         self.mp._connect_signals()
-
-        # 7. 서비스 시작
         self._start_services()
-
-        # 초기화 완료 로그 (Debug 레벨로 변경하여 main.py 로그와 중복 방지)
         logger.debug("Application initialization sequence completed.")
 
     def _init_settings_and_view(self) -> None:
-        """
-        설정 파일을 로드하고 View를 초기화합니다.
-
-        Logic:
-            - 설정 파일 초기화(Reset) 여부 확인 및 알림
-            - 저장된 설정값을 바탕으로 DTO 생성
-            - View에 상태 주입 (apply_state)
-            - 테마 및 색상 규칙 적용
-        """
-        # 설정 초기화 알림 체크
         if self.settings_manager.config_was_reset:
             reason = self.settings_manager.reset_reason
             self.view.show_alert_message(
                 language_manager.get_text("lifecycle_title_settings_reset"),
-                language_manager.get_text("lifecycle_msg_settings_reset").format(reason)
+                language_manager.get_text("lifecycle_msg_settings_reset").format(reason),
             )
-
-        # View 초기화 로직 수행
         self._initialize_view_from_settings()
 
     def _initialize_view_from_settings(self) -> None:
-        """
-        설정 파일에서 값을 읽어 View의 초기 상태를 구성합니다.
-        """
-        all_settings = self.settings_manager.get_all_settings()
-        window_state, font_config = self._create_initial_states(all_settings)
-
-        # View에 설정 주입하여 초기 상태 복원
-        # (MainWindow.apply_state 내부에서 폰트 설정과 함께 테마 리프레시가 수행됨)
+        window_state, font_config = self._create_initial_states(
+            self.settings_manager.get_all_settings()
+        )
         self.view.apply_state(window_state, font_config)
 
     def _restore_sub_presenter_states(self) -> None:
-        """
-        하위 Presenter들의 상태를 복원합니다.
-        (예: 수동 제어 패널의 이전 입력값 복원)
-        """
-        all_settings = self.settings_manager.get_all_settings()
-        window_state, _ = self._create_initial_states(all_settings)
-
-        # ManualControl 상태 복원
+        window_state, _ = self._create_initial_states(self.settings_manager.get_all_settings())
         manual_settings = window_state.left_section_state.get("manual_control", {}).get(
             "manual_control_widget", {}
         )
-        manual_defaults = DEFAULT_MANUAL_CONTROL_STATE["manual_control_widget"]
-
-        # DTO 생성 — 누락 필드는 common.defaults의 정본을 사용한다.
+        defaults = DEFAULT_MANUAL_CONTROL_STATE["manual_control_widget"]
         manual_state_dto = ManualControlState(
-            input_text=manual_settings.get("input_text", manual_defaults["input_text"]),
-            hex_mode=manual_settings.get("hex_mode", manual_defaults["hex_mode"]),
-            prefix_enabled=manual_settings.get("prefix_enabled", manual_defaults["prefix_enabled"]),
-            suffix_enabled=manual_settings.get("suffix_enabled", manual_defaults["suffix_enabled"]),
-            rts_enabled=manual_settings.get("rts_enabled", manual_defaults["rts_enabled"]),
-            dtr_enabled=manual_settings.get("dtr_enabled", manual_defaults["dtr_enabled"]),
+            input_text=manual_settings.get("input_text", defaults["input_text"]),
+            hex_mode=manual_settings.get("hex_mode", defaults["hex_mode"]),
+            prefix_enabled=manual_settings.get("prefix_enabled", defaults["prefix_enabled"]),
+            suffix_enabled=manual_settings.get("suffix_enabled", defaults["suffix_enabled"]),
+            rts_enabled=manual_settings.get("rts_enabled", defaults["rts_enabled"]),
+            dtr_enabled=manual_settings.get("dtr_enabled", defaults["dtr_enabled"]),
             local_echo_enabled=manual_settings.get(
-                "local_echo_enabled", manual_defaults["local_echo_enabled"]
+                "local_echo_enabled", defaults["local_echo_enabled"]
             ),
             broadcast_enabled=manual_settings.get(
-                "broadcast_enabled", manual_defaults["broadcast_enabled"]
+                "broadcast_enabled", defaults["broadcast_enabled"]
             ),
-            auto_tx_enabled=manual_settings.get("auto_tx_enabled", manual_defaults["auto_tx_enabled"]),
+            auto_tx_enabled=manual_settings.get("auto_tx_enabled", defaults["auto_tx_enabled"]),
             auto_tx_interval_ms=manual_settings.get(
                 "auto_tx_interval_ms", DEFAULT_MACRO_INTERVAL_MS
             ),
         )
-
-        # Presenter에 상태 주입
         self.mp.manual_control_presenter.apply_state(manual_state_dto)
 
     def _start_services(self) -> None:
-        """백그라운드 서비스 및 타이머를 시작합니다."""
         self.mp.status_timer = QTimer()
         self.mp.status_timer.timeout.connect(self.mp.update_status_bar)
         self.mp.status_timer.start(STATUS_BAR_UPDATE_INTERVAL_MS)
+        self.view.log_system_message(
+            SystemLogEvent(
+                message="Application initialized",
+                level=LogLevel.INFO.value,
+            )
+        )
 
-        # 초기화 완료 로그 - DTO 사용
-        event = SystemLogEvent(message="Application initialized", level="INFO")
-        self.view.log_system_message(event)
-
-    def _create_initial_states(self, settings: Dict[str, Any]) -> tuple[MainWindowState, FontConfig]:
-        """
-        설정 딕셔너리를 DTO로 변환하는 헬퍼 메서드입니다.
-
-        Args:
-            settings (Dict[str, Any]): 로드된 전체 설정 데이터.
-
-        Returns:
-            tuple[MainWindowState, FontConfig]: 생성된 상태 DTO 튜플.
-        """
+    def _create_initial_states(
+        self, settings: Dict[str, Any]
+    ) -> tuple[MainWindowState, FontConfig]:
         def get_val(path: str, default: Any = None) -> Any:
-            """점(.) 표기법 경로를 사용하여 중첩된 설정값을 읽습니다."""
-            keys = path.split('.')
-            val = settings
+            value: Any = settings
             try:
-                for key in keys:
-                    val = val.get(key, {})
-                return val if val != {} else default
+                for key in path.split("."):
+                    value = value.get(key, {})
+                return value if value != {} else default
             except AttributeError:
                 return default
 
-        # MainWindowState DTO 생성 — defaults.py와 동일한 정본을 사용한다.
         window_state = MainWindowState(
             width=get_val(ConfigKeys.WINDOW_WIDTH, DEFAULT_WINDOW_WIDTH),
             height=get_val(ConfigKeys.WINDOW_HEIGHT, DEFAULT_WINDOW_HEIGHT),
@@ -232,13 +134,10 @@ class AppLifecycleManager:
                 }
             },
         )
-
-        # FontConfig DTO 생성 — 폰트 fallback도 공통 정본을 사용한다.
         font_config = FontConfig(
             prop_family=get_val(ConfigKeys.PROP_FONT_FAMILY, DEFAULT_PROP_FONT_FAMILY),
             prop_size=get_val(ConfigKeys.PROP_FONT_SIZE, DEFAULT_PROP_FONT_SIZE),
             fixed_family=get_val(ConfigKeys.FIXED_FONT_FAMILY, DEFAULT_FIXED_FONT_FAMILY),
             fixed_size=get_val(ConfigKeys.FIXED_FONT_SIZE, DEFAULT_FIXED_FONT_SIZE),
         )
-
         return window_state, font_config
