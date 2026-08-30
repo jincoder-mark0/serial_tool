@@ -25,53 +25,15 @@ import time
 
 from common.constants import (
     DEFAULT_BAUDRATE,
-    DEFAULT_LOG_MAX_LINES,
     DEFAULT_MACRO_INTERVAL_MS,
-)
-from common.defaults import (
-    DEFAULT_COMMAND_PREFIX,
-    DEFAULT_COMMAND_SUFFIX,
-    DEFAULT_FIXED_FONT_FAMILY,
-    DEFAULT_FIXED_FONT_SIZE,
-    DEFAULT_LANGUAGE,
-    DEFAULT_LOG_PATH,
-    DEFAULT_PACKET_AT_COLOR_ERROR,
-    DEFAULT_PACKET_AT_COLOR_OK,
-    DEFAULT_PACKET_AT_COLOR_PROMPT,
-    DEFAULT_PACKET_AT_COLOR_URC,
-    DEFAULT_PACKET_AUTOSCROLL,
-    DEFAULT_PACKET_BUFFER_SIZE,
-    DEFAULT_PACKET_DELIMITERS,
-    DEFAULT_PACKET_GAP_MS,
-    DEFAULT_PACKET_LENGTH,
-    DEFAULT_PACKET_LENGTH_FIELD_ENDIAN,
-    DEFAULT_PACKET_LENGTH_FIELD_OFFSET,
-    DEFAULT_PACKET_LENGTH_FIELD_SIZE,
-    DEFAULT_PACKET_LENGTH_INCLUDES_HEADER,
-    DEFAULT_PACKET_PARSER_TYPE,
-    DEFAULT_PACKET_REALTIME,
-    DEFAULT_PORT_BYTESIZE,
-    DEFAULT_PORT_LOCAL_ECHO,
-    DEFAULT_PORT_NEWLINE,
-    DEFAULT_PORT_PROTOCOL,
-    DEFAULT_PORT_SCAN_INTERVAL_MS,
-    DEFAULT_PROP_FONT_FAMILY,
-    DEFAULT_PROP_FONT_SIZE,
-    DEFAULT_RIGHT_PANEL_VISIBLE,
-    DEFAULT_SPI_MODE,
-    DEFAULT_SPI_SPEED,
-    DEFAULT_THEME,
-    DEFAULT_WINDOW_HEIGHT,
-    DEFAULT_WINDOW_WIDTH,
+    FONT_FAMILY_SEGOE,
+    FONT_FAMILY_CONSOLAS
 )
 from common.enums import (
-    ConnectionEventState,
-    FileStatus,
-    LogLevel,
-    MacroStepType,
-    SerialFlowControl,
     SerialParity,
     SerialStopBits,
+    SerialFlowControl,
+    FileStatus
 )
 
 
@@ -98,6 +60,7 @@ def _safe_cast(value: Any, target_type: type, default: Any) -> Any:
         return default
     try:
         if target_type is bool:
+            # "true"/"false" 문자열 처리
             if isinstance(value, str):
                 return value.lower() == "true"
             return bool(value)
@@ -134,87 +97,92 @@ class PortConfig:
         speed (int): SPI 속도 (Hz).
         mode (int): SPI 모드.
         parser_type (int): 패킷 파서 설정 (Preferences 정수 인덱스, S-041).
-        packet_delimiter (str): DELIMITER 파서용 구분자.
-        packet_length (int): FIXED_LENGTH 파서용 고정 길이.
-        length_field_offset (int): LENGTH_FIELD 길이 필드 오프셋.
-        length_field_size (int): LENGTH_FIELD 길이 필드 크기.
-        length_field_endian (str): LENGTH_FIELD 바이트 순서.
-        length_includes_header (bool): 길이 값이 헤더를 포함하는지.
-        gap_ms (int): GAP 파서 프레임 경계 유휴 시간.
+            0=Auto, 1=AT, 2=Delimiter, 3=Fixed, 4=Raw — 문자열 상수 변환은
+            `common.enums.ParserType.from_preference_index` 참조.
+        packet_delimiter (str): DELIMITER 파서용 구분자 (이스케이프 문자열, 예: "\\r\\n").
+        packet_length (int): FIXED_LENGTH 파서용 고정 길이 (bytes).
+        length_field_offset (int): LENGTH_FIELD 파서용 — 길이 필드까지의 오프셋 (S-072).
+        length_field_size (int): LENGTH_FIELD 파서용 — 길이 필드 크기 (1/2/4).
+        length_field_endian (str): LENGTH_FIELD 파서용 — 바이트 순서 ("big"/"little").
+        length_includes_header (bool): LENGTH_FIELD 파서용 — 길이 값이 헤더를 포함하는지.
+        gap_ms (int): GAP 파서용 — 프레임 경계로 볼 유휴 시간 (ms).
     """
     port: str
-    protocol: str = DEFAULT_PORT_PROTOCOL
+    protocol: str = "Serial"
 
     # Serial Options
     baudrate: int = DEFAULT_BAUDRATE
-    bytesize: int = DEFAULT_PORT_BYTESIZE
+    bytesize: int = 8
     parity: str = SerialParity.NONE.value
     stopbits: float = SerialStopBits.ONE.value
     flowctrl: str = SerialFlowControl.NONE.value
 
     # SPI Options
-    speed: int = DEFAULT_SPI_SPEED
-    mode: int = DEFAULT_SPI_MODE
+    speed: int = 1000000
+    mode: int = 0
 
-    # Packet Parser Options
-    parser_type: int = DEFAULT_PACKET_PARSER_TYPE
-    packet_delimiter: str = DEFAULT_PACKET_DELIMITERS[0]
-    packet_length: int = DEFAULT_PACKET_LENGTH
-    length_field_offset: int = DEFAULT_PACKET_LENGTH_FIELD_OFFSET
-    length_field_size: int = DEFAULT_PACKET_LENGTH_FIELD_SIZE
-    length_field_endian: str = DEFAULT_PACKET_LENGTH_FIELD_ENDIAN
-    length_includes_header: bool = DEFAULT_PACKET_LENGTH_INCLUDES_HEADER
-    gap_ms: int = DEFAULT_PACKET_GAP_MS
+    # Packet Parser Options (S-041) — Preferences 설정을 Presenter가 실어 보낸다
+    # (Model은 SettingsManager를 직접 읽지 않는다).
+    parser_type: int = 0
+    packet_delimiter: str = "\\r\\n"
+    packet_length: int = 64
+    length_field_offset: int = 0
+    length_field_size: int = 1
+    length_field_endian: str = "big"
+    length_includes_header: bool = False
+    gap_ms: int = 5
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'PortConfig':
         """
         Dictionary에서 안전하게 PortConfig 객체를 생성합니다.
 
-        누락 필드는 DTO 내부 리터럴이 아니라 common.defaults의 정본을 사용합니다.
-        S-072에서 추가된 length-field/gap 필드도 저장 상태에서 완전 복원합니다.
+        Args:
+            data (Dict[str, Any]): JSON 데이터 딕셔너리.
+
+        Returns:
+            PortConfig: 생성된 PortConfig 객체.
         """
         return cls(
             port=data.get("port", ""),
-            protocol=data.get("protocol", DEFAULT_PORT_PROTOCOL),
+            protocol=data.get("protocol", "Serial"),
             baudrate=_safe_cast(data.get("baudrate"), int, DEFAULT_BAUDRATE),
-            bytesize=_safe_cast(data.get("bytesize"), int, DEFAULT_PORT_BYTESIZE),
+            bytesize=_safe_cast(data.get("bytesize"), int, 8),
             parity=data.get("parity", SerialParity.NONE.value),
             stopbits=_safe_cast(data.get("stopbits"), float, SerialStopBits.ONE.value),
             flowctrl=data.get("flowctrl", SerialFlowControl.NONE.value),
-            speed=_safe_cast(data.get("speed"), int, DEFAULT_SPI_SPEED),
-            mode=_safe_cast(data.get("mode"), int, DEFAULT_SPI_MODE),
-            parser_type=_safe_cast(data.get("parser_type"), int, DEFAULT_PACKET_PARSER_TYPE),
-            packet_delimiter=_safe_cast(
-                data.get("packet_delimiter"), str, DEFAULT_PACKET_DELIMITERS[0]
-            ),
-            packet_length=_safe_cast(data.get("packet_length"), int, DEFAULT_PACKET_LENGTH),
-            length_field_offset=_safe_cast(
-                data.get("length_field_offset"), int, DEFAULT_PACKET_LENGTH_FIELD_OFFSET
-            ),
-            length_field_size=_safe_cast(
-                data.get("length_field_size"), int, DEFAULT_PACKET_LENGTH_FIELD_SIZE
-            ),
-            length_field_endian=_safe_cast(
-                data.get("length_field_endian"), str, DEFAULT_PACKET_LENGTH_FIELD_ENDIAN
-            ),
-            length_includes_header=_safe_cast(
-                data.get("length_includes_header"), bool, DEFAULT_PACKET_LENGTH_INCLUDES_HEADER
-            ),
-            gap_ms=_safe_cast(data.get("gap_ms"), int, DEFAULT_PACKET_GAP_MS),
+            speed=_safe_cast(data.get("speed"), int, 1000000),
+            mode=_safe_cast(data.get("mode"), int, 0),
+            parser_type=_safe_cast(data.get("parser_type"), int, 0),
+            packet_delimiter=_safe_cast(data.get("packet_delimiter"), str, "\\r\\n"),
+            packet_length=_safe_cast(data.get("packet_length"), int, 64)
         )
 
 
 @dataclass
 class PortInfo:
-    """검색된 포트 정보 DTO."""
+    """
+    검색된 포트 정보 DTO
+
+    Attributes:
+        device (str): 포트 장치 이름 (예: COM1).
+        description (str): 포트 설명 (예: USB Serial Port).
+    """
     device: str
     description: str
 
 
 @dataclass
 class PortStatistics:
-    """포트 통신 통계 DTO."""
+    """
+    포트 통신 통계 DTO
+
+    Attributes:
+        rx_bytes (int): 수신 바이트 수.
+        tx_bytes (int): 송신 바이트 수.
+        error_count (int): 에러 발생 횟수.
+        bps (int): 초당 비트 전송률.
+    """
     rx_bytes: int = 0
     tx_bytes: int = 0
     error_count: int = 0
@@ -224,10 +192,11 @@ class PortStatistics:
 @dataclass
 class PortConnectionEvent:
     """
-    포트 연결 상태 변경 이벤트 DTO.
+    포트 연결 상태 변경 이벤트 DTO
 
-    state는 직렬화 호환성을 위해 str로 유지하지만 값은
-    ConnectionEventState.OPENED/CLOSED.value를 사용합니다.
+    Attributes:
+        port (str): 포트 이름.
+        state (str): 연결 상태 ('opened' 또는 'closed').
     """
     port: str
     state: str
@@ -235,15 +204,27 @@ class PortConnectionEvent:
 
 @dataclass
 class PortDataEvent:
-    """포트 데이터 수신/송신 이벤트 DTO."""
+    """
+    포트 데이터 수신/송신 이벤트 DTO
+
+    Attributes:
+        port (str): 포트 이름.
+        data (bytes): 수신/송신된 바이트 데이터.
+        timestamp (float): 이벤트 발생 시간 (Unix timestamp).
+    """
     port: str
     data: bytes
     timestamp: float = field(default_factory=time.time)
 
-
 @dataclass
 class PortErrorEvent:
-    """포트 에러 이벤트 DTO."""
+    """
+    포트 에러 이벤트 DTO
+
+    Attributes:
+        port (str): 포트 이름.
+        message (str): 에러 메시지 내용.
+    """
     port: str
     message: str
 
@@ -254,7 +235,17 @@ class PortErrorEvent:
 
 @dataclass
 class ManualCommand:
-    """수동 Command 전송 데이터 DTO."""
+    """
+    수동 Command 전송 데이터 DTO
+
+    Attributes:
+        command (str): 전송할 텍스트 명령어.
+        hex_mode (bool): 16진수 모드 여부.
+        prefix_enabled (bool): 접두사 사용 여부.
+        suffix_enabled (bool): 접미사 사용 여부.
+        local_echo_enabled (bool): 로컬 에코 사용 여부.
+        broadcast_enabled (bool): 브로드캐스트 전송 여부.
+    """
     command: str
     hex_mode: bool = False
     prefix_enabled: bool = False
@@ -262,10 +253,21 @@ class ManualCommand:
     local_echo_enabled: bool = False
     broadcast_enabled: bool = False
 
-
 @dataclass
 class MacroEntry:
-    """매크로 항목 데이터 DTO."""
+    """
+    매크로 항목 데이터 DTO
+
+    Attributes:
+        enabled (bool): 항목 활성화 여부.
+        command (str): 전송할 명령어.
+        hex_mode (bool): HEX 모드 여부.
+        prefix_enabled (bool): 접두사 사용 여부 (UI상 prefix_enabled).
+        suffix_enabled (bool): 접미사 사용 여부 (UI상 suffix_enabled).
+        delay_ms (int): 다음 명령까지의 대기 시간 (ms).
+        expect (str): 기대하는 응답 패턴 (Expect 기능용).
+        timeout_ms (int): 응답 대기 시간 제한 (ms).
+    """
     enabled: bool = True
     command: str = ""
     hex_mode: bool = False
@@ -276,7 +278,12 @@ class MacroEntry:
     timeout_ms: int = 5000
 
     def to_dict(self) -> Dict[str, Any]:
-        """DTO를 딕셔너리로 변환합니다."""
+        """
+        DTO를 딕셔너리로 변환합니다 (설정 저장용).
+
+        Returns:
+            Dict[str, Any]: 속성값을 담은 딕셔너리.
+        """
         return {
             "enabled": self.enabled,
             "command": self.command,
@@ -285,12 +292,20 @@ class MacroEntry:
             "suffix_enabled": self.suffix_enabled,
             "delay_ms": self.delay_ms,
             "expect": self.expect,
-            "timeout_ms": self.timeout_ms,
+            "timeout_ms": self.timeout_ms
         }
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'MacroEntry':
-        """딕셔너리에서 MacroEntry 객체를 생성합니다."""
+        """
+        딕셔너리에서 MacroEntry 객체를 생성합니다 (설정 로드용).
+
+        Args:
+            data (Dict[str, Any]): 매크로 데이터 딕셔너리.
+
+        Returns:
+            MacroEntry: 생성된 인스턴스.
+        """
         return cls(
             enabled=_safe_cast(data.get("enabled"), bool, True),
             command=_safe_cast(data.get("command"), str, ""),
@@ -299,31 +314,53 @@ class MacroEntry:
             suffix_enabled=_safe_cast(data.get("suffix_enabled"), bool, False),
             delay_ms=_safe_cast(data.get("delay_ms"), int, 0),
             expect=_safe_cast(data.get("expect"), str, ""),
-            timeout_ms=_safe_cast(data.get("timeout_ms"), int, 5000),
+            timeout_ms=_safe_cast(data.get("timeout_ms"), int, 5000)
         )
-
 
 @dataclass
 class MacroScriptData:
-    """매크로 스크립트 데이터 DTO."""
+    """
+    매크로 스크립트 데이터 DTO
+
+    Attributes:
+        file_path (str): 스크립트 파일 경로.
+        data (Dict[str, Any]): 스크립트 내용 데이터.
+    """
     file_path: str
     data: Dict[str, Any]
 
     @classmethod
     def from_dict(cls, file_path: str, data: Dict[str, Any]) -> 'MacroScriptData':
-        """파일 경로와 데이터로 객체를 생성하며 필수 키를 보장합니다."""
+        """
+        파일 경로와 데이터로 객체를 생성하며 필수 키를 보장합니다.
+
+        Args:
+            file_path (str): 파일 경로.
+            data (Dict[str, Any]): JSON 로드 데이터.
+
+        Returns:
+            MacroScriptData: 생성된 객체.
+        """
         if not isinstance(data, dict):
             data = {}
+        # 필수 키 구조 보장
         if "commands" not in data:
             data["commands"] = []
         if "control_state" not in data:
             data["control_state"] = {}
         return cls(file_path=file_path, data=data)
 
-
 @dataclass
 class MacroRepeatOption:
-    """매크로 반복 실행 옵션 DTO."""
+    """
+    매크로 반복 실행 옵션 DTO
+
+    Attributes:
+        max_runs (int): 최대 실행 횟수 (0=무한).
+        interval_ms (int): 실행 간격 (ms).
+        broadcast_enabled (bool): 브로드캐스트 사용 여부.
+        stop_on_error (bool): 에러 발생 시 매크로 중단 여부.
+    """
     max_runs: int = 0
     interval_ms: int = 0
     broadcast_enabled: bool = False
@@ -332,7 +369,13 @@ class MacroRepeatOption:
 
 @dataclass
 class MacroExecutionRequest:
-    """매크로 실행 요청 DTO."""
+    """
+    매크로 실행 요청 DTO
+
+    Attributes:
+        indices (List[int]): 실행할 매크로 행 인덱스 리스트.
+        option (MacroRepeatOption): 반복 및 지연 설정 옵션.
+    """
     indices: List[int]
     option: MacroRepeatOption
 
@@ -340,19 +383,29 @@ class MacroExecutionRequest:
 @dataclass
 class MacroStepEvent:
     """
-    매크로 실행 단계 이벤트 DTO.
+    매크로 실행 단계 이벤트 DTO
 
-    type은 직렬화 호환성을 위해 str로 유지하며 MacroStepType 값을 사용합니다.
+    Attributes:
+        index (int): 현재 실행 중인 단계의 인덱스 (원본 행 번호).
+        entry (Optional[MacroEntry]): 실행된 매크로 항목 객체.
+        success (bool): 실행 성공 여부.
+        type (str): 이벤트 타입 ('started', 'completed' 등).
     """
     index: int
     entry: Optional[MacroEntry] = None
     success: bool = False
-    type: str = MacroStepType.STARTED.value
+    type: str = "started"
 
 
 @dataclass
 class MacroErrorEvent:
-    """매크로 실행 에러 이벤트 DTO."""
+    """
+    매크로 실행 에러 이벤트 DTO
+
+    Attributes:
+        message (str): 에러 메시지.
+        row_index (int): 에러가 발생한 행 인덱스 (-1이면 전역 에러).
+    """
     message: str
     row_index: int = -1
 
@@ -363,7 +416,18 @@ class MacroErrorEvent:
 
 @dataclass
 class FileProgressState:
-    """파일 전송 진행 상태 DTO (UI 업데이트용)."""
+    """
+    파일 전송 진행 상태 DTO (UI 업데이트용)
+
+    Attributes:
+        file_path (str): 파일 경로.
+        sent_bytes (int): 현재까지 전송된 바이트 수.
+        total_bytes (int): 전체 파일 크기 (바이트).
+        speed (float): 현재 전송 속도 (bytes/s).
+        eta (float): 예상 남은 시간 (초).
+        status (str): 현재 상태 문자열.
+        error_msg (str): 에러 발생 시 메시지.
+    """
     file_path: str = ""
     sent_bytes: int = 0
     total_bytes: int = 0
@@ -372,17 +436,29 @@ class FileProgressState:
     status: str = FileStatus.SENDING.value
     error_msg: str = ""
 
-
 @dataclass
 class FileProgressEvent:
-    """파일 전송 진행 이벤트 DTO."""
+    """
+    파일 전송 진행 이벤트 DTO (EventBus용 경량 객체)
+
+    Attributes:
+        current (int): 현재 전송된 바이트 수.
+        total (int): 전체 파일 크기.
+    """
     current: int
     total: int
 
 
 @dataclass
 class FileCompletionEvent:
-    """파일 전송 완료 이벤트 DTO."""
+    """
+    파일 전송 완료 이벤트 DTO
+
+    Attributes:
+        success (bool): 전송 성공 여부.
+        message (str): 완료 메시지 또는 에러 메시지.
+        file_path (str): 전송된 파일 경로.
+    """
     success: bool
     message: str
     file_path: str = ""
@@ -390,7 +466,13 @@ class FileCompletionEvent:
 
 @dataclass
 class FileErrorEvent:
-    """파일 전송 에러 이벤트 DTO."""
+    """
+    파일 전송 에러 이벤트 DTO
+
+    Attributes:
+        message (str): 에러 메시지.
+        file_path (str): 관련 파일 경로.
+    """
     message: str
     file_path: str = ""
 
@@ -401,14 +483,32 @@ class FileErrorEvent:
 
 @dataclass
 class PacketEvent:
-    """패킷 파싱 완료 이벤트 DTO."""
+    """
+    패킷 파싱 완료 이벤트 DTO
+
+    Attributes:
+        port (str): 패킷이 수신된 포트 이름.
+        packet (Any): 파싱된 패킷 객체 (model.packet_parser.Packet).
+    """
     port: str
     packet: Any
 
-
 @dataclass
 class PacketViewData:
-    """패킷 뷰 표시용 데이터 DTO."""
+    """
+    패킷 뷰 표시용 데이터 DTO
+
+    Attributes:
+        time_str (str): 타임스탬프 문자열.
+        packet_type (str): 패킷 타입 문자열.
+        data_hex (str): 데이터의 HEX 문자열 표현.
+        data_ascii (str): 데이터의 ASCII 문자열 표현.
+        checksum_ok (Optional[bool]): 체크섬 검증 결과 (S-071).
+            True=통과, False=불일치, None=검증하지 않음(알고리즘 미설정이거나
+            패킷이 체크섬 필드를 담기에 너무 짧음). "검증했는데 통과"와
+            "아예 검증하지 않음"은 화면에서 구분돼야 하므로 bool이 아니라
+            3-상태로 둔다.
+    """
     time_str: str
     packet_type: str
     data_hex: str
@@ -418,22 +518,47 @@ class PacketViewData:
 
 @dataclass
 class LogDataBatch:
-    """로그 뷰어 업데이트용 데이터 배치 DTO."""
+    """
+    로그 뷰어 업데이트용 데이터 배치 DTO
+
+    Attributes:
+        port (str): 데이터가 속한 포트 이름.
+        data (bytes): 수신된 데이터 배치.
+    """
     port: str
     data: bytes
 
 
 @dataclass
 class SystemLogEvent:
-    """시스템 로그 이벤트 DTO."""
+    """
+    시스템 로그 이벤트 DTO
+
+    Attributes:
+        message (str): 로그 메시지 내용.
+        level (str): 로그 레벨 (INFO, ERROR, WARN, SUCCESS).
+        timestamp (float): 로그 발생 시간 (Unix timestamp). 기본값은 현재 시간.
+    """
     message: str
-    level: str = LogLevel.INFO.value
+    level: str = "INFO"
     timestamp: float = field(default_factory=time.time)
 
 
 @dataclass
 class ColorRule:
-    """단일 색상 규칙 데이터 DTO."""
+    """
+    단일 색상 규칙 데이터 DTO
+
+    Attributes:
+        name (str): 규칙 이름 (예: "AT_OK").
+        pattern (str): 매칭 패턴 (문자열 또는 정규식).
+        color (str): (Legacy) 기본 색상 코드.
+        light_color (str): 라이트 테마용 색상 코드.
+        dark_color (str): 다크 테마용 색상 코드.
+        regex_enabled (bool): 정규식 사용 여부.
+        enabled (bool): 규칙 활성화 여부.
+        bold (bool): 규칙 적용 시 폰트 굵게 표시 여부.
+    """
     name: str
     pattern: str
     color: str = ""
@@ -443,14 +568,21 @@ class ColorRule:
     enabled: bool = True
     bold: bool = False
 
-
 # =============================================================================
 # 5. 설정 및 상태 관련 DTO (Settings & State)
 # =============================================================================
 
 @dataclass
 class FontConfig:
-    """폰트 설정 데이터 DTO."""
+    """
+    폰트 설정 데이터 DTO
+
+    Attributes:
+        prop_family (str): 가변폭 폰트 패밀리.
+        prop_size (int): 가변폭 폰트 크기.
+        fixed_family (str): 고정폭 폰트 패밀리.
+        fixed_size (int): 고정폭 폰트 크기.
+    """
     prop_family: str
     prop_size: int
     fixed_family: str
@@ -458,72 +590,134 @@ class FontConfig:
 
     @classmethod
     def from_dict(cls, data: Dict[str, Any]) -> 'FontConfig':
-        """딕셔너리에서 안전하게 FontConfig 객체를 생성합니다."""
-        return cls(
-            prop_family=_safe_cast(data.get("prop_family"), str, DEFAULT_PROP_FONT_FAMILY),
-            prop_size=_safe_cast(data.get("prop_size"), int, DEFAULT_PROP_FONT_SIZE),
-            fixed_family=_safe_cast(data.get("fixed_family"), str, DEFAULT_FIXED_FONT_FAMILY),
-            fixed_size=_safe_cast(data.get("fixed_size"), int, DEFAULT_FIXED_FONT_SIZE),
-        )
+        """
+        딕셔너리에서 안전하게 FontConfig 객체를 생성합니다.
 
+        Args:
+            data (Dict[str, Any]): 폰트 설정 딕셔너리.
+
+        Returns:
+            FontConfig: 생성된 객체.
+        """
+        return cls(
+            prop_family=_safe_cast(data.get("prop_family"), str, FONT_FAMILY_SEGOE),
+            prop_size=_safe_cast(data.get("prop_size"), int, 9),
+            fixed_family=_safe_cast(data.get("fixed_family"), str, FONT_FAMILY_CONSOLAS),
+            fixed_size=_safe_cast(data.get("fixed_size"), int, 9)
+        )
 
 @dataclass
 class PreferencesState:
-    """환경 설정 전체 상태 DTO."""
+    """
+    환경 설정 전체 상태 DTO
+
+    Attributes:
+        theme (str): 테마 (Dark/Light).
+        language (str): 언어 코드 (en/ko).
+        font_size (int): UI 폰트 크기.
+        max_log_lines (int): 최대 로그 라인 수.
+        baudrate (int): 기본 보드레이트.
+        newline (str): 줄바꿈 모드.
+        local_echo_enabled (bool): 로컬 에코 사용 여부.
+        scan_interval_ms (int): 포트 스캔 간격.
+        command_prefix (str): 명령어 접두사.
+        command_suffix (str): 명령어 접미사.
+        log_dir (str): 로그 저장 디렉토리.
+        parser_type (int): 파서 타입 인덱스.
+        delimiters (List[str]): 구분자 목록.
+        packet_length (int): 고정 패킷 길이.
+        length_field_offset (int): 길이 필드까지의 오프셋 (S-072).
+        length_field_size (int): 길이 필드 크기 (1/2/4).
+        length_field_endian (str): 길이 필드 바이트 순서 ("big"/"little").
+        length_includes_header (bool): 길이 값이 헤더를 포함하는지.
+        gap_ms (int): 갭 프레이밍의 유휴 임계 (ms).
+        at_color_ok (bool): AT OK 색상 적용 여부.
+        at_color_error (bool): AT ERROR 색상 적용 여부.
+        at_color_urc (bool): AT URC 색상 적용 여부.
+        at_color_prompt (bool): AT Prompt 색상 적용 여부.
+        packet_buffer_size (int): 패킷 버퍼 크기.
+        packet_realtime (bool): 패킷 실시간 추적 여부.
+        packet_autoscroll (bool): 패킷 자동 스크롤 여부.
+    """
     # General
-    theme: str = DEFAULT_THEME
-    language: str = DEFAULT_LANGUAGE
-    font_size: int = DEFAULT_PROP_FONT_SIZE
-    max_log_lines: int = DEFAULT_LOG_MAX_LINES
+    theme: str = "Dark"
+    language: str = "en"
+    font_size: int = 10
+    max_log_lines: int = 1000
 
     # Serial Defaults
     baudrate: int = DEFAULT_BAUDRATE
-    newline: str = DEFAULT_PORT_NEWLINE
-    local_echo_enabled: bool = DEFAULT_PORT_LOCAL_ECHO
-    scan_interval_ms: int = DEFAULT_PORT_SCAN_INTERVAL_MS
+    newline: str = "LF"
+    local_echo_enabled: bool = False
+    scan_interval_ms: int = 1000
 
     # Command
-    command_prefix: str = DEFAULT_COMMAND_PREFIX
-    command_suffix: str = DEFAULT_COMMAND_SUFFIX
+    command_prefix: str = ""
+    command_suffix: str = ""
 
     # Logging
-    log_dir: str = DEFAULT_LOG_PATH
+    log_dir: str = ""
 
     # Packet
-    parser_type: int = DEFAULT_PACKET_PARSER_TYPE
-    delimiters: List[str] = field(default_factory=lambda: list(DEFAULT_PACKET_DELIMITERS))
-    packet_length: int = DEFAULT_PACKET_LENGTH
-    length_field_offset: int = DEFAULT_PACKET_LENGTH_FIELD_OFFSET
-    length_field_size: int = DEFAULT_PACKET_LENGTH_FIELD_SIZE
-    length_field_endian: str = DEFAULT_PACKET_LENGTH_FIELD_ENDIAN
-    length_includes_header: bool = DEFAULT_PACKET_LENGTH_INCLUDES_HEADER
-    gap_ms: int = DEFAULT_PACKET_GAP_MS
-    at_color_ok: bool = DEFAULT_PACKET_AT_COLOR_OK
-    at_color_error: bool = DEFAULT_PACKET_AT_COLOR_ERROR
-    at_color_urc: bool = DEFAULT_PACKET_AT_COLOR_URC
-    at_color_prompt: bool = DEFAULT_PACKET_AT_COLOR_PROMPT
-    packet_buffer_size: int = DEFAULT_PACKET_BUFFER_SIZE
-    packet_realtime: bool = DEFAULT_PACKET_REALTIME
-    packet_autoscroll: bool = DEFAULT_PACKET_AUTOSCROLL
-
+    parser_type: int = 0
+    delimiters: List[str] = field(default_factory=lambda: ["\\r\\n"])
+    packet_length: int = 64
+    length_field_offset: int = 0
+    length_field_size: int = 1
+    length_field_endian: str = "big"
+    length_includes_header: bool = False
+    gap_ms: int = 5
+    at_color_ok: bool = True
+    at_color_error: bool = True
+    at_color_urc: bool = True
+    at_color_prompt: bool = True
+    packet_buffer_size: int = 100
+    packet_realtime: bool = True
+    packet_autoscroll: bool = True
 
 @dataclass
 class MainWindowState:
-    """메인 윈도우 상태 DTO (크기, 위치, 레이아웃)."""
-    width: int = DEFAULT_WINDOW_WIDTH
-    height: int = DEFAULT_WINDOW_HEIGHT
+    """
+    메인 윈도우 상태 DTO (크기, 위치, 레이아웃)
+
+    Attributes:
+        width (int): 윈도우 너비.
+        height (int): 윈도우 높이.
+        x (Optional[int]): X 좌표.
+        y (Optional[int]): Y 좌표.
+        splitter_state (Optional[str]): 스플리터 상태 (Base64).
+        right_panel_visible (bool): 우측 패널 표시 여부.
+        right_section_width (Optional[int]): 우측 패널 저장된 너비.
+        left_section_state (Dict[str, Any]): 좌측 섹션 상태 데이터.
+        right_section_state (Dict[str, Any]): 우측 섹션 상태 데이터.
+    """
+    width: int = 1200
+    height: int = 800
     x: Optional[int] = None
     y: Optional[int] = None
     splitter_state: Optional[str] = None
-    right_panel_visible: bool = DEFAULT_RIGHT_PANEL_VISIBLE
+    right_panel_visible: bool = True
     right_section_width: Optional[int] = None
     left_section_state: Dict[str, Any] = field(default_factory=dict)
     right_section_state: Dict[str, Any] = field(default_factory=dict)
 
-
 @dataclass
 class ManualControlState:
-    """수동 제어 위젯 상태 DTO."""
+    """
+    수동 제어 위젯 상태 DTO
+
+    Attributes:
+        input_text (str): 입력창 텍스트.
+        hex_mode (bool): HEX 모드 체크 상태.
+        prefix_enabled (bool): 접두사 체크 상태.
+        suffix_enabled (bool): 접미사 체크 상태.
+        rts_enabled (bool): RTS 체크 상태.
+        dtr_enabled (bool): DTR 체크 상태.
+        local_echo_enabled (bool): 로컬 에코 체크 상태.
+        broadcast_enabled (bool): 브로드캐스트 체크 상태.
+        auto_tx_enabled (bool): Auto Tx(주기적 자동 전송) 체크 상태.
+        auto_tx_interval_ms (int): Auto Tx 반복 전송 간격 (ms).
+    """
     input_text: str = ""
     hex_mode: bool = False
     prefix_enabled: bool = False
@@ -535,23 +729,38 @@ class ManualControlState:
     auto_tx_enabled: bool = False
     auto_tx_interval_ms: int = DEFAULT_MACRO_INTERVAL_MS
 
-
 @dataclass
 class ErrorContext:
-    """시스템 에러 컨텍스트 DTO."""
+    """
+    시스템 에러 컨텍스트 DTO
+
+    Attributes:
+        error_type (str): 에러 타입 이름.
+        message (str): 에러 상세 메시지.
+        traceback (str): 스택 트레이스 문자열.
+        level (str): 에러 레벨 (기본 CRITICAL).
+        timestamp (float): 에러 발생 시간 (Unix timestamp).
+    """
     error_type: str
     message: str
     traceback: str
-    level: str = LogLevel.CRITICAL.value
+    level: str = "CRITICAL"
     timestamp: float = field(default_factory=time.time)
 
 
 @dataclass
 class MacroSendResult:
     """
-    매크로 명령 1건의 전송 결과 DTO (S-080).
+    매크로 명령 1건의 전송 결과 DTO (S-080)
 
-    매크로 스텝의 성공/실패 판정이 실제 전송 결과와 이어지도록 하기 위한 반환 타입입니다.
+    매크로 스텝의 성공/실패 판정이 **실제 전송 결과와 이어지도록** 하기 위한
+    반환 타입이다. 예전에는 전송을 반환값 없는 시그널로 요청해서, 포트가 하나도
+    열려 있지 않아도 모든 스텝이 "성공"으로 보고됐다.
+
+    Attributes:
+        success (bool): 워커가 데이터를 수락했는지 여부.
+        message (str): 실패 사유 (성공 시 빈 문자열).
+        data (bytes): 실제로 보낸 바이트 (Local Echo 표시에 쓴다).
     """
     success: bool
     message: str = ""
