@@ -31,7 +31,8 @@
 ```
 
 2026-08-30 로컬 검증에서 전체 pytest/ruff와 저장소 정합 검사는 Green을 확인했다.
-`main` 대비 전체 diff 감사와 마지막 구조 교정은 완료했다. PR GitHub Actions 전에는 merge 준비 완료로 선언하지 않는다.
+`main` 대비 전체 diff 감사와 마지막 구조 교정도 완료했다.
+PR #1의 GitHub Actions Python 3.11 CI까지 4/4 job Green을 확인했다.
 
 ---
 
@@ -115,7 +116,7 @@
 
 ---
 
-# 3. 테스트 안전망 — 로컬 실행 검증 완료
+# 3. 테스트 안전망 — 로컬/PR 실행 검증 완료
 
 - [x] composition root contract
 - [x] architecture policy boundaries
@@ -136,11 +137,9 @@
 - [x] Presenter→View facade contract 보강
 - [x] 일부 stale constructor/API 테스트 마이그레이션
 
-테스트 파일이 존재하는 것과 실제 Green은 다르다.
-
 ---
 
-# 4. P0 — 지금 해야 하는 검증
+# 4. P0 — 검증 결과
 
 ## 4.1 stale API / constructor 전수 감사
 
@@ -230,7 +229,7 @@ python tools/check_task_boards.py
 - [x] language key integrity Green
 - [x] task board consistency Green
 - [x] 실제 passed/failed/skipped count 기록
-- [ ] PR GitHub Actions Green
+- [x] PR GitHub Actions Green
 
 2026-08-30 로컬 검증 결과 (Python 3.13.15, Windows, offscreen):
 
@@ -242,6 +241,16 @@ full pytest: 643 passed, 0 failed, 0 skipped, 2 dependency warnings
 ruff: 0 errors
 language keys: success (dynamic expression warnings 7건)
 task board: 78 historical tasks consistent
+```
+
+2026-08-30 PR #1 GitHub Actions 결과 (Python 3.11 / GitHub-hosted runners):
+
+```text
+test-windows: success
+lang-keys: success
+task-boards: success
+lint: success
+SerialTool CI: 4/4 Green
 ```
 
 ---
@@ -291,7 +300,6 @@ task board: 78 historical tasks consistent
   - 현재 구현 기준으로 사용하지 않음
 - [x] `doc/history/session_summary_20260830.md`
 - [x] `doc/CHANGELOG.md`
-  - full pytest/ruff/CI 결과가 확정된 뒤 실제 검증 상태와 함께 최종 리팩토링 항목 추가
 
 ---
 
@@ -321,8 +329,8 @@ task board: 78 historical tasks consistent
 - [x] `doc/CHANGELOG.md` 최종 기록
 - [x] README/AGENTS/CLAUDE/RULES/doc 최종 정합 확인
 - [x] `main` 대비 최종 diff 재감사
-- [ ] PR 생성/업데이트
-- [ ] GitHub Actions CI Green
+- [x] PR 생성/업데이트 — PR #1
+- [x] GitHub Actions CI Green — 4/4 jobs
 - [ ] Mock/LOOPBACK/실기기 검증 범위 기록
 - [ ] 알려진 제한사항 기록
 
@@ -336,7 +344,7 @@ task board: 78 historical tasks consistent
 
 # 9. 후속 기능 후보
 
-리팩토링 검증 완료 전 착수하지 않는다.
+리팩토링 merge 판단 전에는 착수하지 않는다.
 
 - [-] SPI/I2C Transport
 - [-] Plugin system
@@ -370,4 +378,4 @@ CI Green
 Docs match code
 ```
 
-검증하지 않은 항목은 체크하지 않는다.
+자동 검증 조건은 모두 충족했다. merge 전 남은 항목은 검증 범위/제한사항 기록과 commit history 처리 여부 결정이다.
