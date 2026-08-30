@@ -78,10 +78,15 @@ class ConnectionController(QObject):
 
         try:
             self.packet_parser_manager.configure(name, config)
+        except ValueError as exc:
+            self._emit_error(name, f"Invalid packet parser configuration: {exc}")
+            return False
+
+        try:
             worker = self.session_factory.create_worker(config)
         except (ValueError, OSError) as exc:
             self.packet_parser_manager.remove(name)
-            self._emit_error(name, f"Invalid connection configuration: {exc}")
+            self._emit_error(name, f"Failed to create connection session: {exc}")
             return False
 
         self.connection_configs[name] = config
