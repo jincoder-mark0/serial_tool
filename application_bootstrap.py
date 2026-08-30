@@ -8,6 +8,8 @@ View 상태 복원부터 MainPresenter 생성까지 전체 runtime object graph�
 from dataclasses import dataclass
 
 from core.settings_manager import SettingsManager
+from core.transport.transaction.backends.pyftdi_backend import PyFtdiAdapterProvider
+from core.transport.transaction.registry import AdapterBackendRegistry
 from model.command_transmission_service import CommandTransmissionService
 from model.connection_controller import ConnectionController
 from model.connection_session_factory import ConnectionSessionFactory
@@ -19,6 +21,7 @@ from model.packet_export_manager import PacketExportManager
 from model.packet_parser_manager import PacketParserManager
 from model.port_scan_manager import PortScanManager
 from model.traffic_monitor import TrafficMonitor
+from model.transaction_manager import TransactionManager
 from presenter.control_state_coordinator import ControlStateCoordinator
 from presenter.data_handler import DataTrafficHandler
 from presenter.file_presenter import FilePresenter
@@ -48,6 +51,7 @@ class ApplicationComponents:
     connection_session_factory: ConnectionSessionFactory
     connection_controller: ConnectionController
     command_transmission_service: CommandTransmissionService
+    transaction_manager: TransactionManager
     macro_runner: MacroRunner
     traffic_monitor: TrafficMonitor
     data_handler: DataTrafficHandler
@@ -91,6 +95,13 @@ class ApplicationBootstrapper:
             connection_controller,
             self._settings_manager,
         )
+
+        # SPI/I2C는 Serial stream worker와 분리된 transaction runtime을 사용합니다.
+        # PyFtdi package/libusb가 없어도 provider.is_available()만 False가 되며
+        # application startup과 Serial 기능은 계속 동작합니다.
+        transaction_registry = AdapterBackendRegistry([PyFtdiAdapterProvider()])
+        transaction_manager = TransactionManager(transaction_registry)
+
         file_transfer_manager = FileTransferManager(connection_controller)
         port_scan_manager = PortScanManager()
         macro_runner = MacroRunner()
@@ -197,6 +208,7 @@ class ApplicationBootstrapper:
             data_handler=data_handler,
             close_system_log=logging_coordinator.close_system_log,
             status_coordinator=status_coordinator,
+            transaction_manager=transaction_manager,
         )
 
         main_presenter = MainPresenter(
@@ -226,6 +238,7 @@ class ApplicationBootstrapper:
             connection_session_factory=connection_session_factory,
             connection_controller=connection_controller,
             command_transmission_service=command_transmission_service,
+            transaction_manager=transaction_manager,
             macro_runner=macro_runner,
             traffic_monitor=traffic_monitor,
             data_handler=data_handler,
