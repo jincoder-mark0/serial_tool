@@ -15,9 +15,11 @@ class TransactionProtocol(str, Enum):
 
 @dataclass(frozen=True)
 class AdapterIdentity:
-    """Persistent adapter selector.
+    """Adapter selector.
 
-    USB enumeration index 대신 backend stable identity와 optional channel을 사용합니다.
+    가능한 경우 serial number처럼 재연결 후에도 유지되는 stable identity를 사용합니다.
+    ``AdapterDescriptor.identity_persistent``가 False이면 backend가 USB topology 등 임시
+    locator를 fallback으로 사용했다는 뜻입니다.
     """
 
     backend_id: str
@@ -34,6 +36,7 @@ class AdapterIdentity:
 @dataclass(frozen=True)
 class SpiCapabilities:
     modes: FrozenSet[int] = field(default_factory=lambda: frozenset({0, 1, 2, 3}))
+    bit_orders: FrozenSet[str] = field(default_factory=lambda: frozenset({"msb"}))
     min_frequency_hz: int = 1
     max_frequency_hz: int = 1
     full_duplex: bool = True
@@ -43,6 +46,8 @@ class SpiCapabilities:
     def __post_init__(self) -> None:
         if not self.modes or any(mode not in {0, 1, 2, 3} for mode in self.modes):
             raise ValueError("SPI modes must be a non-empty subset of {0,1,2,3}")
+        if not self.bit_orders or not self.bit_orders.issubset({"msb", "lsb"}):
+            raise ValueError("SPI bit_orders must be a non-empty subset of {'msb','lsb'}")
         if self.min_frequency_hz <= 0 or self.max_frequency_hz < self.min_frequency_hz:
             raise ValueError("invalid SPI frequency range")
         if self.chip_select_count <= 0:
@@ -93,6 +98,7 @@ class AdapterDescriptor:
     device_family: str
     display_name: str
     capabilities: AdapterCapabilities
+    identity_persistent: bool = True
 
     def __post_init__(self) -> None:
         if not self.device_family.strip():
