@@ -125,8 +125,17 @@ WHY:
    - malformed rule은 compile 단계에서 `PacketFilterSyntaxError`; 직전 valid filter 유지 + PacketPanel 오류 feedback
    - PacketPanel에 Filter enable checkbox + expression input 추가
    - filter off 시 기존 packet 표시 path 유지
-   - PR #10 구현 HEAD: Windows Python 3.11 full pytest `678 passed, 2 external warnings`, GitHub Actions 4/4 Green
-9. [-] packet annotation / selected-range export
+   - PR #10 Windows Python 3.11 full pytest `678 passed, 2 external warnings`, GitHub Actions 4/4 Green
+9. [x] packet annotation / selected-range export
+   - `PacketRecord` immutable snapshot에 stable runtime packet identity / port / raw bytes / checksum / annotation 보존
+   - `PacketAnnotationStore`를 별도 owner로 두어 Parser Packet / PacketViewData mutation 방지
+   - Annotation은 runtime session state: Clear 시 제거, Settings에는 persist하지 않음
+   - PacketPanel Extended row selection + Note column / Note dialog / Export dialog
+   - CSV / JSON / HEX Text / RAW Binary selected export 지원
+   - `PacketExportManager`가 background QThread worker lifecycle을 소유하고 UI thread file I/O 제거
+   - export는 immutable selection snapshot을 사용하고 temporary file + atomic `os.replace` 적용
+   - `ApplicationBootstrapper`가 AnnotationStore / ExportManager를 생성하여 PacketPresenter에 explicit injection
+   - PR #11 구현 HEAD: Windows Python 3.11 full pytest `695 passed, 2 external warnings`, GitHub Actions 4/4 Green
 
 WHY:
 
@@ -202,6 +211,7 @@ WHY:
 - [x] Manual TX/RX, Auto Tx, Macro, File Transfer
 - [x] Packet Inspector 및 주요 parser
 - [x] Structured Packet Filter
+- [x] Packet Annotation / Selected Export
 - [x] Logging / Theme / Localization / Settings
 - [x] Single Composition Root (`ApplicationBootstrapper`)
 - [x] Passive View + explicit DI
@@ -231,6 +241,7 @@ WHY:
 - language key 동적 표현식 7건은 정적 검사 불가
 - 외부 `lark` dependency warning 2건
 - Serial worker scheduling 변경은 실제 USB Serial 장치 acceptance 미완료
+- Packet annotation은 현재 runtime-only이며 persistent session 저장은 지원하지 않음
 
 ---
 

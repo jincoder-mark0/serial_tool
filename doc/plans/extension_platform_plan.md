@@ -154,36 +154,180 @@ Acceptance:
 
 ---
 
-# 3. Phase 2 — Packet Annotation / Selected-Range Export
+# 3. Phase 2 — Packet Annotation / Selected-Range Export — 완료
 
-## Annotation
+## 3.1 최종 구조
 
-Packet DTO 자체 mutation보다 별도 annotation store/model을 권장한다.
+Parser가 만든 Packet 객체나 표시용 `PacketViewData`를 annotation 때문에 mutation하지 않는다.
 
-정보 후보:
+```text
+PacketEvent
+ -> PacketPresenter
+ -> PacketRecord immutable snapshot
+    - packet_id
+    - port
+    - timestamp/display time
+    - packet type
+    - raw bytes
+    - HEX / ASCII
+    - checksum state
+    - annotation snapshot
+ -> PacketModel
+ -> selection
+```
 
-- packet/session identity
-- timestamp
-- note/tag
-- optional category semantic
+Annotation:
 
-## Selected Range Export
+```text
+selected packet_id(s)
+ -> PacketPresenter
+ -> PacketAnnotationStore
+ -> PacketPanel cached PacketRecord update
+```
 
-View selection을 DTO snapshot으로 변환해 Service에 전달한다.
+Export:
 
-지원 후보:
+```text
+selected PacketRecord tuple
+ -> PacketPresenter
+ -> PacketExportManager
+ -> QThread export worker
+ -> temporary file
+ -> os.replace()
+```
 
-- raw bytes
-- hex text
-- CSV
-- JSON packet metadata
+## 3.2 Owner / Boundary
 
-큰 selection에서 UI thread file I/O 금지.
+`common/packet_records.py`:
+
+- `PacketRecord`: annotation/export용 immutable packet snapshot
+- export 시작 이후 View selection/row eviction과 독립적인 data contract
+
+`model/packet_annotation_store.py`:
+
+- `packet_id -> note` runtime state owner
+- empty note는 annotation 삭제
+- Parser Packet / View DTO mutation 없음
+
+`model/packet_export_manager.py`:
+
+- export worker lifecycle owner
+- CSV / JSON / HEX text / RAW binary 지원
+- background QThread file I/O
+- temporary file + atomic `os.replace`
+- 실패 시 temporary file cleanup
+
+`PacketPresenter`:
+
+- stable runtime packet identity 발급 (`<port>:<sequence>`)
+- annotation use-case orchestration
+- selected immutable record snapshot을 export manager로 전달
+- shutdown 시 export manager bounded stop
+
+`PacketPanel / PacketModel`:
+
+- Extended row selection
+- Note column / tooltip
+- Note dialog / Export save dialog
+- display DTO와 `PacketRecord`를 parallel bounded deque로 정렬 유지
+- selection을 immutable record tuple로 반환
+- file write / annotation source-of-truth 소유하지 않음
+
+`ApplicationBootstrapper`:
+
+- `PacketAnnotationStore`, `PacketExportManager` 생성
+- `PacketPresenter`에 explicit injection
+- `ApplicationComponents`에서 strong reference 유지
+
+## 3.3 Annotation 정책
+
+현재 annotation은 **runtime session state**로 한정한다.
+
+```text
+앱 실행 중 annotation 유지
+Clear Packet View -> annotation store clear
+앱 종료 -> annotation 소멸
+SettingsManager에 저장하지 않음
+```
 
 WHY:
 
-- Packet Filter와 동일한 Packet DTO 경계를 활용 가능
-- Trigger처럼 TX side effect가 없어 먼저 안정화하기 적합
+- persistent annotation을 도입하려면 session/file identity, stale record migration, 저장 위치 정책이 추가로 필요
+- 우선 분석 workflow의 note 기능을 안정화하고 실제 persistence 요구가 확인될 때 별도 feature로 설계
+
+## 3.4 Selected Export 형식
+
+CSV:
+
+```text
+time, port, type, hex, ascii, checksum, annotation
+```
+
+JSON:
+
+```text
+packet_id / time / port / type / raw_hex / ascii / checksum / annotation
+```
+
+HEX Text:
+
+- selected packet당 1 line
+- time / port / type / HEX / optional annotation
+
+RAW Binary:
+
+- selected packet raw bytes를 selection order대로 concatenate
+- 별도 delimiter는 삽입하지 않음
+
+## 3.5 File I/O 정책
+
+큰 selection에서 UI thread file I/O를 하지 않는다.
+
+```text
+View selection
+ -> immutable tuple snapshot
+ -> background QThread
+ -> temp write
+ -> atomic replace
+```
+
+Worker가 실행된 뒤 View가 clear/scroll/annotation 변경되어도 현재 export snapshot에는 영향이 없다.
+
+## 3.6 검증
+
+- AnnotationStore가 Packet snapshot과 독립인지 검증
+- empty annotation removal
+- CSV/JSON/HEX/RAW output contract
+- raw byte preservation
+- atomic replace / failed temp cleanup
+- PacketModel buffer eviction/resize 시 display-record alignment
+- row selection dedupe/order
+- annotation column update
+- PacketPresenter stable packet identity
+- Presenter annotation/store/View sync
+- export request immutable snapshot 전달
+- presenter stop -> export owner stop
+
+PR #11 구현 HEAD 검증:
+
+```text
+Windows / Python 3.11
+  full pytest: 695 passed, 2 external lark warnings
+  lint: success
+  lang-keys: success
+  task-boards: success
+```
+
+Acceptance:
+
+- Packet DTO mutation 없음 — 완료
+- stable selection/export snapshot — 완료
+- selected-range export 4 format — 완료
+- UI thread file I/O 없음 — 완료
+- export failure가 기존 target file을 훼손하지 않음 — 완료
+- View bounded-buffer와 record alignment 유지 — 완료
+- composition-root ownership / shutdown lifecycle 명시 — 완료
+- full CI Green — 완료
 
 ---
 
@@ -386,7 +530,7 @@ Plugin 적합 후보:
 
 ```text
 1. Structured Packet Filter [완료]
-2. Packet Annotation / Selected-range Export
+2. Packet Annotation / Selected-range Export [완료]
 3. SPI/I2C backend & capability model
 4. SPI/I2C Transport implementation
 5. Plugin system

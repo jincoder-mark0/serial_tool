@@ -11,10 +11,13 @@ class _FakePanel(QObject):
     capture_toggled = pyqtSignal(bool)
     filter_toggled = pyqtSignal(bool)
     filter_expression_changed = pyqtSignal(str)
+    annotation_requested = pyqtSignal(object, str)
+    export_requested = pyqtSignal(object, str, str)
 
     def __init__(self) -> None:
         super().__init__()
         self.appended = []
+        self.records = []
         self.filter_errors: list[str] = []
         self.filter_state = False
 
@@ -36,11 +39,16 @@ class _FakePanel(QObject):
     def clear_filter_error(self) -> None:
         self.filter_errors.clear()
 
-    def append_packet(self, data) -> None:
+    def append_packet(self, data, record=None) -> None:
         self.appended.append(data)
+        self.records.append(record)
+
+    def set_packet_annotation(self, _packet_ids, _note: str) -> None:
+        pass
 
     def clear_view(self) -> None:
         self.appended.clear()
+        self.records.clear()
 
 
 class _FakeController(QObject):
@@ -74,6 +82,7 @@ def test_filter_off_preserves_existing_packet_path(qapp):
 
         assert len(panel.appended) == 1
         assert panel.appended[0].packet_type == "AT"
+        assert panel.records[0].raw_data == b"AT+OK\r\n"
     finally:
         presenter.stop()
 

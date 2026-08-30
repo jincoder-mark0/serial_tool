@@ -16,11 +16,14 @@ from common.defaults import (
 )
 from common.dtos import PacketEvent, PacketViewData, PreferencesState
 from common.enums import ByteOrder
+from common.packet_records import PacketRecord
 from core import checksum
 from core.checksum import ChecksumAlgorithm
 from core.logger import logger
 from core.settings_manager import SettingsManager
 from model.connection_controller import ConnectionController
+from model.packet_annotation_store import PacketAnnotationStore
+from model.packet_export_manager import PacketExportManager
 from model.packet_filter import (
     CompiledPacketFilter,
     PacketFilterContext,
@@ -31,23 +34,28 @@ from view.panels.packet_panel import PacketPanel
 
 
 class PacketPresenter(QObject):
-    """패킷 수신 데이터를 View용 DTO로 변환하고 표시 상태를 관리합니다."""
+    """Packet 표시/filter/annotation/export use-case를 조정합니다."""
 
     def __init__(
         self,
         panel: PacketPanel,
         connection_controller: ConnectionController,
         settings_manager: SettingsManager,
+        annotation_store: PacketAnnotationStore | None = None,
+        export_manager: PacketExportManager | None = None,
     ) -> None:
         super().__init__()
         self.panel = panel
         self.connection_controller = connection_controller
         self.settings_manager = settings_manager
+        self._annotation_store = annotation_store or PacketAnnotationStore()
+        self._export_manager = export_manager or PacketExportManager(self)
         self._is_capturing = True
         self._filter_enabled = False
         self._compiled_filter: CompiledPacketFilter = PacketFilterEngine.compile("")
-        self._pending_packets: List[PacketViewData] = []
+        self._pending_packets: List[tuple[PacketViewData, PacketRecord]] = []
         self._buffer_size = DEFAULT_PACKET_BUFFER_SIZE
+        self._packet_sequence = 0
 
         self._flush_timer = QTimer(self)
         self._flush_timer.setInterval(UI_REFRESH_INTERVAL_MS)
@@ -60,9 +68,14 @@ class PacketPresenter(QObject):
         self.panel.capture_toggled.connect(self.on_capture_toggled)
         self.panel.filter_toggled.connect(self.on_filter_toggled)
         self.panel.filter_expression_changed.connect(self.on_filter_expression_changed)
+        self.panel.annotation_requested.connect(self.on_annotation_requested)
+        self.panel.export_requested.connect(self.on_export_requested)
 
         self.connection_controller.packet_received.connect(self.on_packet_received)
         self.connection_controller.connection_closed.connect(self._on_connection_closed)
+
+        self._export_manager.export_completed.connect(self._on_export_completed)
+        self._export_manager.export_failed.connect(self._on_export_failed)
 
     def _apply_initial_settings(self) -> None:
         buffer_size = self.settings_manager.get(
@@ -95,7 +108,6 @@ class PacketPresenter(QObject):
         if packet.metadata and "type" in packet.metadata:
             packet_type = packet.metadata["type"]
 
-        # Checksum은 Filter와 View가 같은 판정값을 공유합니다.
         checksum_ok = self._verify_checksum(raw_data)
 
         if self._filter_enabled:
@@ -113,16 +125,31 @@ class PacketPresenter(QObject):
         data_ascii = "".join(
             chr(byte) if 32 <= byte < 127 else "." for byte in raw_data
         )
+        packet_id = self._next_packet_id(event.port)
 
-        self._pending_packets.append(
-            PacketViewData(
-                time_str=timestamp,
-                packet_type=packet_type,
-                data_hex=data_hex,
-                data_ascii=data_ascii,
-                checksum_ok=checksum_ok,
-            )
+        view_data = PacketViewData(
+            time_str=timestamp,
+            packet_type=packet_type,
+            data_hex=data_hex,
+            data_ascii=data_ascii,
+            checksum_ok=checksum_ok,
         )
+        record = PacketRecord(
+            packet_id=packet_id,
+            port=event.port,
+            time_str=timestamp,
+            packet_type=packet_type,
+            raw_data=bytes(raw_data),
+            data_hex=data_hex,
+            data_ascii=data_ascii,
+            checksum_ok=checksum_ok,
+            annotation=self._annotation_store.get_note(packet_id),
+        )
+        self._pending_packets.append((view_data, record))
+
+    def _next_packet_id(self, port: str) -> str:
+        self._packet_sequence += 1
+        return f"{port}:{self._packet_sequence}"
 
     def _verify_checksum(self, raw_data: bytes) -> Optional[bool]:
         algorithm = self.settings_manager.get(
@@ -162,12 +189,6 @@ class PacketPresenter(QObject):
         return checksum.verify(algo, target, expected)
 
     def on_filter_expression_changed(self, expression: str) -> None:
-        """새 expression이 유효할 때만 active compiled filter를 교체합니다.
-
-        WHY:
-        사용자가 rule을 편집하는 중 malformed 중간 상태가 생겨도 직전 valid filter를
-        갑자기 해제하거나 RX path에 예외를 전달하면 안 됩니다.
-        """
         try:
             compiled = PacketFilterEngine.compile(expression)
         except PacketFilterSyntaxError as exc:
@@ -183,6 +204,31 @@ class PacketPresenter(QObject):
         self._filter_enabled = enabled
         logger.debug(f"Packet filter state changed: {enabled}")
 
+    def on_annotation_requested(self, packet_ids, note: str) -> None:
+        """Selected packet IDs의 annotation source-of-truth와 View cache를 동기화합니다."""
+        ids = tuple(str(packet_id) for packet_id in packet_ids if str(packet_id))
+        if not ids:
+            return
+
+        normalized = note.strip()
+        for packet_id in ids:
+            self._annotation_store.set_note(packet_id, normalized)
+        self.panel.set_packet_annotation(ids, normalized)
+        logger.debug(f"Packet annotation updated: {len(ids)} row(s)")
+
+    def on_export_requested(self, records, path: str, export_format: str) -> None:
+        snapshot = tuple(records)
+        if self._export_manager.export_async(snapshot, path, export_format):
+            logger.info(
+                f"Packet export started: {len(snapshot)} packet(s), format={export_format}"
+            )
+
+    def _on_export_completed(self, path: str, count: int) -> None:
+        logger.info(f"Packet export completed: {count} packet(s) -> {path}")
+
+    def _on_export_failed(self, message: str) -> None:
+        logger.error(f"Packet export failed: {message}")
+
     def _on_connection_closed(self, _event) -> None:
         self._flush_pending_packets()
 
@@ -196,12 +242,13 @@ class PacketPresenter(QObject):
         if self._buffer_size > 0 and len(pending) > self._buffer_size:
             pending = pending[-self._buffer_size:]
 
-        for view_data in pending:
-            self.panel.append_packet(view_data)
+        for view_data, record in pending:
+            self.panel.append_packet(view_data, record)
 
     def stop(self) -> None:
         self._flush_timer.stop()
         self._flush_pending_packets()
+        self._export_manager.stop()
 
     def on_settings_changed(self, state: PreferencesState) -> None:
         self._buffer_size = state.packet_buffer_size
@@ -214,6 +261,7 @@ class PacketPresenter(QObject):
 
     def on_clear_requested(self) -> None:
         self._pending_packets.clear()
+        self._annotation_store.clear()
         self.panel.clear_view()
         logger.debug("Packet view cleared by user.")
 

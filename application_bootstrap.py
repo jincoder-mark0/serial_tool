@@ -14,6 +14,8 @@ from model.connection_session_factory import ConnectionSessionFactory
 from model.file_transfer_manager import FileTransferManager
 from model.macro_runner import MacroRunner
 from model.macro_script_manager import MacroScriptManager
+from model.packet_annotation_store import PacketAnnotationStore
+from model.packet_export_manager import PacketExportManager
 from model.packet_parser_manager import PacketParserManager
 from model.port_scan_manager import PortScanManager
 from model.traffic_monitor import TrafficMonitor
@@ -41,6 +43,8 @@ class ApplicationComponents:
     main_presenter: MainPresenter
     lifecycle_manager: AppLifecycleManager
     packet_parser_manager: PacketParserManager
+    packet_annotation_store: PacketAnnotationStore
+    packet_export_manager: PacketExportManager
     connection_session_factory: ConnectionSessionFactory
     connection_controller: ConnectionController
     command_transmission_service: CommandTransmissionService
@@ -76,6 +80,8 @@ class ApplicationBootstrapper:
         lifecycle_manager.initialize_view()
 
         packet_parser_manager = PacketParserManager()
+        packet_annotation_store = PacketAnnotationStore()
+        packet_export_manager = PacketExportManager()
         connection_session_factory = ConnectionSessionFactory()
         connection_controller = ConnectionController(
             packet_parser_manager,
@@ -117,6 +123,8 @@ class ApplicationBootstrapper:
             self._view.packet_view,
             connection_controller,
             self._settings_manager,
+            packet_annotation_store,
+            packet_export_manager,
         )
         manual_control_presenter = ManualControlPresenter(
             self._view.manual_control_view,
@@ -213,6 +221,8 @@ class ApplicationBootstrapper:
             main_presenter=main_presenter,
             lifecycle_manager=lifecycle_manager,
             packet_parser_manager=packet_parser_manager,
+            packet_annotation_store=packet_annotation_store,
+            packet_export_manager=packet_export_manager,
             connection_session_factory=connection_session_factory,
             connection_controller=connection_controller,
             command_transmission_service=command_transmission_service,
