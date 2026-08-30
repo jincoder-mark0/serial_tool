@@ -27,7 +27,9 @@ from core.structures import ThreadSafeQueue
 from common.constants import (
     DEFAULT_READ_CHUNK_SIZE,
     BATCH_SIZE_THRESHOLD,
-    BATCH_TIMEOUT_MS
+    BATCH_TIMEOUT_MS,
+    WORKER_IDLE_WAIT_MS,
+    WORKER_BUSY_WAIT_US,
 )
 
 class ConnectionWorker(QThread):
@@ -118,9 +120,9 @@ class ConnectionWorker(QThread):
                         # 5. CPU 부하 방지
                         # 데이터가 없으면 긴 sleep, 있으면 짧은 sleep
                         if len(batch_buffer) == 0 and self._write_queue.is_empty():
-                            self.msleep(1)
+                            self.msleep(WORKER_IDLE_WAIT_MS)
                         else:
-                            self.usleep(100)
+                            self.usleep(WORKER_BUSY_WAIT_US)
 
                     except Exception as e:
                         self.error_occurred.emit(f"IO Error: {str(e)}")
