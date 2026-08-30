@@ -2,316 +2,308 @@
 
 > 최종 갱신: 2026-08-31
 > 기준 브랜치: `main`
-> Presenter/View Boundary 리팩토링: PR #1 squash merge 완료
-> Post-merge 통합 로드맵: [`doc/plans/roadmap_post_merge.md`](doc/plans/roadmap_post_merge.md)
-> 최종 환경 검증 계획: [`doc/plans/environment_validation_plan.md`](doc/plans/environment_validation_plan.md)
-> SPI/I2C backend 결정: [`doc/plans/spi_i2c_backend_decision_20260831.md`](doc/plans/spi_i2c_backend_decision_20260831.md)
-> SPI/I2C adapter architecture: [`doc/plans/spi_i2c_adapter_architecture.md`](doc/plans/spi_i2c_adapter_architecture.md)
-> 에이전트 규칙: [`AGENTS.md`](AGENTS.md)
+> 현재 실행 순서: **P2 잔여 hardware gate → P3 확장 → P4 최종 환경/배포 검증**
+> Post-merge 로드맵: [`doc/plans/roadmap_post_merge.md`](doc/plans/roadmap_post_merge.md)
+> SPI/I2C 결정: [`doc/plans/spi_i2c_backend_decision_20260831.md`](doc/plans/spi_i2c_backend_decision_20260831.md)
+> SPI/I2C wrapper: [`doc/plans/spi_i2c_adapter_architecture.md`](doc/plans/spi_i2c_adapter_architecture.md)
 
-이 문서는 **현재 완료 상태와 앞으로 해야 할 일을 실제 권장 착수 순서대로 관리하는 유일한 작업 보드**다.
-상태 표기: `[x]` 완료 / `[ ]` 해야 함 / `[-]` 보류·판단 필요
+상태: `[x]` 완료 / `[ ]` 해야 함 / `[-]` 일부 완료·외부 gate 대기
 
 ---
 
-# 1. 현재 기준선
-
-```text
-PR #1 squash merge: 완료
-Local Windows / Python 3.13.15: 643 passed
-Ruff: 0 errors
-Language key integrity: Green
-Task board consistency: Green
-PR Python 3.11 GitHub Actions: 4/4 Green
-main push CI: Green
-```
-
-현재 단계는 **P2 debt/성능 정리 → P3 기능 확장 → P4 최종 환경/배포 검증**이다.
-
----
-
-# 2. 앞으로 해야 할 업무 — 권장 실행 순서
-
-아래 번호가 실제 권장 착수 순서다. P2/P3/P4 명칭보다 **선행 의존성, 회귀 리스크, 검증 비용**을 우선한다.
+# 1. P2 — 구조 / 성능
 
 ## P2-A — Low-risk 구조 정리
 
-상세: [`architecture_cleanup_plan.md`](doc/plans/architecture_cleanup_plan.md)
-
 1. [x] timeout/status duration/poll interval 상수화
-   - worker/background/file-transfer polling은 기존 canonical constant 사용 확인
-   - MainPresenter status message duration `0/3000/5000 ms`를 의미별 named constant로 정리
-   - literal contract regression test 추가, PR #2 GitHub Actions 4/4 Green
-2. [x] legacy `core/event_bus.py` 완전 삭제
-   - `core/event_bus.py` 및 `common.constants.EventTopics` 제거
-   - EventBus 전용 autouse fixture / unit tests / stale constants contract 제거
-   - direct event topology test가 EventBus/EventTopics 재도입을 차단
-   - PR #3 Python 3.11 full pytest: `639 passed, 2 warnings`, GitHub Actions 4/4 Green
+   - MainPresenter status duration 포함 canonical constant 정리
+   - literal regression contract 추가
+   - PR #2 CI 4/4 Green
 
-WHY:
+2. [x] legacy EventBus 완전 삭제
+   - `core/event_bus.py`, `EventTopics`, EventBus fixture/test 제거
+   - direct Qt signal topology 재도입 방지 contract
+   - PR #3: Python 3.11 `639 passed, 2 warnings`, CI 4/4 Green
 
-- runtime behavior 변경이 거의 없는 작업부터 처리
-- benchmark와 이후 확장에서 stale policy/dead code가 판단 노이즈가 되는 것을 방지
-
-## P2-B — 성능 측정 및 증거 기반 최적화
-
-상세: [`performance_optimization_plan.md`](doc/plans/performance_optimization_plan.md)
+## P2-B — 증거 기반 성능 최적화
 
 3. [x] benchmark scenario/baseline 재고정
-   - 기존 `tools/benchmark.py` Core micro benchmark는 유지
-   - `tools/runtime_benchmark.py` 신규: DataTrafficHandler RX pipeline + 실제 ConnectionWorker QThread mixed RX/TX scenario
-   - metric: RX/TX throughput, elapsed, RX batch count, stop latency
-   - synthetic transport는 benchmark fixture 자체가 병목이 되지 않도록 immutable bytes + offset 소비
-   - CI는 성능 threshold가 아니라 scenario 실행/byte-preservation/result schema만 검증
-   - 기준 문서: [`doc/runtime_benchmark_baseline_spec_20260830.md`](doc/runtime_benchmark_baseline_spec_20260830.md)
-   - PR #4 최신 검증: Python 3.11 `643 passed, 2 warnings`, GitHub Actions 4/4 Green
-4. [x] RxLogView `BatchRenderer` 필요성 benchmark 기반 재평가
-   - 결론: **별도 BatchRenderer 도입하지 않음 / 현재 DataTrafficHandler + LogModel batching 유지**
-   - `LogModel.add_logs()` batch insert는 single-row control 대비 약 `5.5~5.8x` 처리량
-   - ASCII decode/formatting overhead는 약 `0~3%`로 dominant bottleneck 아님
-   - event-loop/paint servicing overhead는 약 `21~28%`
-   - flush-size matrix: `4 KiB=0.813 MB/s`, `16 KiB=3.191 MB/s`, `64 KiB=11.935 MB/s`
-   - update 횟수 `16x` 감소 시 처리량 `14.675x` 증가 -> 병목은 update fixed cost이며 upstream batching이 올바른 해결 위치
-   - 기준 결과: [`doc/benchmarks/rx_view_baseline_20260830.md`](doc/benchmarks/rx_view_baseline_20260830.md)
-   - 실제 2/4-port 고속 RX, 실제 화면/HEX bottleneck이 확인될 때만 재검토
-5. [-] Serial non-blocking I/O loop 후보안 비교/최적화
-   - **software optimization 완료 / 실제 USB Serial acceptance 미완료**
-   - baseline: Windows synthetic mixed RX/TX에서 16 MiB RX를 10 s 내 완료하지 못함 (`3,301,376 / 16,777,216 bytes`)
-   - Candidate A (`usleep(100 us)` activity-aware): 동일하게 timeout -> 폐기
-   - Candidate B: 실제 I/O activity가 있으면 `yieldCurrentThread()`, pending-only는 busy wait, 완전 idle은 1 ms wait -> 채택
-   - Candidate B synthetic repeat=3: RX `226.700 MB/s`, TX `56.675 MB/s`, elapsed `70.578 ms`, stop `0.913 ms`
-   - Python 3.11 full pytest `652 passed, 2 warnings`, CI/benchmark Green 확인
-   - benchmark 결과: [`doc/benchmarks/worker_loop_optimization_20260830.md`](doc/benchmarks/worker_loop_optimization_20260830.md)
-   - TX drain quota / adaptive read / QWaitCondition은 현재 evidence로 불필요하여 도입하지 않음
-   - **남은 완료 조건:** 실제 USB Serial open/close + sustained RX/TX + disconnect/reconnect + shutdown smoke
+   - Core micro benchmark 유지
+   - `tools/runtime_benchmark.py`: RX pipeline + ConnectionWorker mixed RX/TX
+   - PR #4: Python 3.11 `643 passed, 2 warnings`, CI 4/4 Green
 
-WHY:
+4. [x] RxLogView `BatchRenderer` 필요성 재평가
+   - 결론: **별도 BatchRenderer 미도입**
+   - 현재 DataTrafficHandler + LogModel batching 유지
+   - 기준: [`doc/benchmarks/rx_view_baseline_20260830.md`](doc/benchmarks/rx_view_baseline_20260830.md)
 
-- 구조를 크게 바꾸기 전에 성능 baseline을 고정
-- 개선폭이 측정 오차 수준이면 구현하지 않는 것도 완료 판단
-- Serial I/O는 Mock/LOOPBACK/synthetic transport만으로 실제 driver/stack 특성을 충분히 검증할 수 없음
+5. [-] Serial non-blocking I/O loop 최적화
+   - software 변경 완료, 실제 USB Serial acceptance 미완료
+   - Candidate B: active I/O → `yieldCurrentThread()`, pending-only → busy wait, idle → 1 ms wait
+   - synthetic repeat=3: RX `226.700 MB/s`, TX `56.675 MB/s`, elapsed `70.578 ms`, stop `0.913 ms`
+   - PR #7: Python 3.11 `652 passed, 2 warnings`, CI Green
+   - 남은 gate: 실제 USB Serial open/close + sustained RX/TX + disconnect/reconnect + shutdown
 
-## P2-C — Global state 및 package 구조 정리
+## P2-C — Global state / package 구조
 
 6. [x] SettingsManager singleton 제거
-   - `SettingsManager.__new__`, class `_instance`, `_initialized` 제거
-   - application runtime에서는 `main.py`가 instance를 한 번 생성하고 `ApplicationBootstrapper`에 명시적으로 주입
-   - `ThemeManager` 내부의 사용되지 않던 hidden `SettingsManager()` 생성 제거
-   - production direct constructor는 `main.py`만 허용하는 AST architecture contract 추가
-   - test fixture/migration/durability test를 독립 instance 방식으로 전환하고 stale singleton reset 제거
-   - load/save/migration/fallback/backup/atomic replace contract 보존
-   - PR #8 Windows Python 3.11 full pytest `655 passed, 2 external warnings`, GitHub Actions 4/4 Green
-7. [x] Coordinator package 이동 필요성 최종 판단 — **현재는 이동하지 않음**
-   - `ApplicationBootstrapper`가 Presenter/Coordinator를 한 composition root에서 명시적으로 import/조립
-   - Presenter/Coordinator import direction 혼동이나 순환 dependency 문제의 반복 evidence 없음
-   - SPI/I2C/Plugin 확장 전이라 application-level orchestration module 증가 조건 미충족
-   - 별도 coordinator package public API 요구 없음
-   - 계획의 이동 조건 4개 중 2개 이상 충족하지 않으므로 package move는 import churn만 증가한다고 판단
-   - 향후 SPI/I2C/Plugin 확장으로 coordinator 수/의존성이 실제 증가하면 재평가
+   - class-level singleton 제거
+   - production 생성은 `main.py` composition root 1곳
+   - hidden constructor / stale test reset 제거
+   - PR #8: Python 3.11 `655 passed, 2 warnings`, CI 4/4 Green
 
-WHY:
+7. [x] Coordinator package 이동 판단
+   - 결론: **현재 이동하지 않음**
+   - 현재 DI/ownership이 명확하고 import churn 대비 실익 부족
+   - SPI/I2C/Plugin 확장으로 application orchestration이 실제 증가할 때 재평가
 
-- SettingsManager ownership을 class global state가 아니라 Composition Root DI로 단일화
-- Coordinator의 책임 경계는 이미 class/DI 수준에서 분리되어 있어 현재는 파일 위치 변경의 실익이 없음
+---
 
-## P3-A — 기존 Packet 기능 확장
+# 2. P3-A — Packet 기능 확장
 
-상세: [`extension_platform_plan.md`](doc/plans/extension_platform_plan.md)
-
-8. [x] 구조화 packet filter
-   - `model/packet_filter.py`에 pure `PacketFilterEngine` / immutable filter context 추가
-   - Raw RX Fast Path와 parser 내부는 건드리지 않고 완결 `PacketEvent` 이후 `PacketPresenter`에서 filtering
-   - semicolon-separated declarative DSL, 모든 rule은 AND 조건
-   - 지원: `port/type` equality, `len` range, HEX/ASCII contains/prefix, byte/range/mask, checksum state
+8. [x] Structured Packet Filter
+   - 완결 `PacketEvent` 이후 pure `PacketFilterEngine` 적용
+   - declarative AND DSL: port/type/length/HEX/ASCII/byte-mask/checksum
    - arbitrary Python expression 미지원
-   - malformed rule은 compile 단계에서 `PacketFilterSyntaxError`; 직전 valid filter 유지 + PacketPanel 오류 feedback
-   - PacketPanel에 Filter enable checkbox + expression input 추가
-   - filter off 시 기존 packet 표시 path 유지
-   - PR #10 Windows Python 3.11 full pytest `678 passed, 2 external warnings`, GitHub Actions 4/4 Green
-9. [x] packet annotation / selected-range export
-   - `PacketRecord` immutable snapshot에 stable runtime packet identity / port / raw bytes / checksum / annotation 보존
-   - `PacketAnnotationStore`를 별도 owner로 두어 Parser Packet / PacketViewData mutation 방지
-   - Annotation은 runtime session state: Clear 시 제거, Settings에는 persist하지 않음
-   - PacketPanel Extended row selection + Note column / Note dialog / Export dialog
-   - CSV / JSON / HEX Text / RAW Binary selected export 지원
-   - `PacketExportManager`가 background QThread worker lifecycle을 소유하고 UI thread file I/O 제거
-   - export는 immutable selection snapshot을 사용하고 temporary file + atomic `os.replace` 적용
-   - `ApplicationBootstrapper`가 AnnotationStore / ExportManager를 생성하여 PacketPresenter에 explicit injection
-   - PR #11 Windows Python 3.11 full pytest `695 passed, 2 external warnings`, GitHub Actions 4/4 Green
+   - malformed rule은 직전 valid filter 유지
+   - PR #10: Python 3.11 `678 passed, 2 warnings`, CI 4/4 Green
 
-WHY:
+9. [x] Packet Annotation / Selected-range Export
+   - immutable `PacketRecord` + runtime `PacketAnnotationStore`
+   - CSV / JSON / HEX / RAW selected export
+   - background QThread + atomic replace
+   - composition-root ownership / shutdown lifecycle
+   - PR #11: Python 3.11 `695 passed, 2 warnings`, CI 4/4 Green
 
-- 현재 Packet DTO / parser 구조 위에 추가 가능하며 신규 hardware abstraction보다 리스크가 낮음
-- Trigger보다 side effect가 적어 먼저 안정화하기 적합
+---
 
-## P3-B — SPI/I2C Transport 확장
+# 3. P3-B — SPI/I2C Multi-backend Transaction Platform
 
-상세 결정:
+상세:
 
-- [`spi_i2c_backend_decision_20260831.md`](doc/plans/spi_i2c_backend_decision_20260831.md)
-- [`spi_i2c_adapter_architecture.md`](doc/plans/spi_i2c_adapter_architecture.md)
+- [`doc/plans/spi_i2c_backend_decision_20260831.md`](doc/plans/spi_i2c_backend_decision_20260831.md)
+- [`doc/plans/spi_i2c_adapter_architecture.md`](doc/plans/spi_i2c_adapter_architecture.md)
 
-10. [x] SPI/I2C backend family / capability / wrapper architecture 결정
-   - 특정 chip/library에 Transport를 고정하지 않는 **capability-driven Adapter Wrapper** 구조 채택
-   - `AdapterProvider / AdapterHandle / AdapterDescriptor / AdapterIdentity / AdapterCapabilities / BackendRegistry` 경계 확정
-   - 1차 Tier-1 target: **FT232H + FT2232H**
-   - FT2232H dual-channel identity/lifecycle을 첫 구현에서 검증
-   - reference FTDI backend: PyFtdi 0.57.x + MPSSE
-   - CH347: SPI+I2C 후속 backend target
-   - MCP2210: SPI-only 후속 backend target; I2C special-case 없이 capability mismatch로 처리
-   - stable identity는 USB index가 아니라 backend_id + serial/stable_id + optional channel_id
-   - vendor library object / DLL handle / PyFtdi URL은 backend implementation 밖으로 노출 금지
-   - SPI/I2C 공통 capability model과 Windows/Linux driver risk 분리
-   - PyFtdi I2C medium/high-speed write 한계를 명시하고 초기 목표를 register/config/control transaction으로 제한
-11. [-] protocol config DTO + Adapter Wrapper / Transaction contract 결정
-   - `AdapterIdentity`, `AdapterDescriptor`, `AdapterCapabilities`
-   - `AdapterProvider`, `AdapterHandle`, `AdapterBackendRegistry`
-   - `SpiConfig`, `I2cConfig`
-   - SPI/I2C Request/Result DTO
-   - cancellation / timeout / common error surface
-   - current `PortConfig` migration strategy
-12. [-] SPI/I2C Transport / backend 구현
-   - Tier-1: FT232H + FT2232H 모두 구현/검증
-   - PyFtdi backend는 wrapper 뒤에 격리
-   - `requirements.txt` dependency 추가는 #12 implementation branch에서 수행
-   - CH347/MCP2210 backend가 없어도 상위 contract는 변경하지 않는 architecture test 추가
+## 10. [x] Backend family / capability / wrapper architecture
 
-WHY:
+결정:
 
-- backend 없이 추상화부터 만들지 않되, 특정 backend를 Core contract로 굳히지도 않음
-- Serial stream semantics를 transaction protocol에 억지로 맞추지 않음
-- FT232H single-channel + FT2232H multi-channel을 첫 단계에서 함께 검증해 wrapper의 실제 확장성을 확보
-- CH347/MCP2210 등 후속 chip은 provider/capability 추가만으로 수용하는 구조를 목표로 함
+```text
+Transaction layer
+  -> SpiController / I2cController
+  -> AdapterHandle
+  -> AdapterProvider / AdapterBackendRegistry
+      -> PyFtdi backend: FT232H + FT2232H
+      -> CH347 backend: 후속
+      -> MCP2210 backend: 후속, SPI-only
+      -> future backend
+```
 
-## P3-C — Plugin system
+- chip/vendor-neutral capability-driven wrapper
+- Tier-1 hardware: **FT232H + FT2232H**
+- FT2232H A/B channel identity/lifecycle을 첫 구현에서 검증
+- CH347는 SPI+I2C 확장 target
+- MCP2210은 SPI-only capability target
+- persistent USB enumeration index 금지
+- stable identity: `backend_id + stable_id + optional channel_id`
+- vendor library object/DLL/PyFtdi URL은 backend 밖으로 노출 금지
+- PR #12: CI 4/4 Green, squash merge 완료
 
-13. [-] Plugin extension point 요구사항 확정
-14. [-] `PluginBase` / `PluginContext` interface
-15. [-] `PluginLoader` dynamic import / lifecycle / failure isolation
-16. [-] Example plugin
+## 11. [x] Protocol config DTO + Adapter Wrapper / Transaction contract
 
-WHY:
+구현 위치: `core/transport/transaction/`
 
-- Packet/SPI-I2C 확장 사례를 먼저 경험한 뒤 Plugin API를 설계해야 과도한 일반화를 피할 수 있음
-- 내부 architecture debt를 public extension contract로 고정하지 않도록 함
+### Vendor-neutral DTO / capability
 
-## P3-D — Trigger-based transmission
+- `AdapterIdentity`
+- `AdapterDescriptor`
+- `AdapterCapabilities`
+- `SpiCapabilities` / `I2cCapabilities`
+- `SpiConfig` / `I2cConfig`
+- `SpiTransactionRequest` / `SpiTransactionResult`
+- `I2cTransactionRequest` / `I2cTransactionResult`
+- `TransactionConnectionConfig`
 
-17. [-] trigger-based transmission
+### Wrapper contract
 
-마지막에 수행하는 이유:
+- `AdapterProvider`
+- `AdapterHandle`
+- `AdapterBackendRegistry`
+- `SpiController`
+- `I2cController`
+
+### Common control / error surface
+
+- `TransactionOptions(timeout_ms)`
+- thread-safe cooperative `CancellationToken`
+- `BackendUnavailableError`
+- `AdapterNotFoundError`
+- `AdapterBusyError`
+- `UnsupportedCapabilityError`
+- `ProtocolConfigurationError`
+- `TransactionTimeoutError`
+- `TransactionIoError`
+- `AdapterDisconnectedError`
+
+### Legacy migration policy
+
+기존 `PortConfig`는 현재 Serial runtime 호환을 위해 즉시 제거하지 않는다.
+
+```text
+legacy PortConfig(SPI)
+  speed/mode -------------------+
+                                v
+new AdapterIdentity --------> LegacyPortConfigAdapter
+                                |
+                                v
+                     TransactionConnectionConfig
+```
+
+- 기존 SPI `speed/mode`만 재사용
+- adapter backend/stable identity/channel은 **사용자가 새 UI에서 선택한 값을 반드시 주입**
+- 기존 설정에서 FTDI/CH347/MCP2210 identity를 추측하지 않음
+- Serial `PortConfig`를 SPI로 암묵 변환하지 않음
+
+### Architecture regression
+
+Fake provider로 다음 조합을 동일 registry에서 검증:
+
+- FT2232H channel A/B
+- CH347 SPI+I2C
+- MCP2210 SPI-only
+- unavailable optional backend isolation
+- capability mismatch
+- duplicate backend registration
+- vendor import leakage 금지
+
+최신 PR #13 contract HEAD 검증:
+
+```text
+Windows / Python 3.11
+  full pytest: 711 passed, 2 external lark warnings
+  lint: success
+  lang-keys: success
+  task-boards: success
+```
+
+## 12. [ ] SPI/I2C backend / runtime / UI 구현
+
+Tier-1:
+
+- [ ] PyFtdi optional backend loader/provider
+- [ ] FT232H enumerate/open
+- [ ] FT232H SPI transaction
+- [ ] FT232H I2C transaction
+- [ ] FT2232H stable device + channel A/B enumeration
+- [ ] FT2232H SPI transaction
+- [ ] FT2232H I2C transaction
+- [ ] FT2232H dual-channel lifecycle
+- [ ] transaction worker/service + timeout/cancellation 실제 적용
+- [ ] adapter discovery / protocol settings UI
+- [ ] Settings persistence migration
+- [ ] disconnect/reopen/shutdown
+- [ ] actual accepted bus frequency 표시/보고
+- [ ] 실제 FT232H + FT2232H hardware smoke
+
+Architecture requirements:
+
+- PyFtdi import는 backend implementation 내부에만 존재
+- PyFtdi 미설치/driver unavailable이어도 SerialTool startup 유지
+- CH347/MCP2210 provider 추가 시 Presenter/View/transaction contract 변경 금지
+- SPI/I2C를 기존 Serial `read/in_waiting/write` worker loop에 억지로 통합하지 않음
+
+---
+
+# 4. P3-C — Plugin System
+
+13. [ ] Plugin extension point 요구사항 확정
+14. [ ] `PluginBase` / `PluginContext`
+15. [ ] `PluginLoader` dynamic import / lifecycle / failure isolation
+16. [ ] Example plugin
+
+원칙:
+
+- Packet/SPI-I2C의 실제 확장 사례를 경험한 뒤 public extension API를 고정
+- MainWindow / ApplicationComponents / raw SettingsManager / ConnectionController registry 노출 금지
+
+---
+
+# 5. P3-D — Trigger-based Transmission
+
+17. [ ] trigger-based transmission
+
+마지막 수행 이유:
 
 ```text
 RX -> Trigger -> TX -> Echo/RX -> Trigger
 ```
 
-순환 가능성이 있으며 Macro / AutoTx / Broadcast / Packet Parser / Local Echo와 교차하므로 현재 backlog 중 runtime side effect가 가장 크다.
+Macro / AutoTx / Broadcast / Local Echo / Packet Parser와 교차하므로 side effect가 가장 큼.
 
-필수 선행 정책:
+필수:
 
-- origin tagging 또는 max trigger depth
+- origin tagging 또는 max depth
 - cooldown
 - one-shot
 - target snapshot
-- loop/reentrancy regression tests
-
-## P4 — 최종 환경 / 배포 검증
-
-상세: [`environment_validation_plan.md`](doc/plans/environment_validation_plan.md)
-
-18. [-] 현재 `main` 기준 PyInstaller artifact 재빌드 및 smoke test
-19. [-] Windows com0com 가상 Serial E2E
-20. [-] 실제 USB Serial 장치 종합 검증
-21. [-] Linux socat 검증
-   - Linux가 실제 지원 대상일 때 필수화
-
-WHY:
-
-- PyInstaller/com0com/socat는 architecture 설계의 선행 조건보다 최종 제품 검증 성격이 강함
-- 각 기능 개발 중 필요한 실기기 smoke는 해당 작업 acceptance에서 수행하고, P4에서는 전체 제품 관점으로 재검증
+- loop/reentrancy regression
 
 ---
 
-# 3. 완료된 제품/Architecture 기준선
+# 6. P4 — 최종 환경 / 배포 검증
 
-- [x] 다중 Serial port tab과 연결/해제/설정
-- [x] Manual TX/RX, Auto Tx, Macro, File Transfer
-- [x] Packet Inspector 및 주요 parser
-- [x] Structured Packet Filter
-- [x] Packet Annotation / Selected Export
-- [x] Logging / Theme / Localization / Settings
-- [x] Single Composition Root (`ApplicationBootstrapper`)
-- [x] Passive View + explicit DI
-- [x] direct Qt signal topology / EventRouter / EventBus 제거
-- [x] MainPresenter 책임 축소
-- [x] Service/Manager/Coordinator ownership 분리
-- [x] SettingsManager class-level Singleton 제거 / composition-root ownership
-- [x] Coordinator package 이동 현재 보류 결정 / 재평가 trigger 명시
-- [x] SPI/I2C multi-backend Adapter Wrapper 방향 / FT232H+FT2232H Tier-1 결정
-- [x] reconnect stale-signal race 및 shutdown/data preservation 교정
+상세: [`doc/plans/environment_validation_plan.md`](doc/plans/environment_validation_plan.md)
+
+18. [ ] 최신 `main` PyInstaller artifact build + smoke
+19. [ ] Windows com0com Serial E2E
+20. [ ] 실제 USB Serial 종합 검증
+21. [ ] Linux socat 검증 — Linux가 실제 지원 대상일 때 필수
+
+P4는 개별 feature hardware acceptance를 대체하지 않는다.
 
 ---
 
-# 4. 현재 자동 검증 범위 / 알려진 제한사항
+# 7. 현재 자동 검증 / 알려진 제한
 
 자동 검증:
 
-- Mock Serial
-- LoopbackTransport
+- Mock Serial / LoopbackTransport
 - synthetic runtime benchmark
 - offscreen Qt
 - Windows/Ubuntu GitHub-hosted CI
+- SPI/I2C fake multi-backend contract tests
 
-알려진 제한사항:
+제한:
 
-- blocking OS port scan / macro file load helper는 Python thread 특성상 강제 종료하지 않음
-- manager가 outstanding helper를 기능별 최대 1개로 제한
-- language key 동적 표현식 7건은 정적 검사 불가
-- 외부 `lark` dependency warning 2건
-- Serial worker scheduling 변경은 실제 USB Serial 장치 acceptance 미완료
-- Packet annotation은 현재 runtime-only이며 persistent session 저장은 지원하지 않음
-- PyFtdi Windows 사용은 공식 지원 대상이 아니며 FTDI protocol adapter에 libusb driver setup 필요
-- FT2232H I2C clock stretching은 hardware wiring limitation 검증 필요
-- PyFtdi I2C는 medium/high-speed write 용도로 적합하지 않을 수 있음
-- CH347/MCP2210은 architecture target이며 아직 production backend 구현 전
+- Serial worker 실제 USB hardware acceptance 미완료
+- Packet annotation은 runtime-only
+- PyFtdi Windows 사용은 공식 보장 대상이 아니며 libusb setup 필요 가능
+- FT2232H I2C clock stretching hardware wiring 검증 필요
+- PyFtdi I2C medium/high-speed write는 초기 성능 목표에서 제외
+- CH347/MCP2210 production backend는 아직 구현 전
 
 ---
 
-# 5. 작업 공통 Gate
-
-변경은 기능별 branch/PR을 원칙으로 한다.
-
-```text
-targeted tests
-    -> architecture/lifecycle tests
-    -> ruff
-    -> full pytest
-    -> language/task checks
-    -> GitHub Actions
-```
-
-추가 gate:
-
-- 성능 작업: benchmark evidence 필수
-- Serial I/O 최적화: 실제 USB Serial 최소 smoke 필수
-- SPI/I2C Tier-1: 실제 **FT232H + FT2232H** adapter 검증 필수
-- SPI/I2C wrapper: vendor backend import leakage / capability mismatch regression test 필수
-- Plugin: load failure isolation test 필수
-- Trigger: loop/reentrancy test 필수
-
----
-
-# 6. 완료 정의
-
-각 작업은 다음을 만족할 때 완료 처리한다.
+# 8. 공통 Gate / 완료 정의
 
 ```text
 Owner / Boundary clear
 + Regression tests
 + No hidden global dependency
 + No worker -> QWidget access
++ Optional backend failure isolation
 + Ruff Green
 + Full pytest Green
-+ CI Green
++ Language / Task checks Green
++ GitHub Actions Green
 + Docs/Task synchronized
 ```
+
+추가:
+
+- 성능: benchmark evidence
+- Serial I/O: 실제 USB Serial smoke
+- SPI/I2C Tier-1: 실제 **FT232H + FT2232H** smoke
+- SPI/I2C wrapper: vendor import leakage / capability mismatch tests
+- Plugin: load failure isolation
+- Trigger: loop/reentrancy tests
