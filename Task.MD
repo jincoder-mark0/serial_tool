@@ -3,20 +3,16 @@
 > 최종 갱신: 2026-08-30
 > 기준 브랜치: `main`
 > Presenter/View Boundary 리팩토링: PR #1 squash merge 완료
-> 상세 리팩토링 보고서: [`doc/refactoring_validation_report_20260830.md`](doc/refactoring_validation_report_20260830.md)
-> Post-merge 상세 계획: [`doc/plans/roadmap_post_merge.md`](doc/plans/roadmap_post_merge.md)
+> Post-merge 통합 로드맵: [`doc/plans/roadmap_post_merge.md`](doc/plans/roadmap_post_merge.md)
+> 환경 검증 계획: [`doc/plans/environment_validation_plan.md`](doc/plans/environment_validation_plan.md)
 > 에이전트 규칙: [`AGENTS.md`](AGENTS.md)
 
-이 문서는 **현재 완료 상태와 앞으로 해야 할 일**을 관리하는 유일한 작업 보드다.
-과거 S-xxx 상세 이력은 `doc/CHANGELOG.md`, `doc/history/`, `tasks/`에 보존한다.
-
-상태 표기: `[x]` 완료 / `[ ]` 해야 함 / `[-]` 보류
+이 문서는 **현재 완료 상태와 앞으로 해야 할 일을 실행 순서대로 관리하는 유일한 작업 보드**다.
+상태 표기: `[x]` 완료 / `[ ]` 해야 함 / `[-]` 보류·판단 필요
 
 ---
 
-# 1. 현재 상태
-
-Presenter/View Boundary 구조 리팩토링은 완료 및 `main` 반영됐다.
+# 1. 현재 기준선
 
 ```text
 PR #1 squash merge: 완료
@@ -28,133 +24,169 @@ PR Python 3.11 GitHub Actions: 4/4 Green
 main push CI: Green
 ```
 
-현재는 **post-merge 개선 및 확장 단계**다.
+현재 단계는 **post-merge baseline 검증 → debt 정리 → 성능 개선 → 기능 확장**이다.
 
 ---
 
-# 2. 제품 기능 및 구조 리팩토링 — 완료
+# 2. 앞으로 해야 할 업무 — 권장 실행 순서
 
-## 제품 기능 기준선
+아래 번호가 실제 권장 착수 순서다. P2/P3 분류보다 **선행 의존성과 회귀 리스크**를 우선한다.
 
-- [x] 다중 Serial port tab과 연결/해제/설정
-- [x] Manual TX/RX, Local Echo, Prefix/Suffix, Newline mode, Broadcast
-- [x] Manual command history와 Auto Tx scheduler
-- [x] Macro list/load/save/run, Delay/Expect, 반복 실행
-- [x] Packet Inspector와 Raw/AT/Delimiter/Fixed-Length parser
-- [x] File Transfer chunk 전송, progress, cancel, backpressure
-- [x] RX/TX/System logging과 BIN/HEX/PCAP format
-- [x] QSmartListView 기반 대용량 log view와 검색
-- [x] Theme, SVG icon, dual font, 한국어/영어 localization
-- [x] GlobalErrorHandler, RingBuffer, ThreadSafeQueue
-- [x] RX/UI benchmark (`tools/benchmark.py`, `doc/benchmark_20260822.md`)
-- [x] Windows PyInstaller executable build와 smoke test
-- [x] GitHub Actions Windows CI
+## P1 — 현재 main 실환경 기준선 확보
 
-## Architecture
+상세: [`environment_validation_plan.md`](doc/plans/environment_validation_plan.md)
 
-- [x] Single Composition Root (`ApplicationBootstrapper`)
-- [x] Passive View + explicit DI
-- [x] direct Qt signal topology
-- [x] EventRouter 제거
-- [x] MainPresenter God-object 축소
-- [x] CommandTransmissionService 분리
-- [x] PacketParserManager / ConnectionSessionFactory 분리
-- [x] FileTransferManager / PortScanManager / MacroScriptManager 분리
-- [x] Settings / Logging / Status / Shutdown / ControlState Coordinator 분리
-- [x] stale worker queued signal reconnect race 교정
-- [x] shutdown/data preservation ordering 고정
+1. [-] 현재 `main` 기준 PyInstaller artifact 재빌드 및 smoke test
+2. [-] Windows com0com 가상 Serial E2E
+3. [-] 실제 USB Serial 장치 최소 1종 smoke / reconnect / 장시간 RX/TX
+4. [-] Linux socat 검증
+   - Linux가 실제 지원 대상일 때 필수화
 
----
+WHY:
 
-# 3. 검증 기준선
+- 성능/구조 변경 전에 배포·실통신 기준선을 확보해야 이후 회귀 원인을 분리할 수 있음
+- Serial I/O 최적화 수치는 실제 Windows serial stack 기준 결과가 있어야 의미가 있음
+
+## P2-A — Low-risk 구조 정리
+
+상세: [`architecture_cleanup_plan.md`](doc/plans/architecture_cleanup_plan.md)
+
+5. [-] timeout/status duration/poll interval 상수화
+6. [-] legacy `core/event_bus.py` 완전 삭제
+
+WHY:
+
+- runtime behavior 변경이 거의 없는 작업부터 처리
+- benchmark 및 이후 확장에서 stale policy/dead code가 판단 노이즈가 되는 것을 방지
+
+## P2-B — 성능 측정 및 증거 기반 최적화
+
+상세: [`performance_optimization_plan.md`](doc/plans/performance_optimization_plan.md)
+
+7. [-] benchmark scenario/baseline 재고정
+8. [-] RxLogView `BatchRenderer` 후보안 비교
+   - 측정 이득이 명확할 때만 도입
+9. [-] Serial non-blocking I/O loop 후보안 비교/최적화
+   - CPU / throughput / latency / shutdown responsiveness 함께 평가
+
+WHY:
+
+- 구조를 크게 바꾸기 전에 성능 baseline을 고정
+- 개선폭이 측정 오차 수준이면 구현하지 않는 것도 완료 판단
+
+## P2-C — Global state 및 package 구조 정리
+
+10. [-] SettingsManager singleton 제거
+11. [-] Coordinator package 이동 필요성 최종 판단
+   - 실제 dependency/모듈 증가 근거가 없으면 보류 유지
+
+WHY:
+
+- Singleton 제거는 영향 범위가 커서 성능 baseline 확보 후 수행
+- Coordinator 이동은 파일 이동 자체가 가치가 아니므로 마지막 판단
+
+## P3-A — 기존 Packet 기능 확장
+
+상세: [`extension_platform_plan.md`](doc/plans/extension_platform_plan.md)
+
+12. [-] 구조화 packet filter
+13. [-] packet annotation / selected-range export
+
+WHY:
+
+- 현재 Packet DTO / parser 구조 위에 추가 가능하며 신규 hardware abstraction보다 리스크가 낮음
+- Trigger보다 side effect가 적어 먼저 안정화하기 적합
+
+## P3-B — SPI/I2C Transport 확장
+
+14. [-] 실제 SPI/I2C backend 선정 및 capability 표 작성
+15. [-] protocol-specific config DTO 및 Transport contract 결정
+16. [-] SPI/I2C Transport 구현
+   - 실제 필요한 protocol/backend 하나부터 시작
+   - 필요 시 `StreamTransport` / `TransactionTransport` 분리
+
+WHY:
+
+- backend 없이 추상화부터 만들지 않음
+- Serial stream semantics를 transaction protocol에 억지로 맞추지 않음
+
+## P3-C — Plugin system
+
+17. [-] Plugin extension point 요구사항 확정
+18. [-] `PluginBase` / `PluginContext` interface
+19. [-] `PluginLoader` dynamic import / lifecycle / failure isolation
+20. [-] Example plugin
+
+WHY:
+
+- 실제 Packet/Transport 확장 사례를 먼저 경험한 뒤 Plugin API를 설계해야 과도한 일반화를 피할 수 있음
+- 초기 Plugin API가 내부 architecture debt를 public contract로 고정하지 않도록 함
+
+## P3-D — Trigger-based transmission
+
+21. [-] trigger-based transmission
+
+마지막에 수행하는 이유:
 
 ```text
-Local Windows / Python 3.13.15 / offscreen
-  full pytest: 643 passed, 0 failed, 0 skipped
-  ruff: 0 errors
-  language key integrity: Green
-  task board consistency: Green
-
-PR #1 / GitHub Actions / Python 3.11
-  test-windows: success
-  lang-keys: success
-  task-boards: success
-  lint: success
+RX -> Trigger -> TX -> Echo/RX -> Trigger
 ```
 
-검증 범위:
+순환 가능성이 있으며 Macro / AutoTx / Broadcast / Packet Parser / Local Echo와 교차하므로 현재 backlog 중 runtime side effect가 가장 크다.
 
-- 자동: Mock Serial, LoopbackTransport, offscreen Qt
-- 별도 환경 검증: Windows com0com, Linux socat, 실제 USB Serial 장치
+필수 선행 정책:
+
+- origin tagging 또는 max trigger depth
+- cooldown
+- one-shot
+- target snapshot
+- loop/reentrancy regression tests
+
+---
+
+# 3. 완료된 제품/Architecture 기준선
+
+- [x] 다중 Serial port tab과 연결/해제/설정
+- [x] Manual TX/RX, Auto Tx, Macro, File Transfer
+- [x] Packet Inspector 및 주요 parser
+- [x] Logging / Theme / Localization / Settings
+- [x] Single Composition Root (`ApplicationBootstrapper`)
+- [x] Passive View + explicit DI
+- [x] direct Qt signal topology / EventRouter 제거
+- [x] MainPresenter 책임 축소
+- [x] Service/Manager/Coordinator ownership 분리
+- [x] reconnect stale-signal race 및 shutdown/data preservation 교정
+
+---
+
+# 4. 현재 검증 범위 / 알려진 제한사항
+
+자동 검증:
+
+- Mock Serial
+- LoopbackTransport
+- offscreen Qt
+- Windows/Ubuntu GitHub-hosted CI
+
+아직 별도 검증:
+
+- Windows com0com
+- 실제 USB Serial 장치
+- Linux socat
+- 현재 main PyInstaller artifact smoke
 
 알려진 제한사항:
 
 - blocking OS port scan / macro file load helper는 Python thread 특성상 강제 종료하지 않음
 - manager가 outstanding helper를 기능별 최대 1개로 제한
 - language key 동적 표현식 7건은 정적 검사 불가
-- Python 3.13에서 외부 `lark` dependency warning 2건
+- Python 3.13 외부 `lark` dependency warning 2건
 
 ---
 
-# 4. Post-merge 상세 계획
+# 5. 작업 공통 Gate
 
-통합 로드맵:
-
-- [`doc/plans/roadmap_post_merge.md`](doc/plans/roadmap_post_merge.md)
-- [`doc/plans/performance_optimization_plan.md`](doc/plans/performance_optimization_plan.md)
-- [`doc/plans/architecture_cleanup_plan.md`](doc/plans/architecture_cleanup_plan.md)
-- [`doc/plans/extension_platform_plan.md`](doc/plans/extension_platform_plan.md)
-
----
-
-# 5. P2 — 성능
-
-상세: [`performance_optimization_plan.md`](doc/plans/performance_optimization_plan.md)
-
-- [-] RxLogView `BatchRenderer` 도입 필요성 benchmark 기반 재평가
-- [-] Serial non-blocking I/O loop 최적화
-
----
-
-# 6. P2 — 구조
-
-상세: [`architecture_cleanup_plan.md`](doc/plans/architecture_cleanup_plan.md)
-
-- [-] Coordinator를 별도 `application/` / `coordinator/` package로 이동
-  - 실제 필요성 조건 충족 시에만 진행
-- [-] legacy `core/event_bus.py` 완전 삭제
-- [-] SettingsManager singleton 자체 제거
-- [-] timeout/status duration 상수화
-
----
-
-# 7. P3 — 확장 기능
-
-상세: [`extension_platform_plan.md`](doc/plans/extension_platform_plan.md)
-
-- [-] Plugin system
-  - [-] `PluginBase` interface
-  - [-] `PluginLoader` dynamic import
-  - [-] Example plugin
-- [-] SPI/I2C Transport
-- [-] 구조화 packet filter
-- [-] trigger-based transmission
-- [-] packet annotation / selected-range export
-
----
-
-# 8. 환경 / 배포 검증
-
-- [-] Windows com0com 가상 Serial 검증
-- [-] Linux socat 가상 Serial 검증
-- [-] 실제 USB Serial 장치 검증
-- [-] 현재 `main` 기준 PyInstaller artifact smoke 재검증
-
----
-
-# 9. 작업 공통 Gate
-
-변경은 기능별 branch/PR에서 수행한다.
+변경은 기능별 branch/PR을 원칙으로 한다.
 
 ```text
 targeted tests
@@ -165,21 +197,26 @@ targeted tests
     -> GitHub Actions
 ```
 
-성능 작업은 benchmark evidence가 추가 gate다.
+추가 gate:
+
+- 성능 작업: benchmark evidence 필수
+- 실통신/Transport 작업: Mock만으로 완료 선언 금지
+- Plugin: load failure isolation test 필수
+- Trigger: loop/reentrancy test 필수
 
 ---
 
-# 10. 완료 정의
+# 6. 완료 정의
 
-각 P2/P3 작업은 다음을 만족할 때 완료 처리한다.
+각 작업은 다음을 만족할 때 완료 처리한다.
 
 ```text
-Owner/Boundary clear
+Owner / Boundary clear
 + Regression tests
 + No hidden global dependency
 + No worker -> QWidget access
 + Ruff Green
 + Full pytest Green
 + CI Green
-+ Docs/Task synchronized
++ Docs / Task synchronized
 ```

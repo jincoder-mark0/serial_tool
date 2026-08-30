@@ -3,133 +3,169 @@
 > 기준 브랜치: `main`
 > 기준일: 2026-08-30
 > 현재 architecture: Single Composition Root + Passive View + explicit DI + direct Qt signal
-> 현재 검증 기준: Local Python 3.13 `643 passed`, PR/Main GitHub Actions Green
 
 ---
 
 ## 1. 목적
 
-이 문서는 Presenter/View Boundary 리팩토링 이후 남은 P2/P3 작업을 하나의 실행 순서로 정리한다.
+이 문서는 Presenter/View Boundary 리팩토링 이후 남은 업무를 **선행 의존성과 회귀 리스크 기준으로 실제 실행 순서화**한다.
 
-상세 설계는 다음 문서를 정본으로 사용한다.
+상세 문서:
 
+- 환경/배포: [`environment_validation_plan.md`](environment_validation_plan.md)
 - 성능: [`performance_optimization_plan.md`](performance_optimization_plan.md)
 - 구조: [`architecture_cleanup_plan.md`](architecture_cleanup_plan.md)
 - 확장 기능: [`extension_platform_plan.md`](extension_platform_plan.md)
 
-`Task.MD`는 현재 상태와 우선순위만 관리하고, 구현 판단과 acceptance criteria는 본 문서군에서 관리한다.
+`Task.MD`는 실행 순서와 상태를 관리하고, 상세 설계/acceptance criteria는 본 문서군에서 관리한다.
 
 ---
 
 ## 2. 우선순위 원칙
 
 ```text
-측정 가능한 성능 병목
+현재 main 실환경 baseline
         ↓
-구조적 debt 제거
+low-risk architecture cleanup
         ↓
-확장 point 안정화
+performance baseline / optimization
         ↓
-Plugin / SPI-I2C 확장
+global state cleanup
         ↓
-Packet / Trigger 고급 기능
+existing Packet 기능 확장
+        ↓
+SPI/I2C hardware extension
+        ↓
+Plugin system
+        ↓
+Trigger-based transmission
 ```
 
 ### WHY
 
-- 성능 문제를 구조 개편과 동시에 다루면 원인 분리가 어려워진다.
-- 구조 cleanup을 Plugin system 이후에 하면 public extension API가 내부 debt에 고정된다.
-- SPI/I2C는 Serial과 달리 transaction semantics가 강하므로 backend와 capability model을 먼저 확정한 뒤 abstraction을 설계해야 한다.
+- 실제 배포/Serial stack 기준선 없이 성능·구조 변경을 시작하면 회귀 원인 분리가 어려움
+- 작은 dead code/policy literal 정리는 benchmark 전에 끝내도 동작 영향이 거의 없음
+- Settings singleton 제거는 범위가 넓어 baseline 측정 후 수행하는 편이 안전함
+- Packet Filter/Annotation은 기존 구조를 이용하는 low-side-effect 확장이라 hardware/plugin보다 먼저 적합
+- Plugin API는 실제 extension 사례를 먼저 경험한 뒤 설계해야 내부 구조를 성급히 public contract로 고정하지 않음
+- Trigger는 RX→TX 순환 가능성과 Macro/AutoTx/Broadcast 교차 때문에 가장 마지막에 수행
 
 ---
 
 ## 3. 실행 Wave
 
-### Wave A — Performance Evidence
+### Wave 0 — Environment Baseline
 
 대상:
 
-- RxLogView `BatchRenderer` 필요성 재평가
-- Serial non-blocking I/O loop 최적화
+1. 현재 main PyInstaller artifact smoke
+2. Windows com0com E2E
+3. 실제 USB Serial 최소 1종 smoke
+4. Linux socat — Linux 지원 대상일 때
 
-완료 조건:
+Gate:
 
-- benchmark scenario 고정
-- baseline/후보안 비교 수치 확보
-- latency / throughput / CPU / UI responsiveness trade-off 기록
-- 성능 개선이 통계적으로 의미 없으면 구현하지 않는 결정도 허용
+- packaging/runtime dependency 누락 없음
+- connect/reconnect/close/shutdown 기본 경로 정상
+- 실제 Serial stack에서 data loss/crash blocker 없음
 
-### Wave B — Architecture Cleanup
-
-대상:
-
-- Coordinator package 분리 여부 결정
-- `core/event_bus.py` 제거
-- SettingsManager singleton 제거
-- timeout/status duration 상수화
-
-완료 조건:
-
-- runtime behavior 무변경
-- public API 변경 최소화
-- architecture contract 및 full pytest Green
-- hidden global state 감소를 측정 가능한 형태로 확인
-
-### Wave C — Extension Foundation
+### Wave 1 — Low-Risk Architecture Cleanup
 
 대상:
 
-- `PluginBase`
-- `PluginLoader`
-- Example plugin
-- extension lifecycle/error isolation
+5. timeout/status/poll duration 상수화
+6. legacy `core/event_bus.py` 제거
 
-완료 조건:
+Gate:
 
-- plugin이 View/Model 내부를 직접 침범하지 않음
-- plugin load 실패가 application startup을 깨지 않음
-- plugin disable/unload 또는 최소한 restart-safe failure policy 정의
+- runtime behavior 변화 없음
+- stale import/reference 0
+- architecture/full pytest Green
 
-### Wave D — SPI/I2C Expansion
+### Wave 2 — Performance Evidence & Optimization
 
 대상:
 
-- SPI Transport
-- I2C Transport
+7. benchmark scenario/baseline 고정
+8. RxLogView BatchRenderer 후보 비교
+9. Serial I/O loop 후보 비교
 
-선행 조건:
+Gate:
 
-- 실제 사용할 backend 선정
-- stream/transaction capability 차이 명시
-- protocol-specific config DTO 방향 확정
+- CPU / throughput / latency / backlog / shutdown responsiveness 기록
+- 이득이 측정 오차 수준이면 구현하지 않음
 
-완료 조건:
-
-- `BaseTransport` contract를 억지로 확장하지 않음
-- 필요하면 `StreamTransport` / `TransactionTransport` 분리
-- ConnectionSessionFactory가 protocol별 생성 책임 유지
-- Serial-only UI assumption 제거
-
-### Wave E — Packet / Automation Features
+### Wave 3 — Global State Cleanup
 
 대상:
 
-- 구조화 packet filter
-- trigger-based transmission
-- packet annotation
-- selected-range export
+10. SettingsManager singleton 제거
+11. Coordinator package 이동 필요성 판단
 
-완료 조건:
+Gate:
 
-- parsing / filtering / UI rendering 책임 분리
-- 대량 RX에서 filter/annotation이 Fast Path를 막지 않음
-- trigger loop/reentrancy 방지
+- test state isolation 개선
+- hidden global dependency 감소
+- Coordinator 이동은 dependency 명확성 개선 근거가 있을 때만 진행
+
+### Wave 4 — Packet Feature Expansion
+
+대상:
+
+12. Structured Packet Filter
+13. Packet Annotation / Selected-range Export
+
+Gate:
+
+- Raw RX Fast Path 앞에 blocking 단계 추가 금지
+- 큰 export는 UI thread file I/O 금지
+
+### Wave 5 — SPI/I2C Expansion
+
+대상:
+
+14. backend 선정 / capability matrix
+15. config DTO / Transport contract 결정
+16. 필요한 protocol/backend부터 구현
+
+Gate:
+
+- backend 없는 추상화 금지
+- Serial optional-field soup 금지
+- transaction cancellation/shutdown path 명확
+- 실제 adapter 최소 1종 검증
+
+### Wave 6 — Plugin System
+
+대상:
+
+17. extension point 요구사항 정리
+18. PluginBase / PluginContext
+19. PluginLoader / lifecycle / failure isolation
+20. Example plugin
+
+Gate:
+
+- MainWindow/ApplicationComponents 전체 노출 금지
+- plugin failure가 app startup/runtime을 치명적으로 종료하지 않음
+- 실제 사용 사례 없이 범용 API를 과도하게 일반화하지 않음
+
+### Wave 7 — Trigger-Based Transmission
+
+대상:
+
+21. Trigger Engine / Action DTO / safety policy
+
+Gate:
+
+- cooldown / one-shot / origin tagging 또는 depth 제한
+- target snapshot
+- infinite-loop/reentrancy regression test
+- CommandTransmissionService 경유
 
 ---
 
 ## 4. 공통 Architecture Guardrail
-
-모든 Wave에서 다음을 유지한다.
 
 ```text
 Common <- Core <- Model <- Presenter/Coordinator <- View
@@ -139,14 +175,12 @@ Common <- Core <- Model <- Presenter/Coordinator <- View
 - EventRouter 재도입 금지
 - worker/background thread → QWidget 접근 금지
 - Presenter 내부 hidden singleton 생성 금지
-- 새 extension 기능 때문에 MainPresenter를 Service Locator로 되돌리지 않음
+- MainPresenter를 Service Locator로 되돌리지 않음
 - 의미 있는 cross-layer payload는 DTO 우선
 
 ---
 
 ## 5. 공통 검증 Gate
-
-각 작업은 가장 가까운 테스트부터 full suite까지 확대한다.
 
 ```text
 targeted tests
@@ -157,41 +191,21 @@ targeted tests
   -> GitHub Actions
 ```
 
-성능 작업은 기능 Green만으로 완료하지 않고 benchmark 결과를 반드시 남긴다.
+추가:
+
+- performance: benchmark evidence
+- hardware/transport: 실제 backend smoke
+- plugin: failure isolation
+- trigger: loop/reentrancy safety
 
 ---
 
-## 6. 중단 / 되돌림 기준
-
-다음 조건이면 구현을 중단하거나 scope를 줄인다.
+## 6. 중단 / 보류 기준
 
 - 성능 개선이 측정 오차 수준
-- API abstraction이 실제 구현 요구보다 지나치게 일반화됨
-- Plugin system 때문에 core ownership이 불명확해짐
-- SPI/I2C 공통화를 위해 Serial의 안정 경로를 훼손해야 함
-- UI 고급 기능이 RX Fast Path latency를 유의미하게 증가시킴
+- Coordinator 이동이 파일 이동 외 실제 dependency 이득을 만들지 못함
+- SPI/I2C abstraction이 실제 backend 요구보다 과도하게 일반화됨
+- Plugin API가 내부 object graph를 노출해야만 성립함
+- Trigger가 기존 Macro/AutoTx/Broadcast semantics를 불명확하게 만듦
 
----
-
-## 7. 권장 진행 순서
-
-```text
-P2 Performance
-  1. benchmark 재설계
-  2. RxLogView 후보안 비교
-  3. Serial I/O 후보안 비교
-
-P2 Architecture
-  4. EventBus 제거
-  5. SettingsManager singleton 제거
-  6. timeout/status 상수화
-  7. Coordinator package 이동 여부 최종 판단
-
-P3 Extension
-  8. Plugin foundation
-  9. SPI/I2C backend 및 capability model 결정
- 10. SPI/I2C Transport 구현
- 11. packet filter / trigger / annotation / export
-```
-
-Coordinator package 이동은 구조상 필요성이 약하면 보류한다. 파일 이동 자체는 architecture 개선이 아니다.
+이 경우 scope를 축소하거나 보류를 완료 판단으로 인정한다.
