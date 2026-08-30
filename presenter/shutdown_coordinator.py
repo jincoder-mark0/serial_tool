@@ -13,6 +13,7 @@ from core.logger import logger
 from core.settings_manager import SettingsManager
 from model.connection_controller import ConnectionController
 from model.macro_runner import MacroRunner
+from model.macro_script_manager import MacroScriptManager
 from model.port_scan_manager import PortScanManager
 from presenter.data_handler import DataTrafficHandler
 from presenter.manual_control_presenter import ManualControlPresenter
@@ -30,6 +31,7 @@ class ShutdownCoordinator:
         settings_manager: SettingsManager,
         connection_controller: ConnectionController,
         macro_runner: MacroRunner,
+        macro_script_manager: MacroScriptManager,
         port_scan_manager: PortScanManager,
         manual_control_presenter: ManualControlPresenter,
         packet_presenter: PacketPresenter,
@@ -41,6 +43,7 @@ class ShutdownCoordinator:
         self._settings_manager = settings_manager
         self._connection_controller = connection_controller
         self._macro_runner = macro_runner
+        self._macro_script_manager = macro_script_manager
         self._port_scan_manager = port_scan_manager
         self._manual_control_presenter = manual_control_presenter
         self._packet_presenter = packet_presenter
@@ -57,6 +60,7 @@ class ShutdownCoordinator:
             self._macro_runner.stop()
             self._macro_runner.wait(1000)
 
+        self._macro_script_manager.stop()
         self._port_scan_manager.stop()
         self._data_handler.stop()
         self._packet_presenter.stop()
