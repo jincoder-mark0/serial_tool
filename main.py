@@ -1,7 +1,8 @@
 """
 SerialTool 애플리케이션 진입점.
 
-리소스/설정/구체 runtime component를 조립하는 최상위 composition root입니다.
+리소스와 Qt 애플리케이션을 준비한 뒤 ApplicationBootstrapper에 runtime graph 조립을
+위임합니다. 구체 Presenter/Model 조립 규칙은 이 파일이 알지 않습니다.
 """
 import logging
 import os
@@ -20,7 +21,6 @@ from core.error_handler import install_global_error_handler, set_error_message_p
 from core.logger import logger
 from core.resource_path import ResourcePath
 from core.settings_manager import SettingsManager
-from presenter.main_presenter import MainPresenter
 from view.main_window import MainWindow
 from view.managers.color_manager import ColorManager
 from view.managers.language_manager import LanguageManager
@@ -72,11 +72,7 @@ def main() -> None:
     theme_manager.apply_theme(saved_theme)
 
     window = MainWindow()
-    components = ApplicationBootstrapper(window, settings_mgr).build()
-    presenter = MainPresenter(  # noqa: F841 - QObject signal wiring GC 방지
-        window,
-        dependencies=components.main_presenter_dependencies,
-    )
+    runtime = ApplicationBootstrapper(window, settings_mgr).build()  # noqa: F841
     window.show()
 
     sys.exit(app.exec_())
