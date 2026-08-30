@@ -2,9 +2,10 @@
 매크로 Presenter.
 
 MacroPanel의 사용자 요청과 MacroRunner/MacroScriptManager를 중재합니다. 파일 I/O와
-load QThread 생명주기는 Model이 소유하고 Presenter는 성공/실패 표시 정책만 담당합니다.
+load QThread 생명주기는 Model이 소유하며 두 의존성은 composition root가 명시적으로
+주입합니다.
 """
-from typing import List, Optional, Tuple
+from typing import List, Tuple
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
@@ -33,14 +34,13 @@ class MacroPresenter(QObject):
         self,
         panel: MacroPanel,
         runner: MacroRunner,
-        script_manager: Optional[MacroScriptManager] = None,
+        script_manager: MacroScriptManager,
     ) -> None:
         super().__init__()
         self.panel = panel
         self.runner = runner
-        self.script_manager = script_manager or MacroScriptManager()
+        self.script_manager = script_manager
 
-        # View -> Presenter
         self.panel.repeat_start_requested.connect(self.on_repeat_start)
         self.panel.repeat_stop_requested.connect(self.on_repeat_stop)
         self.panel.repeat_pause_requested.connect(self.on_repeat_pause)
@@ -49,13 +49,11 @@ class MacroPresenter(QObject):
         self.panel.send_row_requested.connect(self.on_single_send_requested)
         self.panel.broadcast_changed.connect(self.broadcast_changed.emit)
 
-        # Script Model -> Presenter -> View
         self.script_manager.script_loaded.connect(self._on_load_success)
         self.script_manager.load_failed.connect(self._on_load_failed)
         self.script_manager.save_succeeded.connect(self._on_save_success)
         self.script_manager.save_failed.connect(self._on_save_failed)
 
-        # Runner -> Presenter -> View
         self.runner.step_started.connect(self.on_step_started)
         self.runner.step_completed.connect(self.on_step_completed)
         self.runner.macro_finished.connect(self.on_macro_finished)
@@ -68,11 +66,7 @@ class MacroPresenter(QObject):
     def is_broadcast_enabled(self) -> bool:
         return self.panel.is_broadcast_enabled()
 
-    # ------------------------------------------------------------------
-    # Script persistence
-    # ------------------------------------------------------------------
     def on_script_save(self, script_data: MacroScriptData) -> None:
-        """파일 저장 구현은 MacroScriptManager에 위임합니다."""
         self.script_manager.save_script(script_data)
 
     def _on_save_success(self, _file_path: str) -> None:
@@ -88,7 +82,6 @@ class MacroPresenter(QObject):
         )
 
     def on_script_load(self, file_path: str) -> None:
-        """비동기 load 시작/중복 방지는 MacroScriptManager에 위임합니다."""
         self.script_manager.request_load(file_path)
 
     def _on_load_success(self, script_data: MacroScriptData) -> None:
@@ -100,13 +93,6 @@ class MacroPresenter(QObject):
             language_manager.get_text("macro_panel_msg_load_error").format(error_msg),
         )
 
-    def _save_script_file(self, file_path: str, data: dict) -> None:
-        """기존 테스트/외부 호출 호환용 delegate. 실제 I/O는 Model이 수행합니다."""
-        self.script_manager.save_script(MacroScriptData(file_path=file_path, data=data))
-
-    # ------------------------------------------------------------------
-    # Macro execution
-    # ------------------------------------------------------------------
     def on_repeat_start(self, request: MacroExecutionRequest) -> None:
         indices = request.indices
         if not indices:
@@ -162,7 +148,6 @@ class MacroPresenter(QObject):
         self.panel.set_current_row(event.index)
 
     def on_step_completed(self, _event: MacroStepEvent) -> None:
-        """현재 UI는 완료 행별 별도 표시를 하지 않으므로 추가 동작이 없습니다."""
         return
 
     def on_macro_finished(self) -> None:
