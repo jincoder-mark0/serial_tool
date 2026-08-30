@@ -45,10 +45,6 @@ def test_bootstrapper_is_the_concrete_object_graph_owner():
 
     assert "DataTrafficHandler(self._view, traffic_monitor)" in source
     assert "status_coordinator.start()" in source
-    assert "packet_parser_manager," in source
-    assert "connection_session_factory," in source
-    assert "port_scan_manager," in source
-    assert "macro_script_manager," in source
 
 
 def test_bootstrapper_restores_view_before_view_aware_presenters():
@@ -90,11 +86,17 @@ def test_main_presenter_does_not_construct_concrete_runtime_components():
     assert "self._apply_components(runtime)" in source
     assert "self.lifecycle_manager = components.lifecycle_manager" in source
     assert "self.logging_coordinator = components.logging_coordinator" in source
-    assert "self.status_coordinator = components.status_coordinator" in source
     assert "self.shutdown_coordinator = components.shutdown_coordinator" in source
-    assert "self.port_scan_manager = components.port_scan_manager" in source
-    assert "self.macro_script_manager = components.macro_script_manager" in source
-    assert "self.traffic_monitor = components.traffic_monitor" in source
+
+    # 내부 lifecycle owner는 MainPresenter를 서비스 locator로 만들지 않도록 숨깁니다.
+    for internal_owner in (
+        "self.file_transfer_manager =",
+        "self.port_scan_manager =",
+        "self.macro_script_manager =",
+        "self.traffic_monitor =",
+        "self.status_coordinator =",
+    ):
+        assert internal_owner not in source
 
 
 def test_lifecycle_does_not_own_or_call_main_presenter():
