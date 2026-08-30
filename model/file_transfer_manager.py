@@ -3,19 +3,14 @@
 
 FileTransferService 생성, 전용 QThreadPool scheduling, 취소, progress metric 계산과
 현재 전송 세션의 생명주기를 소유합니다. ConnectionController는 파일 전송 기능을
-모르며, Manager가 connection_closed signal을 구독해 자기 세션을 취소합니다.
+모르며, Manager가 connection_closing signal을 구독해 worker stop 전에 자기 세션을 취소합니다.
 """
 import time
 from typing import Optional
 
 from PyQt5.QtCore import QObject, QThreadPool, pyqtSignal
 
-from common.dtos import (
-    FileCompletionEvent,
-    FileErrorEvent,
-    FileProgressState,
-    PortConnectionEvent,
-)
+from common.dtos import FileCompletionEvent, FileErrorEvent, FileProgressState
 from core.logger import logger
 from model.connection_controller import ConnectionController
 from model.file_transfer_service import FileTransferService
@@ -40,8 +35,8 @@ class FileTransferManager(QObject):
         self._active_port: Optional[str] = None
         self._start_monotonic = 0.0
 
-        self._connection_controller.connection_closed.connect(
-            self._on_connection_closed
+        self._connection_controller.connection_closing.connect(
+            self._on_connection_closing
         )
 
     @property
@@ -101,13 +96,13 @@ class FileTransferManager(QObject):
         self._thread_pool.waitForDone()
         self._clear_active_session()
 
-    def _on_connection_closed(self, event: PortConnectionEvent) -> None:
-        """전송 대상 포트가 닫히면 해당 전송 세션에 취소를 요청합니다."""
+    def _on_connection_closing(self, port_name: str) -> None:
+        """전송 대상 포트가 stop되기 전에 해당 전송 세션에 취소를 요청합니다."""
         if self._active_service is None:
             return
-        if event.port == self._active_port:
+        if port_name == self._active_port:
             logger.warning(
-                f"File transfer target port {event.port} closed. Cancelling transfer..."
+                f"File transfer target port {port_name} is closing. Cancelling transfer..."
             )
             self.cancel_transfer()
 
