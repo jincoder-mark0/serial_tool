@@ -70,17 +70,14 @@ class PortPresenter(QObject):
         # 스캔 워커 (비동기 실행을 위해 멤버로 유지)
         self._scan_worker: Optional[PortScanWorker] = None
 
-        # 현재 활성 포트 패널 참조
-        self.current_port_panel: Optional[PortPanel] = None
-        self.update_current_port_panel()
-
         # 로그 라인 수 설정 적용 (초기화 시)
         settings = SettingsManager()
         max_lines = settings.get(ConfigKeys.RX_MAX_LINES, 2000)
 
-        # LoD 준수: 패널 내부 위젯에 직접 접근하지 않고 Facade 메서드 사용
-        if self.current_port_panel:
-            self.current_port_panel.set_max_log_lines(max_lines)
+        # 현재 패널은 캐시하지 않고 View에서 즉시 조회한다.
+        current_panel = self.left_section.get_current_port_panel()
+        if current_panel:
+            current_panel.set_max_log_lines(max_lines)
 
         # 초기 포트 스캔 (앱 시작 시점)
         self.scan_ports()
@@ -92,9 +89,6 @@ class PortPresenter(QObject):
 
         # 새 탭 추가 시그널 연결 (View의 시그널 사용)
         self.left_section.port_tab_added.connect(self._on_port_tab_added)
-
-        # 탭 변경 시 현재 패널 업데이트 (View의 시그널 사용)
-        self.left_section.current_tab_changed.connect(self.update_current_port_panel)
 
         # 탭 닫기 시 연결 정리 (좀비 연결 방지, S-040)
         # PortTabPanel 내부 구현을 직접 노출하지 않고 MainLeftSection의 중계 시그널을 구독한다.
@@ -109,15 +103,11 @@ class PortPresenter(QObject):
         """
         현재 활성화된 탭의 포트 이름을 반환합니다.
 
-        Logic:
-            - 현재 활성 패널이 존재하면 해당 패널의 포트 이름 반환
-
         Returns:
             Optional[str]: 포트 이름. 활성 탭이 없거나 포트가 선택되지 않았으면 None.
         """
-        if self.current_port_panel:
-            return self.current_port_panel.get_port_name()
-        return None
+        panel = self.left_section.get_current_port_panel()
+        return panel.get_port_name() if panel else None
 
     def _connect_tab_signals(self, panel: PortPanel) -> None:
         """
@@ -187,17 +177,6 @@ class PortPresenter(QObject):
         self._connect_tab_signals(panel)
         # 탭 추가 시에도 포트 리스트 최신화 (새 탭에 빈 목록이 뜨지 않도록)
         self.scan_ports()
-
-    def update_current_port_panel(self) -> None:
-        """
-        현재 활성 포트 패널 참조를 업데이트합니다.
-
-        Logic:
-            - View(LeftSection)를 통해 현재 활성 패널 획득 (Facade)
-            - current_port_panel 멤버 변수 갱신
-        """
-        # LoD 준수: View의 Facade 메서드 사용
-        self.current_port_panel = self.left_section.get_current_port_panel()
 
     def scan_ports(self) -> None:
         """
@@ -420,9 +399,9 @@ class PortPresenter(QObject):
         """
         현재 활성화된 탭의 포트 연결을 시도합니다. (단축키 F2 등에서 호출)
         """
-        self.update_current_port_panel()
-        if self.current_port_panel:
-            config = self.current_port_panel.get_port_config()
+        panel = self.left_section.get_current_port_panel()
+        if panel:
+            config = panel.get_port_config()
             port_name = config.port
             if port_name and not self.connection_controller.is_connection_open(port_name):
                 self._apply_packet_parser_settings(config)
@@ -434,9 +413,9 @@ class PortPresenter(QObject):
         """
         현재 활성화된 탭의 포트 연결을 해제합니다. (단축키 F3 등에서 호출)
         """
-        self.update_current_port_panel()
-        if self.current_port_panel:
-            port_name = self.current_port_panel.get_port_name()
+        panel = self.left_section.get_current_port_panel()
+        if panel:
+            port_name = panel.get_port_name()
             if port_name and self.connection_controller.is_connection_open(port_name):
                 self.connection_controller.close_connection(port_name)
 
@@ -444,6 +423,6 @@ class PortPresenter(QObject):
         """
         현재 활성화된 탭의 데이터 로그를 지웁니다. (단축키 F5 등에서 호출)
         """
-        self.update_current_port_panel()
-        if self.current_port_panel:
-            self.current_port_panel.clear_data_log()
+        panel = self.left_section.get_current_port_panel()
+        if panel:
+            panel.clear_data_log()
