@@ -4,18 +4,21 @@
 * Presenter/View가 AdapterBackendRegistry나 QThread lifecycle을 직접 소유하지 않도록 함
 * Session 이름 기준으로 open/execute/cancel/close API를 제공해 상위 계층의 vendor 의존 제거
 * 앱 종료 시 모든 SPI/I2C worker를 bounded lifecycle로 정리할 단일 owner 필요
+* USB/libusb enumeration을 UI thread에서 실행하지 않도록 discovery lifecycle도 Model에서 소유
 
 ## WHAT
 * TransactionSessionWorker 생성 / registry 관리
+* TransactionDiscoveryWorker 생성 / 중복 discovery 방지
 * request ID 발급 및 transaction 결과 중계
 * session duplicate / stale worker cleanup
-* 전체 session shutdown
+* 전체 session/discovery shutdown
 
 ## HOW
 * Composition Root에서 ``AdapterBackendRegistry``와 함께 한 번 생성
 * 각 session마다 전용 ``TransactionSessionWorker`` 생성
+* discovery는 one-shot ``TransactionDiscoveryWorker`` 사용
 * worker signal을 manager public signal로 중계
-* worker 종료 signal을 기준으로 내부 registry에서 strong reference 제거
+* worker 종료 signal을 기준으로 내부 strong reference 제거
 """
 from __future__ import annotations
 
@@ -27,17 +30,19 @@ from core.logger import logger
 from core.transport.transaction.config import TransactionConnectionConfig
 from core.transport.transaction.control import TransactionOptions
 from core.transport.transaction.dto import (
-    AdapterDescriptor,
     I2cTransactionRequest,
     SpiTransactionRequest,
 )
 from core.transport.transaction.registry import AdapterBackendRegistry
+from model.transaction_discovery_worker import TransactionDiscoveryWorker
 from model.transaction_session_worker import TransactionSessionWorker
 
 
 class TransactionManager(QObject):
-    """SPI/I2C adapter session과 background transaction worker의 application owner."""
+    """SPI/I2C adapter discovery/session/background worker의 application owner."""
 
+    adapters_found = pyqtSignal(object)
+    discovery_failed = pyqtSignal(object)
     session_opened = pyqtSignal(str, object)
     session_closed = pyqtSignal(str)
     session_failed = pyqtSignal(str, object)
@@ -48,6 +53,7 @@ class TransactionManager(QObject):
         super().__init__()
         self._registry = registry
         self._workers: dict[str, TransactionSessionWorker] = {}
+        self._discovery_worker: Optional[TransactionDiscoveryWorker] = None
         self._request_sequence = 0
 
     @property
@@ -55,14 +61,29 @@ class TransactionManager(QObject):
         """하나 이상의 transaction session worker가 살아 있으면 True."""
         return any(worker.isRunning() for worker in self._workers.values())
 
-    def enumerate_adapters(self) -> list[AdapterDescriptor]:
-        """현재 사용 가능한 adapter descriptor를 반환합니다.
+    @property
+    def is_discovering(self) -> bool:
+        """Adapter discovery worker가 현재 실행 중인지 반환합니다."""
+        worker = self._discovery_worker
+        return worker is not None and worker.isRunning()
 
-        이 메서드는 registry의 동기 discovery API를 그대로 노출합니다. UI integration 단계에서는
-        USB enumeration이 느린 환경을 고려해 별도 discovery worker/manager를 추가하고 Presenter는
-        그 비동기 API만 사용하도록 전환합니다.
+    def request_discovery(self) -> bool:
+        """Background adapter discovery를 요청합니다.
+
+        동일 시점에는 하나의 discovery만 허용합니다. 결과는 ``adapters_found`` 또는
+        ``discovery_failed`` signal로 전달합니다.
         """
-        return list(self._registry.enumerate())
+        if self.is_discovering:
+            logger.debug("Transaction adapter discovery already in progress.")
+            return False
+
+        worker = TransactionDiscoveryWorker(self._registry)
+        worker.adapters_found.connect(self.adapters_found.emit)
+        worker.discovery_failed.connect(self.discovery_failed.emit)
+        worker.finished.connect(lambda current=worker: self._on_discovery_finished(current))
+        self._discovery_worker = worker
+        worker.start()
+        return True
 
     def open_session(self, config: TransactionConnectionConfig) -> bool:
         """새 SPI/I2C session worker를 생성하고 비동기로 open합니다."""
@@ -130,9 +151,28 @@ class TransactionManager(QObject):
         self._workers.pop(session_name, None)
         return True
 
+    def stop_discovery(self, timeout_ms: int = 2000) -> bool:
+        """실행 중인 adapter discovery 종료를 bounded wait합니다."""
+        worker = self._discovery_worker
+        if worker is None:
+            return True
+
+        if worker.isRunning():
+            worker.requestInterruption()
+            worker.wait(timeout_ms)
+
+        if worker.isRunning():
+            logger.warning(
+                f"Transaction adapter discovery did not stop within {timeout_ms} ms."
+            )
+            return False
+
+        self._discovery_worker = None
+        return True
+
     def shutdown(self, timeout_ms: int = 2000) -> bool:
-        """모든 transaction session을 취소/종료하고 worker reference를 정리합니다."""
-        success = True
+        """Discovery와 모든 transaction session을 취소/종료하고 reference를 정리합니다."""
+        success = self.stop_discovery(timeout_ms=timeout_ms)
         for session_name in tuple(self._workers):
             if not self.close_session(session_name, timeout_ms=timeout_ms):
                 success = False
@@ -146,6 +186,11 @@ class TransactionManager(QObject):
     def _next_request_id(self) -> int:
         self._request_sequence += 1
         return self._request_sequence
+
+    def _on_discovery_finished(self, worker: TransactionDiscoveryWorker) -> None:
+        """현재 등록된 동일 discovery worker 종료 시에만 strong reference를 제거합니다."""
+        if self._discovery_worker is worker:
+            self._discovery_worker = None
 
     def _on_worker_terminated(
         self,
