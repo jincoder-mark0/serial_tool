@@ -1,13 +1,17 @@
 """
 애플리케이션 최상위 Presenter.
 
-조립된 runtime component를 받아 전역 이벤트와 UI 상태를 중재합니다. 구체 객체 생성과
-View 초기 상태 복원 순서는 application_bootstrap.py가 소유하고, MainPresenter는 완성된
-runtime graph의 public signal을 연결하고 사용자 표시 상태를 조정합니다.
+MainPresenter가 필요한 의존성 contract를 이 모듈이 직접 정의합니다. Composition root는
+이 contract를 조립해서 주입할 뿐이며, Presenter는 application_bootstrap 모듈이나 전체
+runtime graph를 알지 않습니다.
 """
+from __future__ import annotations
+
+from dataclasses import dataclass
+from typing import TYPE_CHECKING
+
 from PyQt5.QtCore import QObject
 
-from application_bootstrap import ApplicationComponents
 from common.constants import ConfigKeys
 from common.dtos import (
     FileCompletionEvent,
@@ -28,6 +32,38 @@ from view.managers.language_manager import language_manager
 
 from .preferences_coordinator import PreferencesCoordinator
 
+if TYPE_CHECKING:
+    from model.connection_controller import ConnectionController
+    from model.macro_runner import MacroRunner
+    from presenter.data_handler import DataTrafficHandler
+    from presenter.file_presenter import FilePresenter
+    from presenter.lifecycle_manager import AppLifecycleManager
+    from presenter.logging_coordinator import LoggingCoordinator
+    from presenter.macro_execution_coordinator import MacroExecutionCoordinator
+    from presenter.macro_presenter import MacroPresenter
+    from presenter.manual_control_presenter import ManualControlPresenter
+    from presenter.packet_presenter import PacketPresenter
+    from presenter.port_presenter import PortPresenter
+    from presenter.shutdown_coordinator import ShutdownCoordinator
+
+
+@dataclass(frozen=True)
+class MainPresenterDependencies:
+    """MainPresenter가 실제로 사용하는 최소 runtime dependency contract."""
+
+    lifecycle_manager: AppLifecycleManager
+    connection_controller: ConnectionController
+    macro_runner: MacroRunner
+    macro_execution_coordinator: MacroExecutionCoordinator
+    data_handler: DataTrafficHandler
+    logging_coordinator: LoggingCoordinator
+    shutdown_coordinator: ShutdownCoordinator
+    port_presenter: PortPresenter
+    macro_presenter: MacroPresenter
+    file_presenter: FilePresenter
+    packet_presenter: PacketPresenter
+    manual_control_presenter: ManualControlPresenter
+
 
 class MainPresenter(QObject):
     """애플리케이션 전역 표시 상태와 상위 이벤트를 조정합니다."""
@@ -36,12 +72,12 @@ class MainPresenter(QObject):
         self,
         view: MainWindow,
         settings_manager: SettingsManager,
-        components: ApplicationComponents,
+        dependencies: MainPresenterDependencies,
     ) -> None:
         super().__init__()
         self.view = view
         self.settings_manager = settings_manager
-        self._apply_components(components)
+        self._apply_dependencies(dependencies)
 
         self.manual_control_presenter.apply_state(
             self.lifecycle_manager.create_manual_control_state()
@@ -58,20 +94,20 @@ class MainPresenter(QObject):
         self.view.connect_port_tab_changed(self._on_port_tab_changed)
         self.lifecycle_manager.log_initialized()
 
-    def _apply_components(self, components: ApplicationComponents) -> None:
-        """MainPresenter가 실제로 사용하는 runtime component만 보관합니다."""
-        self.lifecycle_manager = components.lifecycle_manager
-        self.connection_controller = components.connection_controller
-        self.macro_runner = components.macro_runner
-        self.macro_execution_coordinator = components.macro_execution_coordinator
-        self.data_handler = components.data_handler
-        self.logging_coordinator = components.logging_coordinator
-        self.shutdown_coordinator = components.shutdown_coordinator
-        self.port_presenter = components.port_presenter
-        self.macro_presenter = components.macro_presenter
-        self.file_presenter = components.file_presenter
-        self.packet_presenter = components.packet_presenter
-        self.manual_control_presenter = components.manual_control_presenter
+    def _apply_dependencies(self, dependencies: MainPresenterDependencies) -> None:
+        """Presenter contract에 정의된 의존성만 보관합니다."""
+        self.lifecycle_manager = dependencies.lifecycle_manager
+        self.connection_controller = dependencies.connection_controller
+        self.macro_runner = dependencies.macro_runner
+        self.macro_execution_coordinator = dependencies.macro_execution_coordinator
+        self.data_handler = dependencies.data_handler
+        self.logging_coordinator = dependencies.logging_coordinator
+        self.shutdown_coordinator = dependencies.shutdown_coordinator
+        self.port_presenter = dependencies.port_presenter
+        self.macro_presenter = dependencies.macro_presenter
+        self.file_presenter = dependencies.file_presenter
+        self.packet_presenter = dependencies.packet_presenter
+        self.manual_control_presenter = dependencies.manual_control_presenter
 
     def _connect_signals(self) -> None:
         self.connection_controller.connection_opened.connect(self.on_port_opened)
@@ -201,17 +237,15 @@ class MainPresenter(QObject):
         is_current_connected = self.view.is_current_port_connected()
         has_any_connection = self.connection_controller.has_active_connection
 
-        if self.manual_control_presenter:
-            is_broadcast = self.manual_control_presenter.is_broadcast_enabled()
-            self.manual_control_presenter.set_enabled(
-                is_current_connected or (is_broadcast and has_any_connection)
-            )
+        is_manual_broadcast = self.manual_control_presenter.is_broadcast_enabled()
+        self.manual_control_presenter.set_enabled(
+            is_current_connected or (is_manual_broadcast and has_any_connection)
+        )
 
-        if self.macro_presenter:
-            is_broadcast = self.macro_presenter.is_broadcast_enabled()
-            self.macro_presenter.set_enabled(
-                is_current_connected or (is_broadcast and has_any_connection)
-            )
+        is_macro_broadcast = self.macro_presenter.is_broadcast_enabled()
+        self.macro_presenter.set_enabled(
+            is_current_connected or (is_macro_broadcast and has_any_connection)
+        )
 
     def on_macro_started(self) -> None:
         self._log_info("Macro started")
