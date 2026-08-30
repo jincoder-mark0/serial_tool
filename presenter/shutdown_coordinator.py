@@ -1,8 +1,9 @@
 """
 애플리케이션 종료 시퀀스 조정 모듈.
 
-백그라운드 작업 종료, 상태 저장, 연결 종료, logger drain 순서를 관리합니다.
-S-059의 데이터 보존 순서(connection close -> processEvents -> logger stop)를 보존합니다.
+백그라운드 작업 종료, transient runtime 상태 정리, 상태 저장, 연결 종료, logger drain
+순서를 관리합니다. S-059의 데이터 보존 순서(connection close -> processEvents -> logger stop)를
+보존합니다.
 """
 from typing import Callable
 
@@ -71,6 +72,10 @@ class ShutdownCoordinator:
         self._data_handler.stop()
         self._packet_presenter.stop()
         self._status_coordinator.stop()
+
+        # Auto Tx 실행 여부는 지속 설정이 아니라 transient runtime 상태입니다.
+        # 저장 전에 정지/체크 해제해야 다음 실행에서 UI만 켜진 불일치를 만들지 않습니다.
+        self._manual_control_presenter.stop_auto_tx()
 
         self._close_system_log()
         self._save_ui_state()
