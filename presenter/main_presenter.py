@@ -2,12 +2,12 @@
 애플리케이션 최상위 Presenter
 
 하위 Presenter를 조율하고 전역 UI 상태/생명주기 이벤트를 연결합니다.
-Model/Presenter 간 애플리케이션 이벤트는 DTO 기반 Qt Signal로 직접 연결합니다.
-SettingsManager는 composition root에서 주입받아 하위 객체와 공유합니다.
+객체 생성/배선 순서는 MainPresenter가 직접 소유하고, 초기 상태 복원과 종료 시퀀스는
+각각 AppLifecycleManager와 ShutdownCoordinator에 위임합니다.
 """
 from typing import Optional
 
-from PyQt5.QtCore import QCoreApplication, QDateTime, QObject, QTimer
+from PyQt5.QtCore import QDateTime, QObject, QTimer
 
 from common.constants import ConfigKeys
 from common.dtos import (
@@ -46,7 +46,7 @@ from .manual_control_presenter import ManualControlPresenter
 from .packet_presenter import PacketPresenter
 from .port_presenter import PortPresenter
 from .preferences_coordinator import PreferencesCoordinator
-from .shutdown_state_collector import ShutdownStateCollector
+from .shutdown_coordinator import ShutdownCoordinator
 
 
 class MainPresenter(QObject):
@@ -59,18 +59,52 @@ class MainPresenter(QObject):
     ) -> None:
         super().__init__()
         self.view = view
-        # Production은 main.py에서 명시적으로 주입한다. None fallback은 기존 테스트/
-        # 외부 생성 코드의 단계적 마이그레이션을 위한 호환 경로다.
         self.settings_manager = settings_manager or SettingsManager()
         self.status_timer: Optional[QTimer] = None
         self._sys_log_writer: Optional[TextLogWriter] = None
         self._macro_target_port: Optional[str] = None
 
-        self.lifecycle_manager = AppLifecycleManager(self, self.settings_manager)
-        self.lifecycle_manager.initialize_app()
+        # 1. 저장 설정을 View에 먼저 적용한다.
+        self.lifecycle_manager = AppLifecycleManager(
+            self.view,
+            self.settings_manager,
+        )
+        self.lifecycle_manager.initialize_view()
+
+        # 2. Model/Service/Presenter를 생성한다. 생성 순서는 MainPresenter가 소유한다.
+        self._init_core_systems()
+        self._init_sub_presenters()
+
+        # 3. Presenter 상태 복원 및 direct signal fast path 구성.
+        self.manual_control_presenter.apply_state(
+            self.lifecycle_manager.create_manual_control_state()
+        )
+        self.connection_controller.data_received.connect(
+            self.data_handler.on_fast_data_received
+        )
+
+        # 4. 상태바 서비스/종료 coordinator 생성 후 이벤트를 연결한다.
+        self.status_timer = self.lifecycle_manager.create_status_timer(
+            self.update_status_bar
+        )
+        self.shutdown_coordinator = ShutdownCoordinator(
+            view=self.view,
+            settings_manager=self.settings_manager,
+            connection_controller=self.connection_controller,
+            macro_runner=self.macro_runner,
+            port_presenter=self.port_presenter,
+            manual_control_presenter=self.manual_control_presenter,
+            packet_presenter=self.packet_presenter,
+            data_handler=self.data_handler,
+            close_system_log=self._close_sys_log_writer,
+            status_timer=self.status_timer,
+        )
+        self._connect_signals()
         self.view.connect_port_tab_changed(self._on_port_tab_changed)
+        self.lifecycle_manager.log_initialized()
 
     def _init_core_systems(self) -> None:
+        """MainPresenter가 직접 소유하는 Model/Application Service를 생성합니다."""
         self.connection_controller = ConnectionController()
         self.command_transmission_service = CommandTransmissionService(
             self.connection_controller,
@@ -80,6 +114,7 @@ class MainPresenter(QObject):
         self.data_handler = DataTrafficHandler(self.view)
 
     def _init_sub_presenters(self) -> None:
+        """하위 Presenter를 공용 Model/Settings 의존성과 함께 생성합니다."""
         self.port_presenter = PortPresenter(
             self.view.port_view,
             self.connection_controller,
@@ -101,6 +136,7 @@ class MainPresenter(QObject):
         )
 
     def _connect_signals(self) -> None:
+        """Model/Presenter/View의 public signal을 direct topology로 연결합니다."""
         self.connection_controller.connection_opened.connect(self.on_port_opened)
         self.connection_controller.connection_closed.connect(self.on_port_closed)
         self.connection_controller.error_occurred.connect(self.on_port_error)
@@ -159,36 +195,8 @@ class MainPresenter(QObject):
         )
 
     def on_close_requested(self) -> None:
-        logger.info("Shutdown initiated...")
-
-        if self.macro_runner.isRunning():
-            logger.info("Stopping active macro runner...")
-            self.macro_runner.stop()
-            self.macro_runner.wait(1000)
-
-        self.port_presenter.stop_pending_scan()
-        self.data_handler.stop()
-        self.packet_presenter.stop()
-        if self.status_timer:
-            self.status_timer.stop()
-
-        self._close_sys_log_writer()
-
-        state = self.view.get_window_state()
-        manual_state_dto = self.manual_control_presenter.get_state()
-        ShutdownStateCollector.collect_and_apply(
-            self.settings_manager,
-            state,
-            manual_state_dto,
-        )
-        self.settings_manager.save_settings()
-
-        if self.connection_controller.has_active_connection:
-            self.connection_controller.close_connection()
-
-        QCoreApplication.processEvents()
-        data_logger_manager.stop_all()
-        logger.info("Shutdown completed.")
+        """종료 세부 순서는 ShutdownCoordinator에 위임합니다."""
+        self.shutdown_coordinator.shutdown()
 
     def on_settings_change_requested(self, new_state: PreferencesState) -> None:
         PreferencesCoordinator.apply_state(self.settings_manager, new_state)
@@ -197,7 +205,7 @@ class MainPresenter(QObject):
         self.view.switch_theme(new_state.theme.lower())
         language_manager.set_language(new_state.language)
 
-        # TODO(refactor): 포트 컬렉션 순회는 MainWindow facade로 이동할 대상이다.
+        # TODO(refactor): 포트 컬렉션 순회는 MainWindow/MainLeftSection facade로 이동.
         count = self.view.get_port_tabs_count()
         for index in range(count):
             widget = self.view.get_port_tab_widget(index)
