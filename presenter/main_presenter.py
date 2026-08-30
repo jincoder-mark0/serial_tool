@@ -5,11 +5,9 @@
 View 초기 상태 복원 순서는 application_bootstrap.py가 소유하고, MainPresenter는 완성된
 runtime graph의 public signal을 연결하고 사용자 표시 상태를 조정합니다.
 """
-from typing import Optional
-
 from PyQt5.QtCore import QObject
 
-from application_bootstrap import ApplicationBootstrapper, ApplicationComponents
+from application_bootstrap import ApplicationComponents
 from common.constants import ConfigKeys
 from common.dtos import (
     FileCompletionEvent,
@@ -37,18 +35,13 @@ class MainPresenter(QObject):
     def __init__(
         self,
         view: MainWindow,
-        settings_manager: Optional[SettingsManager] = None,
-        components: Optional[ApplicationComponents] = None,
+        settings_manager: SettingsManager,
+        components: ApplicationComponents,
     ) -> None:
         super().__init__()
         self.view = view
-        self.settings_manager = settings_manager or SettingsManager()
-
-        runtime = components or ApplicationBootstrapper(
-            self.view,
-            self.settings_manager,
-        ).build()
-        self._apply_components(runtime)
+        self.settings_manager = settings_manager
+        self._apply_components(components)
 
         self.manual_control_presenter.apply_state(
             self.lifecycle_manager.create_manual_control_state()
