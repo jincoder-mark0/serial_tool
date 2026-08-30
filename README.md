@@ -10,8 +10,8 @@ SerialTool은 Python/PyQt5 기반의 멀티포트 시리얼 통신·자동화·�
 > 현재 작업 체크리스트: [`Task.MD`](Task.MD)
 > AI/코딩 에이전트 규칙: [`AGENTS.md`](AGENTS.md)
 
-현재 브랜치는 구조 리팩토링과 `main` 전체 diff 감사를 마치고 **PR CI 검증을 준비하는 단계**입니다.
-로컬 Green 기준선과 PR의 Python 3.11 GitHub Actions 결과는 별도로 관리합니다.
+현재 브랜치는 구조 리팩토링과 `main` 전체 diff 감사를 마쳤고, **로컬 및 PR GitHub Actions 검증까지 Green**입니다.
+남은 단계는 실제 검증 범위/제한사항 기록과 merge/history 정리 판단입니다.
 
 ---
 
@@ -80,7 +80,7 @@ SerialTool은 Python/PyQt5 기반의 멀티포트 시리얼 통신·자동화·�
 - PyInstaller onedir 패키징 구성이 존재합니다.
 - GitHub Actions CI는 Windows pytest, language-key 검사, task-board 검사, ruff를 실행합니다.
 - Python 3.13 로컬 검증은 전체 pytest 643개와 Ruff/저장소 정합 gate까지 Green입니다.
-- PR의 Python 3.11 GitHub Actions는 아직 확인하지 않았으므로 merge 준비 완료로 선언하지 않습니다.
+- PR #1의 Python 3.11 GitHub Actions는 `test-windows`, `lang-keys`, `task-boards`, `lint` 4개 job 모두 Green입니다.
 
 ---
 
@@ -132,7 +132,7 @@ python tools/check_language_keys.py
 python tools/check_task_boards.py
 ```
 
-현재 리팩토링 검증은 다음 순서를 권장합니다.
+현재 리팩토링 검증 순서는 다음과 같이 수행했습니다.
 
 ```text
 stale API/constructor audit
@@ -148,6 +148,22 @@ feature tests
 full pytest
         ↓
 GitHub Actions CI
+```
+
+검증 결과:
+
+```text
+Local Windows / Python 3.13.15 / offscreen
+  full pytest: 643 passed, 0 failed, 0 skipped
+  ruff: 0 errors
+  language key integrity: Green
+  task board consistency: Green
+
+PR #1 / GitHub Actions / Python 3.11
+  test-windows: success
+  lang-keys: success
+  task-boards: success
+  lint: success
 ```
 
 상세 체크리스트는 [`Task.MD`](Task.MD)를 사용합니다.
@@ -480,16 +496,16 @@ onedir 결과는 `dist/SerialTool/`에 생성됩니다.
 
 ## 13. 현재 다음 작업
 
-현재 우선순위는 [`Task.MD`](Task.MD)의 P0 검증입니다.
+현재 자동 검증 gate는 모두 Green입니다.
 
-1. stale API / constructor 전수 감사
-2. `ruff check .`
-3. architecture contract tests
-4. lifecycle/threading tests
-5. 전체 `pytest`
-6. 실패 기준 마지막 구조 교정
-7. 문서 정합성 확인
-8. PR/CI Green
-9. 검증 완료 후 squash/rebase 여부 판단
+1. Mock / LOOPBACK / 실기기 검증 범위 기록
+2. 알려진 제한사항 확정
+3. commit history squash/rebase 여부 판단
+4. merge 방식 결정 및 최종 merge
 
-현재 로컬 기준선은 `643 passed, 0 failed, 0 skipped`입니다. 최종 merge 판정에는 PR GitHub Actions Green이 추가로 필요합니다.
+현재 검증 기준:
+
+```text
+Local Python 3.13: 643 passed / Ruff Green / repository gates Green
+PR #1 Python 3.11: 4/4 GitHub Actions jobs Green
+```
