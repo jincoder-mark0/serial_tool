@@ -278,7 +278,8 @@ class MainPresenter(QObject):
     # Macro
     # ------------------------------------------------------------------
     def on_macro_started(self) -> None:
-        self._macro_target_port = self.port_presenter.get_active_port_name()
+        # UI thread에서 현재 View 상태를 문자열로 스냅샷하고 worker thread에는 값만 전달합니다.
+        self._macro_target_port = self.view.port_view.get_current_port_name() or None
         self._log_info("Macro started")
         self.view.show_status_message(
             language_manager.get_text("main_status_msg_macro_running"),
@@ -312,11 +313,10 @@ class MainPresenter(QObject):
         )
 
     def on_macro_send_requested(self, manual_command: ManualCommand) -> None:
-        active_port = (
-            None
-            if manual_command.broadcast_enabled
-            else self.port_presenter.get_active_port_name()
-        )
+        active_port = None
+        if not manual_command.broadcast_enabled:
+            active_port = self.view.port_view.get_current_port_name() or None
+
         result = self.command_transmission_service.send(
             manual_command,
             active_port=active_port,
