@@ -39,14 +39,14 @@ def mock_main_window():
     return view
 
 
-def _build_presenter(view, settings):
-    components = ApplicationBootstrapper(view, settings).build()
-    return MainPresenter(view, dependencies=components.main_presenter_dependencies)
+def _build_runtime(view, settings):
+    return ApplicationBootstrapper(view, settings).build()
 
 
 class TestMainPresenterInit:
     def test_component_injection(self, mock_main_window, mock_settings_manager):
-        presenter = _build_presenter(mock_main_window, mock_settings_manager)
+        runtime = _build_runtime(mock_main_window, mock_settings_manager)
+        presenter = runtime.main_presenter
         for attr in (
             "connection_controller",
             "macro_runner",
@@ -80,8 +80,9 @@ class TestMainPresenterInit:
         restore_pos = source.index("lifecycle_manager.initialize_view()")
         manual_apply_pos = source.index("manual_control_presenter.apply_state(")
         control_pos = source.index("control_state_coordinator = ControlStateCoordinator(")
+        main_pos = source.index("main_presenter = MainPresenter(")
 
-        assert restore_pos < manual_apply_pos < control_pos
+        assert restore_pos < manual_apply_pos < control_pos < main_pos
         assert restore_pos < source.index("port_presenter = PortPresenter(")
         assert restore_pos < source.index("macro_presenter = MacroPresenter(")
 
@@ -95,9 +96,14 @@ class TestMainPresenterInit:
         assert "MainPresenterDependencies" in source
         assert set(signature.parameters) == {"self", "view", "dependencies"}
 
-    def test_signal_connections(self, mock_main_window, mock_settings_manager):
-        presenter = _build_presenter(mock_main_window, mock_settings_manager)
-        # Settings/control/static command 관련 signal은 전용 coordinator/bootstrap이 연결합니다.
+    def test_bootstrapper_builds_main_presenter_once(
+        self,
+        mock_main_window,
+        mock_settings_manager,
+    ):
+        runtime = _build_runtime(mock_main_window, mock_settings_manager)
+        presenter = runtime.main_presenter
+
         mock_main_window.settings_save_requested.connect.assert_called()
         mock_main_window.theme_change_requested.connect.assert_called()
         mock_main_window.language_change_requested.connect.assert_called()
@@ -110,7 +116,9 @@ class TestMainPresenterInit:
         assert presenter.macro_runner.macro_started is not None
 
     def test_bootstrapper_owns_data_handler_and_static_wiring(
-        self, mock_main_window, mock_settings_manager
+        self,
+        mock_main_window,
+        mock_settings_manager,
     ):
         with patch("presenter.data_handler.QTimer") as timer_cls:
             ApplicationBootstrapper(mock_main_window, mock_settings_manager).build()
