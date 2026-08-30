@@ -1,314 +1,457 @@
-# Task.MD — SerialTool 작업 보드
+# Task.MD — SerialTool 현재 작업 보드
 
-최상위 작업 현황판. **세부 실행 절차는 `tasks/S-0xx-*.md`** (하위 모델용 자족적 문서 —
-시작 방법은 [tasks/README.md](tasks/README.md)). Phase별 완료 체크리스트(이력)는 `doc/task.md`,
-구현 계획은 `doc/implementation_plan.md` 참조.
-태스크 시작·완료 시 이 표와 태스크 파일의 Status를 갱신한다 (CLAUDE.md 지시).
+> 최종 갱신: 2026-08-30  
+> 작업 브랜치: `refactor/presenter-view-boundary`  
+> 안정 기준: `main`  
+> 리팩토링 보고서: [`doc/refactoring_validation_report_20260830.md`](doc/refactoring_validation_report_20260830.md)  
+> 에이전트 규칙: [`AGENTS.md`](AGENTS.md)
 
-## 현재 상태 (2026-08-22)
+이 문서는 **현재 완료된 것과 앞으로 해야 할 것**만 관리한다. 과거 Phase/S-xxx 상세 이력은
+`doc/task.md`, `doc/CHANGELOG.md`, `tasks/`에 보존한다.
 
-- **Phase 1~5.5 완료**: MVP 구조·멀티포트 시리얼·매크로/파일 전송/로깅·테마/다국어·
-  Presenter 세분화·안정화. 테스트 기준선 **85개 통과** (offscreen, Mock Transport).
-- 실제 통신 Transport는 `SerialTransport`뿐 — SPI/I2C·플러그인·패키징 미착수 (README §1.4).
-- 처리량 수치는 자동 벤치마크 도입 전까지 비보장.
-- 문서·에이전트 설정 정비 (2026-08-22): 타 프로젝트에서 복사돼 있던 CLAUDE.md/RULES.md/
-  Task.MD/`.claude/`/`tools/analysis` 등을 SerialTool 기준으로 재작성. chatlog 훅·스킬
-  (task-done, lang-keys) 도입. 세부 태스크 체계 `tasks/` 신설 (하위 모델용 자족 문서).
-- **UX 전면 점검 (2026-08-22, 사용자 지시)**: 실행 스크린샷 8조합(`tools/ux_capture.py` 신설,
-  네이티브 렌더 — offscreen은 폰트 미렌더로 판정 불가) + 정적 점검 3종(테마/언어팩/레이아웃)을
-  하위 모델로 수행. 결함 35건(높음 10·중간 15·낮음 10) — 보고서 `doc/ux_audit_20260822.md`,
-  수정 태스크 S-019~S-026 등재. 코드 조사 중 별도 결함 3건(S-016~S-018)도 발견.
+상태 표기:
 
-## 작업 보드
+- `[x]` 완료
+- `[ ]` 해야 함
+- `[-]` 보류 / 재개 조건 필요
 
-상태 값: `⏸ 대기` / `▶ 진행` / `✅ 완료` / `⛔ 보류(사유 기재)`
+---
 
-### 리팩토링 감사 산출 (2026-08-22) — 전량 완료
+# 1. 현재 최우선 목표
 
-읽기 전용 4축 감사(아키텍처 규칙 / 구조·설계 / 오동작 예상 / 테스트·문서) 결과를
-우선순위대로 처리했다. 진단 근거와 남은 항목은 **[doc/refactor_audit_20260822.md](doc/refactor_audit_20260822.md)**,
-세부 절차는 `tasks/S-038~S-051`. 테스트 **134 → 284**.
+기능 추가보다 **대규모 구조 리팩토링 검증 및 안정화**가 우선이다.
 
-| ID | 제목 | 우선 | 상태 |
-|---|---|---|---|
-| [S-038](tasks/S-038-log-view-duplicate-methods.md) | 로그 뷰 표시 파손 (중복 메서드 정의) | P0 | ✅ 완료 |
-| [S-039](tasks/S-039-tx-data-loss.md) | TX 데이터 유실 (close flush + write_timeout) | P0 | ✅ 완료 |
-| [S-040](tasks/S-040-port-tab-close-cleanup.md) | 포트 탭 좀비 연결 + 워커 잔존 | P0 | ✅ 완료 |
-| [S-041](tasks/S-041-parser-and-protocol-wiring.md) | 파서 설정 무효 + SPI 선택 기만 | P1 | ✅ 완료 |
-| [S-042](tasks/S-042-silent-failures.md) | 전송 실패 무통보 + 매크로 종료 알림 | P1 | ✅ 완료 |
-| [S-043](tasks/S-043-settings-pollution.md) | 설정 기본값 개인정보 오염 차단 | P1 | ✅ 완료 |
-| [S-044](tasks/S-044-dead-code-and-dto.md) | dead code 3건 + DTO/enum 우회 | P2 | ✅ 완료 |
-| [S-045](tasks/S-045-test-coverage-gaps.md) | 커버리지 공백 5모듈 + DataLogger 종료 | P2 | ✅ 완료 |
-| [S-046](tasks/S-046-docs-and-rules-sync.md) | 문서·규칙 정합 (EventBus 규칙 정밀화) | P2 | ✅ 완료 |
-| [S-047](tasks/S-047-magic-numbers-naming-lint.md) | 매직 넘버·명명 + ruff 도입 | P3 | ✅ 완료 |
-| [S-048](tasks/S-048-singleton-isolation-and-key-check.md) | 싱글톤 격리 + 언어 키 사용처 검증 | P3 | ✅ 완료 |
-| [S-049](tasks/S-049-log-widget-commonization.md) | 로그 위젯 중복 공통화 | P3 | ✅ 완료 |
-| [S-050](tasks/S-050-theme-manager-safety-net.md) | 테마/색 매니저 안전망 + 순환 참조 해소 | P3 | ✅ 완료 |
-| [S-051](tasks/S-051-datalog-broadcast-init-mismatch.md) | DataLog 브로드캐스트 초기값 불일치 | — | ✅ 완료 |
+현재 순서:
 
-### 후속 처리 (2026-08-22, 사용자 지시 "후속후보 진행, 불일치는 통일")
+```text
+1. stale API / constructor 전수 감사
+2. ruff 실행 및 수정
+3. 구조 contract test 실행
+4. lifecycle / shutdown / threading 고위험 test 실행
+5. 전체 pytest 실행
+6. 실패 기준 마지막 구조 교정
+7. 문서 정합성 재검사
+8. PR/merge 준비
+9. 사용자 승인 후 squash/rebase 여부 결정
+```
 
-| ID | 제목 | 상태 |
-|---|---|---|
-| [S-052](tasks/S-052-log-control-flow-unify.md) | 로그 위젯 제어 흐름 **Presenter 권위로 통일** | ✅ 완료 |
-| [S-053](tasks/S-053-theme-manager-decompose.md) | ThemeManager(833줄) → FontManager + ThemeResourceLoader + 오케스트레이터 | ✅ 완료 |
-| [S-054](tasks/S-054-color-manager-decompose.md) | ColorManager(511줄) → Qt 비의존 ColorRuleRepository + 어댑터 | ✅ 완료 |
-| [S-036](tasks/S-036-fixed-font-routing-and-i18n.md) | **고정폭 폰트 설정 미반영** + 언어팩 잔여 4건 | ✅ 완료 (실측 전후 증명) |
-| [S-055](tasks/S-055-system-log-persistence-missing.md) | 시스템 로그 저장이 동작하지 않음(구독자 0건) | ✅ 완료 (구현 판정) |
-| [S-056](tasks/S-056-error-handler-layer-violation.md) | 크래시 다이얼로그 계층 역전 + **계층 의존 자동 검사** | ✅ 완료 |
-| [S-057](tasks/S-057-ruff-cleanup-and-ci-gate.md) | ruff 잔여 정리 → **0건·CI 게이트 전환** | ✅ 완료 |
-| [S-058](tasks/S-058-main-presenter-decompose.md) | MainPresenter 분해(설정·종료·포맷 결정) | ✅ 완료 |
-| [S-059](tasks/S-059-datalogger-not-stopped-on-exit.md) | **종료 시 RX 로거 미정리 유실**(stop_all 호출처 0건) | ✅ 완료 |
+아직 현재 리팩토링 브랜치의 전체 pytest/ruff 통과는 확인되지 않았다.
+검증 전에는 `완료`, `정상 동작`, `all tests passed`라고 선언하지 않는다.
 
-- S-052~S-054는 **S-050 특성화 테스트 무수정 통과**를 안전 판정 기준으로 삼아 검증됐다.
-- **S-036은 2026-08-22 실측으로 미해결이 확정됐다**: `class="fixed-font"` 위젯에
-  D2Coding 16pt를 설정해도 실제 렌더는 Consolas 9pt다. common.qss의 폰트 하드코딩이
-  QSS 특이도로 동적 규칙을 이기며, **동적 규칙이 문자열상 뒤에 있어도 마찬가지**다.
+---
 
-**후속 처리 중 새로 드러난 결함 3건**(모두 수정 완료): 시스템 로그 저장 미배선(S-055),
-`stop_all()` 미호출로 종료 시 데이터 유실(S-059 — S-045에서 고친 안전장치가 정작 호출되지
-않고 있었다), DataLog 브로드캐스트 초기값 불일치(S-051).
+# 2. 구조 리팩토링 — 완료
 
-감사가 남겼던 3건(패킷 뷰 스로틀·PortScanWorker 종료 미정리·로그 필터 판정 중복)은
-아래 S-061/S-062로 착수했다. 상세는 `doc/refactor_audit_20260822.md`.
+## 2.1 Single Composition Root / DI
 
-### 결함 해결·테마 확장 (2026-08-22, 사용자 지시 "결함을 해결합시다. 클래식 테마도")
+- [x] `application_bootstrap.py` 도입
+- [x] `ApplicationBootstrapper`를 유일한 runtime object graph owner로 지정
+- [x] View state restore를 Presenter 생성보다 먼저 실행
+- [x] 저장된 ManualControl state를 ControlState 계산보다 먼저 적용
+- [x] Bootstrapper가 Model / Service / Presenter / Coordinator / MainPresenter까지 생성
+- [x] `main.py`에서 개별 Presenter/Service 조립 제거
+- [x] `MainPresenter`의 `ApplicationBootstrapper` 역의존 제거
+- [x] `MainPresenter` 내부 `SettingsManager()` fallback 제거
+- [x] `PortPresenter` 내부 `SettingsManager()` fallback 제거
+- [x] `PortPresenter` 내부 `PortScanManager()` fallback 제거
+- [x] `MacroPresenter` 내부 `MacroScriptManager()` fallback 제거
+- [x] 주요 runtime dependency를 constructor로 명시적 주입
 
-| ID | 제목 | 상태 |
-|---|---|---|
-| [S-060](tasks/S-060-classic-theme.md) | 클래식 테마 추가 — 4번째 테마 | ✅ 완료 |
-| [S-061](tasks/S-061-packet-view-throttle.md) | 패킷 뷰 스로틀 — **측정 선행 후 판단**(S-007 원칙) | ✅ 완료 |
-| [S-062](tasks/S-062-scanner-cleanup-and-filter-dedup.md) | PortScanWorker 종료 정리 + 필터 판정 중복 해소 | ✅ 완료 |
-| [S-063](tasks/S-063-semantic-button-contrast.md) | **의미색 버튼 텍스트 대비 미달** — 전송·반복 버튼이 안 읽힘 | ✅ 완료 |
+## 2.2 MainPresenter 축소
 
-- S-063은 S-060이 클래식 테마를 만들며 발견해 에스컬레이션한 결함이다. 대칭성을 위해
-  기존 3테마의 규칙을 그대로 복사하다 **원본에 있던 문제**를 드러냈다. 48칸 중 18칸이
-  기준 미달이었고, 최악은 `warning:disabled`의 **1.22:1**(글씨가 배경과 거의 같은 색).
-  `warning:pressed` 배경이 danger 빨강이던 별도 버그도 함께 교정됐다.
+- [x] command transmission 구현 제거
+- [x] settings persistence 구현 제거
+- [x] system/data logging 구현 제거
+- [x] port scan worker lifecycle 제거
+- [x] macro script file I/O/QThread 제거
+- [x] file transfer lifecycle/QThreadPool 제거
+- [x] traffic statistics/logger 책임 제거
+- [x] status timer 책임 제거
+- [x] control enable/disable 정책 제거
+- [x] View collection/tab iteration 제거
+- [x] shortcut connect/disconnect/clear relay 제거
+- [x] file-transfer dialog relay 제거
+- [x] logging compatibility delegate/alias 제거
+- [x] lifecycle manager 의존 제거
 
-### 위 작업에서 파생된 후속 (2026-08-22)
+현재 MainPresenter는 전역 표시 이벤트와 종료 요청 처리만 담당한다.
 
-| ID | 제목 | 상태 |
-|---|---|---|
-| [S-064](tasks/S-064-parser-buffer-truncation-loss.md) | **파서 버퍼 잘라내기로 완결 패킷 유실** (P1) | ✅ 완료 |
-| [S-065](tasks/S-065-qss-contrast-regression-test.md) | QSS 대비 회귀 테스트 + 포트 상태 색 점검 | ✅ 완료 |
-| [S-066](tasks/S-066-flaky-shutdown-datalogger-test.md) | 종료 시 DataLogger 테스트 간헐 실패 조사 | ✅ 완료 |
+## 2.3 Event topology 단일화
 
-- S-064는 S-061이 고속 측정 중 발견했다. `DelimiterParser.parse()`가 구분자로 나누기
-  **전에** 버퍼를 자르는데, 파서 상한(4096B)이 워커 배치 임계값(8192B)보다 작아
-  **완결된 패킷까지 조용히 버려진다.** 전제는 상위가 코드로 확인했다.
-  **완료(2026-08-22)**: 수정 전 회귀 테스트로 3파서 모두 유실을 실측 확인
-  (Delimiter 1992개·AT 1494개·FixedLength 1192개 유실) 후 "완결 패킷 먼저 분리 → 남은
-  조각에만 상한 적용" 순서로 교정. FixedLengthParser도 동일 순서 버그가 있어 함께
-  고쳤다. 미완결 조각 폐기 시 경고 로그 추가, `max_buffer_size` 기본값을
-  `common/constants.py`의 `PARSER_MAX_BUFFER_SIZE`(=BATCH_SIZE_THRESHOLD*2=16384)로
-  단일 관리. pytest 393 passed(+8), ruff 0건. 상세는 태스크 파일 Status 참조.
-- **S-065 완료(2026-08-22)**: `tests/test_qss_contrast.py` 신설 — 4테마 QSS를 파싱해
-  의미색 버튼(accent/danger/warning)·포트 상태 버튼/라벨(state=connected/disconnected/
-  error/recording)의 대비를 계산하고 활성 ≥4.5:1·disabled ≥3.0:1을 강제한다.
-  `:hover`/`:pressed`가 `color`를 재선언하지 않으면 기본 규칙 글자색을 상속하도록 구현.
-  이 테스트가 **실제 미달 5건**을 새로 찾아냈다: light/classic
-  `state="connected"`(#ffffff on #4CAF50=2.78·hover 2.36 FAIL), light/classic
-  `state="error"`(#ffffff on #F44336=3.68·hover 3.49 FAIL), dark
-  `state="connected"`:hover(#ffffff on #388E3C=4.12 FAIL), dracula
-  `state="disconnected"`:hover(4.41 FAIL), classic `QLabel[state="disconnected"]`
-  (#616161 on #d4d0c8=4.03 FAIL — 이 파일 자체 주석 표에 값이 적혀 있었는데도 기준
-  미달인 채 방치돼 있었음). S-063이 검증한 accent/danger 값을 그대로 재사용해 수정
-  (connected→어두운 글씨 #1b1b1b, error→danger와 동일 배경 톤). 일부러 색을 되돌려
-  테스트가 실패하는 것을 확인 후 복구. pytest 393 passed(+3), ruff 0건.
-- **S-066 완료(2026-08-22)**: `doc/mistakes.md` #7이 남겨둔 간헐 실패의 정체를
-  특정했다. **판정: 테스트 문제** (프로덕션 유실 아님). 원인:
-  `test_shutdown_stops_data_logger_and_preserves_written_bytes`/
-  `test_shutdown_closes_pcap...`가 `connection_controller.send_data()`로 payload를
-  보냈는데, 이 API는 발신(TX) 즉시 EventBus 경유로 `DataTrafficHandler.on_data_sent()`
-  에도 라우팅되어(전이중 로깅, 기존 설계) 로거에 곧바로 1회 기록된다. LOOPBACK은
-  보낸 바이트가 그대로 에코되어 RX Fast Path로도 다시 들어오므로, 종료 전에 그 RX
-  배치까지 추가로 flush되는지 여부(스레드 스케줄링 경합)에 따라 파일에 payload가
-  1회(TX만, 우연히 테스트 의도와 일치) 또는 2회(TX+RX, 테스트 실패) 기록됐다 —
-  실제 종료 시퀀스(S-059/S-061/S-062)는 매 회 데이터를 온전히 보존했고 유실은 한
-  번도 재현되지 않았다(재현: 단독 파일 반복 실행만으로 200/250회 중 5회 실패,
-  전이중 우회 후 450회 전부 통과 — in-process 300회 별도 재현에서도 0/300).
-  형제 테스트(`test_shutdown_flushes_pending_leftover_batch...`)가 이미 문서화한
-  "TX 경로 우회(transport에 직접 write)" 패턴을 두 테스트에도 동일 적용해 순수 RX
-  Fast Path만 재현하도록 수정. 조기 종료 판정 오탐(큐가 "아직 비어 있음"과 "다
-  써서 비어 있음"을 구분 못 함)도 `_file.tell()` 확인을 추가해 함께 보강.
-  이 태스크는 테스트 개수를 늘리지 않았다(기존 2개 테스트 본문만 수정). 검증 시점
-  전체 스위트 397 passed(병행 작업 중인 다른 태스크의 변경 포함, 10회 반복 전부
-  통과), ruff 0건. 상세는 태스크 파일 Status 및 `doc/mistakes.md` #7 참조.
+- [x] `presenter/event_router.py` 제거
+- [x] `tests/test_event_router.py` 제거
+- [x] 주요 runtime event를 direct Qt signal로 통일
+- [x] PacketPresenter direct controller signal 사용
+- [x] Macro Expect direct RX signal 사용
+- [x] File transfer 완료/오류 direct signal 사용
+- [x] production 주요 runtime path에서 EventBus 제거
+- [x] `connection_closing` lifecycle signal 추가
+- [x] 동일 이벤트의 `Qt Signal + EventBus + Router` 이중 전달 제거
 
-### 사용자 보고 대응 (2026-08-22)
+## 2.4 Command Transmission
 
-사용자가 실행 중 관찰한 4건("클래식인데 둥근 모서리", "패널 토글 시 컴포넌트 크기가
-미묘하게 변함", "포트 탭 추가할 때마다 오류", "우측 패널 최소폭을 매크로 가로 스크롤이
-없는 범위로")을 조사했다. 원인은 모두 실행·측정으로 확정했다.
+- [x] `CommandTransmissionService` 추가
+- [x] prefix/suffix 처리 단일화
+- [x] CommandProcessor 사용 위치 단일화
+- [x] single/broadcast target resolution 단일화
+- [x] connection validation/send 결과 단일화
+- [x] Manual/Macro 중복 send 로직 제거
+- [x] `TransmissionErrorCode` 도입
+- [x] Macro worker thread의 QWidget/current-tab 조회 제거
 
-| ID | 제목 | 상태 |
-|---|---|---|
-| [S-067](tasks/S-067-port-tab-change-crash-and-theme-schema.md) | 포트 탭 전환 AttributeError + 클래식 테마 저장 불가 | ✅ 완료 |
-| [S-068](tasks/S-068-right-section-min-width.md) | 우측 패널 최소 폭 지정 (매크로 가로 스크롤 방지) | ✅ 완료 |
-| [S-069](tasks/S-069-port-tab-close-hard-crash.md) | 테스트 하네스 하드 크래시 (원인: 워커 스레드의 comports 호출) | ✅ 완료 |
-| [S-070](tasks/S-070-mock-spec-interface-drift.md) | Presenter→View 인터페이스 드리프트를 Mock이 삼킴 | ✅ 완료 |
+## 2.5 ConnectionController 분해
 
-- **S-069(2026-08-23 갱신)**: 원인은 `serial.tools.list_ports.comports()`를 **워커
-  스레드에서 호출**하는 것이었다(스텁 시 60회 중 0회, 스레드 수명 개입은 전부 무효).
-  `tests/conftest.py`에서 열거를 스텁해 주원인을 제거했다 — 20% → 5%.
-  **실제 앱 종료 경로는 40회 전부 정상이라 사용자 영향은 없다**(등재 당시 P0 서술 철회).
-  **2026-08-23 종료**: 잔여 5%로 남겼던 것이 재현되지 않는다 — 단독 160회 +
-  전체 30회 비정상 0, **3차 수정 시점 커밋으로 되돌려도 0**. conftest 스텁으로
-  이미 해결돼 있었고 당시 관측한 2건은 재현 실패로 철회한다.
-- S-070은 S-067이 드러낸 구멍이다. Presenter 테스트가 View를 `spec` 없는 `MagicMock`으로
-  만들어 **존재하지 않는 메서드 호출도 통과**시켰다(당시 프로젝트 전체 `spec=` 0건).
-  그래서 393개가 초록인 동안 앱은 탭을 바꿀 때마다 죽고 있었다.
-  **완료(2026-08-23)**: View Mock 전수에 spec 적용 + `tests/test_presenter_view_contract.py`
-  신설 — 소스를 AST로 훑어 Presenter→View 접근 **147건**을 실제 View 인스턴스에서
-  `getattr`로 따라가며 존재를 확인한다(spec은 테스트가 지나가는 경로만 막으므로 부족).
-  **새 결함 0건** — S-067이 이 부류의 유일한 사례였다. 태스크 작성 시 "더 나올 것"이라
-  적었으나 빗나갔고, 그대로 기록한다.
+- [x] `PacketParserManager` 분리
+- [x] `ConnectionSessionFactory` 분리
+- [x] concrete Transport 선택 책임 이동
+- [x] ConnectionWorker 생성 책임 이동
+- [x] parser registry/feed/flush 책임 이동
+- [x] FileTransfer registry 제거
+- [x] Controller가 file-transfer 기능을 알지 않도록 분리
 
-**아직 안 고친 사용자 보고 2건** (원인만 확정):
-- 클래식 테마의 둥근 모서리 — `border-radius`가 테마 파일엔 0곳, **`common.qss`에 13곳**.
-  4테마가 공유하는 파일이라 클래식만 빠져나갈 수 없다(S-036과 같은 구조 문제).
-  테마 QSS가 common 뒤에 붙으므로 클래식에서 덮어쓰면 이긴다.
-- 패널 토글 시 크기 변화 — 실측: 숨길 때 `left + margins`(999px)로 줄이려 하나 창 최소
-  폭에 막혀 1055로 클램프되고 **차액 56px를 좌측 패널이 흡수**한다. 다시 켜면 창이
-  원래보다 56px 커진다(왕복이 항등이 아님).
+## 2.6 Macro
 
-### 프로토콜 분석 확장 (2026-08-23, 사용자 요청 — WireScope 참고)
+- [x] `MacroExecutionCoordinator` 추가
+- [x] 실행 시작 시 target port 문자열 snapshot
+- [x] 반복 worker send handler 분리
+- [x] single Row Send 전송 조정 분리
+- [x] target port close 중단 정책 분리
+- [x] `MacroScriptManager` 추가
+- [x] MacroPresenter의 직접 file I/O 제거
+- [x] MacroPresenter의 QThread lifecycle 제거
+- [x] MacroScriptManager shutdown 연동
+- [x] Macro Local Echo 정책 MainPresenter에서 제거
 
-사용자가 `reference/wirescope`(Tauri+React 시리얼/TCP 모니터)를 클론해 두고 "프로토콜
-분석 기능이 마음에 든다, 다른 좋은 기능은 없는지" 요청했다. 기능을 조사해 SerialTool에
-없는 것 중 값어치가 큰 순으로 정리했고, 상위 2건을 태스크로 등재한다.
+## 2.7 File Transfer
 
-**⚠️ WireScope는 AGPL-3.0이다.** 기능 개념 참고는 자유지만 **코드를 가져오면 SerialTool
-전체가 AGPL 전염 대상**이 된다. 두 태스크 모두 "개념만 참고, 독자 구현"을 명시했다.
+- [x] `FileTransferManager` 추가
+- [x] FilePresenter에서 `FileTransferService` 생성 제거
+- [x] FilePresenter에서 `QThreadPool` scheduling 제거
+- [x] speed/ETA/session lifecycle Manager로 이동
+- [x] 전용 QThreadPool 사용
+- [x] shutdown 시 cancel → waitForDone 순서 구현
+- [x] baudrate wait를 cancel 가능한 `Event.wait()` 방식으로 변경
+- [x] target port `connection_closing` 시 transfer cancel
 
-| ID | 제목 | 상태 |
-|---|---|---|
-| [S-071](tasks/S-071-checksum-validation.md) | 패킷 체크섬 검증 (XOR/SUM/CRC 7종) | ✅ 완료 |
-| [S-072](tasks/S-072-framing-length-field-and-gap.md) | 프레이밍 확장 — 길이 필드 + 갭 기반 파서 | ✅ 완료 |
+## 2.8 Port Scan
 
-### 사용자 보고 후속 (2026-08-23, 사용자 방향 지정)
+- [x] `PortScanManager` 추가
+- [x] PortPresenter에서 `PortScanWorker` 생성 제거
+- [x] `_scan_worker` Presenter 상태 제거
+- [x] shutdown에서 `PortScanManager.stop()` 직접 호출
+- [x] worker 종료까지 기다리는 lifecycle 정리
 
-| ID | 제목 | 상태 |
-|---|---|---|
-| [S-073](tasks/S-073-classic-square-corners.md) | 클래식 테마 사각 모서리 | ✅ 완료 |
-| [S-074](tasks/S-074-right-panel-toggle-roundtrip.md) | 우측 패널 토글 왕복이 항등이 아님 | ✅ 완료 |
-| [S-075](tasks/S-075-port-settings-column-alignment.md) | 포트 설정 첫 열 정렬 + 언어 전환 시 이동 | ✅ 완료 |
-| [S-076](tasks/S-076-dialog-layout-and-i18n.md) | **서브 윈도우 레이아웃·다국어 점검** | ✅ 완료 |
-| [S-077](tasks/S-077-theme-uniformity-and-component-distinction.md) | **테마 파일 구조 통일 + 컴포넌트 구분** | ✅ 완료 |
-| [S-078](tasks/S-078-move-hardcoded-colors-to-theme.md) | **코드의 하드코딩 색을 테마 리소스로 이동** | ✅ 완료 |
-| [S-079](tasks/S-079-remaining-screens-sweep.md) | **남은 화면 훑기 (매크로 패널 상세 / 포트 탭 다중 상태)** | ✅ 완료 |
-| [S-080](tasks/S-080-macro-send-result.md) | **매크로 스텝 판정을 실제 전송 결과에 연결** | ✅ 완료 |
-| [S-081](tasks/S-081-settings-durability.md) | **설정 저장 원자화 + 손상 파일 백업** | ✅ 완료 |
-| [S-082](tasks/S-082-modal-not-reentrant.md) | **모달 알림 재진입 제거** | ✅ 완료 |
-| [S-083](tasks/S-083-remove-dead-event-legs.md) | **소비자 없는 EventBus 갈래 제거** | ✅ 완료 |
+## 2.9 Logging / Traffic / Status
 
-- S-073: `border-radius`가 테마 파일엔 0곳, **`common.qss`에 13곳**이라 클래식만
-  빠져나갈 수 없었다(S-036과 같은 구조). 사용자 선택대로 **클래식만 동일 셀렉터로
-  0 덮어쓰기**. 셀렉터 문자열을 같게 유지하는 것이 핵심 — 다르면 특이도 싸움이 된다.
-- S-074: 뿌리는 **줄어드는 양과 늘어나는 양이 다른 것**이었다. 숨김은 창 최소 폭에
-  막혀 덜 줄고, 표시는 막힘없이 다 늘어나 차액이 매번 쌓였다. 숨기기 직전의 창 폭·
-  좌측 폭을 저장해 복원하니 왕복 오차가 0이 됐다. **1차 시도(좌측 폭만 저장)는
-  오히려 악화(+524px)돼 기각했다** — 좌측 폭은 증상이지 원인이 아니었다.
-- **부수**: S-068의 우측 최소 폭 580px 때문에 창 최소 크기가 ko 1093→1274 /
-  en 1097→1213으로 커졌다. `.agent/rules/ui_guide.md` §4 기준선을 갱신했다.
-- S-075: 라벨이 제 글자 폭을 갖고 필드가 바로 뒤에 붙어 행마다 시작 x가 어긋났다.
-  첫 열 라벨 폭을 맞춰 해소(어긋남 15~22px → 0, 언어 전환 이동 41px → 1px).
-  **테스트를 두 번 잘못 짰다** — 픽셀 x 비교가 pytest 하네스에서 변별력을 잃어
-  정렬을 지워도 통과했다. 동작(라벨 폭 강제) 검사로 바꿔 해결.
-- S-076: 다이얼로그를 처음 열어 봤더니 **파일 전송 창이 뭉개져 있었다** —
-  `setFixedSize(450,250)`에 내용이 266px를 요구해 위젯이 겹쳐 그려졌다(4테마 x
-  2언어 전부). 폰트 설정의 OK/Cancel/Apply가 한국어에서도 영문이던 것도 함께 고쳤다.
-- S-077: **4테마가 80규칙·셀렉터·순서까지 완전히 일치**하게 정리했다(S-073이 클래식에만
-  덧붙인 13줄로 92규칙까지 벌어져 있었다). 버튼·입력 구분은 테두리로 갈랐고
-  (light·classic은 테두리 색까지 같아 대비 1.00이었다), 콤보는 입력 계열로 통일했다
-  (dark·dracula는 버튼 쪽이라 테마마다 답이 달랐다).
-- S-078: 색을 옮기려다 **결함이 드러났다**. `LOG_COLOR_*` 상수가 light/dark 두 벌뿐인데
-  테마는 4개라, `theme_name == 'light'` 판정 탓에 밝은 테마인 **classic이 다크용 색을
-  받아 흰 배경에서 11개 중 10개가 4.5:1 미달**이었다(기본 텍스트 1.61). 정본을
-  `resources/themes/palette.json`으로 옮기고 밝기 분류도 테마가 답하게 했다.
-  대비 보정은 기존 값을 유지하고 미달 12건만 손봤다.
-- S-079: 남은 화면을 실행해 훑었다. **포트 탭 넷이 모두 "포트:LOOPBACK"** 이라 구분이
-  불가능했고(기본 이름이 같은 데다 포트 콤보가 첫 항목을 자동 선택한다), 매크로 표에서
-  **가장 중요한 명령 열이 가장 좁았다**(114px, 필요 375px). 후자의 원인은 헤더 잘림을
-  막으려던 S-032의 `setMinimumSectionSize()` — 전 열 공통값이라 헤더 글자가 없는
-  체크박스 열까지 78px로 부풀렸다. 실측하면 ResizeToContents가 이미 열마다 헤더를
-  반영하므로 그 장치는 잃기만 했다(명령 열 114 → 232px). 비활성 위젯 대비도
-  의미색 버튼(S-063) 밖에 있어 dark 2.44 / light 2.29로 미달이었다.
-- S-080~S-083: 설계를 실행해 훑었다. 가장 심각한 것은 **매크로 스텝의 "성공"이 실제
-  전송과 무관**했던 것이다 — 포트가 하나도 열려 있지 않아도 모든 스텝이 성공으로
-  보고됐고(실측: 성공 1 / 전송 0), 그래서 `stop_on_error`가 전송 실패에 무력했다.
-  설정 저장은 원자적이지 않은 데다, commentjson이 파싱 오류를 `ValueError`가 아닌
-  자체 예외로 감싸는 탓에 **가장 흔한 손상(잘린 파일)이 백업도 없이 조용히
-  초기화**됐다. 그 밖에 모달이 워커 정리 스택 위에서 열리던 재진입과, 소비자가
-  하나도 없는 EventBus 갈래 둘을 정리했다.
-  **정정**: offscreen 8/8 크래시를 재진입 탓으로 봤으나 틀렸다 — QMessageBox만으로도
-  offscreen에서는 죽는다(Qt 플랫폼 한계). 네이티브는 0/5.
+- [x] `LoggingCoordinator` 추가
+- [x] port/system log lifecycle 분리
+- [x] 다른 listener를 제거하는 broad `.disconnect()` 패턴 제거
+- [x] `TrafficMonitor` 추가
+- [x] DataTrafficHandler에서 logging/statistics 제거
+- [x] DataTrafficHandler를 RX UI buffer/throttling 역할로 축소
+- [x] `StatusCoordinator` 추가
+- [x] 상태바 timer/statistics 갱신 분리
 
-- **체크섬을 1순위로 둔 이유**: SerialTool엔 체크섬 개념이 아예 없다(코드 0건). 패킷
-  경계는 나눌 수 있는데 "이 패킷이 유효한가"를 답할 수단이 없어, 프로토콜 디버깅의
-  가장 잦은 질문에 사람이 HEX를 눈으로 더해야 한다.
-- **프레이밍을 2순위로 둔 이유**: 현재 `FixedLengthParser`는 *상수 길이*라 "헤더에
-  길이가 들어있는" 프로토콜을 못 다루고, Modbus RTU식 **유휴 시간 프레이밍**도 없다.
-  둘은 서로 맞물린다 — 체크섬 오프셋은 프레이밍이 정해져야 의미가 있다.
+## 2.10 Settings / Control State
 
-**후순위로 남긴 것**(구현하지 않음, 판단 대기): 갭 통계·TX→RX 사이클 응답시간 등
-**분석기**, `starts:`/`len>8`/`checksum:fail` 같은 **구조화된 패킷 필터**, 수신 패턴에
-반응하는 **트리거 전송**(현재 AutoTx는 주기 전송만), 패킷별 메모, 바이트 표시 형식
-전환(hex/ascii/dec/bin), 연결 프리셋, 선택 구간 export, TCP/UDP 세션.
+- [x] `SettingsCoordinator` 추가
+- [x] Preferences/Theme/Language/Font persistence MainPresenter에서 제거
+- [x] Preferences runtime propagation 단일화
+- [x] `ControlStateCoordinator` 추가
+- [x] current-tab + connection + broadcast enable 정책 단일화
+- [x] View 내부 Manual/Macro enable 정책 제거
+- [x] Manual state restore 이후 ControlState 계산 순서 보장
 
-| ID | 제목 | Phase | 상태 | 비고 |
-|---|---|---|---|---|
-| S-001 | MVP 골격·UI·테마·다국어 | 1~2.5 | ✅ 완료 | doc/task.md Phase 1~2.5 |
-| S-002 | Core 유틸리티 (EventBus/Settings/구조체) | 3 | ✅ 완료 | 설정 스키마 검증·마이그레이션 포함 |
-| S-003 | Model 계층 (Connection/Macro/FileTransfer/Parser) | 4 | ✅ 완료 | Fast Path·Backpressure 포함 |
-| S-004 | Presenter 세분화·EventRouter | 5 | ✅ 완료 | |
-| S-005 | 안정화·테스트 기준선 85개 | 5.5 | ✅ 완료 | 경합·교착 수정, conftest 복구 |
-| [S-006](tasks/S-006-auto-tx-scheduler.md) | `AutoTxScheduler` (주기적 자동 전송) | 6 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 테스트 9건, 실기기 미검증. 기준선 109 |
-| [S-007](tasks/S-007-performance-optimization.md) | 성능 최적화 (Rx 경로·렌더링) | 6 | ⛔ 보류 | **실측상 병목 없음** (2026-08-22 판정, benchmark_20260822.md). 체감 보고 시 재개 |
-| [S-008](tasks/S-008-rx-capture-writer.md) | Rx 파일 캡처 (`RxCaptureWriter`) 필요성 판정 | 6 | ✅ 완료 | **폐기 결정** (2026-08-22) — DataLogger가 전이중·3포맷 기록 이미 제공 |
-| [S-009](tasks/S-009-plugin-system.md) | 플러그인 인프라 (base/loader/Example) | 7 | ⏸ 대기 | 인터페이스 설계 선행 (상위 전용) |
-| [S-010](tasks/S-010-virtual-serial-env.md) | 가상 시리얼 포트 실환경 검증 (com0com) | 8 | ⏸ 대기 | 사용자 설치 개입 필요. 실기기 미검증 해소 기반 |
-| [S-011](tasks/S-011-benchmark.md) | 성능 벤치마크 도구 | 8 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 실측: doc/benchmark_20260822.md. S-007 선행 해소 |
-| [S-012](tasks/S-012-packaging.md) | 패키징 (pyinstaller spec, 독립 실행 파일) | 8 | ✅ 완료 | 하위 모델 수행 (2026-08-22). exe 빌드·스모크·스크린샷 확인. 아이콘·언어 전환 수동 잔여 |
-| [S-029](tasks/S-029-bundle-log-path.md) | 번들 로그 경로 사용자 디렉터리화 | 8 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 번들=APPDATA\logs, 개발 모드 불변. 기준선 115 |
-| [S-013](tasks/S-013-user-config-dir.md) | 설정 파일 사용자 디렉터리 분리 | 8 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 번들=APPDATA, 개발 모드 불변. S-012 선행 해소 |
-| [S-014](tasks/S-014-github-actions-ci.md) | GitHub Actions CI (pytest + 언어 키 검사) | 8 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 러너 실검증은 push 후 확인 필요 |
-| [S-015](tasks/S-015-spi-i2c-transport.md) | SPI/I2C Transport 확장 | 후속 | ⛔ 보류 | 요구 미확정 (대상 하드웨어·유스케이스) |
-| [S-016](tasks/S-016-settings-namespace.md) | 설정 키 네임스페이스 이중화 해소 (`settings.*` vs `global.*`) | 유지보수 | ✅ 완료 | **결정**: `settings.*` 정본 (2026-08-22). 구현은 S-027 |
-| [S-027](tasks/S-027-settings-namespace-migration.md) | 설정 네임스페이스 마이그레이션 구현 (1.0→1.1) | 유지보수 | ✅ 완료 | 하위 모델 수행 (2026-08-22). global 소멸·스키마 실검증. 기준선 100 |
-| [S-028](tasks/S-028-right-width-key-conflict.md) | 우측 폭 저장 키 이중화 해소 | 유지보수 | ✅ 완료 | 하위 모델 수행 (2026-08-22). saved_* 정본, 1.2 마이그레이션. 기준선 112 |
-| [S-030](tasks/S-030-flowctrl-key-resurrection.md) | 루트 serial 고아 블록 정리 + defaults no-op 가드 | 유지보수 | ✅ 완료 | 하위 조사로 전제 오류 정정 후 완결 (2026-08-22). 1.3 승격, 재발 차단 테스트. 기준선 118 |
-| [S-031](tasks/S-031-ui-guide-enforcement.md) | UI 가이드 강제 테스트 + 잔여 위반 정리 | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 정적 스캔 4종·위반 4그룹 실수정·허용 목록 0건. 기준선 122 |
-| [S-017](tasks/S-017-ui-refresh-constant.md) | UI 갱신 주기 리터럴 30 상수화 | 유지보수 | ✅ 완료 | 하위 모델 수행 (2026-08-22). pytest 85 passed |
-| [S-018](tasks/S-018-meipass-detection-fix.md) | PyInstaller 감지 버그 수정 (`os._MEIPASS`→`sys`) | 유지보수 | ✅ 완료 | 하위 모델 수행 (2026-08-22). S-012/013 선행 해소 |
-| [S-019](tasks/S-019-datalog-duplicate-init.md) | DataLogWidget init_ui 중복 생성 블록 제거 | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 26줄 삭제, pytest 85+캡처 검증. 검색창 축소 별건은 S-026로 |
-| [S-020](tasks/S-020-langpack-broken-keys.md) | 언어팩 결함 수정 (깨진 키·오타·용어 통일) | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 캡처 8조합 키 노출 0건. packet.py dead code 발견(보고만) |
-| [S-021](tasks/S-021-hardcoded-messages-i18n.md) | 하드코딩 사용자 메시지 언어팩 전환 | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 키 32개 신설, 상태바·통계 retranslate 연동 |
-| [S-022](tasks/S-022-theme-contrast-hardcoded-colors.md) | 테마 대비 미달·하드코딩 색 수정 | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 색 리터럴 제거·대비 전 조합 ≥4.5 |
-| [S-023](tasks/S-023-theme-system-structural.md) | 테마 시스템 구조 결함 (죽은 경로·dracula 라우팅) | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 3테마 정상 경로 로드, 동기화·번역 정합 |
-| [S-024](tasks/S-024-text-clipping-fixed-sizes.md) | 텍스트 잘림·고정 크기 수정 (영문 버튼 등) | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 고정→최소 크기 5곳, 캡처 8조합+16pt 검증 |
-| [S-025](tasks/S-025-ui-consistency.md) | UI 일관성 정비 (툴팁·상수·다이얼로그·니모닉) | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 상수 6종·툴팁 14키·니모닉·버튼바 통일 |
-| [S-026](tasks/S-026-minimum-window-width.md) | 최소 창 크기 완화 | UX | ✅ 완료 | **1471×786 → 1093×780** (2026-08-22). 폭 목표 초과 달성. 높이 잔여는 S-032 |
-| [S-032](tasks/S-032-min-height-and-macro-header.md) | 최소 높이 마무리 + 매크로 헤더 잘림 | UX | ✅ 완료 | 헤더 잘림 해소(스크롤 허용 판정). 높이 780 잔여는 ⛔ 보류(재개 조건부). 전제 오류 → RULES §8 규칙화 |
-| [S-033](tasks/S-033-loopback-dummy-port.md) | 루프백 더미 포트 (디버깅용) | 기능 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 테스트 +8, 기준선 130. 레이스 발견 → S-037 |
-| [S-037](tasks/S-037-send-before-open-race.md) | 연결 직후 send 침묵 실패 레이스 | 안정성 | ✅ 완료 | 하위 모델 수행 (2026-08-22). 옵션 A(큐잉 허용), 회귀 4건. 기준선 134 |
-| [S-034](tasks/S-034-remove-scan-button.md) | 중복 검색 버튼 제거 | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 삭제 20줄·키 2종 제거, 자동 스캔 경로 검증 |
-| [S-035](tasks/S-035-spacing-grouping-polish.md) | 마진·구획 정비 (테두리 대비·제목 간격·그루핑) | UX | ✅ 완료 | 하위 모델 수행 (2026-08-22). 대비 3:1↑·간격 상수 2종·ms 라벨. 최소 높이 +11 |
-| [S-036](tasks/S-036-fixed-font-routing-and-i18n.md) | 고정폭 폰트 설정 미반영 + 언어팩 잔여 4건 | UX | ✅ 완료 | 근본 원인은 common.qss 하드코딩이 QSS 특이도로 동적 폰트 규칙을 이긴 것 — 그 블록 삭제로 해소, 실측 전후 증명 |
+## 2.11 Shutdown / State Persistence
 
-## 우선순위 메모
+- [x] `ShutdownCoordinator` 추가
+- [x] S-059 순서 유지: connection close → processEvents → data logger stop
+- [x] FileTransfer/MacroScript/PortScan/DataHandler/Packet/Status shutdown 포함
+- [x] 시스템 로그 writer close 포함
+- [x] `ShutdownStateCollector`의 View state → Settings key adapter 수정
+- [x] `ports` / `macro_panel` 저장 shape mismatch 수정
+- [x] Auto Tx를 transient runtime state로 정의
+- [x] shutdown에서 Auto Tx를 state 저장 전에 중지/체크 해제
 
-1. **S-010 가상 포트 환경** — "실기기 미검증" 딱지를 떼는 기반. 다른 항목의 검증 품질이 여기에 걸린다.
-2. **S-013 → S-012 → S-014** — 배포 트랙. 설정 경로 분리가 패키징의 선행 조건.
-3. **S-011 → S-007** — 측정 먼저, 최적화는 그다음.
-4. S-006/S-008은 독립적이라 언제든 착수 가능. S-009/S-015는 요구 구체화 후.
+## 2.12 View Boundary
 
-## 운영 규칙
+- [x] MainWindow의 Connect command 직접 처리 제거
+- [x] Theme/Language menu persistence 직접 처리 제거
+- [x] Ctrl+O/F2 command route Presenter 경로로 통일
+- [x] MainLeftSection의 중복 enable 정책 제거
+- [x] Port color/log presentation 책임 View/LoggingCoordinator 쪽으로 이동
+- [x] Presenter가 탭 내부 위젯 collection 구현을 직접 순회하지 않도록 정리
 
-- 새 태스크는 `S-0xx` 번호로 이 표에 추가하고 `tasks/S-0xx-<slug>.md`를 작성한다
-  (번호는 증가만, 재사용 금지). 태스크 파일 작성은 상위 모델 담당 — RULES.md §8.
-  형식: 목적 / 배경(자족적) / 참조 파일 / Steps / Acceptance criteria / 검증 방법.
-- 완료 선언은 RULES.md §2 검증 규율을 따른다 (실행한 명령·결과·Mock/실기기 여부 명시).
-- 완료 시: 이 표 갱신 → `doc/task.md` 체크리스트 반영 → `doc/CHANGELOG.md` 기록 → 커밋
-  (`.claude/skills/task-done` 절차).
+---
+
+# 3. 테스트/회귀 안전망 — 구현 완료, 실행 검증 필요
+
+- [x] `test_composition_root_contract.py`
+- [x] `test_architecture_policy_boundaries.py`
+- [x] `test_direct_event_topology.py`
+- [x] `test_command_transmission_service.py`
+- [x] `test_connection_session_factory.py`
+- [x] `test_control_state_coordinator.py`
+- [x] `test_file_transfer_manager.py`
+- [x] `test_logging_coordinator.py`
+- [x] `test_macro_execution_coordinator.py`
+- [x] `test_macro_script_manager.py`
+- [x] `test_manual_control_transient_state.py`
+- [x] `test_port_presenter_sender_contract.py`
+- [x] `test_settings_coordinator.py`
+- [x] `test_shutdown_coordinator.py`
+- [x] `test_status_coordinator.py`
+- [x] `test_traffic_monitor.py`
+- [x] Presenter→View facade contract 검사 보강
+- [x] stale EventRouter 테스트 제거
+- [x] 일부 옛 constructor/API 테스트를 새 graph 기준으로 마이그레이션
+
+**주의:** 테스트 파일이 존재하는 것과 실제로 통과한 것은 다르다. 아래 P0 검증이 완료되기 전에는
+현재 기준선을 확정하지 않는다.
+
+---
+
+# 4. P0 — 지금 해야 하는 검증 작업
+
+## 4.1 stale API / constructor 전수 감사
+
+- [ ] `MainPresenter(...)` 직접 생성 위치 전수 검색
+  - 기대: production은 Bootstrapper만 생성
+  - test도 가능한 경우 `runtime.main_presenter` 사용
+- [ ] `PortPresenter(...)` 옛 2-argument/optional dependency 생성 검사
+- [ ] `MacroPresenter(...)`에서 `MacroScriptManager` 미주입 호출 검사
+- [ ] `MacroExecutionCoordinator(...)`의 `SettingsManager` 누락 호출 검사
+- [ ] 제거된 `EventRouter` import/fixture/reference 검사
+- [ ] `event_router.packet_received`, `settings_changed`, `port_closed` 등 옛 signal 사용 검사
+- [ ] 제거된 MainPresenter 내부 필드 검사
+  - `data_handler`
+  - `settings_manager`
+  - `status_coordinator`
+  - `file_transfer_manager`
+  - `port_scan_manager`
+  - `macro_script_manager`
+  - `macro_presenter`
+  - `packet_presenter`
+  - `port_presenter`
+- [ ] 제거된 logging compatibility API 검사
+  - `_sys_log_writer`
+  - `_on_logging_*`
+  - `_on_sys_logging_*`
+  - `_on_system_log_line_appended`
+- [ ] `controller.parsers` 내부 registry 접근 검사
+- [ ] `_active_file_transfers` / `register_file_transfer` / `unregister_file_transfer` 검사
+- [ ] `_scan_worker` / `PortScanWorker` Presenter 소유 가정 검사
+- [ ] `ScriptLoadWorker`를 Presenter에서 import하는 테스트 검사
+- [ ] `EventBus`를 production runtime에 다시 연결한 코드가 없는지 검사
+
+## 4.2 Ruff
+
+- [ ] `ruff check .`
+- [ ] import 정리
+- [ ] unused import/variable 정리
+- [ ] line length / formatting 계열 수정
+- [ ] 필요한 noqa는 규칙 번호 + 이유 명시
+- [ ] ruff 0건 확인
+
+## 4.3 Architecture / contract tests
+
+먼저 작은 구조 테스트부터 실행한다.
+
+- [ ] `tests/test_layer_dependencies.py`
+- [ ] `tests/test_composition_root_contract.py`
+- [ ] `tests/test_architecture_policy_boundaries.py`
+- [ ] `tests/test_direct_event_topology.py`
+- [ ] `tests/test_presenter_view_contract.py`
+- [ ] `tests/test_port_presenter_sender_contract.py`
+
+Acceptance:
+
+- [ ] layer 역방향 import 0건
+- [ ] Presenter가 bootstrap/composition root를 생성하지 않음
+- [ ] runtime EventRouter 의존 0건
+- [ ] Presenter→View 없는 API 호출 0건
+
+## 4.4 고위험 lifecycle/threading tests
+
+- [ ] `tests/test_shutdown_coordinator.py`
+- [ ] `tests/test_shutdown_data_logger.py`
+- [ ] `tests/test_file_transfer_manager.py`
+- [ ] `tests/test_port_scan_shutdown.py`
+- [ ] `tests/test_macro_script_manager.py`
+- [ ] `tests/test_manual_control_transient_state.py`
+- [ ] `tests/test_port_tab_cleanup.py`
+- [ ] Macro worker View 접근 회귀 테스트
+
+Acceptance:
+
+- [ ] running QThread/QRunnable 잔존 없음
+- [ ] shutdown data loss 없음
+- [ ] Auto Tx transient state 저장 불일치 없음
+- [ ] target port close 시 file/macro lifecycle 정상 종료
+
+## 4.5 기능 핵심 tests
+
+- [ ] `tests/test_command_transmission_service.py`
+- [ ] `tests/test_presenter_manual_control.py`
+- [ ] `tests/test_auto_tx.py`
+- [ ] `tests/test_macro_execution_coordinator.py`
+- [ ] `tests/test_parser_and_protocol.py`
+- [ ] `tests/test_presenter_packet.py`
+- [ ] `tests/test_file_transfer.py`
+- [ ] `tests/test_integration_refactored.py`
+
+## 4.6 전체 검증
+
+Windows/PowerShell CI 기준:
+
+```powershell
+$env:QT_QPA_PLATFORM = "offscreen"
+python -m pytest -q
+ruff check .
+python tools/check_language_keys.py
+python tools/check_task_boards.py
+```
+
+- [ ] 전체 pytest 통과
+- [ ] ruff 0건
+- [ ] language key integrity 통과
+- [ ] task board consistency 통과
+- [ ] 실제 실행한 test count를 이 문서에 기록
+- [ ] CI PR run 확인
+
+---
+
+# 5. P1 — 테스트 실패 기준 마지막 구조 교정
+
+테스트가 실패하면 **옛 테스트에 맞추기 위해 production architecture를 되돌리지 않는다.**
+실패 원인을 먼저 아래 유형으로 분류한다.
+
+## 5.1 constructor/API drift
+
+- [ ] 테스트/호출부를 새 explicit DI 계약으로 이동
+- [ ] 편의를 위해 production에 optional fallback을 다시 추가하지 않음
+
+## 5.2 removed internal field 접근
+
+- [ ] 실제 owner (`ApplicationComponents`, Manager, Coordinator) public API를 사용하도록 수정
+- [ ] MainPresenter를 service locator로 다시 만들지 않음
+
+## 5.3 signal topology mismatch
+
+- [ ] direct Qt signal 소유권을 기준으로 수정
+- [ ] EventRouter/EventBus bridge를 복구하지 않음
+
+## 5.4 lifecycle failure
+
+- [ ] 실제 QThread/QRunnable owner에서 수정
+- [ ] Presenter에 worker ownership을 되돌리지 않음
+- [ ] shutdown ordering을 보존
+
+## 5.5 state persistence failure
+
+- [ ] View DTO shape와 Settings key shape를 명시적으로 adapter 처리
+- [ ] `ConfigKeys.*` 문자열을 View state dict key로 직접 가정하지 않음
+
+---
+
+# 6. P1 — 문서 현행화
+
+- [x] `doc/refactoring_validation_report_20260830.md` 작성
+- [x] `AGENTS.md` 현재 구조 기준으로 전면 개편
+- [x] `doc/00_overview.md` EventBus/EventRouter 중심 설명 제거
+- [x] `Task.MD` 현재 체크리스트로 재정리
+- [ ] `README.md` 아키텍처/구조/테스트 기준선 현행화
+- [ ] `CLAUDE.md` EventBus/EventRouter/Fast Path 과거 설명 정리
+- [ ] `RULES.md` 현재 Single Composition Root/direct signal 규칙과 충돌 여부 감사
+- [ ] `doc/implementation_plan.md` 완료/현재 구조와 충돌하는 계획 문구 감사
+- [ ] `doc/CHANGELOG.md` 이번 리팩토링 세션 요약 추가
+- [ ] 필요 시 `doc/history/session_summary_20260830.md` 작성
+
+---
+
+# 7. P2 — 구조 정리 후보
+
+다음은 검증 Green 이후 판단한다. 지금 바로 수행하지 않는다.
+
+- [-] `presenter/` 안의 Coordinator를 별도 `application/` 또는 `coordinator/` 패키지로 이동
+  - 현재 기능 경계는 명확함
+  - 파일 이동은 import churn이 매우 크므로 pytest Green 이후 판단
+- [-] legacy `core/event_bus.py` 완전 삭제
+  - production runtime에서는 사용하지 않음
+  - conftest/core refinement test 의존 제거 후 판단
+- [-] `SettingsManager` singleton 자체를 non-singleton으로 재설계
+  - 현재 production DI는 명시적임
+  - 범위가 크므로 별도 태스크화 필요
+- [-] hardcoded timeout/status message duration 상수화
+  - 구조 안정화 이후 낮은 우선순위
+
+---
+
+# 8. Merge / PR 준비
+
+다음 조건을 모두 만족하기 전에는 `main` merge 준비 완료로 보지 않는다.
+
+- [ ] stale API/constructor 전수 감사 완료
+- [ ] ruff 0건
+- [ ] architecture contract tests Green
+- [ ] lifecycle/threading tests Green
+- [ ] 전체 pytest Green
+- [ ] language/task consistency 검사 Green
+- [ ] README/CLAUDE/RULES/doc 문서 정합 완료
+- [ ] `main` 대비 최종 diff 재감사
+- [ ] PR 생성 또는 기존 PR 업데이트
+- [ ] GitHub Actions CI Green
+- [ ] 실제 테스트 환경/Mock/실기기 여부 기록
+- [ ] 알려진 제한사항 기록
+
+## Commit history 정리
+
+현재 리팩토링 브랜치는 `main` 대비 다수의 중간 커밋이 누적돼 있다.
+
+- [-] squash/rebase
+  - **검증 Green 이후** 수행 여부 판단
+  - destructive history rewrite이므로 사용자 명시 승인 없이 수행하지 않음
+
+---
+
+# 9. 후속 기능 후보 — 리팩토링 검증 후
+
+현재는 착수하지 않는다.
+
+- [-] SPI/I2C Transport
+- [-] Plugin system
+- [-] 가상 시리얼 실환경(com0com) 검증
+- [-] 구조화 packet filter
+- [-] trigger-based transmission
+- [-] packet annotation / selected range export
+- [-] TCP/UDP session
+
+---
+
+# 10. 완료 정의
+
+리팩토링은 코드가 나뉘었다고 완료가 아니다.
+
+다음을 만족해야 완료다.
+
+```text
+Architecture ownership clear
+        +
+No stale API / constructor
+        +
+No hidden runtime fallback
+        +
+No worker -> QWidget access
+        +
+No duplicate event topology
+        +
+ruff Green
+        +
+pytest Green
+        +
+CI Green
+        +
+Docs match code
+```
+
+검증하지 않은 항목은 체크하지 않는다.
