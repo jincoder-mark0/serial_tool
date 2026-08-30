@@ -2,8 +2,8 @@
 애플리케이션 최상위 Presenter.
 
 MainPresenter가 필요한 의존성 contract를 이 모듈이 직접 정의합니다. Composition root는
-이 contract를 조립해서 주입할 뿐이며, Presenter는 application_bootstrap 모듈이나 전체
-runtime graph를 알지 않습니다.
+이 contract를 조립해서 주입할 뿐이며, Presenter는 전역 사용자 표시와 command relay에
+집중합니다. 상태/설정/로그/매크로 실행 정책은 전용 coordinator가 소유합니다.
 """
 from __future__ import annotations
 
@@ -32,9 +32,7 @@ if TYPE_CHECKING:
     from presenter.lifecycle_manager import AppLifecycleManager
     from presenter.logging_coordinator import LoggingCoordinator
     from presenter.macro_execution_coordinator import MacroExecutionCoordinator
-    from presenter.macro_presenter import MacroPresenter
     from presenter.manual_control_presenter import ManualControlPresenter
-    from presenter.packet_presenter import PacketPresenter
     from presenter.port_presenter import PortPresenter
     from presenter.shutdown_coordinator import ShutdownCoordinator
 
@@ -50,14 +48,12 @@ class MainPresenterDependencies:
     logging_coordinator: LoggingCoordinator
     shutdown_coordinator: ShutdownCoordinator
     port_presenter: PortPresenter
-    macro_presenter: MacroPresenter
     file_presenter: FilePresenter
-    packet_presenter: PacketPresenter
     manual_control_presenter: ManualControlPresenter
 
 
 class MainPresenter(QObject):
-    """애플리케이션 전역 표시 상태와 상위 이벤트를 조정합니다."""
+    """애플리케이션 전역 사용자 표시와 최상위 command relay를 담당합니다."""
 
     def __init__(
         self,
@@ -77,7 +73,6 @@ class MainPresenter(QObject):
         self.logging_coordinator.connect_signals()
 
         self._connect_signals()
-        self.view.connect_port_tab_changed(self._on_port_tab_changed)
         self.lifecycle_manager.log_initialized()
 
     def _apply_dependencies(self, dependencies: MainPresenterDependencies) -> None:
@@ -89,9 +84,7 @@ class MainPresenter(QObject):
         self.logging_coordinator = dependencies.logging_coordinator
         self.shutdown_coordinator = dependencies.shutdown_coordinator
         self.port_presenter = dependencies.port_presenter
-        self.macro_presenter = dependencies.macro_presenter
         self.file_presenter = dependencies.file_presenter
-        self.packet_presenter = dependencies.packet_presenter
         self.manual_control_presenter = dependencies.manual_control_presenter
 
     def _connect_signals(self) -> None:
@@ -117,13 +110,7 @@ class MainPresenter(QObject):
             self.file_presenter.on_file_transfer_dialog_opened
         )
 
-        self.manual_control_presenter.broadcast_changed.connect(
-            lambda _: self._update_controls_state_for_current_tab()
-        )
         self.manual_control_presenter.send_error.connect(self._on_manual_send_error)
-        self.macro_presenter.broadcast_changed.connect(
-            lambda _: self._update_controls_state_for_current_tab()
-        )
 
     def _log_info(self, message: str) -> None:
         self.view.log_system_message(
@@ -146,34 +133,15 @@ class MainPresenter(QObject):
     def on_port_opened(self, event: PortConnectionEvent) -> None:
         self.view.update_status_bar_port(event.port, True)
         self.view.show_status_message(f"Connected to {event.port}", 3000)
-        self._update_controls_state_for_current_tab()
 
     def on_port_closed(self, event: PortConnectionEvent) -> None:
         self.view.update_status_bar_port(event.port, False)
         self.view.show_status_message(f"Disconnected from {event.port}", 3000)
-        self._update_controls_state_for_current_tab()
 
     def on_port_error(self, event: PortErrorEvent) -> None:
         self.view.show_status_message(
             f"Error ({event.port}): {event.message}",
             5000,
-        )
-
-    def _on_port_tab_changed(self, _index: int) -> None:
-        self._update_controls_state_for_current_tab()
-
-    def _update_controls_state_for_current_tab(self) -> None:
-        is_current_connected = self.view.is_current_port_connected()
-        has_any_connection = self.connection_controller.has_active_connection
-
-        is_manual_broadcast = self.manual_control_presenter.is_broadcast_enabled()
-        self.manual_control_presenter.set_enabled(
-            is_current_connected or (is_manual_broadcast and has_any_connection)
-        )
-
-        is_macro_broadcast = self.macro_presenter.is_broadcast_enabled()
-        self.macro_presenter.set_enabled(
-            is_current_connected or (is_macro_broadcast and has_any_connection)
         )
 
     def on_macro_started(self) -> None:
