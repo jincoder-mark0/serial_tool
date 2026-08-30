@@ -27,11 +27,8 @@ from core.structures import ThreadSafeQueue
 from common.constants import (
     DEFAULT_READ_CHUNK_SIZE,
     BATCH_SIZE_THRESHOLD,
-    BATCH_TIMEOUT_MS,
-    WORKER_IDLE_WAIT_MS,
-    WORKER_BUSY_WAIT_US,
+    BATCH_TIMEOUT_MS
 )
-
 
 class ConnectionWorker(QThread):
     """
@@ -65,7 +62,7 @@ class ConnectionWorker(QThread):
         self._broadcast_enabled = False
 
         self._mutex = QMutex()
-        self._write_queue = ThreadSafeQueue()  # 비동기 전송용 Queue
+        self._write_queue = ThreadSafeQueue() # 비동기 전송용 Queue
 
     def run(self) -> None:
         """
@@ -90,7 +87,7 @@ class ConnectionWorker(QThread):
                     self.connection_opened.emit(self.connection_name)
 
                 # Batch 처리용 버퍼 및 타이머
-                last_emit_time = time.monotonic() * 1000  # ms 단위
+                last_emit_time = time.monotonic() * 1000 # ms 단위
 
                 while self.is_running():
                     try:
@@ -102,6 +99,7 @@ class ConnectionWorker(QThread):
 
                         # 3. Batch 전송 로직
                         # 조건: 크기 임계값 초과 OR 시간 초과
+                        # BATCH_SIZE_THRESHOLD가 상향 조정되어 고속 통신 시 시그널 빈도 감소
                         current_time = time.monotonic() * 1000
                         time_diff = current_time - last_emit_time
 
@@ -117,11 +115,12 @@ class ConnectionWorker(QThread):
                             if data:
                                 self.transport.write(data)
 
-                        # 5. CPU 부하 방지 — 타이밍 정책은 common.constants가 정본이다.
+                        # 5. CPU 부하 방지
+                        # 데이터가 없으면 긴 sleep, 있으면 짧은 sleep
                         if len(batch_buffer) == 0 and self._write_queue.is_empty():
-                            self.msleep(WORKER_IDLE_WAIT_MS)
+                            self.msleep(1)
                         else:
-                            self.usleep(WORKER_BUSY_WAIT_US)
+                            self.usleep(100)
 
                     except Exception as e:
                         self.error_occurred.emit(f"IO Error: {str(e)}")
@@ -135,12 +134,25 @@ class ConnectionWorker(QThread):
             if batch_buffer:
                 self.data_received.emit(bytes(batch_buffer))
             # close() 이전에 TX 큐를 마지막으로 드레인 (S-039)
+            # while 루프는 최상단에서만 is_running()을 확인하므로, msleep(1) 중에
+            # stop()이 플래그를 내리면 L112-115의 큐 처리 블록을 한 번도 통과하지
+            # 못한 채 여기로 온다 — 여기서 마저 내보내지 않으면 큐잉 성공(True) 응답을
+            # 받은 데이터가 조용히 유실된다.
             self._drain_write_queue_on_exit()
             self.close_connection()
 
     def _drain_write_queue_on_exit(self) -> None:
         """
         종료(run() 루프 탈출) 시 TX 큐에 남은 데이터를 마지막으로 내보냅니다 (S-039).
+
+        Logic:
+            - 큐가 비어있으면 아무 것도 하지 않는다.
+            - transport가 열려있지 않으면 드레인이 불가능하다 — 남은 항목을
+              조용히 버리지 않고 개수를 error_occurred로 표면화한 뒤 큐를 비운다.
+            - transport가 열려있으면 큐가 빌 때까지 write()를 반복한다.
+            - write() 중 예외(예: write_timeout에 의한 SerialTimeoutException)가
+              발생하면 무한 재시도하지 않고, 이미 내보낸 개수/남은 개수와 함께
+              error_occurred로 보고한 뒤 큐를 비운다.
         """
         remaining = self._write_queue.qsize()
         if remaining == 0:
@@ -159,9 +171,11 @@ class ConnectionWorker(QThread):
             while not self._write_queue.is_empty():
                 data = self._write_queue.dequeue()
                 if data:
-                    self.transport.write(data)
+                    self.transport.write(data)  # 실패 시 여기서 raise (data는 이미 dequeue됨)
                     drained += 1
         except Exception as e:
+            # write()가 실패한 청크는 이미 dequeue되어 큐에서 빠진 뒤이므로
+            # qsize()에 잡히지 않는다 — 누락 없이 세려면 +1(그 청크 자신)을 더한다.
             failed_and_left = self._write_queue.qsize() + 1
             self._write_queue.clear()
             self.error_occurred.emit(
@@ -170,19 +184,37 @@ class ConnectionWorker(QThread):
             )
 
     def is_running(self) -> bool:
-        """현재 Worker 실행 상태를 thread-safe하게 반환합니다."""
+        """
+        Thread 실행 상태 확인 (Thread-safe)
+
+        Returns:
+            bool: 실행 중이면 True
+        """
         with QMutexLocker(self._mutex):
             return self._is_running
 
     def stop(self) -> None:
-        """Thread 중지 요청 및 대기."""
+        """Thread 중지 요청 및 대기"""
         with QMutexLocker(self._mutex):
             self._stop_requested = True
             self._is_running = False
         self.wait()
 
     def close_connection(self) -> None:
-        """연결 종료 및 리소스 정리를 수행합니다."""
+        """
+        연결 종료 및 리소스 정리
+
+        Logic:
+            - Transport가 열려있으면 닫고 connection_closed Signal 발행 (정상 연결 종료를
+              의미 — 이 시그널의 의미를 흐리지 않기 위해 실제로 열렸던 경우에만 발행)
+            - 에러 발생 시 error_occurred Signal 발행
+            - transport가 한 번도 열리지 못한 경우(open() 실패, B-3)에도
+              worker_terminated는 항상 발행한다 — 그래야 Controller가 레지스트리
+              (workers/parsers/connection_configs)에서 죽은 Worker를 즉시 제거할 수
+              있다. 이 경로에서는 connection_closed를 발행하지 않는다: open 실패는
+              이미 run()에서 error_occurred로 통지되었으므로, 연결된 적도 없는
+              포트에 대해 "Port closed"라는 오인 메시지가 중복 표시되는 것을 막는다.
+        """
         if self.transport.is_open():
             try:
                 self.transport.close()
@@ -194,7 +226,28 @@ class ConnectionWorker(QThread):
         self.worker_terminated.emit(self.connection_name)
 
     def send_data(self, data: bytes) -> bool:
-        """데이터를 비동기 TX Queue에 추가합니다."""
+        """
+        데이터 전송 (Non-blocking)
+
+        Logic:
+            - 워커 종료 요청 여부만 확인 (transport.is_open()이 아님 — S-037)
+              QThread.start() 직후 controller.is_connection_open()은 즉시 True가
+              되지만, 실제 OS 스레드가 run()에 진입해 transport.open()을 마치기까지는
+              지연이 있다. 그 틈에 들어온 send를 transport.is_open()으로 막으면
+              큐잉이 조용히 실패해 데이터가 유실된다. run() 루프는 open 성공 후
+              TX 큐를 전량 드레인하므로(L111-115), 열리기 전에 큐잉해도 순서가
+              보존된다. open이 실패하면 큐는 드레인되지 않고 버려지지만(L127-128
+              경로는 while 루프 진입 자체가 없음), 이 경우 이미 별도로
+              "Failed to open connection" error_occurred가 발행되므로 상태 정보
+              누락은 아니다.
+            - 전송 큐에 데이터 추가
+
+        Args:
+            data (bytes): 전송할 바이트 데이터
+
+        Returns:
+            bool: Queue 추가 성공 여부
+        """
         with QMutexLocker(self._mutex):
             stop_requested = self._stop_requested
         if stop_requested:
@@ -202,25 +255,51 @@ class ConnectionWorker(QThread):
         return self._write_queue.enqueue(data)
 
     def get_write_queue_size(self) -> int:
-        """현재 전송 대기 중인 TX Queue 크기를 반환합니다."""
+        """
+        현재 전송 대기 중인 데이터 큐의 크기(청크 개수)를 반환합니다.
+        파일 전송 시 Backpressure(역압) 제어에 사용됩니다.
+
+        Returns:
+            int: 큐 사이즈
+        """
         return self._write_queue.qsize()
 
     # ---------------------------------------------------------
     # 하드웨어 제어 신호 위임
     # ---------------------------------------------------------
     def set_dtr(self, state: bool) -> None:
-        """DTR(Data Terminal Ready) 신호를 설정합니다."""
+        """
+        DTR(Data Terminal Ready) 신호 설정
+
+        Args:
+            state (bool): True=ON, False=OFF
+        """
         self.transport.set_dtr(state)
 
     def set_rts(self, state: bool) -> None:
-        """RTS(Request To Send) 신호를 설정합니다."""
+        """
+        RTS(Request To Send) 신호 설정
+
+        Args:
+            state (bool): True=ON, False=OFF
+        """
         self.transport.set_rts(state)
 
     def set_broadcast(self, state: bool) -> None:
-        """broadcasting 설정을 변경합니다."""
+        """
+        broadcasting 설정
+
+        Args:
+            state: True면 broadcasting ON, False면 broadcasting OFF
+        """
         self._broadcast_enabled = state
         self.transport.set_broadcast(state)
 
     def broadcast_enabled(self) -> bool:
-        """현재 브로드캐스팅 수신 허용 여부를 반환합니다."""
+        """
+        현재 브로드캐스팅 수신 허용 여부 반환
+
+        Returns:
+            bool: 브로드캐스팅 허용 여부
+        """
         return self._broadcast_enabled
