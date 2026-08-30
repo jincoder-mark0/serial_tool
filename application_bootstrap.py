@@ -27,6 +27,7 @@ from presenter.main_presenter import MainPresenterDependencies
 from presenter.manual_control_presenter import ManualControlPresenter
 from presenter.packet_presenter import PacketPresenter
 from presenter.port_presenter import PortPresenter
+from presenter.settings_coordinator import SettingsCoordinator
 from presenter.shutdown_coordinator import ShutdownCoordinator
 from presenter.status_coordinator import StatusCoordinator
 from view.main_window import MainWindow
@@ -42,6 +43,7 @@ class ApplicationComponents:
     file_transfer_manager: FileTransferManager
     port_scan_manager: PortScanManager
     macro_script_manager: MacroScriptManager
+    settings_coordinator: SettingsCoordinator
     status_coordinator: StatusCoordinator
 
 
@@ -59,14 +61,24 @@ class ApplicationBootstrapper:
 
         packet_parser_manager = PacketParserManager()
         connection_session_factory = ConnectionSessionFactory()
-        connection_controller = ConnectionController(packet_parser_manager, connection_session_factory)
-        command_transmission_service = CommandTransmissionService(connection_controller, self._settings_manager)
+        connection_controller = ConnectionController(
+            packet_parser_manager,
+            connection_session_factory,
+        )
+        command_transmission_service = CommandTransmissionService(
+            connection_controller,
+            self._settings_manager,
+        )
         file_transfer_manager = FileTransferManager(connection_controller)
         port_scan_manager = PortScanManager()
         macro_runner = MacroRunner()
         macro_script_manager = MacroScriptManager()
         macro_execution_coordinator = MacroExecutionCoordinator(
-            macro_runner, connection_controller, command_transmission_service, self._view.port_view
+            macro_runner,
+            connection_controller,
+            command_transmission_service,
+            self._view.port_view,
+            self._settings_manager,
         )
         traffic_monitor = TrafficMonitor()
         data_handler = DataTrafficHandler(self._view, traffic_monitor)
@@ -74,12 +86,21 @@ class ApplicationBootstrapper:
         status_coordinator = StatusCoordinator(self._view, traffic_monitor)
 
         port_presenter = PortPresenter(
-            self._view.port_view, connection_controller, self._settings_manager, port_scan_manager
+            self._view.port_view,
+            connection_controller,
+            self._settings_manager,
+            port_scan_manager,
         )
-        macro_presenter = MacroPresenter(self._view.macro_view, macro_runner, macro_script_manager)
+        macro_presenter = MacroPresenter(
+            self._view.macro_view,
+            macro_runner,
+            macro_script_manager,
+        )
         file_presenter = FilePresenter(file_transfer_manager)
         packet_presenter = PacketPresenter(
-            self._view.packet_view, connection_controller, self._settings_manager
+            self._view.packet_view,
+            connection_controller,
+            self._settings_manager,
         )
         manual_control_presenter = ManualControlPresenter(
             self._view.manual_control_view,
@@ -87,11 +108,28 @@ class ApplicationBootstrapper:
             connection_controller,
             command_transmission_service,
         )
+        settings_coordinator = SettingsCoordinator(
+            self._view,
+            self._settings_manager,
+            port_presenter,
+            manual_control_presenter,
+            packet_presenter,
+        )
 
+        # 변하지 않는 runtime topology는 composition root에서 한 번만 배선합니다.
         connection_controller.data_received.connect(data_handler.on_fast_data_received)
         connection_controller.data_sent.connect(data_handler.on_data_sent)
         connection_controller.data_received.connect(macro_runner.on_data_received)
-        manual_control_presenter.local_echo_requested.connect(self._view.append_local_echo_data)
+        manual_control_presenter.local_echo_requested.connect(
+            self._view.append_local_echo_data
+        )
+        macro_execution_coordinator.local_echo_requested.connect(
+            self._view.append_local_echo_data
+        )
+        settings_coordinator.info_requested.connect(
+            logging_coordinator.info_requested.emit
+        )
+        settings_coordinator.connect_signals()
 
         shutdown_coordinator = ShutdownCoordinator(
             view=self._view,
@@ -131,5 +169,6 @@ class ApplicationBootstrapper:
             file_transfer_manager=file_transfer_manager,
             port_scan_manager=port_scan_manager,
             macro_script_manager=macro_script_manager,
+            settings_coordinator=settings_coordinator,
             status_coordinator=status_coordinator,
         )
