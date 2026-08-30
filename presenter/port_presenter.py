@@ -22,8 +22,7 @@
 """
 from typing import Optional, List
 
-from PyQt5.QtCore import QObject, QTimer
-from PyQt5.QtWidgets import QMessageBox
+from PyQt5.QtCore import QObject
 
 from view.sections.main_left_section import MainLeftSection
 from view.panels.port_panel import PortPanel
@@ -422,7 +421,7 @@ class PortPresenter(QObject):
         Logic:
             - 에러 로그(Logger) 기록
             - 연결 시도 중 에러 발생 시 UI 버튼 상태를 'Disconnected'로 복구
-            - 사용자에게 팝업(MessageBox)으로 알림
+            - View Facade를 통해 사용자에게 에러 메시지 표시
             - 시스템 로그 위젯에 에러 기록 (SystemLogEvent)
 
         Args:
@@ -438,17 +437,13 @@ class PortPresenter(QObject):
                 panel.set_connected(False)
                 break
 
-        # View 계층을 통해 에러 메시지 표시.
-        # 현재 호출 스택이 풀린 뒤에 띄운다 (S-082) — 포트 에러는 워커를 정리하는
-        # 도중에도 발행되므로, 여기서 곧바로 모달을 열면 중첩 이벤트 루프가 돌면서
-        # 정리 중이던 객체가 발밑에서 파괴된다.
+        # Presenter는 표시 정책만 결정하고, Qt 모달 생성/지연 호출은 View가 소유한다.
         if self.left_section:
-            parent = self.left_section
             title = language_manager.get_text("port_title_error")
             detail = language_manager.get_text("port_msg_error_detail").format(
                 event.port, event.message
             )
-            QTimer.singleShot(0, lambda: QMessageBox.critical(parent, title, detail))
+            self.left_section.show_error_message(title, detail)
 
             # 시스템 로그 기록
             self._log_event(f"[{event.port}] Error: {event.message}", "ERROR")
