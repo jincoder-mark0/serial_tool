@@ -1,7 +1,7 @@
 """
 애플리케이션 생명주기 관리자 모듈
 
-MainPresenter의 초기화 순서를 분리하고 설정/상태 복원을 담당합니다.
+MainPresenter의 초기화 순서를 분리하고 주입된 SettingsManager로 상태를 복원합니다.
 """
 from typing import Any, Dict, TYPE_CHECKING
 
@@ -31,10 +31,14 @@ if TYPE_CHECKING:
 class AppLifecycleManager:
     """애플리케이션 초기화 및 View 상태 복원을 관리합니다."""
 
-    def __init__(self, main_presenter: "MainPresenter") -> None:
+    def __init__(
+        self,
+        main_presenter: "MainPresenter",
+        settings_manager: SettingsManager,
+    ) -> None:
         self.mp = main_presenter
         self.view = main_presenter.view
-        self.settings_manager = SettingsManager()
+        self.settings_manager = settings_manager
 
     def initialize_app(self) -> None:
         logger.info("Starting application initialization sequence...")
@@ -70,25 +74,28 @@ class AppLifecycleManager:
             "manual_control_widget", {}
         )
         defaults = DEFAULT_MANUAL_CONTROL_STATE["manual_control_widget"]
-        manual_state_dto = ManualControlState(
-            input_text=manual_settings.get("input_text", defaults["input_text"]),
-            hex_mode=manual_settings.get("hex_mode", defaults["hex_mode"]),
-            prefix_enabled=manual_settings.get("prefix_enabled", defaults["prefix_enabled"]),
-            suffix_enabled=manual_settings.get("suffix_enabled", defaults["suffix_enabled"]),
-            rts_enabled=manual_settings.get("rts_enabled", defaults["rts_enabled"]),
-            dtr_enabled=manual_settings.get("dtr_enabled", defaults["dtr_enabled"]),
-            local_echo_enabled=manual_settings.get(
-                "local_echo_enabled", defaults["local_echo_enabled"]
-            ),
-            broadcast_enabled=manual_settings.get(
-                "broadcast_enabled", defaults["broadcast_enabled"]
-            ),
-            auto_tx_enabled=manual_settings.get("auto_tx_enabled", defaults["auto_tx_enabled"]),
-            auto_tx_interval_ms=manual_settings.get(
-                "auto_tx_interval_ms", DEFAULT_MACRO_INTERVAL_MS
-            ),
+        self.mp.manual_control_presenter.apply_state(
+            ManualControlState(
+                input_text=manual_settings.get("input_text", defaults["input_text"]),
+                hex_mode=manual_settings.get("hex_mode", defaults["hex_mode"]),
+                prefix_enabled=manual_settings.get("prefix_enabled", defaults["prefix_enabled"]),
+                suffix_enabled=manual_settings.get("suffix_enabled", defaults["suffix_enabled"]),
+                rts_enabled=manual_settings.get("rts_enabled", defaults["rts_enabled"]),
+                dtr_enabled=manual_settings.get("dtr_enabled", defaults["dtr_enabled"]),
+                local_echo_enabled=manual_settings.get(
+                    "local_echo_enabled", defaults["local_echo_enabled"]
+                ),
+                broadcast_enabled=manual_settings.get(
+                    "broadcast_enabled", defaults["broadcast_enabled"]
+                ),
+                auto_tx_enabled=manual_settings.get(
+                    "auto_tx_enabled", defaults["auto_tx_enabled"]
+                ),
+                auto_tx_interval_ms=manual_settings.get(
+                    "auto_tx_interval_ms", DEFAULT_MACRO_INTERVAL_MS
+                ),
+            )
         )
-        self.mp.manual_control_presenter.apply_state(manual_state_dto)
 
     def _start_services(self) -> None:
         self.mp.status_timer = QTimer()
@@ -113,31 +120,36 @@ class AppLifecycleManager:
             except AttributeError:
                 return default
 
-        window_state = MainWindowState(
-            width=get_val(ConfigKeys.WINDOW_WIDTH, DEFAULT_WINDOW_WIDTH),
-            height=get_val(ConfigKeys.WINDOW_HEIGHT, DEFAULT_WINDOW_HEIGHT),
-            x=get_val(ConfigKeys.WINDOW_X),
-            y=get_val(ConfigKeys.WINDOW_Y),
-            splitter_state=get_val(ConfigKeys.SPLITTER_STATE),
-            right_panel_visible=get_val(
-                ConfigKeys.RIGHT_PANEL_VISIBLE, DEFAULT_RIGHT_PANEL_VISIBLE
+        return (
+            MainWindowState(
+                width=get_val(ConfigKeys.WINDOW_WIDTH, DEFAULT_WINDOW_WIDTH),
+                height=get_val(ConfigKeys.WINDOW_HEIGHT, DEFAULT_WINDOW_HEIGHT),
+                x=get_val(ConfigKeys.WINDOW_X),
+                y=get_val(ConfigKeys.WINDOW_Y),
+                splitter_state=get_val(ConfigKeys.SPLITTER_STATE),
+                right_panel_visible=get_val(
+                    ConfigKeys.RIGHT_PANEL_VISIBLE, DEFAULT_RIGHT_PANEL_VISIBLE
+                ),
+                right_section_width=get_val(ConfigKeys.SAVED_RIGHT_WIDTH),
+                left_section_state={
+                    "manual_control": get_val(ConfigKeys.MANUAL_CONTROL_STATE, {}),
+                    "ports": get_val(ConfigKeys.PORTS_TABS_STATE, []),
+                },
+                right_section_state={
+                    "macro_panel": {
+                        "commands": get_val(ConfigKeys.MACRO_COMMANDS, []),
+                        "control_state": get_val(ConfigKeys.MACRO_CONTROL_STATE, {}),
+                    }
+                },
             ),
-            right_section_width=get_val(ConfigKeys.SAVED_RIGHT_WIDTH),
-            left_section_state={
-                "manual_control": get_val(ConfigKeys.MANUAL_CONTROL_STATE, {}),
-                "ports": get_val(ConfigKeys.PORTS_TABS_STATE, []),
-            },
-            right_section_state={
-                "macro_panel": {
-                    "commands": get_val(ConfigKeys.MACRO_COMMANDS, []),
-                    "control_state": get_val(ConfigKeys.MACRO_CONTROL_STATE, {}),
-                }
-            },
+            FontConfig(
+                prop_family=get_val(
+                    ConfigKeys.PROP_FONT_FAMILY, DEFAULT_PROP_FONT_FAMILY
+                ),
+                prop_size=get_val(ConfigKeys.PROP_FONT_SIZE, DEFAULT_PROP_FONT_SIZE),
+                fixed_family=get_val(
+                    ConfigKeys.FIXED_FONT_FAMILY, DEFAULT_FIXED_FONT_FAMILY
+                ),
+                fixed_size=get_val(ConfigKeys.FIXED_FONT_SIZE, DEFAULT_FIXED_FONT_SIZE),
+            ),
         )
-        font_config = FontConfig(
-            prop_family=get_val(ConfigKeys.PROP_FONT_FAMILY, DEFAULT_PROP_FONT_FAMILY),
-            prop_size=get_val(ConfigKeys.PROP_FONT_SIZE, DEFAULT_PROP_FONT_SIZE),
-            fixed_family=get_val(ConfigKeys.FIXED_FONT_FAMILY, DEFAULT_FIXED_FONT_FAMILY),
-            fixed_size=get_val(ConfigKeys.FIXED_FONT_SIZE, DEFAULT_FIXED_FONT_SIZE),
-        )
-        return window_state, font_config
