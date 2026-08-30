@@ -1,7 +1,9 @@
-﻿# 프로젝트 개요 (Project Overview)
+# 프로젝트 개요 (Project Overview)
 
 **SerialTool**은 Python(PyQt5) 기반의 고성능 멀티포트 시리얼 통신 유틸리티입니다.
 현재 구조는 **MVP 기반의 Passive View + 명시적 Composition Root + 역할별 Coordinator/Manager**를 중심으로 구성됩니다.
+
+> 현재 개발/리팩토링 상태는 `Task.MD`와 `doc/refactoring_validation_report_20260830.md`를 우선 확인합니다.
 
 ---
 
@@ -18,8 +20,6 @@
 * **Composition Root**: `application_bootstrap.py`가 View 상태 복원부터 MainPresenter 생성까지 전체 runtime object graph와 고정 signal topology를 한 곳에서 조립합니다.
 
 ### 1.2 현재 데이터/명령 흐름
-
-대표적인 흐름은 다음과 같습니다.
 
 ```text
 User Action
@@ -91,7 +91,7 @@ ApplicationBootstrapper
 
 ## 3. 개발 가이드 요약
 
-* **의존성 주입**: Presenter/Coordinator의 runtime dependency는 가능한 한 Composition Root에서 명시적으로 생성·주입합니다. 테스트 편의를 위한 hidden singleton/fallback 생성자를 다시 추가하지 않습니다.
+* **의존성 주입**: Presenter/Coordinator의 runtime dependency는 Composition Root에서 명시적으로 생성·주입합니다. 테스트 편의를 위한 hidden singleton/fallback 생성자를 다시 추가하지 않습니다.
 * **View 정책**: View는 rendering/input/facade에 집중하며 연결 상태, broadcast 예외, settings persistence 같은 정책을 직접 소유하지 않습니다.
 * **상태 관리**: View state는 `get_state()` / `apply_state()` 및 DTO를 사용하고, View state → Settings path 변환은 명시적 adapter를 사용합니다.
 * **Cross-layer 데이터**: 계층 간 전달은 `common/dtos.py`의 DTO를 우선합니다.
@@ -108,15 +108,19 @@ ApplicationBootstrapper
 * 리팩토링 브랜치는 `main`과 큰 차이가 있으므로 merge 전 전체 stale API/constructor 감사와 실제 ruff/pytest/CI 검증이 필수입니다.
 * CI는 Windows에서 `QT_QPA_PLATFORM=offscreen`으로 전체 pytest를 실행하고, 별도로 Ruff, language key, task board consistency를 검사합니다.
 * 리팩토링 상세 현황과 검증 절차는 `doc/refactoring_validation_report_20260830.md`를 기준 문서로 사용합니다.
+* 현재 전체 Green test baseline은 아직 재확정되지 않았습니다. 과거 문서의 passed 개수를 현재 기준선으로 사용하지 않습니다.
 
 ---
 
 ## 5. 문서 구조
 
+* `README.md`: 사용자/개발자용 현재 기능·실행·아키텍처 안내.
+* `AGENTS.md`: AI/코딩 에이전트 최상위 실행 규칙.
+* `Task.MD`: **현재** 완료/잔여 작업 체크리스트.
 * `doc/00_overview.md`: 현재 프로젝트/아키텍처 개요.
 * `doc/refactoring_validation_report_20260830.md`: `main` 대비 리팩토링 주요 변경과 stale API/constructor 감사, ruff/pytest/CI 검증 계획.
 * `doc/refactor_audit_20260822.md`: 이전 구조 감사 기록.
-* `doc/history/`: 과거 세션 요약 및 변경 이력.
-* `doc/implementation_plan.md`: 상세 구현 계획.
-* `doc/task.md`: 작업 진행 상황 트래킹.
+* `doc/implementation_plan.md`: **초기 설계/과거 구현 계획 보존 문서**. 현재 구현 기준으로 사용하지 않음.
+* `doc/task.md`: **과거 Phase별 완료 이력**. 현재 작업 보드는 `Task.MD`를 사용.
 * `doc/CHANGELOG.md`: 변경 이력.
+* `doc/history/`: 세션별 작업/결정 기록.
