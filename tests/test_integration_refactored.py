@@ -46,13 +46,12 @@ def integration_system(mock_main_window, mock_serial_port, mock_settings_manager
     )
     yield presenter, mock_main_window, mock_serial_port
 
+    presenter.status_coordinator.stop()
     presenter.data_handler.stop()
     presenter.packet_presenter.stop()
     presenter.file_transfer_manager.shutdown()
     presenter.macro_script_manager.stop()
     presenter.port_scan_manager.stop()
-    if presenter.status_timer:
-        presenter.status_timer.stop()
     presenter.connection_controller.close_connection()
 
 
@@ -64,6 +63,8 @@ def test_system_initialization_wires_facade_views(integration_system):
     assert presenter.manual_control_presenter is not None
     assert presenter.packet_presenter is not None
     assert presenter.macro_execution_coordinator is not None
+    assert presenter.status_coordinator is not None
+    assert presenter.shutdown_coordinator is not None
     assert not hasattr(presenter, "event_router")
     window.connect_port_tab_changed.assert_called_once()
     window.manual_control_view.send_requested.connect.assert_called()
