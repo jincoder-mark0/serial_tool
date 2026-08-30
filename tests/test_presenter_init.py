@@ -62,14 +62,11 @@ class TestMainPresenterInit:
         presenter = _build_presenter(mock_main_window, mock_settings_manager)
 
         assert presenter.connection_controller is not None
-        assert presenter.file_transfer_manager is not None
-        assert presenter.port_scan_manager is not None
         assert presenter.macro_runner is not None
-        assert presenter.macro_script_manager is not None
         assert presenter.macro_execution_coordinator is not None
-        assert presenter.traffic_monitor is not None
         assert presenter.data_handler is not None
         assert presenter.logging_coordinator is not None
+        assert presenter.shutdown_coordinator is not None
         assert not hasattr(presenter, "event_router")
 
         assert presenter.port_presenter is not None
@@ -78,7 +75,13 @@ class TestMainPresenterInit:
         assert presenter.packet_presenter is not None
         assert presenter.manual_control_presenter is not None
         assert presenter.lifecycle_manager is not None
-        assert presenter.shutdown_coordinator is not None
+
+        # 내부 lifecycle owner를 MainPresenter 서비스 locator처럼 노출하지 않습니다.
+        assert not hasattr(presenter, "file_transfer_manager")
+        assert not hasattr(presenter, "port_scan_manager")
+        assert not hasattr(presenter, "macro_script_manager")
+        assert not hasattr(presenter, "traffic_monitor")
+        assert not hasattr(presenter, "status_coordinator")
 
     def test_bootstrapper_restores_view_before_presenter_construction(self):
         source = inspect.getsource(ApplicationBootstrapper.build)
