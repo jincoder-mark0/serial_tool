@@ -3,6 +3,7 @@
 
 하위 Presenter를 조율하고 전역 UI 상태/생명주기 이벤트를 연결합니다.
 Model/Presenter 간 애플리케이션 이벤트는 DTO 기반 Qt Signal로 직접 연결합니다.
+SettingsManager는 composition root에서 주입받아 하위 객체와 공유합니다.
 """
 from typing import Optional
 
@@ -51,15 +52,21 @@ from .shutdown_state_collector import ShutdownStateCollector
 class MainPresenter(QObject):
     """애플리케이션 전역 Presenter 조정자."""
 
-    def __init__(self, view: MainWindow) -> None:
+    def __init__(
+        self,
+        view: MainWindow,
+        settings_manager: Optional[SettingsManager] = None,
+    ) -> None:
         super().__init__()
         self.view = view
-        self.settings_manager = SettingsManager()
+        # Production은 main.py에서 명시적으로 주입한다. None fallback은 기존 테스트/
+        # 외부 생성 코드의 단계적 마이그레이션을 위한 호환 경로다.
+        self.settings_manager = settings_manager or SettingsManager()
         self.status_timer: Optional[QTimer] = None
         self._sys_log_writer: Optional[TextLogWriter] = None
         self._macro_target_port: Optional[str] = None
 
-        self.lifecycle_manager = AppLifecycleManager(self)
+        self.lifecycle_manager = AppLifecycleManager(self, self.settings_manager)
         self.lifecycle_manager.initialize_app()
         self.view.connect_port_tab_changed(self._on_port_tab_changed)
 
@@ -76,6 +83,7 @@ class MainPresenter(QObject):
         self.port_presenter = PortPresenter(
             self.view.port_view,
             self.connection_controller,
+            self.settings_manager,
         )
         self.macro_presenter = MacroPresenter(self.view.macro_view, self.macro_runner)
         self.file_presenter = FilePresenter(self.connection_controller)
@@ -93,21 +101,18 @@ class MainPresenter(QObject):
         )
 
     def _connect_signals(self) -> None:
-        # ConnectionController -> interested consumers (single direct signal layer)
         self.connection_controller.connection_opened.connect(self.on_port_opened)
         self.connection_controller.connection_closed.connect(self.on_port_closed)
         self.connection_controller.error_occurred.connect(self.on_port_error)
         self.connection_controller.data_sent.connect(self._on_data_sent)
         self.connection_controller.data_received.connect(self.macro_runner.on_data_received)
 
-        # MacroRunner -> MainPresenter. MacroPresenter also subscribes to its own UI events.
         self.macro_runner.macro_started.connect(self.on_macro_started)
         self.macro_runner.macro_finished.connect(self.on_macro_finished)
         self.macro_runner.error_occurred.connect(self.on_macro_error)
         self.macro_runner.send_requested.connect(self.on_macro_send_requested)
         self.macro_runner.set_send_handler(self.deliver_macro_command)
 
-        # FilePresenter is the public lifecycle boundary for FileTransferService.
         self.file_presenter.transfer_completed.connect(self.on_file_transfer_completed)
         self.file_presenter.transfer_error.connect(self.on_file_transfer_error)
 
@@ -274,7 +279,6 @@ class MainPresenter(QObject):
             )
 
     def on_macro_started(self) -> None:
-        # MacroRunner.start() is called on the UI thread before QThread.run() starts.
         self._macro_target_port = self.port_presenter.get_active_port_name()
         self._log_info("Macro started")
         self.view.show_status_message(
@@ -297,7 +301,6 @@ class MainPresenter(QObject):
         self.view.show_status_message(msg, 5000)
 
     def deliver_macro_command(self, manual_command: ManualCommand) -> MacroSendResult:
-        """Worker thread에서 View 접근 없이 스냅샷 대상에 명령을 전송합니다."""
         active_port = None if manual_command.broadcast_enabled else self._macro_target_port
         result = self.command_transmission_service.send(
             manual_command,
@@ -310,7 +313,6 @@ class MainPresenter(QObject):
         )
 
     def on_macro_send_requested(self, manual_command: ManualCommand) -> None:
-        """개별 Row Send는 UI thread이므로 현재 포트를 즉시 조회해 전송합니다."""
         active_port = (
             None
             if manual_command.broadcast_enabled
