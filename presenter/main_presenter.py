@@ -19,7 +19,6 @@ from common.dtos import (
     FontConfig,
     MacroErrorEvent,
     PortConnectionEvent,
-    PortDataEvent,
     PortErrorEvent,
     PreferencesState,
     SystemLogEvent,
@@ -35,7 +34,6 @@ from .preferences_coordinator import PreferencesCoordinator
 if TYPE_CHECKING:
     from model.connection_controller import ConnectionController
     from model.macro_runner import MacroRunner
-    from presenter.data_handler import DataTrafficHandler
     from presenter.file_presenter import FilePresenter
     from presenter.lifecycle_manager import AppLifecycleManager
     from presenter.logging_coordinator import LoggingCoordinator
@@ -55,7 +53,6 @@ class MainPresenterDependencies:
     connection_controller: ConnectionController
     macro_runner: MacroRunner
     macro_execution_coordinator: MacroExecutionCoordinator
-    data_handler: DataTrafficHandler
     logging_coordinator: LoggingCoordinator
     shutdown_coordinator: ShutdownCoordinator
     port_presenter: PortPresenter
@@ -82,9 +79,6 @@ class MainPresenter(QObject):
         self.manual_control_presenter.apply_state(
             self.lifecycle_manager.create_manual_control_state()
         )
-        self.connection_controller.data_received.connect(
-            self.data_handler.on_fast_data_received
-        )
 
         self.logging_coordinator.info_requested.connect(self._log_info)
         self.logging_coordinator.error_requested.connect(self._log_error)
@@ -100,7 +94,6 @@ class MainPresenter(QObject):
         self.connection_controller = dependencies.connection_controller
         self.macro_runner = dependencies.macro_runner
         self.macro_execution_coordinator = dependencies.macro_execution_coordinator
-        self.data_handler = dependencies.data_handler
         self.logging_coordinator = dependencies.logging_coordinator
         self.shutdown_coordinator = dependencies.shutdown_coordinator
         self.port_presenter = dependencies.port_presenter
@@ -113,8 +106,6 @@ class MainPresenter(QObject):
         self.connection_controller.connection_opened.connect(self.on_port_opened)
         self.connection_controller.connection_closed.connect(self.on_port_closed)
         self.connection_controller.error_occurred.connect(self.on_port_error)
-        self.connection_controller.data_sent.connect(self._on_data_sent)
-        self.connection_controller.data_received.connect(self.macro_runner.on_data_received)
 
         self.macro_runner.macro_started.connect(self.on_macro_started)
         self.macro_runner.macro_finished.connect(self.on_macro_finished)
@@ -210,9 +201,6 @@ class MainPresenter(QObject):
         settings.set(ConfigKeys.FIXED_FONT_SIZE, font_config.fixed_size)
         settings.save_settings()
         logger.info("Font settings saved successfully.")
-
-    def _on_data_sent(self, event: PortDataEvent) -> None:
-        self.data_handler.on_data_sent(event)
 
     def on_port_opened(self, event: PortConnectionEvent) -> None:
         self.view.update_status_bar_port(event.port, True)
