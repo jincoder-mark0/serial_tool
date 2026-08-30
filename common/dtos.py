@@ -25,6 +25,7 @@ import time
 
 from common.constants import (
     DEFAULT_BAUDRATE,
+    DEFAULT_LOG_MAX_LINES,
     DEFAULT_MACRO_INTERVAL_MS,
 )
 from common.defaults import (
