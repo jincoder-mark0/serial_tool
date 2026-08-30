@@ -29,6 +29,10 @@ class ProtocolConfigurationError(TransactionAdapterError, ValueError):
     """Protocol config가 정적 또는 capability validation을 통과하지 못함."""
 
 
+class TransactionCancelledError(TransactionAdapterError):
+    """Cooperative cancellation이 transaction 시작/경계에서 확인됨."""
+
+
 class TransactionTimeoutError(TransactionAdapterError, TimeoutError):
     """Transaction이 허용된 timeout 안에 완료되지 않음."""
 
