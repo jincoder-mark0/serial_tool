@@ -10,7 +10,7 @@
 - [x] timeout/status duration/poll interval 상수화
 - [x] legacy `core/event_bus.py` 완전 삭제
 - [x] SettingsManager singleton 제거
-- [-] Coordinator package 분리 여부 판단
+- [x] Coordinator package 분리 여부 판단 — 현재 이동하지 않음
 
 이 네 항목은 영향 범위가 다르므로 한 번에 묶지 않는다.
 
@@ -146,6 +146,8 @@ PR #8 / Windows / Python 3.11
   Ruff: success
   language keys: success
   task-board consistency: success
+  final PR CI: 4/4 Green
+  main push CI: 4/4 Green
 ```
 
 Acceptance:
@@ -158,20 +160,64 @@ Acceptance:
 
 ---
 
-## 4. Stage C — Coordinator Package 이동은 조건부
+## 4. Stage C — Coordinator Package 이동 판단 — 완료, 현재 이동하지 않음
 
-현재 Coordinator가 `presenter/` 아래 있지만 책임 경계 자체는 이미 분리돼 있다.
+### 4.1 판단 기준
 
-따라서 파일 위치만 바꾸는 refactor는 기본적으로 보류한다.
-
-진행 조건 — 다음 중 2개 이상이 명확할 때:
+Coordinator가 `presenter/` 아래 있다는 이름/파일 위치만으로 이동하지 않는다. 다음 조건 중 **2개 이상**이 실제 evidence로 확인될 때만 별도 `application/coordinators/` package를 검토한다.
 
 - Presenter/Coordinator import direction 혼동 반복
 - application orchestration module 수 증가
 - SPI/I2C/Plugin 확장으로 application-level coordinator 증가
 - package-level public API 필요
 
-후보:
+### 4.2 현재 상태 감사
+
+현재 `ApplicationBootstrapper`가 다음 역할을 composition root 한 곳에서 수행한다.
+
+```text
+Model / Service 생성
+  -> Presenter 생성
+  -> Coordinator 생성
+  -> direct Qt signal wiring
+  -> shutdown / status lifecycle 조립
+  -> ApplicationComponents가 strong reference 보유
+```
+
+Coordinator는 `presenter.*_coordinator`에서 import하지만 실제 ownership과 lifecycle은 `ApplicationBootstrapper`가 명시적으로 관리한다. 현재 확인된 상태:
+
+1. Presenter/Coordinator import direction 혼동 반복 evidence 없음
+2. Coordinator 조립 위치가 `ApplicationBootstrapper`로 단일화되어 있음
+3. SPI/I2C/Plugin은 아직 구현 전이므로 expansion에 따른 coordinator 증가 없음
+4. coordinator package를 외부에 노출할 public API 요구 없음
+
+따라서 이동 조건은 2개 이상 충족되지 않는다.
+
+### 4.3 결론
+
+**현재는 Coordinator 파일을 이동하지 않는다.**
+
+이유:
+
+- 책임/ownership 경계는 이미 class와 constructor DI에서 분리됨
+- package 이동만으로 runtime dependency direction이 개선되지 않음
+- `application_bootstrap.py`, tests, imports 전반의 churn만 발생
+- P3 확장 전 현재 package layout을 미리 일반화하면 실제 요구보다 앞선 구조화가 됨
+
+즉 이번 항목의 완료는 파일 이동이 아니라 **현재 이동하지 않는 결정을 evidence와 재검토 trigger까지 명문화하는 것**이다.
+
+### 4.4 재검토 Trigger
+
+다음 중 2개 이상이 실제로 발생하면 다시 판단한다.
+
+```text
+Presenter/Coordinator import confusion 반복
++ application-level coordinator 수 실질 증가
++ SPI/I2C/Plugin orchestration 추가
++ coordinator public API/package boundary 필요
+```
+
+그때 후보 구조:
 
 ```text
 application/
@@ -185,13 +231,11 @@ application/
     macro_execution.py
 ```
 
-Acceptance:
+이동 시에도 Acceptance:
 
 - 기능 변경 0
 - dependency direction이 실제로 더 명확
 - import churn 대비 유지보수 이득 문서화
-
-조건을 충족하지 못하면 **이동하지 않는 것이 완료 판단**이다.
 
 ---
 
@@ -202,10 +246,11 @@ timeout/status 상수화 [완료]
   -> EventBus 제거 [완료]
   -> P2 성능 baseline/최적화
   -> SettingsManager singleton 제거 [완료]
-  -> Coordinator package 이동 여부 판단
+  -> Coordinator package 이동 판단 [완료: 현재 이동하지 않음]
+  -> P3 기능 확장
 ```
 
-구조 작업을 한 묶음으로 연속 수행하지 않는다. 영향이 작은 cleanup은 성능 측정 전에, 영향이 큰 global-state refactor는 측정 기준 확보 후 수행한다.
+구조 작업을 한 묶음으로 연속 수행하지 않는다. 파일 이동 자체를 목표로 삼지 않고 실제 dependency 문제에만 구조 변경을 적용한다.
 
 ---
 

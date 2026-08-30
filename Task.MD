@@ -98,14 +98,19 @@ WHY:
    - production direct constructor는 `main.py`만 허용하는 AST architecture contract 추가
    - test fixture/migration/durability test를 독립 instance 방식으로 전환하고 stale singleton reset 제거
    - load/save/migration/fallback/backup/atomic replace contract 보존
-   - PR #8 중간 검증: Windows Python 3.11 full pytest `655 passed, 2 external warnings`, Ruff / language / task checks Green
-7. [-] Coordinator package 이동 필요성 최종 판단
-   - 실제 dependency/모듈 증가 근거가 없으면 **이동하지 않는 결정도 완료**
+   - PR #8 Windows Python 3.11 full pytest `655 passed, 2 external warnings`, GitHub Actions 4/4 Green
+7. [x] Coordinator package 이동 필요성 최종 판단 — **현재는 이동하지 않음**
+   - `ApplicationBootstrapper`가 Presenter/Coordinator를 한 composition root에서 명시적으로 import/조립
+   - Presenter/Coordinator import direction 혼동이나 순환 dependency 문제의 반복 evidence 없음
+   - SPI/I2C/Plugin 확장 전이라 application-level orchestration module 증가 조건 미충족
+   - 별도 coordinator package public API 요구 없음
+   - 계획의 이동 조건 4개 중 2개 이상 충족하지 않으므로 package move는 import churn만 증가한다고 판단
+   - 향후 SPI/I2C/Plugin 확장으로 coordinator 수/의존성이 실제 증가하면 재평가
 
 WHY:
 
 - SettingsManager ownership을 class global state가 아니라 Composition Root DI로 단일화
-- Coordinator 이동은 파일 이동 자체가 가치가 아니므로 마지막 구조 판단으로 유지
+- Coordinator의 책임 경계는 이미 class/DI 수준에서 분리되어 있어 현재는 파일 위치 변경의 실익이 없음
 
 ## P3-A — 기존 Packet 기능 확장
 
@@ -194,6 +199,7 @@ WHY:
 - [x] MainPresenter 책임 축소
 - [x] Service/Manager/Coordinator ownership 분리
 - [x] SettingsManager class-level Singleton 제거 / composition-root ownership
+- [x] Coordinator package 이동 현재 보류 결정 / 재평가 trigger 명시
 - [x] reconnect stale-signal race 및 shutdown/data preservation 교정
 
 ---
