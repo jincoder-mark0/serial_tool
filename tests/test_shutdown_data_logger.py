@@ -11,8 +11,7 @@ S-059 회귀 테스트: 앱 종료 시 RX 데이터 로거 미정리 결함
 
 ## HOW
 * View는 MagicMock, SettingsManager는 임시 경로 fixture를 사용한다.
-* Production과 동일하게 ApplicationBootstrapper가 View 복원/런타임 조립을 수행하고
-  MainPresenter에는 최소 dependency contract만 명시적으로 주입한다.
+* Production과 동일하게 ApplicationBootstrapper가 MainPresenter까지 생성한다.
 * LOOPBACK_PORT_NAME을 사용해 실제 QThread 기반 ConnectionWorker를 구동한다.
 """
 from unittest.mock import MagicMock
@@ -24,7 +23,6 @@ from common.constants import LOOPBACK_PORT_NAME
 from common.dtos import MainWindowState, PortConfig
 from common.enums import SerialFlowControl, SerialParity, SerialStopBits
 from core.data_logger import data_logger_manager
-from presenter.main_presenter import MainPresenter
 
 
 @pytest.fixture
@@ -80,21 +78,17 @@ def mock_main_window():
 
 @pytest.fixture
 def presenter(mock_main_window, mock_settings_manager):
-    components = ApplicationBootstrapper(
+    runtime = ApplicationBootstrapper(
         mock_main_window,
         mock_settings_manager,
     ).build()
-    p = MainPresenter(
-        mock_main_window,
-        dependencies=components.main_presenter_dependencies,
-    )
-    yield p
+    yield runtime.main_presenter
     data_logger_manager.stop_all()
-    components.status_coordinator.stop()
-    components.file_transfer_manager.shutdown()
-    components.macro_script_manager.stop()
-    components.port_scan_manager.stop()
-    components.connection_controller.close_connection()
+    runtime.status_coordinator.stop()
+    runtime.file_transfer_manager.shutdown()
+    runtime.macro_script_manager.stop()
+    runtime.port_scan_manager.stop()
+    runtime.connection_controller.close_connection()
 
 
 def _make_logging_panel(port_name: str, file_path: str) -> MagicMock:
