@@ -22,6 +22,7 @@ class PortScanManager(QObject):
     def __init__(self) -> None:
         super().__init__()
         self._worker: Optional[PortScanWorker] = None
+        self._pending_io_worker: Optional[PortScanWorker] = None
 
     @property
     def is_running(self) -> bool:
@@ -38,6 +39,13 @@ class PortScanManager(QObject):
         if self.is_running:
             logger.debug("Port scan already in progress.")
             return False
+        if self._pending_io_worker is not None:
+            if self._pending_io_worker.has_pending_io:
+                logger.warning(
+                    "Previous port scan OS query is still blocked; retry rejected."
+                )
+                return False
+            self._pending_io_worker = None
 
         logger.debug("Starting async port scan...")
         worker = PortScanWorker()
@@ -75,6 +83,8 @@ class PortScanManager(QObject):
             logger.warning("Port scan worker did not finish before the requested timeout.")
             return False
 
+        if worker.has_pending_io:
+            self._pending_io_worker = worker
         self._worker = None
         return True
 

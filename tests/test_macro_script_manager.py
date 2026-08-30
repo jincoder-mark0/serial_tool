@@ -91,15 +91,27 @@ def test_stop_interrupts_qthread_when_file_read_is_blocked(qapp, tmp_path):
     file_path.write_text("{}", encoding="utf-8")
     release = Event()
 
+    def blocked_load(_file):
+        release.wait(5)
+        return {}
+
     with patch(
         "model.macro_script_manager.commentjson.load",
-        side_effect=lambda _file: (release.wait(5) or {}),
+        side_effect=blocked_load,
     ):
         assert manager.request_load(str(file_path)) is True
         started_at = time.monotonic()
         assert manager.stop() is True
         elapsed = time.monotonic() - started_at
+        assert manager.request_load(str(file_path)) is False
         release.set()
+
+        deadline = time.monotonic() + 1
+        while manager._pending_io_worker.has_pending_io and time.monotonic() < deadline:
+            time.sleep(0.01)
+
+        assert manager.request_load(str(file_path)) is True
+        manager.stop()
 
     assert elapsed < 0.5
     assert manager._load_worker is None

@@ -3,13 +3,14 @@
 > 기준일: 2026-08-30
 > 기준 브랜치: `refactor/presenter-view-boundary`
 > 비교 기준: `main` (`c2963eea7fdab64dfd40b1d5bcd4cbfc006ecb92`)
-> 최종 로컬 감사 기준: **280 commits ahead / 0 behind**
+> 감사 기준 commit: `b0ac86d6d77f0ea33fe0b6e345897bfacd81fc58`
+> 감사 snapshot: **281 commits ahead / 0 behind**
 
 ---
 
 ## 1. 문서 목적
 
-이 문서는 `main` 대비 `refactor/presenter-view-boundary` 브랜치에서 진행된 구조 리팩토링의 핵심 내용을 기록하고, 다음 단계인 **전체 테스트 stale API/constructor 전수 감사 → ruff/pytest 실행 가능 상태 확보 → 실패 기준 마지막 구조 교정**을 위한 실행 기준을 정의한다.
+이 문서는 `main` 대비 `refactor/presenter-view-boundary` 브랜치에서 진행된 구조 리팩토링과 로컬 검증 결과를 기록하고, PR CI와 merge 판단을 위한 실행 기준을 정의한다.
 
 이번 리팩토링의 목표는 단순 코드 축소가 아니라 다음 문제를 구조적으로 제거하는 것이다.
 
@@ -28,7 +29,7 @@
 
 ## 2. `main` 대비 변경 규모 요약
 
-최종 로컬 감사 기준 현재 브랜치는 `main`보다 **280 commits ahead, 0 behind**이다.
+`b0ac86d6` 감사 snapshot은 `main`보다 **281 commits ahead, 0 behind**이다.
 
 변경량이 큰 주요 파일은 다음과 같다.
 
@@ -994,9 +995,9 @@ logger를 먼저 닫아 테스트를 통과시키는 수정은 금지한다.
 - [x] `python tools/check_language_keys.py` 성공
 - [x] `python tools/check_task_boards.py` 성공
 - [x] 구조 contract tests 전체 성공
-- [x] 전체 `python -m pytest -q` 성공 (`641 passed`)
+- [x] 전체 `python -m pytest -q` 성공 (`643 passed`)
 - [x] QThread/QTimer 종료 warning 없음
-- [x] 테스트 종료 시 background thread leak 없음
+- [x] 테스트 종료 시 owned QThread/QTimer leak 없음
 - [x] `EventRouter` production 참조 0건
 - [x] MainPresenter를 Service Locator처럼 접근하는 테스트 0건
 - [x] Presenter 내부 `SettingsManager()` / manager fallback 생성 0건
@@ -1039,7 +1040,7 @@ logger를 먼저 닫아 테스트를 통과시키는 수정은 금지한다.
 
 ## 15. 브랜치 history
 
-현재 브랜치는 `main` 대비 **280 commits ahead / 0 behind**이다.
+`b0ac86d6` 감사 snapshot은 `main` 대비 **281 commits ahead / 0 behind**이다.
 
 리팩토링 과정의 intermediate/revert/contract-test 커밋이 많이 포함되어 있으므로 PR merge 전 history 정리가 필요하다.
 

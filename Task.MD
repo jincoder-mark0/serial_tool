@@ -115,7 +115,7 @@
 
 ---
 
-# 3. 테스트 안전망 — 코드 작성 완료, 실행 검증 필요
+# 3. 테스트 안전망 — 로컬 실행 검증 완료
 
 - [x] composition root contract
 - [x] architecture policy boundaries
@@ -238,7 +238,7 @@ python tools/check_task_boards.py
 architecture contract: 33 passed
 lifecycle/data-preservation: 45 passed
 core feature: 75 passed
-full pytest: 641 passed, 0 failed, 0 skipped, 2 dependency warnings
+full pytest: 643 passed, 0 failed, 0 skipped, 2 dependency warnings
 ruff: 0 errors
 language keys: success (dynamic expression warnings 7건)
 task board: 78 historical tasks consistent

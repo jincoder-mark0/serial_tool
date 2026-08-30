@@ -10,8 +10,8 @@ SerialTool은 Python/PyQt5 기반의 멀티포트 시리얼 통신·자동화·�
 > 현재 작업 체크리스트: [`Task.MD`](Task.MD)
 > AI/코딩 에이전트 규칙: [`AGENTS.md`](AGENTS.md)
 
-현재 브랜치는 구조 리팩토링 후 **전체 stale API/constructor 감사와 pytest/ruff 재검증 단계**입니다.
-따라서 과거 문서에 기록된 테스트 통과 개수를 현재 기준선으로 간주하지 않습니다.
+현재 브랜치는 구조 리팩토링과 `main` 전체 diff 감사를 마치고 **PR CI 검증을 준비하는 단계**입니다.
+로컬 Green 기준선과 PR의 Python 3.11 GitHub Actions 결과는 별도로 관리합니다.
 
 ---
 
@@ -79,7 +79,7 @@ SerialTool은 Python/PyQt5 기반의 멀티포트 시리얼 통신·자동화·�
 - SPI/I2C Transport와 Plugin system은 후속 후보이며 현재 구현 범위가 아닙니다.
 - PyInstaller onedir 패키징 구성이 존재합니다.
 - GitHub Actions CI는 Windows pytest, language-key 검사, task-board 검사, ruff를 실행합니다.
-- Python 3.13 로컬 검증은 전체 pytest 641개와 Ruff/저장소 정합 gate까지 Green입니다.
+- Python 3.13 로컬 검증은 전체 pytest 643개와 Ruff/저장소 정합 gate까지 Green입니다.
 - PR의 Python 3.11 GitHub Actions는 아직 확인하지 않았으므로 merge 준비 완료로 선언하지 않습니다.
 
 ---
@@ -492,4 +492,4 @@ onedir 결과는 `dist/SerialTool/`에 생성됩니다.
 8. PR/CI Green
 9. 검증 완료 후 squash/rebase 여부 판단
 
-현재 로컬 기준선은 `641 passed, 0 failed, 0 skipped`입니다. 최종 merge 판정에는 PR GitHub Actions Green이 추가로 필요합니다.
+현재 로컬 기준선은 `643 passed, 0 failed, 0 skipped`입니다. 최종 merge 판정에는 PR GitHub Actions Green이 추가로 필요합니다.

@@ -359,7 +359,8 @@ signal.disconnect()
 
 ## 9. 테스트 작업 규칙
 
-현재 리팩토링의 가장 중요한 남은 단계는 **stale API/constructor 전수 감사와 실제 실행 검증**이다.
+현재 리팩토링은 stale API/constructor 감사와 로컬 실행 검증을 마쳤다.
+가장 중요한 남은 단계는 **PR GitHub Actions Green 확인과 merge 승인**이다.
 
 기준 문서:
 

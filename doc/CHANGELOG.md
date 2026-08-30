@@ -10,15 +10,21 @@
   분리하고, QThread는 interruption polling과 1초 bounded wait로 종료하도록
   변경했습니다. 반환하지 않는 OS API나 네트워크 파일 읽기 때문에 앱 shutdown이
   무기한 멈추지 않습니다.
+- Python thread는 안전하게 강제 종료할 수 없으므로 manager가 반환 전 helper를
+  추적하고, helper가 살아 있는 동안 retry를 거부해 작업별 stuck helper를 최대
+  1개로 제한합니다. 해당 daemon helper는 process 종료 시 OS가 정리합니다.
+- ConnectionWorker의 opened/error/data queued signal도 Worker identity를 검증해
+  재연결된 새 세션에 old event가 섞이지 않게 했습니다. 새 세션이 없는 explicit
+  close에서는 retiring Worker의 마지막 RX batch만 termination 전까지 보존합니다.
 - ConnectionWorker가 Queue 대기뿐 아니라 실제 `transport.write()` in-flight/terminal
   error 상태도 추적하며, FileTransferService는 write 성공과 idle을 모두 확인한 뒤에만
   성공 완료를 알립니다.
 - Port scan 실패를 `scan_failed` signal로 Loopback fallback과 구분하고, 초기 scan을
   LoggingCoordinator/MainPresenter 연결 후 시작해 시스템 로그에 오류를 표시합니다.
 - blocking fake와 실제 composition graph/ConnectionWorker를 사용하는 회귀 테스트
-  8개를 추가했습니다.
+  10개를 추가했습니다.
 
-검증 결과는 `641 passed`, Ruff 0건, language/task-board gate Green입니다.
+검증 결과는 `643 passed`, Ruff 0건, language/task-board gate Green입니다.
 
 ---
 
@@ -40,7 +46,7 @@
 - 언어 키 검사 중 Python parse 오류를 CI 실패로 처리하고 관련 회귀 테스트를
   추가했습니다.
 
-전체 diff 감사 교정 후 Python 3.13 로컬 결과는 `641 passed`, Ruff 0건,
+전체 diff 감사 교정 후 Python 3.13 로컬 결과는 `643 passed`, Ruff 0건,
 language/task-board gate Green입니다. Python 3.11 PR CI와 실제 PyInstaller 산출물
 smoke test는 별도 merge gate/잔여 리스크로 유지합니다.
 

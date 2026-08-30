@@ -36,6 +36,7 @@ class ConnectionController(QObject):
         super().__init__()
         self.workers: Dict[str, ConnectionWorker] = {}
         self.connection_configs: Dict[str, PortConfig] = {}
+        self._retired_workers: Dict[str, ConnectionWorker] = {}
         self.packet_parser_manager = packet_parser_manager or PacketParserManager()
         self.session_factory = session_factory or ConnectionSessionFactory()
 
@@ -103,12 +104,7 @@ class ConnectionController(QObject):
 
         self.connection_configs[name] = config
         worker.connection_opened.connect(
-            lambda n=name: self.connection_opened.emit(
-                PortConnectionEvent(
-                    port=n,
-                    state=ConnectionEventState.OPENED.value,
-                )
-            )
+            lambda _name, n=name, w=worker: self._on_worker_opened(n, w)
         )
         worker.connection_closed.connect(
             lambda _name, n=name, w=worker: self.on_worker_closed(n, w)
@@ -116,9 +112,11 @@ class ConnectionController(QObject):
         worker.worker_terminated.connect(
             lambda _name, n=name, w=worker: self.on_worker_terminated(n, w)
         )
-        worker.error_occurred.connect(lambda msg, n=name: self._emit_error(n, msg))
+        worker.error_occurred.connect(
+            lambda msg, n=name, w=worker: self._on_worker_error(n, w, msg)
+        )
         worker.data_received.connect(
-            lambda data, n=name: self._handle_data_received(n, data)
+            lambda data, n=name, w=worker: self._on_worker_data_received(n, w, data)
         )
 
         self.workers[name] = worker
@@ -151,6 +149,7 @@ class ConnectionController(QObject):
             return False
 
         was_registered = True
+        self._retired_workers[name] = current_worker
         self.workers.pop(name, None)
 
         for packet in self.packet_parser_manager.remove(name):
@@ -178,9 +177,59 @@ class ConnectionController(QObject):
         worker: Optional[ConnectionWorker] = None,
     ) -> None:
         self._cleanup_worker_registry(name, worker)
+        if self._retired_workers.get(name) is worker:
+            self._retired_workers.pop(name, None)
 
     def _emit_error(self, port: str, message: str) -> None:
         self.error_occurred.emit(PortErrorEvent(port=port, message=message))
+
+    def _is_current_worker(self, name: str, worker: ConnectionWorker) -> bool:
+        """Queued signal의 발신 Worker가 현재 port session인지 확인합니다."""
+        return self.workers.get(name) is worker
+
+    def _is_current_or_retiring_worker(
+        self,
+        name: str,
+        worker: ConnectionWorker,
+    ) -> bool:
+        """새 세션이 없을 때 retiring Worker의 final data/error만 허용합니다."""
+        current_worker = self.workers.get(name)
+        if current_worker is worker:
+            return True
+        return (
+            current_worker is None
+            and self._retired_workers.get(name) is worker
+        )
+
+    def _on_worker_opened(self, name: str, worker: ConnectionWorker) -> None:
+        if not self._is_current_worker(name, worker):
+            return
+        self.connection_opened.emit(
+            PortConnectionEvent(
+                port=name,
+                state=ConnectionEventState.OPENED.value,
+            )
+        )
+
+    def _on_worker_error(
+        self,
+        name: str,
+        worker: ConnectionWorker,
+        message: str,
+    ) -> None:
+        if not self._is_current_or_retiring_worker(name, worker):
+            return
+        self._emit_error(name, message)
+
+    def _on_worker_data_received(
+        self,
+        name: str,
+        worker: ConnectionWorker,
+        data: bytes,
+    ) -> None:
+        if not self._is_current_or_retiring_worker(name, worker):
+            return
+        self._handle_data_received(name, data)
 
     def _handle_data_received(self, name: str, data: bytes) -> None:
         self.data_received.emit(PortDataEvent(port=name, data=data))

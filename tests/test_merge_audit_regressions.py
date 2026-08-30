@@ -45,6 +45,69 @@ def test_current_worker_signal_still_cleans_session():
     assert not parser_manager.has_parser("COM1")
 
 
+def test_all_stale_worker_events_are_ignored_after_reconnect():
+    parser_manager = PacketParserManager()
+    controller = ConnectionController(packet_parser_manager=parser_manager)
+    old_worker = MagicMock()
+    new_worker = MagicMock()
+    config = PortConfig(port="COM1")
+    parser_manager.configure("COM1", config)
+    controller.workers["COM1"] = old_worker
+    controller.connection_configs["COM1"] = config
+    assert controller._cleanup_worker_registry("COM1", old_worker) is True
+
+    # 동일 port 재연결은 새 parser/session을 만들며 old final event보다 우선합니다.
+    parser_manager.configure("COM1", config)
+    controller.workers["COM1"] = new_worker
+    controller.connection_configs["COM1"] = config
+    opened = []
+    errors = []
+    received = []
+    packets = []
+    controller.connection_opened.connect(opened.append)
+    controller.error_occurred.connect(errors.append)
+    controller.data_received.connect(received.append)
+    controller.packet_received.connect(packets.append)
+
+    controller._on_worker_opened("COM1", old_worker)
+    controller._on_worker_error("COM1", old_worker, "stale error")
+    controller._on_worker_data_received("COM1", old_worker, b"stale data")
+
+    assert opened == []
+    assert errors == []
+    assert received == []
+    assert packets == []
+
+    controller._on_worker_opened("COM1", new_worker)
+    controller._on_worker_error("COM1", new_worker, "current error")
+    controller._on_worker_data_received("COM1", new_worker, b"current data")
+
+    assert opened[0].port == "COM1"
+    assert errors[0].message == "current error"
+    assert received[0].data == b"current data"
+    assert packets[0].packet.data == b"current data"
+
+
+def test_retiring_worker_final_data_is_kept_until_termination():
+    controller = ConnectionController()
+    worker = MagicMock()
+    config = PortConfig(port="COM1")
+    controller.packet_parser_manager.configure("COM1", config)
+    controller.workers["COM1"] = worker
+    controller.connection_configs["COM1"] = config
+    received = []
+    controller.data_received.connect(received.append)
+
+    assert controller._cleanup_worker_registry("COM1", worker) is True
+    controller._on_worker_data_received("COM1", worker, b"final data")
+
+    assert received[0].data == b"final data"
+
+    controller.on_worker_terminated("COM1", worker)
+    controller._on_worker_data_received("COM1", worker, b"too late")
+    assert len(received) == 1
+
+
 def test_serial_transport_propagates_device_read_error():
     transport = SerialTransport(PortConfig(port="COM1"))
     serial_port = MagicMock()

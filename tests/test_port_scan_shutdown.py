@@ -55,16 +55,28 @@ def test_manager_stop_without_worker_is_idempotent():
 def test_manager_interrupts_scan_even_when_os_query_is_blocked(qapp):
     release = Event()
 
+    def blocked_comports():
+        release.wait(5)
+        return []
+
     with patch(
         "model.port_scanner.serial.tools.list_ports.comports",
-        side_effect=lambda: (release.wait(5) or []),
+        side_effect=blocked_comports,
     ):
         manager = PortScanManager()
         assert manager.request_scan() is True
         started_at = time.monotonic()
         assert manager.stop() is True
         elapsed = time.monotonic() - started_at
+        assert manager.request_scan() is False
         release.set()
+
+        deadline = time.monotonic() + 1
+        while manager._pending_io_worker.has_pending_io and time.monotonic() < deadline:
+            time.sleep(0.01)
+
+        assert manager.request_scan() is True
+        manager.stop()
 
     assert elapsed < 0.5
     assert manager._worker is None

@@ -29,6 +29,12 @@ class _MacroScriptLoadWorker(QThread):
     def __init__(self, file_path: str) -> None:
         super().__init__()
         self._file_path = file_path
+        self._io_thread: Optional[Thread] = None
+
+    @property
+    def has_pending_io(self) -> bool:
+        """QThread 종료 후에도 file I/O helper가 남아 있는지 반환합니다."""
+        return self._io_thread is not None and self._io_thread.is_alive()
 
     def run(self) -> None:
         result_queue = Queue()
@@ -41,7 +47,8 @@ class _MacroScriptLoadWorker(QThread):
             except Exception as exc:
                 result_queue.put((False, exc))
 
-        Thread(target=load_file, daemon=True).start()
+        self._io_thread = Thread(target=load_file, daemon=True)
+        self._io_thread.start()
 
         while not self.isInterruptionRequested():
             try:
@@ -71,6 +78,7 @@ class MacroScriptManager(QObject):
     def __init__(self) -> None:
         super().__init__()
         self._load_worker: Optional[_MacroScriptLoadWorker] = None
+        self._pending_io_worker: Optional[_MacroScriptLoadWorker] = None
 
     @property
     def is_loading(self) -> bool:
@@ -96,6 +104,13 @@ class MacroScriptManager(QObject):
         if self.is_loading:
             logger.warning("Script loading already in progress.")
             return False
+        if self._pending_io_worker is not None:
+            if self._pending_io_worker.has_pending_io:
+                logger.warning(
+                    "Previous script file I/O is still blocked; retry rejected."
+                )
+                return False
+            self._pending_io_worker = None
 
         logger.debug(f"Starting async script load: {file_path}")
         worker = _MacroScriptLoadWorker(file_path)
@@ -124,6 +139,8 @@ class MacroScriptManager(QObject):
             logger.warning("Macro script load worker did not finish before timeout.")
             return False
 
+        if worker.has_pending_io:
+            self._pending_io_worker = worker
         self._load_worker = None
         return True
 

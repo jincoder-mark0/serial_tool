@@ -36,6 +36,15 @@ class PortScanWorker(QThread):
     ports_found = pyqtSignal(list)
     scan_failed = pyqtSignal(str)
 
+    def __init__(self) -> None:
+        super().__init__()
+        self._io_thread: Thread | None = None
+
+    @property
+    def has_pending_io(self) -> bool:
+        """QThread 종료 후에도 OS API 호출 helper가 남아 있는지 반환합니다."""
+        return self._io_thread is not None and self._io_thread.is_alive()
+
     def run(self) -> None:
         """
         스캔 실행 (Thread Entry Point)
@@ -54,7 +63,8 @@ class PortScanWorker(QThread):
                 result_queue.put((False, exc))
 
         # OS API가 반환하지 않아도 QThread는 interruption 요청에 응답해야 합니다.
-        Thread(target=collect_ports, daemon=True).start()
+        self._io_thread = Thread(target=collect_ports, daemon=True)
+        self._io_thread.start()
 
         while not self.isInterruptionRequested():
             try:
