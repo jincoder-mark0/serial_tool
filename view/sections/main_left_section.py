@@ -28,7 +28,7 @@ from view.panels.port_panel import PortPanel
 from view.panels.manual_control_panel import ManualControlPanel
 from view.panels.port_tab_panel import PortTabPanel
 from view.widgets.system_log import SystemLogWidget
-from common.dtos import LogDataBatch, SystemLogEvent, ColorRule
+from common.dtos import LogDataBatch, SystemLogEvent, ColorRule, PortInfo
 from common.constants import LAYOUT_MARGIN_NONE
 
 
@@ -211,6 +211,20 @@ class MainLeftSection(QWidget):
             return widget
         return None
 
+    def get_port_panels(self) -> List[PortPanel]:
+        """
+        현재 존재하는 모든 포트 패널을 반환합니다.
+
+        Presenter가 탭 개수/인덱스 구조를 알지 않고, 개별 PortPanel의 시그널 계약만
+        연결할 수 있도록 컬렉션 형태의 Facade를 제공합니다.
+        """
+        panels: List[PortPanel] = []
+        for index in range(self._port_tab_panel.count()):
+            panel = self.get_port_panel_at(index)
+            if panel:
+                panels.append(panel)
+        return panels
+
     def get_current_port_panel(self) -> Optional[PortPanel]:
         """
         현재 활성화된 포트 패널을 반환합니다.
@@ -234,6 +248,28 @@ class MainLeftSection(QWidget):
         if panel and hasattr(panel, 'get_port_name'):
             return panel.get_port_name()
         return ""
+
+    def set_port_list_for_all(self, port_list: List[PortInfo]) -> None:
+        """
+        모든 포트 패널의 선택 가능한 포트 목록을 갱신합니다.
+
+        Presenter는 탭 개수나 인덱스를 순회하지 않고 스캔 결과만 전달합니다.
+        """
+        for panel in self.get_port_panels():
+            panel.set_port_list(port_list)
+
+    def set_port_connection_state(self, port_name: str, connected: bool) -> None:
+        """
+        지정한 포트를 사용하는 패널의 연결 표시 상태를 갱신합니다.
+
+        Args:
+            port_name (str): 상태를 갱신할 포트 이름.
+            connected (bool): 연결 여부.
+        """
+        for panel in self.get_port_panels():
+            if panel.get_port_name() == port_name:
+                panel.set_connected(connected)
+                break
 
     def log_system_message(self, event: SystemLogEvent) -> None:
         """
