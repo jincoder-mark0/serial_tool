@@ -13,6 +13,7 @@ from model.file_transfer_manager import FileTransferManager
 from model.macro_runner import MacroRunner
 from model.macro_script_manager import MacroScriptManager
 from model.port_scan_manager import PortScanManager
+from model.traffic_monitor import TrafficMonitor
 from presenter.data_handler import DataTrafficHandler
 from presenter.file_presenter import FilePresenter
 from presenter.macro_presenter import MacroPresenter
@@ -32,6 +33,7 @@ class ApplicationComponents:
     port_scan_manager: PortScanManager
     macro_runner: MacroRunner
     macro_script_manager: MacroScriptManager
+    traffic_monitor: TrafficMonitor
     data_handler: DataTrafficHandler
     port_presenter: PortPresenter
     macro_presenter: MacroPresenter
@@ -58,7 +60,8 @@ class ApplicationBootstrapper:
         port_scan_manager = PortScanManager()
         macro_runner = MacroRunner()
         macro_script_manager = MacroScriptManager()
-        data_handler = DataTrafficHandler(self._view)
+        traffic_monitor = TrafficMonitor()
+        data_handler = DataTrafficHandler(self._view, traffic_monitor)
 
         port_presenter = PortPresenter(
             self._view.port_view,
@@ -84,7 +87,6 @@ class ApplicationBootstrapper:
             command_transmission_service,
         )
 
-        # View 간 횡단 출력은 Presenter callback 대신 명시적 signal wiring으로 연결합니다.
         manual_control_presenter.local_echo_requested.connect(
             self._view.append_local_echo_data
         )
@@ -96,6 +98,7 @@ class ApplicationBootstrapper:
             port_scan_manager=port_scan_manager,
             macro_runner=macro_runner,
             macro_script_manager=macro_script_manager,
+            traffic_monitor=traffic_monitor,
             data_handler=data_handler,
             port_presenter=port_presenter,
             macro_presenter=macro_presenter,
