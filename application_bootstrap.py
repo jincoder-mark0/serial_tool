@@ -1,9 +1,9 @@
 """
-SerialTool application composition root helper.
+SerialTool application composition root.
 
-View 상태 복원, 구체 runtime object graph 생성, 초기 Presenter 상태 복원, 변하지 않는
-cross-component signal wiring을 한 곳에서 순서대로 수행합니다. MainPresenter에는 사용자
-표시 orchestration에 필요한 최소 dependency contract만 전달합니다.
+View 상태 복원부터 MainPresenter 생성까지 전체 runtime object graph를 한 곳에서 조립합니다.
+`main.py`는 리소스/Qt 애플리케이션을 준비한 뒤 이 bootstrapper를 호출하는 진입점 역할만
+담당합니다.
 """
 from dataclasses import dataclass
 
@@ -24,7 +24,7 @@ from presenter.lifecycle_manager import AppLifecycleManager
 from presenter.logging_coordinator import LoggingCoordinator
 from presenter.macro_execution_coordinator import MacroExecutionCoordinator
 from presenter.macro_presenter import MacroPresenter
-from presenter.main_presenter import MainPresenterDependencies
+from presenter.main_presenter import MainPresenter, MainPresenterDependencies
 from presenter.manual_control_presenter import ManualControlPresenter
 from presenter.packet_presenter import PacketPresenter
 from presenter.port_presenter import PortPresenter
@@ -36,9 +36,9 @@ from view.main_window import MainWindow
 
 @dataclass(frozen=True)
 class ApplicationComponents:
-    """Composition root가 소유하는 전체 runtime graph와 Presenter contract."""
+    """Composition root가 수명을 소유하는 완성된 runtime graph."""
 
-    main_presenter_dependencies: MainPresenterDependencies
+    main_presenter: MainPresenter
     connection_controller: ConnectionController
     data_handler: DataTrafficHandler
     file_transfer_manager: FileTransferManager
@@ -51,14 +51,14 @@ class ApplicationComponents:
 
 
 class ApplicationBootstrapper:
-    """저장 상태 복원 후 구체 runtime object graph를 생성합니다."""
+    """저장 상태 복원 후 완전한 application runtime graph를 생성합니다."""
 
     def __init__(self, view: MainWindow, settings_manager: SettingsManager) -> None:
         self._view = view
         self._settings_manager = settings_manager
 
     def build(self) -> ApplicationComponents:
-        """View restore → Model/Service → Presenter state → Coordinator → static wiring 순으로 조립합니다."""
+        """View restore → Model/Service → Presenter state → Coordinator → MainPresenter 순으로 조립합니다."""
         lifecycle_manager = AppLifecycleManager(self._view, self._settings_manager)
         lifecycle_manager.initialize_view()
 
@@ -113,7 +113,6 @@ class ApplicationBootstrapper:
         )
 
         # 저장된 ManualControl 상태를 먼저 적용한 뒤 enable policy를 계산합니다.
-        # apply_state()는 broadcast_changed를 emit하지 않으므로 이 순서가 중요합니다.
         manual_control_presenter.apply_state(
             lifecycle_manager.create_manual_control_state()
         )
@@ -132,7 +131,7 @@ class ApplicationBootstrapper:
             macro_presenter,
         )
 
-        # 변하지 않는 runtime topology는 composition root에서 한 번만 배선합니다.
+        # 실행 중 변하지 않는 signal topology는 composition root에서 한 번만 배선합니다.
         connection_controller.data_received.connect(data_handler.on_fast_data_received)
         connection_controller.data_sent.connect(data_handler.on_data_sent)
         connection_controller.data_received.connect(macro_runner.on_data_received)
@@ -174,21 +173,24 @@ class ApplicationBootstrapper:
             status_coordinator=status_coordinator,
         )
 
-        main_presenter_dependencies = MainPresenterDependencies(
-            connection_controller=connection_controller,
-            macro_runner=macro_runner,
-            macro_execution_coordinator=macro_execution_coordinator,
-            logging_coordinator=logging_coordinator,
-            shutdown_coordinator=shutdown_coordinator,
-            file_presenter=file_presenter,
-            manual_control_presenter=manual_control_presenter,
+        main_presenter = MainPresenter(
+            self._view,
+            dependencies=MainPresenterDependencies(
+                connection_controller=connection_controller,
+                macro_runner=macro_runner,
+                macro_execution_coordinator=macro_execution_coordinator,
+                logging_coordinator=logging_coordinator,
+                shutdown_coordinator=shutdown_coordinator,
+                file_presenter=file_presenter,
+                manual_control_presenter=manual_control_presenter,
+            ),
         )
 
         status_coordinator.start()
         lifecycle_manager.log_initialized()
 
         return ApplicationComponents(
-            main_presenter_dependencies=main_presenter_dependencies,
+            main_presenter=main_presenter,
             connection_controller=connection_controller,
             data_handler=data_handler,
             file_transfer_manager=file_transfer_manager,
