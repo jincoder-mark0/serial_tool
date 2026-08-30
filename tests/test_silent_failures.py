@@ -7,7 +7,7 @@
 """
 from unittest.mock import MagicMock
 
-from common.dtos import MacroEntry, ManualCommand
+from common.dtos import MacroEntry, MacroSendResult, ManualCommand
 from model.command_transmission_service import CommandTransmissionService
 from model.macro_runner import MacroRunner
 from presenter.manual_control_presenter import ManualControlPresenter
@@ -149,7 +149,7 @@ class TestMacroFinishedNotificationConsistency:
     def test_normal_completion_emits_macro_finished_signal_once(self, qapp, qtbot):
         runner = MacroRunner()
         runner.load_macro([MacroEntry(enabled=True, command="CMD", delay_ms=0)])
-        runner.set_send_handler(lambda _cmd: __import__("common.dtos", fromlist=["MacroSendResult"]).MacroSendResult(True))
+        runner.set_send_handler(lambda _cmd: MacroSendResult(True))
 
         finished_spy = MagicMock()
         runner.macro_finished.connect(finished_spy)
@@ -163,7 +163,7 @@ class TestMacroFinishedNotificationConsistency:
     def test_manual_stop_emits_macro_finished_signal_exactly_once(self, qapp, qtbot):
         runner = MacroRunner()
         runner.load_macro([MacroEntry(enabled=True, command="CMD", delay_ms=5000)])
-        runner.set_send_handler(lambda _cmd: __import__("common.dtos", fromlist=["MacroSendResult"]).MacroSendResult(True))
+        runner.set_send_handler(lambda _cmd: MacroSendResult(True))
 
         finished_spy = MagicMock()
         runner.macro_finished.connect(finished_spy)
@@ -180,7 +180,7 @@ class TestMacroFinishedNotificationConsistency:
     def test_start_then_immediate_stop_does_not_deadlock(self, qapp, qtbot):
         runner = MacroRunner()
         runner.load_macro([MacroEntry(enabled=True, command="CMD", delay_ms=5000)])
-        runner.set_send_handler(lambda _cmd: __import__("common.dtos", fromlist=["MacroSendResult"]).MacroSendResult(True))
+        runner.set_send_handler(lambda _cmd: MacroSendResult(True))
 
         finished_spy = MagicMock()
         runner.macro_finished.connect(finished_spy)
