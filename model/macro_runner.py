@@ -2,14 +2,13 @@
 매크로 실행 엔진 모듈
 
 Command 시퀀스를 별도 QThread에서 순차 실행하며 Pause/Stop/Expect/반복 실행을 지원합니다.
-단계 이벤트 타입은 common.enums.MacroStepType을 정본으로 사용합니다.
+외부 이벤트는 EventBus를 거치지 않고 DTO 기반 Qt Signal로 직접 전달합니다.
 """
 import time
 from typing import Callable, List, Optional, Tuple
 
 from PyQt5.QtCore import QMutex, QThread, QWaitCondition, pyqtSignal
 
-from common.constants import EventTopics
 from common.dtos import (
     MacroEntry,
     MacroErrorEvent,
@@ -19,7 +18,6 @@ from common.dtos import (
     PortDataEvent,
 )
 from common.enums import MacroStepType
-from core.event_bus import event_bus
 from core.logger import logger
 from model.packet_parser import ExpectMatcher
 
@@ -29,6 +27,7 @@ class MacroRunner(QThread):
 
     step_started = pyqtSignal(object)
     step_completed = pyqtSignal(object)
+    macro_started = pyqtSignal()
     macro_finished = pyqtSignal()
     error_occurred = pyqtSignal(object)
     send_requested = pyqtSignal(object)
@@ -48,8 +47,6 @@ class MacroRunner(QThread):
         self.stop_on_error = True
         self._expect_matcher: Optional[ExpectMatcher] = None
         self._expect_found = False
-        self.event_bus = event_bus
-        self.event_bus.subscribe(EventTopics.PORT_DATA_RECEIVED, self._on_data_received)
         self._send_handler: Optional[Callable[[ManualCommand], MacroSendResult]] = None
 
     def set_send_handler(
@@ -83,7 +80,7 @@ class MacroRunner(QThread):
         self.stop_on_error = stop_on_error
         self._mutex.unlock()
 
-        self.event_bus.publish(EventTopics.MACRO_STARTED)
+        self.macro_started.emit()
         super().start()
 
     def stop(self) -> None:
@@ -133,7 +130,8 @@ class MacroRunner(QThread):
     def send_single_command(self, command: ManualCommand) -> None:
         self.send_requested.emit(command)
 
-    def _on_data_received(self, event: PortDataEvent) -> None:
+    def on_data_received(self, event: PortDataEvent) -> None:
+        """ConnectionController.data_received에 직접 연결되는 Expect 입력 슬롯."""
         if not isinstance(event, PortDataEvent) or not event.data:
             return
 
@@ -211,7 +209,6 @@ class MacroRunner(QThread):
                     else:
                         error_event = MacroErrorEvent(message=error_msg, row_index=row_idx)
                         self.error_occurred.emit(error_event)
-                        self.event_bus.publish(EventTopics.MACRO_ERROR, error_event)
                         if self.stop_on_error:
                             logger.warning(f"Macro stopped due to error at row {row_idx}")
                             self._stop_internal()
@@ -223,9 +220,9 @@ class MacroRunner(QThread):
 
                 except Exception as exc:
                     logger.error(f"Critical macro execution error at row {row_idx}: {exc}")
-                    error_event = MacroErrorEvent(message=str(exc), row_index=row_idx)
-                    self.error_occurred.emit(error_event)
-                    self.event_bus.publish(EventTopics.MACRO_ERROR, error_event)
+                    self.error_occurred.emit(
+                        MacroErrorEvent(message=str(exc), row_index=row_idx)
+                    )
                     self._stop_internal()
                     break
 
@@ -234,7 +231,6 @@ class MacroRunner(QThread):
 
         self._stop_internal()
         self.macro_finished.emit()
-        self.event_bus.publish(EventTopics.MACRO_FINISHED)
 
     def _check_running(self) -> bool:
         self._mutex.lock()
