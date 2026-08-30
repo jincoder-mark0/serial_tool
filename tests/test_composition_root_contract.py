@@ -8,15 +8,17 @@ from presenter.main_presenter import MainPresenter, MainPresenterDependencies
 from presenter.port_presenter import PortPresenter
 
 
-def test_main_builds_and_injects_presenter_dependency_contract():
-    source = inspect.getsource(main.main)
-    assert "settings_mgr = SettingsManager(resource_path)" in source
-    assert "ApplicationBootstrapper(window, settings_mgr).build()" in source
-    assert "dependencies=components.main_presenter_dependencies" in source
-    assert "settings_manager=settings_mgr" not in source
+def test_main_is_thin_entry_point_and_does_not_construct_presenters():
+    source = inspect.getsource(main)
+    main_source = inspect.getsource(main.main)
+
+    assert "settings_mgr = SettingsManager(resource_path)" in main_source
+    assert "ApplicationBootstrapper(window, settings_mgr).build()" in main_source
+    assert "MainPresenter" not in source
+    assert "dependencies=" not in main_source
 
 
-def test_bootstrapper_is_the_concrete_object_graph_owner():
+def test_bootstrapper_is_the_complete_object_graph_owner():
     source = inspect.getsource(ApplicationBootstrapper.build)
     for constructor in (
         "AppLifecycleManager(",
@@ -41,10 +43,12 @@ def test_bootstrapper_is_the_concrete_object_graph_owner():
         "PacketPresenter(",
         "ManualControlPresenter(",
         "MainPresenterDependencies(",
+        "MainPresenter(",
     ):
         assert constructor in source
     assert "DataTrafficHandler(self._view, traffic_monitor)" in source
     assert "status_coordinator.start()" in source
+    assert "main_presenter=main_presenter" in source
 
 
 def test_bootstrapper_restores_state_in_safe_order():
@@ -53,10 +57,11 @@ def test_bootstrapper_restores_state_in_safe_order():
     manual_presenter = source.index("manual_control_presenter = ManualControlPresenter(")
     manual_apply = source.index("manual_control_presenter.apply_state(")
     control_state = source.index("control_state_coordinator = ControlStateCoordinator(")
+    main_presenter = source.index("main_presenter = MainPresenter(")
 
     assert restore < source.index("port_presenter = PortPresenter(")
     assert restore < source.index("macro_presenter = MacroPresenter(")
-    assert restore < manual_presenter < manual_apply < control_state
+    assert restore < manual_presenter < manual_apply < control_state < main_presenter
 
 
 def test_bootstrapper_owns_fixed_command_routing():
