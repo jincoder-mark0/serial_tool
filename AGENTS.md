@@ -97,15 +97,16 @@ self.service = SomeService(...)
 
 ## 4. Event / Signal
 
-production 주요 이벤트는 direct Qt signal을 사용한다.
+production 주요 이벤트는 **direct Qt signal만** 사용한다.
 
 - `EventRouter` 재도입 금지
-- 동일 event의 `Qt Signal + EventBus + Router` 중복 전달 금지
+- `core/event_bus.py`와 `EventTopics`는 제거됐으며 전역 Pub/Sub bridge 재도입 금지
+- 동일 event를 여러 전달 체계로 중복 전달하지 않는다
 - worker thread에서 QWidget/View 상태 조회 금지
 - Presenter 간 callback으로 숨은 수평 의존 생성 금지
 - broad `signal.disconnect()` 금지
 
-`core/event_bus.py`는 legacy/core test utility로 남을 수 있으나 새 production feature의 기본 event mechanism으로 사용하지 않는다.
+`tests/test_direct_event_topology.py`가 EventRouter/EventBus/EventTopics의 재생성을 회귀로 차단한다.
 
 ---
 
@@ -222,7 +223,7 @@ python tools/check_language_keys.py
 python tools/check_task_boards.py
 ```
 
-2026-08-30 post-merge baseline은 `Task.MD`에 기록한다.
+현재 기준선과 backlog는 `Task.MD`에 기록한다.
 
 ---
 
@@ -230,7 +231,7 @@ python tools/check_task_boards.py
 
 - constructor mismatch -> 현재 explicit DI contract로 test/caller 수정
 - removed internal field -> 실제 owner public API 사용
-- signal mismatch -> direct Qt signal topology 기준 수정
+- event topology mismatch -> direct Qt signal 기준 수정
 - QThread failure -> 실제 Manager/Service owner에서 수정
 - state persistence mismatch -> View shape와 Settings shape 사이 explicit adapter 사용
 - 데이터 손실 -> producer stop / queued signal drain / logger close 순서를 먼저 감사

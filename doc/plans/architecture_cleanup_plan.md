@@ -7,10 +7,10 @@
 
 ## 1. 범위
 
-- timeout/status duration/poll interval 상수화
-- legacy `core/event_bus.py` 완전 삭제
-- SettingsManager singleton 제거
-- Coordinator package 분리 여부 판단
+- [x] timeout/status duration/poll interval 상수화
+- [x] legacy `core/event_bus.py` 완전 삭제
+- [-] SettingsManager singleton 제거
+- [-] Coordinator package 분리 여부 판단
 
 이 네 항목은 영향 범위가 다르므로 한 번에 묶지 않는다.
 
@@ -18,7 +18,7 @@
 
 ## 2. Stage A — Performance 전에 처리할 Low-Risk Cleanup
 
-### 2.1 Timeout / Status Duration 상수화
+### 2.1 Timeout / Status Duration 상수화 — 완료
 
 상수화 대상:
 
@@ -40,58 +40,52 @@
 - feature-local policy -> 해당 module named constant
 - user-configurable -> settings/default/schema
 
-Naming 예:
+완료 결과:
 
-```python
-PORT_SCAN_STOP_TIMEOUT_MS
-STATUS_MESSAGE_DURATION_MS
-MACRO_STOP_WAIT_MS
-```
+- 기존 worker/background/file-transfer polling 값의 canonical constant 사용 확인
+- MainPresenter status message duration `0/3000/5000 ms`를 의미별 named constant로 정리
+- literal contract regression test 추가
+- PR #2 GitHub Actions 4/4 Green
 
-단위 suffix를 명시한다.
-
-WHY:
-
-- 동작을 바꾸지 않으면서 benchmark/리뷰에서 policy 의미를 명확히 함
-- 이후 최적화 중 timeout literal을 성능 tuning 값과 혼동하는 것을 방지
-
-### 2.2 `core/event_bus.py` 완전 삭제
+### 2.2 `core/event_bus.py` 완전 삭제 — 완료
 
 목표:
 
-production 주요 runtime에서 이미 사용하지 않는 EventBus를 repository에서도 제거하여 event topology 정본을 direct Qt signal 하나로 만든다.
+production 주요 runtime에서 이미 사용하지 않던 EventBus를 repository에서도 제거하여 event topology 정본을 direct Qt signal 하나로 만든다.
 
-선행 감사:
+수행 결과:
+
+1. `core/event_bus.py` 삭제
+2. `common.constants.EventTopics` 삭제
+3. `tests/conftest.py`의 EventBus autouse reset 제거
+4. EventBus 자체 unit tests 제거
+5. stale `EventTopics` constants contract 제거
+6. direct event topology test에 EventBus module / EventTopics 재도입 방지 조건 추가
+
+역사 문서 정책:
+
+- `doc/history/`, `tasks/S-xxx`의 EventBus 언급은 당시 구조와 결정 기록이므로 보존
+- 현재 architecture 문서는 direct Qt signal만 정본으로 설명
+
+검증:
 
 ```text
-EventBus
-get_event_bus
-subscribe(
-publish(
-reset_event_bus
+PR #3 / Python 3.11 / Windows
+  full pytest: 639 passed, 2 external lark warnings
+  lint: success
+  lang-keys: success
+  task-boards: success
 ```
 
-분류:
-
-- production runtime
-- test fixture
-- legacy/core unit test
-- docs/comments
-
-실행:
-
-1. test-only consumer 파악
-2. architecture contract로 대체 가능한 테스트 이관
-3. EventBus-specific test 제거
-4. `core/event_bus.py` 삭제
-5. stale import/string 감사
-6. docs 업데이트
+테스트 수가 이전보다 5개 감소한 이유는 EventBus 전용 테스트 4개와 EventTopics 전용 테스트 1개를 의도적으로 제거했기 때문이다.
 
 Acceptance:
 
-- production/test import 0건
-- direct signal contract Green
-- full pytest Green
+- production/test EventBus import 0
+- `core/event_bus.py` 없음
+- `EventTopics` 없음
+- direct signal topology contract Green
+- full pytest / CI Green
 
 ---
 
@@ -182,15 +176,14 @@ Acceptance:
 ## 5. 전체 Roadmap에서의 위치
 
 ```text
-P1 실환경 baseline
-  -> timeout/status 상수화
-  -> EventBus 제거
+timeout/status 상수화 [완료]
+  -> EventBus 제거 [완료]
   -> P2 성능 baseline/최적화
   -> SettingsManager singleton 제거
   -> Coordinator package 이동 여부 판단
 ```
 
-즉 구조 작업을 한 묶음으로 연속 수행하지 않는다. 영향이 작은 cleanup은 성능 측정 전에, 영향이 큰 global-state refactor는 측정 기준 확보 후 수행한다.
+구조 작업을 한 묶음으로 연속 수행하지 않는다. 영향이 작은 cleanup은 성능 측정 전에, 영향이 큰 global-state refactor는 측정 기준 확보 후 수행한다.
 
 ---
 

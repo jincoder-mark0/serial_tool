@@ -1,14 +1,15 @@
 """
-EventRouter 제거 후 애플리케이션 이벤트 토폴로지 회귀 테스트.
+EventRouter/EventBus 제거 후 애플리케이션 이벤트 토폴로지 회귀 테스트.
 
 ## WHY
-같은 사건을 Qt Signal -> EventBus -> EventRouter -> Qt Signal로 다시 중계하면
+같은 사건을 Qt Signal -> 전역 Pub/Sub -> Router -> Qt Signal로 다시 중계하면
 배선 경로가 이중화되고 구독 생명주기까지 별도로 관리해야 합니다. 현재 구조는
 Model/Presenter의 DTO 기반 Qt Signal을 직접 연결하는 단일 경로를 사용합니다.
 """
 import inspect
 from pathlib import Path
 
+import common.constants as constants
 from model.connection_controller import ConnectionController
 from model.file_transfer_service import FileTransferService
 from model.macro_runner import MacroRunner
@@ -49,5 +50,7 @@ def test_macro_expect_input_is_public_direct_signal_slot():
     assert "macro_started = pyqtSignal()" in source
 
 
-def test_removed_event_router_module_is_not_present():
+def test_removed_event_relay_modules_and_topics_are_not_present():
     assert not (PROJECT_ROOT / "presenter" / "event_router.py").exists()
+    assert not (PROJECT_ROOT / "core" / "event_bus.py").exists()
+    assert "class EventTopics" not in inspect.getsource(constants)

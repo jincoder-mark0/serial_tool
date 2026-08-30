@@ -11,7 +11,7 @@ Pytest 설정 및 공통 Fixture 모듈
 ## WHAT
 * sys.path 설정 (프로젝트 루트 인식)
 * QApplication 인스턴스 관리 (qapp)
-* Serial/Settings/EventBus Mocking Fixture
+* Serial/Settings Mocking Fixture
 * 공통 DTO 데이터 Fixture
 
 ## HOW
@@ -36,7 +36,6 @@ sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')
 from PyQt5.QtWidgets import QApplication
 from common.dtos import PortConfig, ManualCommand, MacroEntry
 from common.enums import SerialParity, SerialStopBits, SerialFlowControl
-from core.event_bus import event_bus
 from core.resource_path import ResourcePath
 
 
@@ -160,25 +159,6 @@ def stub_serial_port_enumeration(monkeypatch):
     import serial.tools.list_ports
 
     monkeypatch.setattr(serial.tools.list_ports, "comports", lambda: [])
-
-
-@pytest.fixture(autouse=True)
-def reset_event_bus():
-    """
-    각 테스트 실행 전후에 EventBus를 초기화합니다 (자동 적용).
-
-    테스트 간 이벤트 구독(Subscribe) 상태가 공유되어 발생하는 사이드 이펙트를 방지합니다.
-    """
-    # 테스트 전: 구독자 목록 초기화
-    # (EventBus 내부 구현에 따라 _subscribers 접근이 필요할 수 있음)
-    if hasattr(event_bus, '_subscribers'):
-        event_bus._subscribers.clear()
-
-    yield
-
-    # 테스트 후: 다시 초기화
-    if hasattr(event_bus, '_subscribers'):
-        event_bus._subscribers.clear()
 
 
 @pytest.fixture(autouse=True)

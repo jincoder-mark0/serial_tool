@@ -13,7 +13,7 @@
 * 버퍼 및 성능 설정 (RingBuffer, Queue, Batch)
 * UI 제한값 및 기본값 (Log Lines, Scan Interval)
 * 타이밍 상수 (Worker Sleep, UI Refresh)
-* 로그 색상 정의 및 ConfigKeys, EventTopics
+* 로그 색상 정의 및 ConfigKeys
 
 ## HOW
 * 대문자 Snake Case로 상수 명명
@@ -21,33 +21,6 @@
 * 논리적 그룹으로 섹션 구분
 """
 from typing import List
-
-# ==========================================
-# Event Bus Topics (이벤트 토픽 상수)
-# ==========================================
-class EventTopics:
-    """EventBus에서 사용하는 토픽 상수 클래스입니다."""
-
-    # Port Events
-    PORT_OPENED = "port.opened"
-    PORT_CLOSED = "port.closed"
-    PORT_ERROR = "port.error"
-    PORT_DATA_RECEIVED = "port.data_received"
-    PORT_DATA_SENT = "port.data_sent"
-    PORT_PACKET_RECEIVED = "port.packet_received"
-
-    # Macro Events
-    MACRO_STARTED = "macro.started"
-    MACRO_FINISHED = "macro.finished"
-    MACRO_ERROR = "macro.error"
-
-    # File Transfer Events
-    FILE_COMPLETED = "file.completed"
-    FILE_ERROR = "file.error"
-
-    # System Events
-    SETTINGS_CHANGED = "system.settings_changed"
-
 
 # ==========================================
 # Configuration Keys (설정 키 상수)

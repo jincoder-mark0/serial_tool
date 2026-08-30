@@ -51,7 +51,7 @@ python tools/check_task_boards.py
 - Mock / LOOPBACK / virtual Serial / 실기기 검증을 구분한다.
 - 실제 장비로만 확인 가능한 항목은 `실기기 미검증`으로 남긴다.
 
-2026-08-30 post-merge baseline은 `Task.MD`에 기록한다.
+현재 post-merge baseline과 backlog는 `Task.MD`에 기록한다.
 
 ---
 
@@ -67,10 +67,10 @@ Common <- Core <- Model <- Presenter/Coordinator <- View
 - `ApplicationBootstrapper` = 유일한 runtime composition root
 - Presenter hidden singleton/manager fallback 금지
 - production 주요 event = direct Qt signal
-- `EventRouter` 재도입 금지
-- 동일 event의 Qt Signal + EventBus + Router 중복 전달 금지
+- `EventRouter`, `core/event_bus.py`, `EventTopics` 재도입 금지
+- 동일 event를 복수 전달 체계로 중복 전달 금지
 
-`core/event_bus.py`는 legacy/core test utility로 남을 수 있으나 새 runtime 기능의 기본 event mechanism으로 사용하지 않는다.
+`tests/test_direct_event_topology.py`가 제거된 event relay 계층의 재생성을 차단한다.
 
 ---
 
@@ -134,7 +134,7 @@ queued RX를 drain하기 전에 DataLogger를 닫지 않는다.
 
 - constructor mismatch -> 현재 explicit DI contract로 test/caller 수정
 - removed internal field -> 실제 owner public API 사용
-- EventRouter/EventBus path mismatch -> direct Qt signal 기준 수정
+- removed EventRouter/EventBus/EventTopics contract -> direct Qt signal 기준으로 test 수정
 - worker ownership mismatch -> 실제 Manager/Service owner 테스트
 
 테스트를 맞추기 위해 production architecture를 옛 구조로 되돌리지 않는다.

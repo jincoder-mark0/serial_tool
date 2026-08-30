@@ -40,7 +40,11 @@ main push CI: Green
    - worker/background/file-transfer polling은 기존 canonical constant 사용 확인
    - MainPresenter status message duration `0/3000/5000 ms`를 의미별 named constant로 정리
    - literal contract regression test 추가, PR #2 GitHub Actions 4/4 Green
-2. [-] legacy `core/event_bus.py` 완전 삭제
+2. [x] legacy `core/event_bus.py` 완전 삭제
+   - `core/event_bus.py` 및 `common.constants.EventTopics` 제거
+   - EventBus 전용 autouse fixture / unit tests / stale constants contract 제거
+   - direct event topology test가 EventBus/EventTopics 재도입을 차단
+   - PR #3 Python 3.11 full pytest: `639 passed, 2 warnings`, GitHub Actions 4/4 Green
 
 WHY:
 
@@ -158,7 +162,7 @@ WHY:
 - [x] Logging / Theme / Localization / Settings
 - [x] Single Composition Root (`ApplicationBootstrapper`)
 - [x] Passive View + explicit DI
-- [x] direct Qt signal topology / EventRouter 제거
+- [x] direct Qt signal topology / EventRouter / EventBus 제거
 - [x] MainPresenter 책임 축소
 - [x] Service/Manager/Coordinator ownership 분리
 - [x] reconnect stale-signal race 및 shutdown/data preservation 교정
