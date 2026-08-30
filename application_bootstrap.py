@@ -12,6 +12,7 @@ from model.connection_controller import ConnectionController
 from model.file_transfer_manager import FileTransferManager
 from model.macro_runner import MacroRunner
 from model.macro_script_manager import MacroScriptManager
+from model.packet_parser_manager import PacketParserManager
 from model.port_scan_manager import PortScanManager
 from model.traffic_monitor import TrafficMonitor
 from presenter.data_handler import DataTrafficHandler
@@ -51,7 +52,8 @@ class ApplicationBootstrapper:
 
     def build(self) -> ApplicationComponents:
         """의존 순서에 따라 Model/Service/Presenter를 생성하고 정적 배선을 구성합니다."""
-        connection_controller = ConnectionController()
+        packet_parser_manager = PacketParserManager()
+        connection_controller = ConnectionController(packet_parser_manager)
         command_transmission_service = CommandTransmissionService(
             connection_controller,
             self._settings_manager,
