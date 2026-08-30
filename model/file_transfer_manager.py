@@ -1,8 +1,8 @@
 """
 파일 전송 애플리케이션 매니저.
 
-FileTransferService 생성, QThreadPool scheduling, 취소, progress metric 계산과 현재
-전송 세션의 생명주기를 소유합니다. Presenter는 Dialog 표시만 담당합니다.
+FileTransferService 생성, 전용 QThreadPool scheduling, 취소, progress metric 계산과
+현재 전송 세션의 생명주기를 소유합니다. Presenter는 Dialog 표시만 담당합니다.
 """
 import time
 from typing import Optional
@@ -16,7 +16,7 @@ from model.file_transfer_service import FileTransferService
 
 
 class FileTransferManager(QObject):
-    """단일 활성 파일 전송 세션을 관리하는 application/model boundary."""
+    """단일 활성 파일 전송 세션과 전용 worker pool을 관리합니다."""
 
     progress_updated = pyqtSignal(object)
     transfer_completed = pyqtSignal(object)
@@ -29,7 +29,9 @@ class FileTransferManager(QObject):
     ) -> None:
         super().__init__()
         self._connection_controller = connection_controller
-        self._thread_pool = thread_pool or QThreadPool.globalInstance()
+        # global pool을 공유하지 않습니다. 종료 시 이 manager가 제출한 작업만
+        # 기다릴 수 있도록 전용 pool을 소유합니다.
+        self._thread_pool = thread_pool or QThreadPool(self)
         self._active_service: Optional[FileTransferService] = None
         self._start_monotonic = 0.0
 
@@ -39,12 +41,7 @@ class FileTransferManager(QObject):
         return self._active_service is not None
 
     def start_transfer(self, file_path: str, target_port: str) -> bool:
-        """
-        대상 포트를 검증하고 FileTransferService를 thread pool에 제출합니다.
-
-        Returns:
-            bool: service가 실제 scheduling 되었으면 True, 사전 검증 실패면 False.
-        """
+        """대상 포트를 검증하고 FileTransferService를 worker pool에 제출합니다."""
         if self._active_service is not None:
             self._emit_start_error(file_path, "File transfer is already in progress.")
             return False
@@ -92,6 +89,18 @@ class FileTransferManager(QObject):
             return
         logger.info("Cancelling file transfer...")
         service.cancel()
+
+    def shutdown(self) -> None:
+        """
+        활성 전송을 취소하고 이 manager가 소유한 worker가 끝날 때까지 기다립니다.
+
+        FileTransferService는 cancel flag를 각 chunk/backpressure 루프에서 확인하므로
+        종료 중 새 데이터를 계속 큐에 넣지 않습니다. 전용 thread pool을 사용하므로
+        waitForDone()이 다른 기능의 QRunnable까지 기다리는 부작용도 없습니다.
+        """
+        self.cancel_transfer()
+        self._thread_pool.waitForDone()
+        self._active_service = None
 
     def _on_progress(self, state: FileProgressState) -> None:
         """전송량으로 평균 속도와 ETA를 계산한 뒤 상위 계층에 전달합니다."""
