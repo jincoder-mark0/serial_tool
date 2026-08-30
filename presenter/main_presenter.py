@@ -30,7 +30,6 @@ from view.managers.language_manager import language_manager
 from view.panels.port_panel import PortPanel
 
 from .lifecycle_manager import AppLifecycleManager
-from .logging_coordinator import LoggingCoordinator
 from .preferences_coordinator import PreferencesCoordinator
 from .shutdown_coordinator import ShutdownCoordinator
 
@@ -68,11 +67,8 @@ class MainPresenter(QObject):
             self.data_handler.on_fast_data_received
         )
 
-        self.logging_coordinator = LoggingCoordinator(
-            port_view=self.view.port_view,
-            log_info=self._log_info,
-            log_error=self._log_error,
-        )
+        self.logging_coordinator.info_requested.connect(self._log_info)
+        self.logging_coordinator.error_requested.connect(self._log_error)
         self.logging_coordinator.connect_signals()
 
         self.status_timer = self.lifecycle_manager.create_status_timer(
@@ -107,6 +103,7 @@ class MainPresenter(QObject):
         self.macro_execution_coordinator = components.macro_execution_coordinator
         self.traffic_monitor = components.traffic_monitor
         self.data_handler = components.data_handler
+        self.logging_coordinator = components.logging_coordinator
         self.port_presenter = components.port_presenter
         self.macro_presenter = components.macro_presenter
         self.file_presenter = components.file_presenter
@@ -116,8 +113,7 @@ class MainPresenter(QObject):
     @property
     def _sys_log_writer(self):
         """S-055 기존 테스트/외부 코드 호환용 읽기 전용 alias."""
-        coordinator = getattr(self, "logging_coordinator", None)
-        return coordinator._system_log_writer if coordinator is not None else None
+        return self.logging_coordinator.system_log_writer
 
     def _connect_signals(self) -> None:
         self.connection_controller.connection_opened.connect(self.on_port_opened)
@@ -126,8 +122,6 @@ class MainPresenter(QObject):
         self.connection_controller.data_sent.connect(self._on_data_sent)
         self.connection_controller.data_received.connect(self.macro_runner.on_data_received)
 
-        # 실행/전송 규칙은 MacroExecutionCoordinator가 소유하고, MainPresenter는
-        # 사용자에게 보여줄 상태/로그만 구독합니다.
         self.macro_runner.macro_started.connect(self.on_macro_started)
         self.macro_runner.macro_finished.connect(self.on_macro_finished)
         self.macro_runner.error_occurred.connect(self.on_macro_error)
@@ -288,7 +282,6 @@ class MainPresenter(QObject):
             self.view.append_local_echo_data(data)
 
     def _notify_macro_error(self, message: str) -> None:
-        """MacroExecutionCoordinator가 이미 중지한 실행의 사용자 표시만 담당합니다."""
         logger.error(f"Macro stopped: {message}")
         self.view.show_status_message(
             language_manager.get_text("main_status_msg_macro_stopped").format(message),
