@@ -2,8 +2,8 @@
 TextLogWriter, SystemLogWidget, LoggingCoordinator의 실제 시스템 로그 파일 기록을 검증합니다.
 
 시스템 로그 저장 구현은 MainPresenter가 아니라 LoggingCoordinator가 소유하므로 테스트도
-해당 public API를 직접 사용합니다. 앱 종료 시 writer close 연동만 MainPresenter의 실제
-shutdown 경로를 통해 확인합니다.
+해당 public API를 직접 사용합니다. 앱 종료 시 writer close 연동만 완전히 조립된 runtime의
+MainPresenter 실제 shutdown 경로를 통해 확인합니다.
 """
 from unittest.mock import MagicMock, patch
 
@@ -12,7 +12,6 @@ import pytest
 from application_bootstrap import ApplicationBootstrapper
 from common.dtos import MainWindowState, SystemLogEvent
 from core.text_log_writer import TextLogWriter
-from presenter.main_presenter import MainPresenter
 from view.widgets.system_log import SystemLogWidget
 
 
@@ -170,35 +169,27 @@ def mock_main_window():
 
 
 @pytest.fixture
-def presenter_and_components(mock_main_window, mock_settings_manager):
-    components = ApplicationBootstrapper(
+def runtime(mock_main_window, mock_settings_manager):
+    runtime = ApplicationBootstrapper(
         mock_main_window,
         mock_settings_manager,
     ).build()
-    presenter = MainPresenter(
-        mock_main_window,
-        dependencies=components.main_presenter_dependencies,
-    )
-    yield presenter, components
-    components.status_coordinator.stop()
-    components.file_transfer_manager.shutdown()
-    components.macro_script_manager.stop()
-    components.port_scan_manager.stop()
-    components.connection_controller.close_connection()
+    yield runtime
+    runtime.status_coordinator.stop()
+    runtime.file_transfer_manager.shutdown()
+    runtime.macro_script_manager.stop()
+    runtime.port_scan_manager.stop()
+    runtime.connection_controller.close_connection()
 
 
 class TestSystemLogPersistenceIntegration:
     @staticmethod
-    def _coordinator(components):
-        return components.main_presenter_dependencies.logging_coordinator
+    def _coordinator(runtime):
+        return runtime.main_presenter.logging_coordinator
 
-    def test_start_line_stop_writes_and_closes_real_file(
-        self,
-        presenter_and_components,
-        tmp_path,
-    ):
-        presenter, components = presenter_and_components
-        coordinator = self._coordinator(components)
+    def test_start_line_stop_writes_and_closes_real_file(self, runtime, tmp_path):
+        presenter = runtime.main_presenter
+        coordinator = self._coordinator(runtime)
         file_path = tmp_path / "system_log.txt"
         presenter.view.port_view.show_save_log_dialog.return_value = str(file_path)
 
@@ -216,13 +207,9 @@ class TestSystemLogPersistenceIntegration:
         )
         assert file_path.read_text(encoding="utf-8") == "[12:00:00] [INFO] hello\n"
 
-    def test_open_failure_surfaces_error_and_leaves_recording_off(
-        self,
-        presenter_and_components,
-        tmp_path,
-    ):
-        presenter, components = presenter_and_components
-        coordinator = self._coordinator(components)
+    def test_open_failure_surfaces_error_and_leaves_recording_off(self, runtime, tmp_path):
+        presenter = runtime.main_presenter
+        coordinator = self._coordinator(runtime)
         blocking_file = tmp_path / "not_a_dir"
         blocking_file.write_text("x", encoding="utf-8")
         presenter.view.port_view.show_save_log_dialog.return_value = str(
@@ -238,13 +225,9 @@ class TestSystemLogPersistenceIntegration:
             for call in presenter.view.log_system_message.call_args_list
         )
 
-    def test_write_failure_stops_recording_and_surfaces_error(
-        self,
-        presenter_and_components,
-        tmp_path,
-    ):
-        presenter, components = presenter_and_components
-        coordinator = self._coordinator(components)
+    def test_write_failure_stops_recording_and_surfaces_error(self, runtime, tmp_path):
+        presenter = runtime.main_presenter
+        coordinator = self._coordinator(runtime)
         file_path = tmp_path / "system_log.txt"
         presenter.view.port_view.show_save_log_dialog.return_value = str(file_path)
         coordinator.on_system_logging_start_requested()
@@ -261,20 +244,16 @@ class TestSystemLogPersistenceIntegration:
             for call in presenter.view.log_system_message.call_args_list
         )
 
-    def test_cancel_dialog_does_not_create_writer(self, presenter_and_components):
-        presenter, components = presenter_and_components
-        coordinator = self._coordinator(components)
+    def test_cancel_dialog_does_not_create_writer(self, runtime):
+        presenter = runtime.main_presenter
+        coordinator = self._coordinator(runtime)
         presenter.view.port_view.show_save_log_dialog.return_value = ""
         coordinator.on_system_logging_start_requested()
         assert coordinator.system_log_writer is None
 
-    def test_app_shutdown_closes_open_writer_without_data_loss(
-        self,
-        presenter_and_components,
-        tmp_path,
-    ):
-        presenter, components = presenter_and_components
-        coordinator = self._coordinator(components)
+    def test_app_shutdown_closes_open_writer_without_data_loss(self, runtime, tmp_path):
+        presenter = runtime.main_presenter
+        coordinator = self._coordinator(runtime)
         file_path = tmp_path / "system_log.txt"
         presenter.view.port_view.show_save_log_dialog.return_value = str(file_path)
         coordinator.on_system_logging_start_requested()
@@ -292,12 +271,9 @@ class TestSystemLogPersistenceIntegration:
             "[12:00:00] [INFO] before shutdown\n"
         )
 
-    def test_app_shutdown_without_active_recording_does_not_raise(
-        self,
-        presenter_and_components,
-    ):
-        presenter, components = presenter_and_components
-        coordinator = self._coordinator(components)
+    def test_app_shutdown_without_active_recording_does_not_raise(self, runtime):
+        presenter = runtime.main_presenter
+        coordinator = self._coordinator(runtime)
         assert coordinator.system_log_writer is None
         presenter.on_close_requested()
         assert coordinator.system_log_writer is None
