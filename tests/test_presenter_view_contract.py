@@ -240,3 +240,31 @@ def test_port_presenter_uses_left_section_facades_for_tab_collection():
         "MainLeftSection facade/signal을 사용해야 한다:\n  "
         + "\n  ".join(violations)
     )
+
+
+def test_port_presenter_does_not_cache_current_port_panel():
+    """
+    현재 탭의 View 객체를 Presenter 상태로 보관하지 않는다.
+
+    현재 패널은 탭 전환/닫기 때 수명이 바뀌므로, Presenter가 `current_port_panel`
+    같은 멤버를 캐시하고 변경 시그널로 동기화하면 stale QWidget 참조와 별도 상태
+    동기화 책임이 생긴다. 필요한 순간에 MainLeftSection facade로 조회해야 한다.
+    """
+    path = PRESENTER_DIR / "port_presenter.py"
+    tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
+    violations = []
+
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Attribute):
+            chain = _attribute_chain(node)
+            if chain and chain[0] == "current_port_panel":
+                violations.append(f"{path.name}:{node.lineno}: self.{'.'.join(chain)}")
+        elif isinstance(node, (ast.FunctionDef, ast.AsyncFunctionDef)):
+            if node.name == "update_current_port_panel":
+                violations.append(f"{path.name}:{node.lineno}: def {node.name}()")
+
+    assert not violations, (
+        "PortPresenter가 현재 PortPanel View 참조를 상태로 캐시한다. "
+        "사용 시 MainLeftSection.get_current_port_panel()로 즉시 조회해야 한다:\n  "
+        + "\n  ".join(violations)
+    )
