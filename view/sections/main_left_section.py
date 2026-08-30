@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import QMessageBox, QVBoxLayout, QWidget
 
 from common.constants import LAYOUT_MARGIN_NONE
 from common.dtos import ColorRule, LogDataBatch, PortInfo, SystemLogEvent
+from view.managers.color_manager import color_manager
 from view.managers.language_manager import language_manager
 from view.panels.manual_control_panel import ManualControlPanel
 from view.panels.port_panel import PortPanel
@@ -51,9 +52,15 @@ class MainLeftSection(QWidget):
         layout.setSpacing(10)
 
         self._port_tab_panel = PortTabPanel()
+        self._port_tab_panel.port_tab_added.connect(self._on_port_tab_added)
         self._port_tab_panel.port_tab_added.connect(self.port_tab_added.emit)
         self._port_tab_panel.port_tab_closed.connect(self.port_tab_closed.emit)
         self._port_tab_panel.currentChanged.connect(self.current_tab_changed.emit)
+
+        # PortTabPanel 생성자에서 이미 만들어진 초기 탭에도 동일한 presentation
+        # 정책을 적용합니다. 생성 시그널 연결 이전에 만들어진 탭을 놓치지 않습니다.
+        for panel in self.get_port_panels():
+            self._apply_port_panel_presentation(panel)
 
         self._manual_control_panel = ManualControlPanel()
         self._manual_control_panel.send_requested.connect(self.send_requested.emit)
@@ -73,6 +80,14 @@ class MainLeftSection(QWidget):
         layout.addWidget(self._manual_control_panel)
         layout.addWidget(self._system_log_widget)
         self.setLayout(layout)
+
+    def _on_port_tab_added(self, panel: PortPanel) -> None:
+        """새 PortPanel에 View-only presentation 정책을 적용합니다."""
+        self._apply_port_panel_presentation(panel)
+
+    @staticmethod
+    def _apply_port_panel_presentation(panel: PortPanel) -> None:
+        panel.set_data_log_color_rules(color_manager.rules)
 
     def retranslate_ui(self) -> None:
         """섹션 자체에는 번역 대상 텍스트가 없고 하위 View가 각자 갱신합니다."""
@@ -165,6 +180,7 @@ class MainLeftSection(QWidget):
     def add_new_tab(self, port: str) -> None:
         """복원용으로 지정 포트 이름의 View 탭을 추가합니다."""
         tab = PortPanel(port)
+        self._apply_port_panel_presentation(tab)
         self._port_tab_panel.addTab(tab, port)
         self._port_tab_panel.setCurrentWidget(tab)
 
@@ -233,12 +249,14 @@ class MainLeftSection(QWidget):
                 self._port_tab_panel.removeTab(index)
 
             if not port_states:
-                self._port_tab_panel.add_new_port_tab()
+                panel = self._port_tab_panel.add_new_port_tab()
+                self._apply_port_panel_presentation(panel)
                 return
 
             for port_state in port_states:
                 panel = self._port_tab_panel.add_new_port_tab()
                 panel.apply_state(port_state)
+                self._apply_port_panel_presentation(panel)
         finally:
             self._port_tab_panel.blockSignals(False)
             if self._port_tab_panel.count() > 1:
