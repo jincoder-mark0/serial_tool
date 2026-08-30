@@ -2,7 +2,8 @@
 애플리케이션 최상위 Presenter.
 
 조립된 runtime component를 받아 전역 이벤트와 UI 상태를 중재합니다. 구체 객체 생성은
-application_bootstrap.py, 초기 상태 복원/로그/종료 같은 독립 유스케이스는 전용 객체가 소유합니다.
+application_bootstrap.py, 초기 상태 복원/로그/매크로 전송/종료 같은 독립 유스케이스는
+전용 객체가 소유합니다.
 """
 from typing import Optional
 
@@ -15,8 +16,6 @@ from common.dtos import (
     FileErrorEvent,
     FontConfig,
     MacroErrorEvent,
-    MacroSendResult,
-    ManualCommand,
     PortConnectionEvent,
     PortDataEvent,
     PortErrorEvent,
@@ -37,7 +36,7 @@ from .shutdown_coordinator import ShutdownCoordinator
 
 
 class MainPresenter(QObject):
-    """애플리케이션 전역 Presenter 조정자."""
+    """애플리케이션 전역 표시 상태와 상위 이벤트를 조정합니다."""
 
     def __init__(
         self,
@@ -49,7 +48,6 @@ class MainPresenter(QObject):
         self.view = view
         self.settings_manager = settings_manager or SettingsManager()
         self.status_timer: Optional[QTimer] = None
-        self._macro_target_port: Optional[str] = None
 
         self.lifecycle_manager = AppLifecycleManager(
             self.view,
@@ -102,11 +100,11 @@ class MainPresenter(QObject):
     def _apply_components(self, components: ApplicationComponents) -> None:
         """Bootstrapper가 생성한 runtime component를 Presenter 필드에 배치합니다."""
         self.connection_controller = components.connection_controller
-        self.command_transmission_service = components.command_transmission_service
         self.file_transfer_manager = components.file_transfer_manager
         self.port_scan_manager = components.port_scan_manager
         self.macro_runner = components.macro_runner
         self.macro_script_manager = components.macro_script_manager
+        self.macro_execution_coordinator = components.macro_execution_coordinator
         self.traffic_monitor = components.traffic_monitor
         self.data_handler = components.data_handler
         self.port_presenter = components.port_presenter
@@ -128,11 +126,17 @@ class MainPresenter(QObject):
         self.connection_controller.data_sent.connect(self._on_data_sent)
         self.connection_controller.data_received.connect(self.macro_runner.on_data_received)
 
+        # 실행/전송 규칙은 MacroExecutionCoordinator가 소유하고, MainPresenter는
+        # 사용자에게 보여줄 상태/로그만 구독합니다.
         self.macro_runner.macro_started.connect(self.on_macro_started)
         self.macro_runner.macro_finished.connect(self.on_macro_finished)
         self.macro_runner.error_occurred.connect(self.on_macro_error)
-        self.macro_runner.send_requested.connect(self.on_macro_send_requested)
-        self.macro_runner.set_send_handler(self.deliver_macro_command)
+        self.macro_execution_coordinator.local_echo_requested.connect(
+            self.show_local_echo
+        )
+        self.macro_execution_coordinator.execution_interrupted.connect(
+            self._notify_macro_error
+        )
 
         self.file_presenter.transfer_completed.connect(self.on_file_transfer_completed)
         self.file_presenter.transfer_error.connect(self.on_file_transfer_error)
@@ -200,14 +204,12 @@ class MainPresenter(QObject):
         self._log_info(settings_updated_msg)
 
     def on_theme_change_requested(self, theme_name: str) -> None:
-        """메뉴/단축 UI의 테마 변경 요청을 저장하고 View에 적용합니다."""
         normalized = theme_name.lower()
         self.settings_manager.set(ConfigKeys.THEME, normalized)
         self.settings_manager.save_settings()
         self.view.switch_theme(normalized)
 
     def on_language_change_requested(self, language_code: str) -> None:
-        """메뉴의 언어 변경 요청을 저장한 뒤 LanguageManager에 적용합니다."""
         self.settings_manager.set(ConfigKeys.LANGUAGE, language_code)
         self.settings_manager.save_settings()
         language_manager.set_language(language_code)
@@ -230,21 +232,6 @@ class MainPresenter(QObject):
         self._update_controls_state_for_current_tab()
 
     def on_port_closed(self, event: PortConnectionEvent) -> None:
-        port_name = event.port
-        if self.macro_runner.isRunning():
-            if (
-                not self.macro_runner.broadcast_enabled
-                and self._macro_target_port == port_name
-            ):
-                self._notify_macro_error(
-                    f"Target port '{port_name}' closed. Macro stopped."
-                )
-            elif (
-                self.macro_runner.broadcast_enabled
-                and not self.connection_controller.has_active_broadcast_ports()
-            ):
-                self._notify_macro_error("No active ports left. Macro stopped.")
-
         self.view.update_status_bar_port(event.port, False)
         self.view.show_status_message(f"Disconnected from {event.port}", 3000)
         self._update_controls_state_for_current_tab()
@@ -275,7 +262,6 @@ class MainPresenter(QObject):
             )
 
     def on_macro_started(self) -> None:
-        self._macro_target_port = self.view.port_view.get_current_port_name() or None
         self._log_info("Macro started")
         self.view.show_status_message(
             language_manager.get_text("main_status_msg_macro_running"),
@@ -283,7 +269,6 @@ class MainPresenter(QObject):
         )
 
     def on_macro_finished(self) -> None:
-        self._macro_target_port = None
         self._log_success("Macro finished")
         self.view.show_status_message(
             language_manager.get_text("main_status_msg_macro_finished"),
@@ -296,32 +281,6 @@ class MainPresenter(QObject):
         self._log_error(msg)
         self.view.show_status_message(msg, 5000)
 
-    def deliver_macro_command(self, manual_command: ManualCommand) -> MacroSendResult:
-        active_port = None if manual_command.broadcast_enabled else self._macro_target_port
-        result = self.command_transmission_service.send(
-            manual_command,
-            active_port=active_port,
-        )
-        return MacroSendResult(
-            success=result.success,
-            message=result.message,
-            data=result.data,
-        )
-
-    def on_macro_send_requested(self, manual_command: ManualCommand) -> None:
-        active_port = None
-        if not manual_command.broadcast_enabled:
-            active_port = self.view.port_view.get_current_port_name() or None
-
-        result = self.command_transmission_service.send(
-            manual_command,
-            active_port=active_port,
-        )
-        if not result.success:
-            self._notify_macro_error(result.message)
-            return
-        self.show_local_echo(result.data)
-
     def show_local_echo(self, data: bytes) -> None:
         if not data:
             return
@@ -329,8 +288,8 @@ class MainPresenter(QObject):
             self.view.append_local_echo_data(data)
 
     def _notify_macro_error(self, message: str) -> None:
+        """MacroExecutionCoordinator가 이미 중지한 실행의 사용자 표시만 담당합니다."""
         logger.error(f"Macro stopped: {message}")
-        self.macro_runner.stop()
         self.view.show_status_message(
             language_manager.get_text("main_status_msg_macro_stopped").format(message),
             5000,
@@ -378,7 +337,6 @@ class MainPresenter(QObject):
         self._log_error(f"File Transfer Error: {event.message}")
 
     def update_status_bar(self) -> None:
-        """현재 interval의 트래픽 통계를 소비해 상태바를 갱신합니다."""
         self.view.update_status_bar_stats(self.traffic_monitor.take_statistics())
         self.view.update_status_bar_time(
             QDateTime.currentDateTime().toString("HH:mm:ss")
@@ -393,6 +351,9 @@ class MainPresenter(QObject):
     def on_shortcut_clear(self) -> None:
         self.port_presenter.clear_log_current_port()
 
+    # ------------------------------------------------------------------
+    # Compatibility delegates — 구현 책임은 LoggingCoordinator가 소유합니다.
+    # ------------------------------------------------------------------
     def _connect_logging_signals(self) -> None:
         self.logging_coordinator.connect_signals()
 
