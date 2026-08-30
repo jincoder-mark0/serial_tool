@@ -3,6 +3,7 @@
 
 QRunnable 기반 파일 전송 엔진입니다. 진행/완료/에러는 FileTransferSignals로 직접
 전달하고, backpressure/baudrate 대기는 cancel 요청으로 즉시 깨울 수 있습니다.
+세션 생명주기와 connection-close 대응은 FileTransferManager가 소유합니다.
 """
 import os
 from threading import Event
@@ -50,18 +51,11 @@ class FileTransferService(QRunnable):
         self._cancel_event.set()
 
     def _wait_or_cancel(self, seconds: float) -> bool:
-        """
-        지정 시간까지 기다리되 cancel되면 즉시 반환합니다.
-
-        Returns:
-            bool: cancel 요청으로 깨어났으면 True.
-        """
+        """지정 시간까지 기다리되 cancel되면 즉시 True를 반환합니다."""
         return self._cancel_event.wait(max(0.0, seconds))
 
     def run(self) -> None:
         try:
-            self.connection_controller.register_file_transfer(self.port_name, self)
-
             if not os.path.exists(self.file_path):
                 self._emit_failure(f"File not found: {self.file_path}")
                 return
@@ -140,8 +134,6 @@ class FileTransferService(QRunnable):
                 pass
 
             self._emit_failure(str(exc))
-        finally:
-            self.connection_controller.unregister_file_transfer(self.port_name)
 
     def _emit_failure(self, message: str) -> None:
         error_event = FileErrorEvent(message=message, file_path=self.file_path)
