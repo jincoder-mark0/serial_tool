@@ -22,6 +22,10 @@ jobs:
         run: |
           $env:QT_QPA_PLATFORM = "offscreen"
           python -m pytest -q
+      - name: Run observational Serial loop benchmark
+        run: |
+          $env:QT_QPA_PLATFORM = "offscreen"
+          python tools/serial_loop_benchmark.py --repeat 3
 
   lang-keys:
     runs-on: ubuntu-latest
