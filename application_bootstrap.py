@@ -162,9 +162,7 @@ class ApplicationBootstrapper:
             logging_coordinator=logging_coordinator,
             shutdown_coordinator=shutdown_coordinator,
             port_presenter=port_presenter,
-            macro_presenter=macro_presenter,
             file_presenter=file_presenter,
-            packet_presenter=packet_presenter,
             manual_control_presenter=manual_control_presenter,
         )
 
