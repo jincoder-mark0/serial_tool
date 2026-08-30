@@ -10,8 +10,11 @@ TextLogWriter 생명주기를 한 곳으로 모읍니다.
   흐름을 공유하므로 하나의 coordinator가 일관된 정책을 적용합니다.
 * 시스템 로그 writer의 close는 앱 종료에서도 재사용되어야 하므로 명시적인 생명주기
   객체가 소유하는 편이 안전합니다.
+* 중복 연결을 막기 위해 `signal.disconnect()`로 모든 구독자를 지우지 않고 coordinator가
+  이미 연결한 패널만 추적합니다. 다른 Presenter/확장 기능의 listener를 침범하지 않습니다.
 """
 from typing import Callable, Optional
+from weakref import WeakSet
 
 from core.data_logger import data_logger_manager
 from core.text_log_writer import TextLogWriter
@@ -36,11 +39,16 @@ class LoggingCoordinator:
         self._log_info = log_info
         self._log_error = log_error
         self._system_log_writer: Optional[TextLogWriter] = None
+        self._connected_panels: WeakSet[PortPanel] = WeakSet()
+        self._system_signals_connected = False
 
     def connect_signals(self) -> None:
         """기존 포트 패널과 시스템 로그의 recording signal을 연결합니다."""
         for panel in self._port_view.get_port_panels():
             self.connect_port_panel(panel)
+
+        if self._system_signals_connected:
+            return
 
         self._port_view.sys_logging_start_requested.connect(
             self.on_system_logging_start_requested
@@ -51,22 +59,18 @@ class LoggingCoordinator:
         self._port_view.system_log_line_appended.connect(
             self.on_system_log_line_appended
         )
+        self._system_signals_connected = True
 
     def on_port_tab_added(self, panel: PortPanel) -> None:
         """새 PortPanel의 logging 요청을 coordinator에 연결합니다."""
         self.connect_port_panel(panel)
 
     def connect_port_panel(self, panel: PortPanel) -> None:
-        """단일 PortPanel의 기록 시작/중지 요청을 연결합니다."""
+        """단일 PortPanel의 기록 시작/중지 요청을 중복 없이 연결합니다."""
         if not hasattr(panel, "logging_start_requested"):
             return
-
-        # Presenter가 관리하던 기존 연결을 초기화하고 coordinator가 단일 소유자가 된다.
-        try:
-            panel.logging_start_requested.disconnect()
-            panel.logging_stop_requested.disconnect()
-        except TypeError:
-            pass
+        if panel in self._connected_panels:
+            return
 
         panel.logging_start_requested.connect(
             lambda p=panel: self.on_port_logging_start_requested(p)
@@ -74,6 +78,7 @@ class LoggingCoordinator:
         panel.logging_stop_requested.connect(
             lambda p=panel: self.on_port_logging_stop_requested(p)
         )
+        self._connected_panels.add(panel)
 
     @staticmethod
     def _choose_log_path(widget) -> Optional[str]:
@@ -130,7 +135,7 @@ class LoggingCoordinator:
             )
             return
 
-        # 중복 시작 요청에서도 이전 handle을 누수시키지 않는다.
+        # 중복 시작 요청에서도 이전 handle을 누수시키지 않습니다.
         self.close_system_log()
         self._system_log_writer = writer
         self._port_view.set_logging_active(True)
@@ -158,7 +163,7 @@ class LoggingCoordinator:
         try:
             writer.write_line(text)
         except OSError as exc:
-            # 에러 로그가 다시 이 슬롯으로 들어와 재귀하는 것을 막기 위해 먼저 해제한다.
+            # 에러 로그가 다시 이 슬롯으로 들어와 재귀하는 것을 막기 위해 먼저 해제합니다.
             self._system_log_writer = None
             writer.close()
             self._port_view.set_logging_active(False)
