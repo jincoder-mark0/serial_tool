@@ -2,13 +2,13 @@
 애플리케이션 최상위 Presenter
 
 하위 Presenter를 조율하고 전역 UI 상태/생명주기 이벤트를 연결합니다.
-명령 가공과 전송 규칙은 CommandTransmissionService에 위임합니다.
+Model/Presenter 간 애플리케이션 이벤트는 DTO 기반 Qt Signal로 직접 연결합니다.
 """
 from typing import Optional
 
 from PyQt5.QtCore import QCoreApplication, QDateTime, QObject, QTimer
 
-from common.constants import ConfigKeys, EventTopics
+from common.constants import ConfigKeys
 from common.dtos import (
     FileCompletionEvent,
     FileErrorEvent,
@@ -37,7 +37,6 @@ from view.managers.language_manager import language_manager
 from view.panels.port_panel import PortPanel
 
 from .data_handler import DataTrafficHandler
-from .event_router import EventRouter
 from .file_presenter import FilePresenter
 from .lifecycle_manager import AppLifecycleManager
 from .logging_format_resolver import LoggingFormatResolver
@@ -58,8 +57,6 @@ class MainPresenter(QObject):
         self.settings_manager = SettingsManager()
         self.status_timer: Optional[QTimer] = None
         self._sys_log_writer: Optional[TextLogWriter] = None
-        # MacroRunner worker thread에서는 QWidget을 조회하지 않는다.
-        # 반복 시작 직전 UI thread에서 선택 포트를 문자열로 스냅샷한다.
         self._macro_target_port: Optional[str] = None
 
         self.lifecycle_manager = AppLifecycleManager(self)
@@ -73,7 +70,6 @@ class MainPresenter(QObject):
             self.settings_manager,
         )
         self.macro_runner = MacroRunner()
-        self.event_router = EventRouter()
         self.data_handler = DataTrafficHandler(self.view)
 
     def _init_sub_presenters(self) -> None:
@@ -85,7 +81,7 @@ class MainPresenter(QObject):
         self.file_presenter = FilePresenter(self.connection_controller)
         self.packet_presenter = PacketPresenter(
             self.view.packet_view,
-            self.event_router,
+            self.connection_controller,
             self.settings_manager,
         )
         self.manual_control_presenter = ManualControlPresenter(
@@ -97,19 +93,23 @@ class MainPresenter(QObject):
         )
 
     def _connect_signals(self) -> None:
-        self.event_router.port_opened.connect(self.on_port_opened)
-        self.event_router.port_closed.connect(self.on_port_closed)
-        self.event_router.port_error.connect(self.on_port_error)
-        self.event_router.data_sent.connect(self._on_data_sent_router)
-        self.event_router.macro_started.connect(self.on_macro_started)
-        self.event_router.macro_finished.connect(self.on_macro_finished)
-        self.event_router.macro_error.connect(self.on_macro_error)
-        self.event_router.file_transfer_completed.connect(self.on_file_transfer_completed)
-        self.event_router.file_transfer_error.connect(self.on_file_transfer_error)
-        self.event_router.settings_changed.connect(self.on_settings_change_requested)
+        # ConnectionController -> interested consumers (single direct signal layer)
+        self.connection_controller.connection_opened.connect(self.on_port_opened)
+        self.connection_controller.connection_closed.connect(self.on_port_closed)
+        self.connection_controller.error_occurred.connect(self.on_port_error)
+        self.connection_controller.data_sent.connect(self._on_data_sent)
+        self.connection_controller.data_received.connect(self.macro_runner.on_data_received)
 
+        # MacroRunner -> MainPresenter. MacroPresenter also subscribes to its own UI events.
+        self.macro_runner.macro_started.connect(self.on_macro_started)
+        self.macro_runner.macro_finished.connect(self.on_macro_finished)
+        self.macro_runner.error_occurred.connect(self.on_macro_error)
         self.macro_runner.send_requested.connect(self.on_macro_send_requested)
         self.macro_runner.set_send_handler(self.deliver_macro_command)
+
+        # FilePresenter is the public lifecycle boundary for FileTransferService.
+        self.file_presenter.transfer_completed.connect(self.on_file_transfer_completed)
+        self.file_presenter.transfer_error.connect(self.on_file_transfer_error)
 
         self.view.settings_save_requested.connect(self.on_settings_change_requested)
         self.view.font_settings_changed.connect(self.on_font_settings_changed)
@@ -202,10 +202,8 @@ class MainPresenter(QObject):
         self.manual_control_presenter.update_local_echo_setting(
             new_state.local_echo_enabled
         )
+        self.packet_presenter.on_settings_changed(new_state)
 
-        from core.event_bus import event_bus
-
-        event_bus.publish(EventTopics.SETTINGS_CHANGED, new_state)
         settings_updated_msg = language_manager.get_text(
             "main_status_msg_settings_updated"
         )
@@ -221,7 +219,7 @@ class MainPresenter(QObject):
         settings.save_settings()
         logger.info("Font settings saved successfully.")
 
-    def _on_data_sent_router(self, event: PortDataEvent) -> None:
+    def _on_data_sent(self, event: PortDataEvent) -> None:
         self.data_handler.on_data_sent(event)
 
     def on_port_opened(self, event: PortConnectionEvent) -> None:
@@ -276,8 +274,7 @@ class MainPresenter(QObject):
             )
 
     def on_macro_started(self) -> None:
-        # EventBus publish는 MacroRunner.start()가 QThread.start()를 호출하기 전에
-        # UI thread에서 발생한다. 이 시점에만 View를 읽고 문자열을 저장한다.
+        # MacroRunner.start() is called on the UI thread before QThread.run() starts.
         self._macro_target_port = self.port_presenter.get_active_port_name()
         self._log_info("Macro started")
         self.view.show_status_message(
