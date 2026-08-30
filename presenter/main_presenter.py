@@ -29,7 +29,6 @@ if TYPE_CHECKING:
     from model.connection_controller import ConnectionController
     from model.macro_runner import MacroRunner
     from presenter.file_presenter import FilePresenter
-    from presenter.lifecycle_manager import AppLifecycleManager
     from presenter.logging_coordinator import LoggingCoordinator
     from presenter.macro_execution_coordinator import MacroExecutionCoordinator
     from presenter.manual_control_presenter import ManualControlPresenter
@@ -41,7 +40,6 @@ if TYPE_CHECKING:
 class MainPresenterDependencies:
     """MainPresenter가 실제로 사용하는 최소 runtime dependency contract."""
 
-    lifecycle_manager: AppLifecycleManager
     connection_controller: ConnectionController
     macro_runner: MacroRunner
     macro_execution_coordinator: MacroExecutionCoordinator
@@ -64,20 +62,14 @@ class MainPresenter(QObject):
         self.view = view
         self._apply_dependencies(dependencies)
 
-        self.manual_control_presenter.apply_state(
-            self.lifecycle_manager.create_manual_control_state()
-        )
-
         self.logging_coordinator.info_requested.connect(self._log_info)
         self.logging_coordinator.error_requested.connect(self._log_error)
         self.logging_coordinator.connect_signals()
 
         self._connect_signals()
-        self.lifecycle_manager.log_initialized()
 
     def _apply_dependencies(self, dependencies: MainPresenterDependencies) -> None:
         """Presenter contract에 정의된 의존성만 보관합니다."""
-        self.lifecycle_manager = dependencies.lifecycle_manager
         self.connection_controller = dependencies.connection_controller
         self.macro_runner = dependencies.macro_runner
         self.macro_execution_coordinator = dependencies.macro_execution_coordinator
