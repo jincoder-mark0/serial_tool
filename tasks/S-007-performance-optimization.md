@@ -15,8 +15,8 @@
 
 ## 목적 (Why)
 
-`doc/task.md` Phase 6 계획 항목: BatchRenderer(RxLog), RingBuffer 최적화, 논블로킹
-I/O 루프 최적화. 단, **어느 것이 실제 병목인지 측정된 바 없다.**
+루트 `Task.MD` Post-merge backlog: BatchRenderer(RxLog)와 논블로킹 I/O 루프
+최적화. 단, **어느 것이 실제 병목인지 측정된 바 없다.**
 
 ## 원칙
 

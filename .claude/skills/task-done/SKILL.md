@@ -37,15 +37,14 @@ $env:QT_QPA_PLATFORM="offscreen"; .venv\Scripts\python -m pytest -q
 1. **`tasks/S-0xx-*.md` 상단 `- Status:`** — `DONE (날짜 — 수행 주체, 한 줄 근거)`.
    가장 빠뜨리기 쉬운 곳이다. 판정 토큰(`DONE`/`TODO`/`⛔ 보류`)을 **맨 앞**에 둔다 —
    뒤따르는 부연은 자유롭게 써도 되지만 선두 토큰이 검사 대상이다.
-2. **`Task.MD`** — 해당 행 상태를 `✅ 완료`로, 비고에 한 줄 근거 (검증 결과 요약).
+2. **`Task.MD`** — 해당 행 상태를 `[x]`로, 비고에 한 줄 근거 (검증 결과 요약).
 3. **`tasks/README.md`** — 해당 행 상태를 `DONE`으로. 표에 행이 없으면 **추가**한다.
-4. `doc/task.md` — 해당 Phase 체크리스트에 체크 추가 (이력 문서 — 기존 항목 재구성 금지).
-5. `doc/CHANGELOG.md` — 사용자 관점의 변경 한 줄.
-6. 기능·구조가 바뀌었으면 `README.md` 해당 절 현행화.
+4. `doc/CHANGELOG.md` — 사용자 관점의 변경 한 줄.
+5. 기능·구조가 바뀌었으면 `README.md` 해당 절 현행화.
    **UI 최소 크기(minimumSizeHint)가 바뀌었으면 `.agent/rules/ui_guide.md` §4의 회귀
    기준선도 함께 갱신한다** — 빠뜨리면 다음 작업자가 실측치를 회귀로 오인한다
    (doc/mistakes.md #5).
-7. 작업 중 실수가 있었다면 `doc/mistakes.md`에 기록.
+6. 작업 중 실수가 있었다면 `doc/mistakes.md`에 기록.
 
 ## 3. 커밋
 

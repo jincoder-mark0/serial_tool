@@ -487,7 +487,7 @@ onedir 결과는 `dist/SerialTool/`에 생성됩니다.
 | `doc/00_overview.md` | 현재 아키텍처 요약 |
 | `doc/refactoring_validation_report_20260830.md` | main 대비 리팩토링 결과와 검증 계획 |
 | `doc/implementation_plan.md` | 초기 설계/과거 계획 보존 문서 |
-| `doc/task.md` | 과거 Phase 완료 이력 |
+| `doc/history/` | 과거 세션별 작업·결정 기록 |
 | `doc/CHANGELOG.md` | 변경 이력 |
 | `doc/mistakes.md` | 반복 실수/교정 기록 |
 | `tasks/` | 세부 S-xxx 작업 이력 |

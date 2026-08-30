@@ -122,6 +122,6 @@ ApplicationBootstrapper
 * `doc/refactoring_validation_report_20260830.md`: `main` 대비 리팩토링 주요 변경과 stale API/constructor 감사, ruff/pytest/CI 검증 계획.
 * `doc/refactor_audit_20260822.md`: 이전 구조 감사 기록.
 * `doc/implementation_plan.md`: **초기 설계/과거 구현 계획 보존 문서**. 현재 구현 기준으로 사용하지 않음.
-* `doc/task.md`: **과거 Phase별 완료 이력**. 현재 작업 보드는 `Task.MD`를 사용.
+* `tasks/`: 과거 S-xxx 상세 작업 이력. 현재 작업 보드는 `Task.MD`를 사용.
 * `doc/CHANGELOG.md`: 변경 이력.
 * `doc/history/`: 세션별 작업/결정 기록.
