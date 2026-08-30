@@ -1,9 +1,10 @@
-"""CommandTransmissionService와 Presenter 경계 회귀 테스트."""
+"""CommandTransmissionService와 Presenter/Coordinator 경계 회귀 테스트."""
 import inspect
 
 from common.dtos import ManualCommand
 from common.enums import TransmissionErrorCode
 from model.command_transmission_service import CommandTransmissionService
+from presenter.macro_execution_coordinator import MacroExecutionCoordinator
 from presenter.main_presenter import MainPresenter
 from presenter.manual_control_presenter import ManualControlPresenter
 
@@ -43,8 +44,7 @@ class _FakeController:
 def test_single_send_is_processed_and_sent_by_service():
     controller = _FakeController()
     controller.open_ports.add("COM1")
-    settings = _FakeSettings()
-    service = CommandTransmissionService(controller, settings)
+    service = CommandTransmissionService(controller, _FakeSettings())
 
     result = service.send(ManualCommand(command="AT"), active_port="COM1")
 
@@ -88,15 +88,24 @@ def test_presenters_do_not_own_command_processing_or_send_branching():
     assert "send_data(" not in manual_source
     assert "send_broadcast_data(" not in main_source
     assert "send_data(" not in main_source
+    assert "deliver_macro_command" not in main_source
+    assert "on_macro_send_requested" not in main_source
 
 
 def test_macro_worker_send_handler_does_not_read_view_state():
-    source = inspect.getsource(MainPresenter.deliver_macro_command)
+    source = inspect.getsource(MacroExecutionCoordinator.deliver_repeated_command)
 
-    assert "port_presenter" not in source
-    assert "self.view" not in source
-    assert "_macro_target_port" in source
-    assert "command_transmission_service.send" in source
+    assert "port_view" not in source
+    assert "get_current_port_name" not in source
+    assert "_target_port" in source
+    assert "_transmission_service.send" in source
+
+
+def test_macro_coordinator_snapshots_target_on_ui_thread_callback():
+    source = inspect.getsource(MacroExecutionCoordinator._on_macro_started)
+
+    assert "_port_view.get_current_port_name()" in source
+    assert "_target_port" in source
 
 
 def test_manual_presenter_uses_shared_transmission_service():
