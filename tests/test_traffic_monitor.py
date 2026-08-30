@@ -1,6 +1,6 @@
 """TrafficMonitor / DataTrafficHandler 책임 경계 테스트."""
 import inspect
-from unittest.mock import MagicMock, patch
+from unittest.mock import MagicMock, call, patch
 
 from common.dtos import PortDataEvent
 from model.traffic_monitor import TrafficMonitor
@@ -46,8 +46,8 @@ def test_monitor_writes_full_duplex_data_when_logging_active():
         monitor.record_sent(tx)
 
     assert write.call_args_list == [
-        (("COM7", b"RX"),),
-        (("COM7", b"TX"),),
+        call("COM7", b"RX"),
+        call("COM7", b"TX"),
     ]
 
 
