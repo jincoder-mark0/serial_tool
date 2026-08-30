@@ -75,7 +75,6 @@ def main() -> None:
     components = ApplicationBootstrapper(window, settings_mgr).build()
     presenter = MainPresenter(  # noqa: F841 - QObject signal wiring GC 방지
         window,
-        settings_manager=settings_mgr,
         dependencies=components.main_presenter_dependencies,
     )
     window.show()
