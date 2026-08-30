@@ -1,5 +1,5 @@
 """ShutdownCoordinator의 책임과 S-059 종료 순서를 검증합니다."""
-from unittest.mock import MagicMock, call, patch
+from unittest.mock import MagicMock, patch
 
 from presenter.shutdown_coordinator import ShutdownCoordinator
 
@@ -28,13 +28,34 @@ def _make_coordinator():
         close_system_log=close_system_log,
         status_timer=timer,
     )
-    return coordinator, view, settings, controller, macro, port, manual, packet, data, close_system_log, timer
+    return (
+        coordinator,
+        view,
+        settings,
+        controller,
+        macro,
+        port,
+        manual,
+        packet,
+        data,
+        close_system_log,
+        timer,
+    )
 
 
 def test_shutdown_stops_runtime_services_and_saves_state():
     (
-        coordinator, view, settings, controller, macro, port,
-        manual, packet, data, close_system_log, timer,
+        coordinator,
+        view,
+        settings,
+        controller,
+        macro,
+        port,
+        manual,
+        packet,
+        data,
+        close_system_log,
+        timer,
     ) = _make_coordinator()
     macro.isRunning.return_value = True
     controller.has_active_connection = True
