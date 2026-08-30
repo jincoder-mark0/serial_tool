@@ -83,6 +83,17 @@ class LogLevel(Enum):
     CRITICAL = "CRITICAL"
 
 
+class TransmissionErrorCode(Enum):
+    """CommandTransmissionService가 반환하는 UI 비의존 실패 분류."""
+    INVALID_COMMAND = "invalid_command"
+    EMPTY_DATA = "empty_data"
+    NO_BROADCAST_TARGET = "no_broadcast_target"
+    BROADCAST_SEND_FAILED = "broadcast_send_failed"
+    NO_ACTIVE_PORT = "no_active_port"
+    PORT_NOT_OPEN = "port_not_open"
+    SEND_FAILED = "send_failed"
+
+
 class LogFormat(Enum):
     BIN = "bin"
     HEX = "hex"
