@@ -20,6 +20,8 @@ class ConnectionController(QObject):
     """다중 연결 세션의 worker/configuration과 송수신을 관리합니다."""
 
     connection_opened = pyqtSignal(object)
+    # 기능별 manager가 worker stop 전에 자기 작업을 취소할 수 있는 중립 lifecycle signal.
+    connection_closing = pyqtSignal(str)
     connection_closed = pyqtSignal(object)
     error_occurred = pyqtSignal(object)
     data_received = pyqtSignal(object)
@@ -113,7 +115,10 @@ class ConnectionController(QObject):
         if name:
             worker = self.workers.get(name)
             if worker:
+                self.connection_closing.emit(name)
                 worker.stop()
+                # worker의 cross-thread connection_closed는 main event loop에 queued될 수
+                # 있으므로 registry는 stop() 반환 직후 동기적으로도 정리합니다.
                 self.on_worker_closed(name)
             return
 
