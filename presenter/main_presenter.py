@@ -1,13 +1,14 @@
 """
 애플리케이션 최상위 Presenter.
 
-하위 Presenter/Service를 조율하고 전역 UI 상태를 연결합니다. 초기 상태 복원,
-명령 전송, 로그 저장, 파일 전송, 종료 시퀀스 같은 독립 유스케이스는 전용 객체에 위임합니다.
+조립된 runtime component를 받아 전역 이벤트와 UI 상태를 중재합니다. 구체 객체 생성은
+application_bootstrap.py, 초기 상태 복원/로그/종료 같은 독립 유스케이스는 전용 객체가 소유합니다.
 """
 from typing import Optional
 
 from PyQt5.QtCore import QDateTime, QObject, QTimer
 
+from application_bootstrap import ApplicationBootstrapper, ApplicationComponents
 from common.constants import ConfigKeys
 from common.dtos import (
     FileCompletionEvent,
@@ -26,23 +27,13 @@ from common.dtos import (
 from common.enums import LogLevel
 from core.logger import logger
 from core.settings_manager import SettingsManager
-from model.command_transmission_service import CommandTransmissionService
-from model.connection_controller import ConnectionController
-from model.file_transfer_manager import FileTransferManager
-from model.macro_runner import MacroRunner
 from view.main_window import MainWindow
 from view.managers.color_manager import color_manager
 from view.managers.language_manager import language_manager
 from view.panels.port_panel import PortPanel
 
-from .data_handler import DataTrafficHandler
-from .file_presenter import FilePresenter
 from .lifecycle_manager import AppLifecycleManager
 from .logging_coordinator import LoggingCoordinator
-from .macro_presenter import MacroPresenter
-from .manual_control_presenter import ManualControlPresenter
-from .packet_presenter import PacketPresenter
-from .port_presenter import PortPresenter
 from .preferences_coordinator import PreferencesCoordinator
 from .shutdown_coordinator import ShutdownCoordinator
 
@@ -54,6 +45,7 @@ class MainPresenter(QObject):
         self,
         view: MainWindow,
         settings_manager: Optional[SettingsManager] = None,
+        components: Optional[ApplicationComponents] = None,
     ) -> None:
         super().__init__()
         self.view = view
@@ -68,9 +60,13 @@ class MainPresenter(QObject):
         )
         self.lifecycle_manager.initialize_view()
 
-        # 2. Model/Application Service/Presenter를 생성합니다.
-        self._init_core_systems()
-        self._init_sub_presenters()
+        # 2. Production은 main.py가 조립한 component를 주입합니다.
+        # None fallback은 기존 단위 테스트/외부 생성 코드의 단계적 마이그레이션용입니다.
+        runtime = components or ApplicationBootstrapper(
+            self.view,
+            self.settings_manager,
+        ).build()
+        self._apply_components(runtime)
 
         # 3. Presenter 상태와 RX fast path를 복원/연결합니다.
         self.manual_control_presenter.apply_state(
@@ -109,44 +105,24 @@ class MainPresenter(QObject):
         self.view.connect_port_tab_changed(self._on_port_tab_changed)
         self.lifecycle_manager.log_initialized()
 
+    def _apply_components(self, components: ApplicationComponents) -> None:
+        """Bootstrapper가 생성한 runtime component를 Presenter 필드에 배치합니다."""
+        self.connection_controller = components.connection_controller
+        self.command_transmission_service = components.command_transmission_service
+        self.file_transfer_manager = components.file_transfer_manager
+        self.macro_runner = components.macro_runner
+        self.data_handler = components.data_handler
+        self.port_presenter = components.port_presenter
+        self.macro_presenter = components.macro_presenter
+        self.file_presenter = components.file_presenter
+        self.packet_presenter = components.packet_presenter
+        self.manual_control_presenter = components.manual_control_presenter
+
     @property
     def _sys_log_writer(self):
         """S-055 기존 테스트/외부 코드 호환용 읽기 전용 alias."""
         coordinator = getattr(self, "logging_coordinator", None)
         return coordinator._system_log_writer if coordinator is not None else None
-
-    def _init_core_systems(self) -> None:
-        """MainPresenter가 조립하는 Model/Application Service를 생성합니다."""
-        self.connection_controller = ConnectionController()
-        self.command_transmission_service = CommandTransmissionService(
-            self.connection_controller,
-            self.settings_manager,
-        )
-        self.file_transfer_manager = FileTransferManager(self.connection_controller)
-        self.macro_runner = MacroRunner()
-        self.data_handler = DataTrafficHandler(self.view)
-
-    def _init_sub_presenters(self) -> None:
-        """공유 Model/Settings 의존성과 함께 하위 Presenter를 생성합니다."""
-        self.port_presenter = PortPresenter(
-            self.view.port_view,
-            self.connection_controller,
-            self.settings_manager,
-        )
-        self.macro_presenter = MacroPresenter(self.view.macro_view, self.macro_runner)
-        self.file_presenter = FilePresenter(self.file_transfer_manager)
-        self.packet_presenter = PacketPresenter(
-            self.view.packet_view,
-            self.connection_controller,
-            self.settings_manager,
-        )
-        self.manual_control_presenter = ManualControlPresenter(
-            self.view.manual_control_view,
-            self.connection_controller,
-            self.command_transmission_service,
-            self.view.append_local_echo_data,
-            self.port_presenter.get_active_port_name,
-        )
 
     def _connect_signals(self) -> None:
         """Model/Presenter/View public signal을 direct topology로 연결합니다."""
