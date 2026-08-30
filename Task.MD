@@ -91,13 +91,20 @@ WHY:
 
 ## P2-C — Global state 및 package 구조 정리
 
-6. [-] SettingsManager singleton 제거
+6. [x] SettingsManager singleton 제거
+   - `SettingsManager.__new__`, class `_instance`, `_initialized` 제거
+   - application runtime에서는 `main.py`가 instance를 한 번 생성하고 `ApplicationBootstrapper`에 명시적으로 주입
+   - `ThemeManager` 내부의 사용되지 않던 hidden `SettingsManager()` 생성 제거
+   - production direct constructor는 `main.py`만 허용하는 AST architecture contract 추가
+   - test fixture/migration/durability test를 독립 instance 방식으로 전환하고 stale singleton reset 제거
+   - load/save/migration/fallback/backup/atomic replace contract 보존
+   - PR #8 중간 검증: Windows Python 3.11 full pytest `655 passed, 2 external warnings`, Ruff / language / task checks Green
 7. [-] Coordinator package 이동 필요성 최종 판단
    - 실제 dependency/모듈 증가 근거가 없으면 **이동하지 않는 결정도 완료**
 
 WHY:
 
-- Singleton 제거는 영향 범위가 커서 성능 baseline 확보 후 수행
+- SettingsManager ownership을 class global state가 아니라 Composition Root DI로 단일화
 - Coordinator 이동은 파일 이동 자체가 가치가 아니므로 마지막 구조 판단으로 유지
 
 ## P3-A — 기존 Packet 기능 확장
@@ -186,6 +193,7 @@ WHY:
 - [x] direct Qt signal topology / EventRouter / EventBus 제거
 - [x] MainPresenter 책임 축소
 - [x] Service/Manager/Coordinator ownership 분리
+- [x] SettingsManager class-level Singleton 제거 / composition-root ownership
 - [x] reconnect stale-signal race 및 shutdown/data preservation 교정
 
 ---

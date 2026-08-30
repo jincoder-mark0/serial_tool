@@ -5,97 +5,75 @@ Pytest 설정 및 공통 Fixture 모듈
 
 ## WHY
 * 반복되는 테스트 객체(DTO, Mock) 생성 코드 제거
-* 실제 하드웨어/파일시스템 의존성 격리 (Mocking)
+* 실제 하드웨어/파일시스템 의존성 격리
 * PyQt5 QApplication 인스턴스의 전역 관리
 
 ## WHAT
-* sys.path 설정 (프로젝트 루트 인식)
-* QApplication 인스턴스 관리 (qapp)
-* Serial/Settings Mocking Fixture
-* 공통 DTO 데이터 Fixture
+* sys.path 설정
+* QApplication instance 관리
+* Serial/Settings test fixture
+* 공통 DTO fixture
 
 ## HOW
-* pytest.fixture 데코레이터 활용
-* unittest.mock.MagicMock을 이용한 가짜 객체 주입
-* autouse=True를 통한 자동 초기화
+* pytest.fixture 활용
+* unittest.mock으로 hardware dependency 대체
+* mutable global UI manager state는 snapshot/restore
 
 pytest tests/test_conf_test.py -v
 """
-import sys
-import os
+
 import copy
-import pytest
+import os
+import sys
 from unittest.mock import patch
 
+import pytest
+
 # -----------------------------------------------------------------------------
-# 1. 경로 설정 (Path Setup)
+# 1. Path Setup
 # -----------------------------------------------------------------------------
-# 프로젝트 루트 디렉토리를 sys.path에 추가하여 모듈 import 에러 방지
-sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), '..')))
+sys.path.insert(0, os.path.abspath(os.path.join(os.path.dirname(__file__), "..")))
 
 from PyQt5.QtWidgets import QApplication
-from common.dtos import PortConfig, ManualCommand, MacroEntry
-from common.enums import SerialParity, SerialStopBits, SerialFlowControl
+
+from common.dtos import MacroEntry, ManualCommand, PortConfig
+from common.enums import SerialFlowControl, SerialParity, SerialStopBits
 from core.resource_path import ResourcePath
 
 
 # -----------------------------------------------------------------------------
-# 2. PyQt 관련 Fixture (PyQt Fixtures)
+# 2. PyQt Fixtures
 # -----------------------------------------------------------------------------
 
 @pytest.fixture(scope="session")
 def qapp():
-    """
-    테스트 세션 전체에서 공유되는 QApplication 인스턴스를 제공합니다.
-
-    PyQt 위젯을 테스트하려면 반드시 하나의 QApplication 인스턴스가 필요합니다.
-    이미 생성된 인스턴스가 있다면 그것을 반환하고, 없다면 새로 생성합니다.
-
-    Yields:
-        QApplication: Qt 애플리케이션 인스턴스.
-    """
+    """테스트 session 전체에서 공유되는 QApplication instance를 제공한다."""
     app = QApplication.instance()
     if app is None:
         app = QApplication(sys.argv)
     yield app
-    # 세션 종료 시 별도 정리 작업은 필요 없음 (프로세스 종료로 처리)
 
 
 # -----------------------------------------------------------------------------
-# 3. Mocking Fixtures (Core & Hardware)
+# 3. Core / Hardware Fixtures
 # -----------------------------------------------------------------------------
 
 @pytest.fixture
 def mock_serial_port():
-    """
-    pyserial의 Serial 클래스를 Mocking합니다.
-
-    실제 하드웨어 연결 없이 시리얼 통신 로직을 테스트하기 위해 사용됩니다.
-    read, write, open, close 등의 메서드가 Mock 객체로 대체됩니다.
-
-    Yields:
-        MagicMock: Mocking된 Serial 인스턴스.
-    """
+    """실제 hardware 없이 pyserial Serial 동작을 대체한다."""
     with patch("core.transport.serial_transport.serial.Serial") as mock_cls:
         mock_instance = mock_cls.return_value
-
-        # 기본 동작 설정
-        # serial.Serial(...) opens the configured port during construction.
         mock_instance.is_open = True
         mock_instance.in_waiting = 0
 
-        # open() 호출 시 is_open을 True로 변경하는 사이드 이펙트
         def open_side_effect():
             mock_instance.is_open = True
 
-        # close() 호출 시 is_open을 False로 변경하는 사이드 이펙트
         def close_side_effect():
             mock_instance.is_open = False
 
         mock_instance.open.side_effect = open_side_effect
         mock_instance.close.side_effect = close_side_effect
-
-        # write()는 보낸 바이트 수를 반환하도록 설정
         mock_instance.write.side_effect = lambda data: len(data)
 
         yield mock_instance
@@ -103,58 +81,32 @@ def mock_serial_port():
 
 @pytest.fixture
 def mock_settings_manager(tmp_path):
-    """
-    SettingsManager를 Mocking하여 임시 경로를 사용하도록 설정합니다.
+    """tmp_path에 격리된 독립 SettingsManager instance를 제공한다.
 
-    실제 config.json 파일을 덮어쓰지 않고 테스트하기 위함입니다.
-    pytest의 tmp_path 픽스처를 사용하여 격리된 파일 시스템을 제공합니다.
-
-    Args:
-        tmp_path (Path): pytest가 제공하는 임시 디렉토리 경로.
-
-    Yields:
-        SettingsManager: 임시 경로로 초기화된 설정 관리자.
+    SettingsManager는 더 이상 Singleton이 아니므로 reset/recreate 절차가 필요 없다.
+    fixture마다 ResourcePath와 instance를 새로 만들어 filesystem/state를 자연스럽게
+    격리한다.
     """
     from core.settings_manager import SettingsManager
 
     resource_path = ResourcePath(tmp_path)
     resource_path.config_dir.mkdir(parents=True)
-
-    SettingsManager._instance = None
-    SettingsManager._initialized = False
-    manager = SettingsManager(resource_path)
-    yield manager
-    SettingsManager._instance = None
-    SettingsManager._initialized = False
+    yield SettingsManager(resource_path)
 
 
 @pytest.fixture(autouse=True)
 def stub_serial_port_enumeration(monkeypatch):
-    """
-    시스템의 실제 시리얼 포트 열거를 차단한다 (S-069).
+    """시스템 실제 Serial port 열거를 차단한다 (S-069).
 
     ## WHY
-    `PortScanWorker.run()`이 `serial.tools.list_ports.comports()`를 호출하는데,
-    이건 Windows에서 ctypes로 SetupAPI를 두드리는 실제 하드웨어 열거다. 테스트가
-    실기기 없이 돌아야 한다는 프로젝트 규칙(CLAUDE.md)에 어긋날 뿐 아니라,
-    실측 결과 **워커 스레드에서 이 호출을 하면 프로세스가 종료 중 abort**한다
-    (`tests/test_port_tab_cleanup.py`의 탭 닫기 테스트가 단독 실행 60회 중 12회
-    exit 0xC0000409로 사망 — 파이썬 예외가 아니라 네이티브 크래시라 pytest 요약도
-    남지 않는다).
+    `PortScanWorker.run()`의 `serial.tools.list_ports.comports()`는 Windows에서 ctypes로
+    SetupAPI를 호출하는 실제 hardware enumeration이다. 워커 thread에서 이를 반복한
+    과거 test에서 native abort가 관찰되어 deterministic unit/integration test 범위를
+    넘어섰다.
 
-    실측으로 원인을 갈랐다: comports()를 스텁하면 60회 중 0회, 메인 스레드에서
-    부르면 60회 중 1회, 워커 스레드에서 그대로 부르면 60회 중 12회다. 반면
-    스레드 수명·참조 유지·종료 대기 같은 개입은 모두 기준선과 차이가 없었다.
-
-    **실제 앱은 영향받지 않는다** — `MainPresenter.on_close_requested()`가 도는
-    정상 종료 경로는 40회 전부 정상 종료했다. 즉 이건 테스트 하네스 문제다.
-
-    ## WHAT
-    빈 목록을 반환하도록 대체한다. LOOPBACK 항목은 `PortScanWorker.run()`이
-    열거 결과와 무관하게 항상 덧붙이므로, LOOPBACK을 쓰는 테스트는 영향받지 않는다.
-    실제 열거 결과에 의존하는 테스트는 현재 없다.
-
-    특정 포트 목록이 필요한 테스트는 이 픽스처 위에 다시 monkeypatch하면 된다.
+    ## HOW
+    기본적으로 빈 목록을 반환한다. LOOPBACK은 worker가 별도로 추가하므로 관련 test는
+    유지된다. 특정 port list가 필요한 test는 이 autouse fixture 위에 다시 monkeypatch한다.
     """
     import serial.tools.list_ports
 
@@ -163,58 +115,34 @@ def stub_serial_port_enumeration(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def reset_ui_manager_state():
-    """
-    ThemeManager/ColorManager/LanguageManager 싱글톤의 가변 상태를 테스트 전후로
-    스냅샷/복원합니다 (자동 적용, S-048).
+    """공유 UI manager mutable state를 test 전후 snapshot/restore한다 (S-048).
 
-    ## WHY (SettingsManager 리셋 패턴을 그대로 재사용하지 않은 이유)
-    `mock_settings_manager`(위)는 `SettingsManager._instance`를 None으로 리셋한 뒤
-    `SettingsManager()`를 다시 호출하는 방식이 통한다 — 실제 소비 코드
-    (presenter 등)가 필요할 때마다 `SettingsManager()`를 새로 호출해 싱글톤을
-    조회하기 때문이다.
+    ## WHY
+    ThemeManager/ColorManager/LanguageManager는 module-level shared instance를 여러 consumer가
+    직접 import한다. class singleton field를 지웠다가 재생성하는 방식은 이미 배포된
+    reference를 교체하지 못하므로 state isolation 방법으로 적합하지 않다.
 
-    반면 ThemeManager/ColorManager/LanguageManager는 각 모듈 하단에서 **단 한 번**
-    `theme_manager = ThemeManager()` 식으로 생성된 모듈 전역 인스턴스를 소비 코드가
-    `from view.managers.xxx import xxx_manager`로 직접 import해 재사용한다(생성자를
-    다시 호출하는 곳이 없음 — 코드베이스 전체 검색으로 확인, 2026-08-22). 따라서
-    `_instance`/`_initialized`를 None으로 리셋해도 이미 import되어 여기저기 박혀있는
-    전역 인스턴스 자체는 그대로 남아 오염이 사라지지 않는다(오히려 다음에 우연히
-    생성자가 호출되면 별개의 "두 번째 싱글톤"이 생겨 상태가 갈라지는 위험만 추가).
-
-    그래서 이 픽스처는 실제로 공유되는 그 전역 인스턴스의 **가변 상태 값**을
-    스냅샷/복원한다 — 재생성(파일 재로드) 없이 오염을 막는 방식.
-
-    ## WHY autouse (재생성이 아니라 스냅샷이므로 비용이 무시할 수준)
-    재생성 방식 비용을 측정한 결과(2026-08-22, 이 머신 기준):
-    - ThemeManager 재생성: ~0.02ms/회 (무시 가능)
-    - ColorManager 재생성: ~0.3ms/회 (무시 가능, JSON 규칙 8개 재로드/재저장)
-    - LanguageManager 재생성: ~64ms/회 (commentjson으로 en/ko 278키 재파싱 —
-      227개 테스트 전체에 autouse로 걸면 +14초 이상, 기준선(2.91초)의 5배 이상 증가)
-    반면 아래 스냅샷/복원 방식은 문자열 대입 + 작은 dict/list의 `copy.deepcopy`
-    뿐이라 1000회 반복 측정 기준 총 0.04ms(1회당 0.00004ms) 수준 — autouse로 걸어도
-    전체 실행 시간에 측정 가능한 영향이 없다. 그래서 opt-in이 아니라 autouse로 걸어
-    (아직 존재하지 않는 미래의) "상태를 바꾸는 테스트"까지 기본적으로 보호한다.
+    SettingsManager는 현재 fixture/runtime에서 명시적으로 생성·주입하는 일반 instance라
+    이 global-state snapshot 대상에 포함되지 않는다.
 
     ## WHAT
-    - `ThemeManager._current_theme`: 문자열 스칼라라 얕은 복원으로 충분.
-    - `ColorManager._rules`: 규칙 리스트 자체가 재할당되기도 하고(add/remove_rule),
-      기존 ColorRule 객체의 `.color` 필드가 `apply_theme()`으로 제자리 수정되기도
-      하므로 `copy.deepcopy`로 값 단위 스냅샷이 필요하다(얕은 리스트 복사로는
-      제자리 mutation을 못 막음). `COLOR_*` 팔레트 속성도 함께 복원한다.
-    - `LanguageManager._current_language`, `.resources`: `test_view_translations.py`가
-      이미 `.resources`를 통째로 테스트용 dict로 교체하는 실사용 사례가 있어
-      (교체된 채 복원되지 않으면 이후 세션의 다른 테스트가 실제 언어 데이터 대신
-      그 테스트용 mini dict를 보게 된다) `.resources`도 deepcopy로 스냅샷한다.
+    - ThemeManager current theme
+    - ColorManager rules 및 COLOR_* palette
+    - LanguageManager current language/resources
+
+    nested mutable object가 있으므로 필요한 항목은 deepcopy한다.
     """
-    from view.managers.theme_manager import theme_manager
     from view.managers.color_manager import color_manager
     from view.managers.language_manager import language_manager
+    from view.managers.theme_manager import theme_manager
 
     theme_snapshot = theme_manager._current_theme
 
     color_rules_snapshot = copy.deepcopy(color_manager._rules)
     color_palette_snapshot = {
-        k: v for k, v in vars(color_manager).items() if k.startswith("COLOR_")
+        key: value
+        for key, value in vars(color_manager).items()
+        if key.startswith("COLOR_")
     }
 
     lang_current_snapshot = language_manager._current_language
@@ -233,56 +161,41 @@ def reset_ui_manager_state():
 
 
 # -----------------------------------------------------------------------------
-# 4. Data Object Fixtures (DTOs)
+# 4. DTO Fixtures
 # -----------------------------------------------------------------------------
 
 @pytest.fixture
 def sample_port_config():
-    """
-    테스트용 기본 PortConfig DTO를 제공합니다.
-
-    Returns:
-        PortConfig: 유효한 값을 가진 포트 설정 객체.
-    """
+    """테스트용 기본 PortConfig DTO를 반환한다."""
     return PortConfig(
         port="COM_TEST",
         baudrate=115200,
         bytesize=8,
         parity=SerialParity.NONE.value,
         stopbits=SerialStopBits.ONE.value,
-        flowctrl=SerialFlowControl.NONE.value
+        flowctrl=SerialFlowControl.NONE.value,
     )
 
 
 @pytest.fixture
 def sample_manual_command():
-    """
-    테스트용 기본 ManualCommand DTO를 제공합니다.
-
-    Returns:
-        ManualCommand: "TEST_CMD" 명령어를 가진 객체.
-    """
+    """테스트용 ManualCommand DTO를 반환한다."""
     return ManualCommand(
         command="TEST_CMD",
         hex_mode=False,
         prefix_enabled=False,
-        suffix_enabled=True,  # 보통 \n을 붙이므로 True로 설정
+        suffix_enabled=True,
         local_echo_enabled=True,
-        broadcast_enabled=False
+        broadcast_enabled=False,
     )
 
 
 @pytest.fixture
 def sample_macro_entry():
-    """
-    테스트용 기본 MacroEntry DTO를 제공합니다.
-
-    Returns:
-        MacroEntry: 매크로 실행 테스트용 객체.
-    """
+    """테스트용 MacroEntry DTO를 반환한다."""
     return MacroEntry(
         enabled=True,
         command="MACRO_CMD",
         delay_ms=100,
-        hex_mode=False
+        hex_mode=False,
     )

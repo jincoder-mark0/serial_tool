@@ -9,7 +9,7 @@
 
 - [x] timeout/status duration/poll interval 상수화
 - [x] legacy `core/event_bus.py` 완전 삭제
-- [-] SettingsManager singleton 제거
+- [x] SettingsManager singleton 제거
 - [-] Coordinator package 분리 여부 판단
 
 이 네 항목은 영향 범위가 다르므로 한 번에 묶지 않는다.
@@ -91,47 +91,69 @@ Acceptance:
 
 ## 3. Stage B — Performance Baseline 이후 Global State Cleanup
 
-### SettingsManager Singleton 제거
+### SettingsManager Singleton 제거 — 완료
 
 WHY:
 
-production DI는 명시적으로 개선됐지만 Singleton이 남아 있으면 test global state leakage와 hidden dependency 재도입 가능성이 남는다.
+production DI는 이미 Composition Root 중심으로 정리돼 있었지만 `SettingsManager` class-level Singleton이 남아 있으면 다음 문제가 유지된다.
 
-다만 singleton 제거는 construction/test fixture 전반에 영향을 줄 수 있으므로 **성능 baseline을 먼저 고정한 뒤** 수행한다.
+- `SettingsManager()` 호출만으로 hidden global dependency 생성 가능
+- test가 `_instance`/`_initialized` reset 순서에 의존
+- 서로 다른 ResourcePath로 설정 격리를 검증하기 어려움
+- future module이 constructor injection을 우회할 수 있음
 
-목표 구조:
+최종 구조:
 
 ```text
 main.py
-  -> SettingsManager instance
+  -> SettingsManager(resource_path)     # production 생성 위치 1곳
   -> ApplicationBootstrapper
      -> SettingsCoordinator
-     -> Presenter/Coordinator dependencies
+     -> Presenter / Coordinator dependencies
 ```
 
-하나의 application instance가 하나의 SettingsManager를 소유하지만 class-level Singleton으로 강제하지 않는다.
+하나의 application runtime은 하나의 SettingsManager instance를 공유하지만 class-level Singleton으로 강제하지 않는다.
 
-감사 대상:
+수행 결과:
 
-- `SettingsManager()` direct construction
-- `get_instance()` / class `_instance`
-- singleton reset fixture
-- module-level settings lookup
+1. `SettingsManager.__new__` 제거
+2. class `_instance`, `_initialized` 제거
+3. `ThemeManager`의 사용되지 않던 hidden `SettingsManager()` 생성 제거
+4. `mock_settings_manager` fixture를 tmp_path 기반 독립 instance로 변경
+5. SettingsManager core/migration/durability test의 singleton reset 제거
+6. 독립 instance 간 state/ResourcePath isolation test 추가
+7. AST architecture contract 추가
+   - `core/settings_manager.py`에 Singleton mechanism 재도입 금지
+   - production direct `SettingsManager()` construction은 `main.py`만 허용
+   - tests에서 제거된 `_instance` / `_initialized` reset 재도입 금지
 
-단계:
+보존한 behavior:
 
-1. current construction graph 수집
-2. production hidden call 제거
-3. tests fixture explicit instance화
-4. singleton mechanism 제거
-5. constructor/public contract 정리
-6. test/state isolation 검증
+- settings load / save
+- schema validation
+- version `1.3` migration
+- fallback merge
+- corrupted settings `.bak` 보존
+- 개발 모드 `settings.local.json` 분리
+- frozen mode user path
+- temporary file + `fsync` + `os.replace` atomic save
+
+검증:
+
+```text
+PR #8 / Windows / Python 3.11
+  full pytest: 655 passed, 2 external lark warnings
+  Ruff: success
+  language keys: success
+  task-board consistency: success
+```
 
 Acceptance:
 
-- hidden global settings access 0
-- tests 간 settings state leak 없음
-- migration/schema behavior 동일
+- hidden production settings construction 0 (`main.py` 제외)
+- SettingsManager class global instance state 0
+- tests 간 settings state reset dependency 0
+- migration/schema/durability behavior Green
 - composition root ownership 유지
 
 ---
@@ -179,7 +201,7 @@ Acceptance:
 timeout/status 상수화 [완료]
   -> EventBus 제거 [완료]
   -> P2 성능 baseline/최적화
-  -> SettingsManager singleton 제거
+  -> SettingsManager singleton 제거 [완료]
   -> Coordinator package 이동 여부 판단
 ```
 
