@@ -6,6 +6,7 @@ from unittest.mock import MagicMock
 import pytest
 from PyQt5.QtCore import QCoreApplication
 
+from application_bootstrap import ApplicationBootstrapper
 from common.dtos import PacketEvent, PortDataEvent
 from model.packet_parser import Packet
 from presenter.main_presenter import MainPresenter
@@ -34,14 +35,22 @@ def mock_main_window(qapp):
 
 @pytest.fixture
 def integration_system(mock_main_window, mock_serial_port, mock_settings_manager):
+    components = ApplicationBootstrapper(
+        mock_main_window,
+        mock_settings_manager,
+    ).build()
     presenter = MainPresenter(
         mock_main_window,
         settings_manager=mock_settings_manager,
+        components=components,
     )
     yield presenter, mock_main_window, mock_serial_port
 
     presenter.data_handler.stop()
     presenter.packet_presenter.stop()
+    presenter.file_transfer_manager.shutdown()
+    presenter.macro_script_manager.stop()
+    presenter.port_scan_manager.stop()
     if presenter.status_timer:
         presenter.status_timer.stop()
     presenter.connection_controller.close_connection()
@@ -54,15 +63,13 @@ def test_system_initialization_wires_facade_views(integration_system):
     assert presenter.macro_presenter is not None
     assert presenter.manual_control_presenter is not None
     assert presenter.packet_presenter is not None
+    assert presenter.macro_execution_coordinator is not None
     assert not hasattr(presenter, "event_router")
     window.connect_port_tab_changed.assert_called_once()
     window.manual_control_view.send_requested.connect.assert_called()
 
 
-def test_connection_send_and_close_flow(
-    integration_system,
-    sample_port_config,
-):
+def test_connection_send_and_close_flow(integration_system, sample_port_config):
     presenter, _, mock_serial = integration_system
     controller = presenter.connection_controller
 
