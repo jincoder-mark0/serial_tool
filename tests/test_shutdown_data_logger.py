@@ -116,7 +116,7 @@ class TestShutdownStopsDataLogger:
         file_path = tmp_path / "rx_shutdown.bin"
         panel = _make_logging_panel(LOOPBACK_PORT_NAME, str(file_path))
 
-        presenter._on_logging_start_requested(panel)
+        presenter.logging_coordinator.on_port_logging_start_requested(panel)
         panel.set_logging_active.assert_any_call(True)
         assert data_logger_manager.is_logging(LOOPBACK_PORT_NAME) is True
 
@@ -156,7 +156,7 @@ class TestShutdownStopsDataLogger:
 
         file_path = tmp_path / "rx_shutdown.pcap"
         panel = _make_logging_panel(LOOPBACK_PORT_NAME, str(file_path))
-        presenter._on_logging_start_requested(panel)
+        presenter.logging_coordinator.on_port_logging_start_requested(panel)
         assert data_logger_manager.is_logging(LOOPBACK_PORT_NAME) is True
 
         payload = b"PCAP-PAYLOAD-ON-SHUTDOWN"
@@ -216,7 +216,7 @@ class TestShutdownOrderingClosesConnectionBeforeLogger:
 
         file_path = tmp_path / "rx_leftover.bin"
         panel = _make_logging_panel(LOOPBACK_PORT_NAME, str(file_path))
-        presenter._on_logging_start_requested(panel)
+        presenter.logging_coordinator.on_port_logging_start_requested(panel)
         assert data_logger_manager.is_logging(LOOPBACK_PORT_NAME) is True
 
         payload = b"LEFTOVER-BATCH-ON-EXIT"
