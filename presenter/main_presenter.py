@@ -2,8 +2,9 @@
 애플리케이션 최상위 Presenter.
 
 MainPresenter가 필요한 의존성 contract를 이 모듈이 직접 정의합니다. Composition root는
-이 contract를 조립해서 주입할 뿐이며, Presenter는 전역 사용자 표시와 command relay에
-집중합니다. 상태/설정/로그/매크로 실행 정책은 전용 coordinator가 소유합니다.
+이 contract를 조립해서 주입할 뿐이며, Presenter는 전역 사용자 표시와 종료 요청 처리에
+집중합니다. 고정 command relay/상태/설정/로그/매크로 실행 정책은 전용 조립/조정 계층이
+소유합니다.
 """
 from __future__ import annotations
 
@@ -32,7 +33,6 @@ if TYPE_CHECKING:
     from presenter.logging_coordinator import LoggingCoordinator
     from presenter.macro_execution_coordinator import MacroExecutionCoordinator
     from presenter.manual_control_presenter import ManualControlPresenter
-    from presenter.port_presenter import PortPresenter
     from presenter.shutdown_coordinator import ShutdownCoordinator
 
 
@@ -45,13 +45,12 @@ class MainPresenterDependencies:
     macro_execution_coordinator: MacroExecutionCoordinator
     logging_coordinator: LoggingCoordinator
     shutdown_coordinator: ShutdownCoordinator
-    port_presenter: PortPresenter
     file_presenter: FilePresenter
     manual_control_presenter: ManualControlPresenter
 
 
 class MainPresenter(QObject):
-    """애플리케이션 전역 사용자 표시와 최상위 command relay를 담당합니다."""
+    """애플리케이션 전역 사용자 표시와 종료 요청을 담당합니다."""
 
     def __init__(
         self,
@@ -75,7 +74,6 @@ class MainPresenter(QObject):
         self.macro_execution_coordinator = dependencies.macro_execution_coordinator
         self.logging_coordinator = dependencies.logging_coordinator
         self.shutdown_coordinator = dependencies.shutdown_coordinator
-        self.port_presenter = dependencies.port_presenter
         self.file_presenter = dependencies.file_presenter
         self.manual_control_presenter = dependencies.manual_control_presenter
 
@@ -95,13 +93,6 @@ class MainPresenter(QObject):
         self.file_presenter.transfer_error.connect(self.on_file_transfer_error)
 
         self.view.close_requested.connect(self.on_close_requested)
-        self.view.shortcut_connect_requested.connect(self.on_shortcut_connect)
-        self.view.shortcut_disconnect_requested.connect(self.on_shortcut_disconnect)
-        self.view.shortcut_clear_requested.connect(self.on_shortcut_clear)
-        self.view.file_transfer_dialog_opened.connect(
-            self.file_presenter.on_file_transfer_dialog_opened
-        )
-
         self.manual_control_presenter.send_error.connect(self._on_manual_send_error)
 
     def _log_info(self, message: str) -> None:
@@ -203,12 +194,3 @@ class MainPresenter(QObject):
 
     def on_file_transfer_error(self, event: FileErrorEvent) -> None:
         self._log_error(f"File Transfer Error: {event.message}")
-
-    def on_shortcut_connect(self) -> None:
-        self.port_presenter.connect_current_port()
-
-    def on_shortcut_disconnect(self) -> None:
-        self.port_presenter.disconnect_current_port()
-
-    def on_shortcut_clear(self) -> None:
-        self.port_presenter.clear_log_current_port()
