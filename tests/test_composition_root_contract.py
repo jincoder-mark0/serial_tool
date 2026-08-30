@@ -4,104 +4,72 @@ import inspect
 import main
 from application_bootstrap import ApplicationBootstrapper
 from presenter.lifecycle_manager import AppLifecycleManager
-from presenter.main_presenter import MainPresenter
+from presenter.main_presenter import MainPresenter, MainPresenterDependencies
 from presenter.port_presenter import PortPresenter
 
 
-def test_main_builds_and_injects_runtime_components():
+def test_main_builds_and_injects_presenter_dependency_contract():
     source = inspect.getsource(main.main)
-
     assert "settings_mgr = SettingsManager(resource_path)" in source
     assert "ApplicationBootstrapper(window, settings_mgr).build()" in source
     assert "settings_manager=settings_mgr" in source
-    assert "components=components" in source
+    assert "dependencies=components.main_presenter_dependencies" in source
 
 
 def test_bootstrapper_is_the_concrete_object_graph_owner():
     source = inspect.getsource(ApplicationBootstrapper.build)
-
     for constructor in (
-        "AppLifecycleManager(",
-        "PacketParserManager()",
-        "ConnectionSessionFactory()",
-        "ConnectionController(",
-        "CommandTransmissionService(",
-        "FileTransferManager(",
-        "PortScanManager()",
-        "MacroRunner()",
-        "MacroScriptManager()",
-        "MacroExecutionCoordinator(",
-        "TrafficMonitor()",
-        "LoggingCoordinator(",
-        "StatusCoordinator(",
-        "ShutdownCoordinator(",
-        "PortPresenter(",
-        "MacroPresenter(",
-        "FilePresenter(",
-        "PacketPresenter(",
-        "ManualControlPresenter(",
+        "AppLifecycleManager(", "PacketParserManager()", "ConnectionSessionFactory()",
+        "ConnectionController(", "CommandTransmissionService(", "FileTransferManager(",
+        "PortScanManager()", "MacroRunner()", "MacroScriptManager()",
+        "MacroExecutionCoordinator(", "TrafficMonitor()", "LoggingCoordinator(",
+        "StatusCoordinator(", "ShutdownCoordinator(", "PortPresenter(",
+        "MacroPresenter(", "FilePresenter(", "PacketPresenter(",
+        "ManualControlPresenter(", "MainPresenterDependencies(",
     ):
         assert constructor in source
-
     assert "DataTrafficHandler(self._view, traffic_monitor)" in source
     assert "status_coordinator.start()" in source
 
 
 def test_bootstrapper_restores_view_before_view_aware_presenters():
     source = inspect.getsource(ApplicationBootstrapper.build)
-
     restore = source.index("lifecycle_manager.initialize_view()")
     assert restore < source.index("port_presenter = PortPresenter(")
     assert restore < source.index("macro_presenter = MacroPresenter(")
     assert restore < source.index("manual_control_presenter = ManualControlPresenter(")
 
 
-def test_main_presenter_requires_explicit_runtime_graph():
+def test_main_presenter_owns_its_dependency_contract():
     source = inspect.getsource(MainPresenter)
     signature = inspect.signature(MainPresenter.__init__)
-
     assert "ApplicationBootstrapper" not in source
+    assert "ApplicationComponents" not in source
     assert "SettingsManager()" not in source
     assert signature.parameters["settings_manager"].default is inspect.Parameter.empty
-    assert signature.parameters["components"].default is inspect.Parameter.empty
+    assert signature.parameters["dependencies"].default is inspect.Parameter.empty
+    assert inspect.isclass(MainPresenterDependencies)
 
 
 def test_main_presenter_does_not_construct_concrete_runtime_components():
     source = inspect.getsource(MainPresenter)
-
     for constructor in (
-        "AppLifecycleManager(",
-        "ConnectionController(",
-        "PacketParserManager(",
-        "ConnectionSessionFactory(",
-        "CommandTransmissionService(",
-        "FileTransferManager(",
-        "PortScanManager(",
-        "MacroRunner(",
-        "MacroScriptManager(",
-        "MacroExecutionCoordinator(",
-        "TrafficMonitor(",
-        "LoggingCoordinator(",
-        "StatusCoordinator(",
-        "ShutdownCoordinator(",
-        "PortPresenter(",
-        "MacroPresenter(",
-        "FilePresenter(",
-        "PacketPresenter(",
+        "AppLifecycleManager(", "ConnectionController(", "PacketParserManager(",
+        "ConnectionSessionFactory(", "CommandTransmissionService(", "FileTransferManager(",
+        "PortScanManager(", "MacroRunner(", "MacroScriptManager(",
+        "MacroExecutionCoordinator(", "TrafficMonitor(", "LoggingCoordinator(",
+        "StatusCoordinator(", "ShutdownCoordinator(", "PortPresenter(",
+        "MacroPresenter(", "FilePresenter(", "PacketPresenter(",
         "ManualControlPresenter(",
     ):
         assert constructor not in source
-
-    assert "self._apply_components(components)" in source
-    assert "self.lifecycle_manager = components.lifecycle_manager" in source
-    assert "self.logging_coordinator = components.logging_coordinator" in source
-    assert "self.shutdown_coordinator = components.shutdown_coordinator" in source
-
+    assert "self._apply_dependencies(dependencies)" in source
+    assert "self.lifecycle_manager = dependencies.lifecycle_manager" in source
+    assert "self.logging_coordinator = dependencies.logging_coordinator" in source
+    assert "self.shutdown_coordinator = dependencies.shutdown_coordinator" in source
     for internal_owner in (
-        "self.file_transfer_manager =",
-        "self.port_scan_manager =",
-        "self.macro_script_manager =",
-        "self.traffic_monitor =",
+        "self.file_transfer_manager =", "self.port_scan_manager =",
+        "self.macro_script_manager =", "self.traffic_monitor =",
         "self.status_coordinator =",
     ):
         assert internal_owner not in source
