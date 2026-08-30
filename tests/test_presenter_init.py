@@ -1,9 +1,10 @@
 """
 MainPresenter 초기화/배선 회귀 테스트.
 
-Production과 동일하게 ApplicationBootstrapper가 runtime component를 조립하고
-MainPresenter에는 완성된 component graph를 명시적으로 주입합니다.
+Production과 동일하게 ApplicationBootstrapper가 View state를 먼저 복원하고 runtime
+component를 조립한 뒤 MainPresenter에는 완성된 graph를 명시적으로 주입합니다.
 """
+import inspect
 from unittest.mock import MagicMock, patch
 
 import pytest
@@ -68,6 +69,7 @@ class TestMainPresenterInit:
         assert presenter.macro_execution_coordinator is not None
         assert presenter.traffic_monitor is not None
         assert presenter.data_handler is not None
+        assert presenter.logging_coordinator is not None
         assert not hasattr(presenter, "event_router")
 
         assert presenter.port_presenter is not None
@@ -78,34 +80,23 @@ class TestMainPresenterInit:
         assert presenter.lifecycle_manager is not None
         assert presenter.shutdown_coordinator is not None
 
-    def test_lifecycle_has_no_reverse_main_presenter_orchestration(
-        self, mock_main_window, mock_settings_manager
-    ):
-        components = ApplicationBootstrapper(
-            mock_main_window,
-            mock_settings_manager,
-        ).build()
+    def test_bootstrapper_restores_view_before_presenter_construction(self):
+        source = inspect.getsource(ApplicationBootstrapper.build)
 
-        with patch("presenter.main_presenter.AppLifecycleManager") as lifecycle_cls:
-            lifecycle = lifecycle_cls.return_value
-            lifecycle.create_manual_control_state.return_value = MagicMock()
-            lifecycle.create_status_timer.return_value = MagicMock()
+        restore_pos = source.index("lifecycle_manager.initialize_view()")
+        port_presenter_pos = source.index("port_presenter = PortPresenter(")
+        macro_presenter_pos = source.index("macro_presenter = MacroPresenter(")
 
-            MainPresenter(
-                mock_main_window,
-                settings_manager=mock_settings_manager,
-                components=components,
-            )
+        assert restore_pos < port_presenter_pos
+        assert restore_pos < macro_presenter_pos
+        assert "AppLifecycleManager(" in source
 
-        lifecycle_cls.assert_called_once_with(
-            mock_main_window,
-            mock_settings_manager,
-        )
-        lifecycle.initialize_view.assert_called_once()
-        lifecycle.create_manual_control_state.assert_called_once()
-        lifecycle.create_status_timer.assert_called_once()
-        lifecycle.log_initialized.assert_called_once()
-        assert not hasattr(lifecycle, "initialize_app") or not lifecycle.initialize_app.called
+    def test_main_presenter_does_not_create_or_initialize_lifecycle_manager(self):
+        source = inspect.getsource(MainPresenter)
+
+        assert "AppLifecycleManager(" not in source
+        assert "initialize_view()" not in source
+        assert "components.lifecycle_manager" in source
 
     def test_signal_connections(self, mock_main_window, mock_settings_manager):
         presenter = _build_presenter(mock_main_window, mock_settings_manager)
