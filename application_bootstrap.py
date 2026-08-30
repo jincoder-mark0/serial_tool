@@ -1,8 +1,9 @@
 """
 SerialTool application composition root helper.
 
-이 모듈만 View/Presenter/Model의 구체 클래스를 동시에 알고 런타임 객체 그래프를
-조립합니다. MainPresenter는 생성 규칙 대신 조립된 component 사용에 집중합니다.
+View 상태 복원과 구체 runtime object graph 생성을 한 곳에서 순서대로 수행합니다.
+Port/Macro Presenter가 View collection을 관찰하기 전에 저장된 탭/패널 상태가 먼저
+복원되어야 하므로 `AppLifecycleManager.initialize_view()`를 build의 첫 단계로 둡니다.
 """
 from dataclasses import dataclass
 
@@ -18,6 +19,7 @@ from model.port_scan_manager import PortScanManager
 from model.traffic_monitor import TrafficMonitor
 from presenter.data_handler import DataTrafficHandler
 from presenter.file_presenter import FilePresenter
+from presenter.lifecycle_manager import AppLifecycleManager
 from presenter.logging_coordinator import LoggingCoordinator
 from presenter.macro_execution_coordinator import MacroExecutionCoordinator
 from presenter.macro_presenter import MacroPresenter
@@ -29,8 +31,9 @@ from view.main_window import MainWindow
 
 @dataclass(frozen=True)
 class ApplicationComponents:
-    """MainPresenter가 사용하는 구체 runtime component 집합."""
+    """MainPresenter가 사용하는 완성된 runtime component 집합."""
 
+    lifecycle_manager: AppLifecycleManager
     connection_controller: ConnectionController
     command_transmission_service: CommandTransmissionService
     file_transfer_manager: FileTransferManager
@@ -49,14 +52,22 @@ class ApplicationComponents:
 
 
 class ApplicationBootstrapper:
-    """구체 runtime object graph를 한 곳에서 생성합니다."""
+    """저장 상태 복원 후 구체 runtime object graph를 생성합니다."""
 
     def __init__(self, view: MainWindow, settings_manager: SettingsManager) -> None:
         self._view = view
         self._settings_manager = settings_manager
 
     def build(self) -> ApplicationComponents:
-        """의존 순서에 따라 Model/Service/Presenter를 생성하고 정적 배선을 구성합니다."""
+        """View restore → Model/Service → Presenter 순으로 application graph를 조립합니다."""
+        # 1. View collection을 소비하는 Presenter보다 상태 복원이 반드시 먼저입니다.
+        lifecycle_manager = AppLifecycleManager(
+            self._view,
+            self._settings_manager,
+        )
+        lifecycle_manager.initialize_view()
+
+        # 2. Model / application services
         packet_parser_manager = PacketParserManager()
         connection_session_factory = ConnectionSessionFactory()
         connection_controller = ConnectionController(
@@ -81,6 +92,7 @@ class ApplicationBootstrapper:
         data_handler = DataTrafficHandler(self._view, traffic_monitor)
         logging_coordinator = LoggingCoordinator(self._view.port_view)
 
+        # 3. Presenter — 복원 완료된 View를 기준으로 초기 collection을 연결합니다.
         port_presenter = PortPresenter(
             self._view.port_view,
             connection_controller,
@@ -110,6 +122,7 @@ class ApplicationBootstrapper:
         )
 
         return ApplicationComponents(
+            lifecycle_manager=lifecycle_manager,
             connection_controller=connection_controller,
             command_transmission_service=command_transmission_service,
             file_transfer_manager=file_transfer_manager,
