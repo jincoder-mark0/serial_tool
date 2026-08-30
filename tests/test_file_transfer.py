@@ -34,19 +34,13 @@ def _rts_cts_config(port: str, baudrate: int = 115200) -> PortConfig:
 
 
 class _FakeConnectionController:
+    """FileTransferService가 실제로 사용하는 queue/send 계약만 구현합니다."""
+
     def __init__(self, queue_size: int = 0, send_succeeds: bool = True):
         self.queue_size = queue_size
         self.send_succeeds = send_succeeds
         self.sent_chunks = []
-        self.registered = []
-        self.unregistered = []
         self.queue_size_query_count = 0
-
-    def register_file_transfer(self, port_name, service):
-        self.registered.append(port_name)
-
-    def unregister_file_transfer(self, port_name):
-        self.unregistered.append(port_name)
 
     def get_write_queue_size(self, port_name) -> int:
         self.queue_size_query_count += 1
@@ -118,7 +112,6 @@ def test_missing_file_emits_error_and_failed_completion(qapp, tmp_path):
     assert "not found" in errors[0].message.lower()
     assert len(completed) == 1
     assert completed[0].success is False
-    assert "SOME_PORT" not in controller._active_file_transfers
 
 
 def test_cancel_stops_before_remaining_chunks_and_emits_failed_completion(qapp, tmp_path):
