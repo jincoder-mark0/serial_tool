@@ -12,12 +12,10 @@
 * AppLifecycleManager의 누락 설정 fallback이 같은 창/폰트 기본값을 사용하는지 검증
 * SettingsManager의 버전 값과 defaults.py의 설정 버전이 어긋나지 않는지 검증
 * SerialTransport가 이미 존재하는 timeout/flow-control 정의를 우회하지 않는지 검증
-
-## HOW
-실제 설정 파일이나 GUI를 띄우지 않고 빈 설정/간단한 FakeSettings를 주입해
-각 경로가 반환하는 DTO 값을 직접 비교한다. 구현 상수 우회는 소스 AST가 아니라
-명시적인 모듈 의존성과 런타임 인자를 검사해 주석/문자열 오탐을 피한다.
+* settings schema의 theme/language 허용값이 common enum과 일치하는지 검증
+* ConnectionWorker가 이미 존재하는 sleep 타이밍 상수를 사용하는지 검증
 """
+import inspect
 from unittest.mock import patch
 
 from common.constants import (
@@ -53,9 +51,11 @@ from common.defaults import (
     create_fallback_settings,
 )
 from common.dtos import PortConfig
-from common.enums import SerialFlowControl
+from common.enums import LanguageType, SerialFlowControl, ThemeType
 from core.settings_manager import SettingsManager
+from core.settings_schema import CORE_SETTINGS_SCHEMA
 from core.transport.serial_transport import SerialTransport
+from model.connection_worker import ConnectionWorker
 from presenter.lifecycle_manager import AppLifecycleManager
 from presenter.preferences_coordinator import PreferencesCoordinator
 
@@ -145,3 +145,18 @@ def test_serial_transport_uses_common_timeout_and_flow_control_values():
     assert kwargs["write_timeout"] == WRITE_TIMEOUT_S
     assert kwargs["rtscts"] is True
     assert kwargs["xonxoff"] is False
+
+
+def test_settings_schema_uses_common_theme_and_language_enums():
+    settings_schema = CORE_SETTINGS_SCHEMA["properties"]["settings"]["properties"]
+
+    assert set(settings_schema["theme"]["enum"]) == {item.value for item in ThemeType}
+    assert set(settings_schema["language"]["enum"]) == {item.value for item in LanguageType}
+
+
+def test_connection_worker_uses_common_sleep_timing_constants():
+    """Worker loop가 1/100 같은 magic timing literal을 다시 사용하지 않게 고정한다."""
+    source = inspect.getsource(ConnectionWorker.run)
+
+    assert "msleep(WORKER_IDLE_WAIT_MS)" in source
+    assert "usleep(WORKER_BUSY_WAIT_US)" in source
