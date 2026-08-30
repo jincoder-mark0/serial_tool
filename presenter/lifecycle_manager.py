@@ -1,15 +1,12 @@
 """
-애플리케이션 초기 상태 복원 지원 모듈
+애플리케이션 초기 상태 복원 지원 모듈.
 
-View 초기 상태, 수동 제어 복원 상태, 상태바 타이머 생성만 담당합니다.
-객체 생성/Presenter 배선 순서는 MainPresenter가 소유하며 이 클래스는 MainPresenter의
-private 메서드를 역호출하지 않습니다.
+저장 설정을 MainWindowState/FontConfig/ManualControlState로 변환하고 View에 적용합니다.
+주기 timer나 종료 생명주기는 별도 coordinator가 소유합니다.
 """
-from typing import Any, Callable, Dict
+from typing import Any, Dict
 
-from PyQt5.QtCore import QTimer
-
-from common.constants import ConfigKeys, DEFAULT_MACRO_INTERVAL_MS, STATUS_BAR_UPDATE_INTERVAL_MS
+from common.constants import ConfigKeys, DEFAULT_MACRO_INTERVAL_MS
 from common.defaults import (
     DEFAULT_FIXED_FONT_FAMILY,
     DEFAULT_FIXED_FONT_SIZE,
@@ -80,13 +77,6 @@ class AppLifecycleManager:
                 "auto_tx_interval_ms", DEFAULT_MACRO_INTERVAL_MS
             ),
         )
-
-    def create_status_timer(self, callback: Callable[[], None]) -> QTimer:
-        """상태바 갱신용 QTimer를 생성하고 시작합니다."""
-        timer = QTimer()
-        timer.timeout.connect(callback)
-        timer.start(STATUS_BAR_UPDATE_INTERVAL_MS)
-        return timer
 
     def log_initialized(self) -> None:
         """초기화 완료 메시지를 View의 시스템 로그에 기록합니다."""
