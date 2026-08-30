@@ -17,6 +17,7 @@ from model.macro_script_manager import MacroScriptManager
 from model.packet_parser_manager import PacketParserManager
 from model.port_scan_manager import PortScanManager
 from model.traffic_monitor import TrafficMonitor
+from presenter.control_state_coordinator import ControlStateCoordinator
 from presenter.data_handler import DataTrafficHandler
 from presenter.file_presenter import FilePresenter
 from presenter.lifecycle_manager import AppLifecycleManager
@@ -44,6 +45,7 @@ class ApplicationComponents:
     port_scan_manager: PortScanManager
     macro_script_manager: MacroScriptManager
     settings_coordinator: SettingsCoordinator
+    control_state_coordinator: ControlStateCoordinator
     status_coordinator: StatusCoordinator
 
 
@@ -115,6 +117,12 @@ class ApplicationBootstrapper:
             manual_control_presenter,
             packet_presenter,
         )
+        control_state_coordinator = ControlStateCoordinator(
+            self._view.port_view,
+            connection_controller,
+            manual_control_presenter,
+            macro_presenter,
+        )
 
         # 변하지 않는 runtime topology는 composition root에서 한 번만 배선합니다.
         connection_controller.data_received.connect(data_handler.on_fast_data_received)
@@ -170,5 +178,6 @@ class ApplicationBootstrapper:
             port_scan_manager=port_scan_manager,
             macro_script_manager=macro_script_manager,
             settings_coordinator=settings_coordinator,
+            control_state_coordinator=control_state_coordinator,
             status_coordinator=status_coordinator,
         )
