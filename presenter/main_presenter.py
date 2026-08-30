@@ -58,6 +58,9 @@ class MainPresenter(QObject):
         self.settings_manager = SettingsManager()
         self.status_timer: Optional[QTimer] = None
         self._sys_log_writer: Optional[TextLogWriter] = None
+        # MacroRunner worker thread에서는 QWidget을 조회하지 않는다.
+        # 반복 시작 직전 UI thread에서 선택 포트를 문자열로 스냅샷한다.
+        self._macro_target_port: Optional[str] = None
 
         self.lifecycle_manager = AppLifecycleManager(self)
         self.lifecycle_manager.initialize_app()
@@ -178,7 +181,6 @@ class MainPresenter(QObject):
         if self.connection_controller.has_active_connection:
             self.connection_controller.close_connection()
 
-        # Worker 종료 직전 queued RX를 UI thread에 전달한 뒤 logger를 닫아야 한다(S-059).
         QCoreApplication.processEvents()
         data_logger_manager.stop_all()
         logger.info("Shutdown completed.")
@@ -231,8 +233,10 @@ class MainPresenter(QObject):
         port_name = event.port
 
         if self.macro_runner.isRunning():
-            target_port = self.port_presenter.get_active_port_name()
-            if not self.macro_runner.broadcast_enabled and target_port == port_name:
+            if (
+                not self.macro_runner.broadcast_enabled
+                and self._macro_target_port == port_name
+            ):
                 self._notify_macro_error(
                     f"Target port '{port_name}' closed. Macro stopped."
                 )
@@ -272,6 +276,9 @@ class MainPresenter(QObject):
             )
 
     def on_macro_started(self) -> None:
+        # EventBus publish는 MacroRunner.start()가 QThread.start()를 호출하기 전에
+        # UI thread에서 발생한다. 이 시점에만 View를 읽고 문자열을 저장한다.
+        self._macro_target_port = self.port_presenter.get_active_port_name()
         self._log_info("Macro started")
         self.view.show_status_message(
             language_manager.get_text("main_status_msg_macro_running"),
@@ -279,6 +286,7 @@ class MainPresenter(QObject):
         )
 
     def on_macro_finished(self) -> None:
+        self._macro_target_port = None
         self._log_success("Macro finished")
         self.view.show_status_message(
             language_manager.get_text("main_status_msg_macro_finished"),
@@ -292,16 +300,8 @@ class MainPresenter(QObject):
         self.view.show_status_message(msg, 5000)
 
     def deliver_macro_command(self, manual_command: ManualCommand) -> MacroSendResult:
-        """
-        매크로 스레드에서 호출되는 동기 전송 경로.
-
-        UI 객체를 만지지 않고 CommandTransmissionService만 호출합니다.
-        """
-        active_port = (
-            None
-            if manual_command.broadcast_enabled
-            else self.port_presenter.get_active_port_name()
-        )
+        """Worker thread에서 View 접근 없이 스냅샷 대상에 명령을 전송합니다."""
+        active_port = None if manual_command.broadcast_enabled else self._macro_target_port
         result = self.command_transmission_service.send(
             manual_command,
             active_port=active_port,
@@ -313,7 +313,16 @@ class MainPresenter(QObject):
         )
 
     def on_macro_send_requested(self, manual_command: ManualCommand) -> None:
-        result = self.deliver_macro_command(manual_command)
+        """개별 Row Send는 UI thread이므로 현재 포트를 즉시 조회해 전송합니다."""
+        active_port = (
+            None
+            if manual_command.broadcast_enabled
+            else self.port_presenter.get_active_port_name()
+        )
+        result = self.command_transmission_service.send(
+            manual_command,
+            active_port=active_port,
+        )
         if not result.success:
             self._notify_macro_error(result.message)
             return
