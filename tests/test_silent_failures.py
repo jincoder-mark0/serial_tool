@@ -159,6 +159,7 @@ class TestMacroFinishedNotificationConsistency:
 
         qapp.processEvents()
         assert finished_spy.call_count == 1
+        assert runner.last_run_succeeded is True
 
     def test_manual_stop_emits_macro_finished_signal_exactly_once(self, qapp, qtbot):
         runner = MacroRunner()
@@ -176,6 +177,7 @@ class TestMacroFinishedNotificationConsistency:
         qapp.processEvents()
         assert finished_spy.call_count == 1
         assert not runner.isRunning()
+        assert runner.last_run_succeeded is False
 
     def test_start_then_immediate_stop_does_not_deadlock(self, qapp, qtbot):
         runner = MacroRunner()
@@ -192,3 +194,19 @@ class TestMacroFinishedNotificationConsistency:
         qapp.processEvents()
         assert finished_spy.call_count == 1
         assert not runner.isRunning()
+        assert runner.last_run_succeeded is False
+
+    def test_start_while_running_is_rejected_without_replacing_state(self, qapp, qtbot):
+        runner = MacroRunner()
+        runner.load_macro([MacroEntry(enabled=True, command="CMD", delay_ms=5000)])
+        runner.set_send_handler(lambda _cmd: MacroSendResult(True))
+        errors = []
+        runner.error_occurred.connect(errors.append)
+
+        runner.start(loop_count=0)
+        qtbot.waitUntil(runner.isRunning, timeout=1000)
+        runner.start(loop_count=2)
+
+        assert errors
+        assert "already running" in errors[-1].message
+        runner.stop()

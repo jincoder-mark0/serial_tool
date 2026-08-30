@@ -116,6 +116,7 @@ class AppLifecycleManager:
                     "ports": get_val(ConfigKeys.PORTS_TABS_STATE, []),
                 },
                 right_section_state={
+                    "current_tab_index": get_val(ConfigKeys.RIGHT_TAB_INDEX, 0),
                     "macro_panel": {
                         "commands": get_val(ConfigKeys.MACRO_COMMANDS, []),
                         "control_state": get_val(ConfigKeys.MACRO_CONTROL_STATE, {}),

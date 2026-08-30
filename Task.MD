@@ -1,9 +1,9 @@
 # Task.MD — SerialTool 현재 작업 보드
 
-> 최종 갱신: 2026-08-30  
-> 작업 브랜치: `refactor/presenter-view-boundary`  
-> 안정 기준: `main`  
-> 리팩토링 보고서: [`doc/refactoring_validation_report_20260830.md`](doc/refactoring_validation_report_20260830.md)  
+> 최종 갱신: 2026-08-30
+> 작업 브랜치: `refactor/presenter-view-boundary`
+> 안정 기준: `main`
+> 리팩토링 보고서: [`doc/refactoring_validation_report_20260830.md`](doc/refactoring_validation_report_20260830.md)
 > 에이전트 규칙: [`AGENTS.md`](AGENTS.md)
 
 이 문서는 **현재 완료된 것과 앞으로 해야 할 것**만 관리한다. 과거 Phase/S-xxx 상세 이력은
@@ -31,7 +31,7 @@
 ```
 
 2026-08-30 로컬 검증에서 전체 pytest/ruff와 저장소 정합 검사는 Green을 확인했다.
-PR GitHub Actions와 `main` 대비 전체 diff 감사 전에는 merge 준비 완료로 선언하지 않는다.
+`main` 대비 전체 diff 감사와 마지막 구조 교정은 완료했다. PR GitHub Actions 전에는 merge 준비 완료로 선언하지 않는다.
 
 ---
 
@@ -238,7 +238,7 @@ python tools/check_task_boards.py
 architecture contract: 33 passed
 lifecycle/data-preservation: 45 passed
 core feature: 75 passed
-full pytest: 622 passed, 0 failed, 0 skipped, 2 dependency warnings
+full pytest: 633 passed, 0 failed, 0 skipped, 2 dependency warnings
 ruff: 0 errors
 language keys: success (dynamic expression warnings 7건)
 task board: 78 historical tasks consistent
@@ -319,8 +319,8 @@ task board: 78 historical tasks consistent
 - [x] full pytest Green
 - [x] language/task consistency Green
 - [x] `doc/CHANGELOG.md` 최종 기록
-- [ ] README/AGENTS/CLAUDE/RULES/doc 최종 정합 확인
-- [ ] `main` 대비 최종 diff 재감사
+- [x] README/AGENTS/CLAUDE/RULES/doc 최종 정합 확인
+- [x] `main` 대비 최종 diff 재감사
 - [ ] PR 생성/업데이트
 - [ ] GitHub Actions CI Green
 - [ ] Mock/LOOPBACK/실기기 검증 범위 기록

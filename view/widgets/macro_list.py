@@ -779,9 +779,6 @@ class MacroListWidget(QWidget):
         Args:
             state (list): Command 목록 데이터 (dict list).
         """
-        if not state:
-            return
-
         self.import_macros(state)
 
     def set_all_checked(self, checked: bool) -> None:

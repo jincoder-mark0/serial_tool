@@ -4,6 +4,30 @@
 
 ---
 
+### main 전체 diff 감사 및 merge blocker 교정 (2026-08-30)
+
+- 이전 Worker의 queued 종료 signal이 동일 포트의 새 연결 registry를 삭제할 수 있던
+  race를 Worker identity 검사로 차단했습니다.
+- USB Serial 분리/read 오류를 빈 데이터로 숨기지 않고 Worker 오류/종료 경로로
+  전파하도록 수정했습니다.
+- DataLogger write/stop 및 Loopback write/close 경쟁 구간을 lock으로 보호했습니다.
+- 잘못된 parser preference 타입은 Raw parser로 안전하게 fallback하고, newline
+  기본값을 UI enum의 canonical `LF`로 통일했습니다.
+- `ApplicationComponents`가 모든 runtime owner에 명시적인 strong reference를
+  유지하도록 완전한 composition graph를 반환합니다.
+- Macro 실행 중 재시작/목록 교체를 거부하고, 중단/실패를 성공 완료로 표시하지
+  않도록 실행 결과 의미를 분리했습니다.
+- 빈 Macro script load, 우측 탭 저장/복원, Manual View state key, 빈 탭 삭제 후
+  control refresh, Preferences font size 즉시 반영을 수정했습니다.
+- 언어 키 검사 중 Python parse 오류를 CI 실패로 처리하고 관련 회귀 테스트를
+  추가했습니다.
+
+전체 diff 감사 교정 후 Python 3.13 로컬 결과는 `633 passed`, Ruff 0건,
+language/task-board gate Green입니다. Python 3.11 PR CI와 실제 PyInstaller 산출물
+smoke test는 별도 merge gate/잔여 리스크로 유지합니다.
+
+---
+
 ### Presenter/View 리팩토링 로컬 검증 및 마지막 교정 (2026-08-30)
 
 - stale API/constructor 감사에서 남아 있던 `controller.parsers` 테스트 접근을

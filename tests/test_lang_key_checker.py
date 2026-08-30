@@ -134,6 +134,14 @@ class TestKeyUsageCheck:
         assert checker.run_check() is True
         assert checker.has_error is False
 
+    def test_source_syntax_error_fails_integrity_check(self, lang_dir, code_root):
+        _write_lang_files(lang_dir, {"btn_ok": "OK"}, {"btn_ok": "확인"})
+        _write_source(code_root, "view/broken.py", "def broken(:\n")
+
+        checker = LanguageIntegrityChecker(str(lang_dir), code_root=code_root)
+        assert checker.run_check() is False
+        assert checker.has_error is True
+
     def test_unrelated_get_text_method_on_other_object_ignored(self, lang_dir, code_root):
         """`get_text`라는 이름이라도 언어 키 조회가 아닐 수 있음 - 첫 인자만 보므로
         오탐 가능성이 있지만, 리터럴이 실재 안 하면 여전히 실패해야 정책이 일관된다.

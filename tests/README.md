@@ -2,7 +2,7 @@
 
 이 문서는 SerialTool의 pytest/ruff 실행 순서와 결과 해석 규칙을 설명합니다.
 
-> 현재 리팩토링 검증 체크리스트: [`../Task.MD`](../Task.MD)  
+> 현재 리팩토링 검증 체크리스트: [`../Task.MD`](../Task.MD)
 > 구조 변경 상세: [`../doc/refactoring_validation_report_20260830.md`](../doc/refactoring_validation_report_20260830.md)
 
 현재 `refactor/presenter-view-boundary` 브랜치는 대규모 constructor/API 변경 후 전체 검증 단계입니다.

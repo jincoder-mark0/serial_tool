@@ -1,9 +1,9 @@
 # Presenter/View Boundary 리팩토링 현황 및 검증 계획
 
-> 기준일: 2026-08-30  
-> 기준 브랜치: `refactor/presenter-view-boundary`  
-> 비교 기준: `main` (`c2963eea7fdab64dfd40b1d5bcd4cbfc006ecb92`)  
-> GitHub compare 기준: **277 commits ahead / 0 behind**
+> 기준일: 2026-08-30
+> 기준 브랜치: `refactor/presenter-view-boundary`
+> 비교 기준: `main` (`c2963eea7fdab64dfd40b1d5bcd4cbfc006ecb92`)
+> 최종 로컬 감사 기준: **280 commits ahead / 0 behind**
 
 ---
 
@@ -28,7 +28,7 @@
 
 ## 2. `main` 대비 변경 규모 요약
 
-GitHub compare 기준 현재 브랜치는 `main`보다 **277 commits ahead, 0 behind**이다.
+최종 로컬 감사 기준 현재 브랜치는 `main`보다 **280 commits ahead, 0 behind**이다.
 
 변경량이 큰 주요 파일은 다음과 같다.
 
@@ -990,19 +990,19 @@ logger를 먼저 닫아 테스트를 통과시키는 수정은 금지한다.
 
 리팩토링 검증 완료 조건은 다음을 모두 만족하는 것이다.
 
-- [ ] `ruff check .` 0 errors
-- [ ] `python tools/check_language_keys.py` 성공
-- [ ] `python tools/check_task_boards.py` 성공
-- [ ] 구조 contract tests 전체 성공
-- [ ] 전체 `python -m pytest -q` 성공
-- [ ] QThread/QTimer 종료 warning 없음
-- [ ] 테스트 종료 시 background thread leak 없음
-- [ ] `EventRouter` production 참조 0건
-- [ ] MainPresenter를 Service Locator처럼 접근하는 테스트 0건
-- [ ] Presenter 내부 `SettingsManager()` / manager fallback 생성 0건
-- [ ] View → Model 직접 import 0건
-- [ ] Model → Presenter/View import 0건
-- [ ] shutdown logger/data-loss 회귀 테스트 성공
+- [x] `ruff check .` 0 errors
+- [x] `python tools/check_language_keys.py` 성공
+- [x] `python tools/check_task_boards.py` 성공
+- [x] 구조 contract tests 전체 성공
+- [x] 전체 `python -m pytest -q` 성공 (`633 passed`)
+- [x] QThread/QTimer 종료 warning 없음
+- [x] 테스트 종료 시 background thread leak 없음
+- [x] `EventRouter` production 참조 0건
+- [x] MainPresenter를 Service Locator처럼 접근하는 테스트 0건
+- [x] Presenter 내부 `SettingsManager()` / manager fallback 생성 0건
+- [x] View → Model 직접 import 0건
+- [x] Model → Presenter/View import 0건
+- [x] shutdown logger/data-loss 회귀 테스트 성공
 - [ ] PR CI Windows test + lint + language + task-board gate 성공
 
 ---
@@ -1039,7 +1039,7 @@ logger를 먼저 닫아 테스트를 통과시키는 수정은 금지한다.
 
 ## 15. 브랜치 history
 
-현재 브랜치는 `main` 대비 **277 commits ahead / 0 behind**이다.
+현재 브랜치는 `main` 대비 **280 commits ahead / 0 behind**이다.
 
 리팩토링 과정의 intermediate/revert/contract-test 커밋이 많이 포함되어 있으므로 PR merge 전 history 정리가 필요하다.
 

@@ -1,8 +1,9 @@
 """Production composition root / dependency injection 회귀 테스트."""
 import inspect
+from dataclasses import fields
 
 import main
-from application_bootstrap import ApplicationBootstrapper
+from application_bootstrap import ApplicationBootstrapper, ApplicationComponents
 from presenter.lifecycle_manager import AppLifecycleManager
 from presenter.main_presenter import MainPresenter, MainPresenterDependencies
 from presenter.port_presenter import PortPresenter
@@ -49,6 +50,25 @@ def test_bootstrapper_is_the_complete_object_graph_owner():
     assert "DataTrafficHandler(self._view, traffic_monitor)" in source
     assert "status_coordinator.start()" in source
     assert "main_presenter=main_presenter" in source
+
+
+def test_application_components_keeps_strong_references_to_runtime_owners():
+    component_names = {field.name for field in fields(ApplicationComponents)}
+    assert {
+        "lifecycle_manager",
+        "packet_parser_manager",
+        "connection_session_factory",
+        "command_transmission_service",
+        "macro_runner",
+        "traffic_monitor",
+        "port_presenter",
+        "macro_presenter",
+        "file_presenter",
+        "manual_control_presenter",
+        "macro_execution_coordinator",
+        "logging_coordinator",
+        "shutdown_coordinator",
+    } <= component_names
 
 
 def test_bootstrapper_restores_state_in_safe_order():

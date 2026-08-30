@@ -118,6 +118,7 @@ class TestApplyWindowState:
         assert mock_settings_manager.get(ConfigKeys.MACRO_CONTROL_STATE) == {
             "broadcast": True
         }
+        assert mock_settings_manager.get(ConfigKeys.RIGHT_TAB_INDEX) == 0
 
     def test_settings_path_strings_are_not_expected_as_view_keys(
         self,

@@ -39,14 +39,27 @@ class ApplicationComponents:
     """Composition root가 수명을 소유하는 완성된 runtime graph."""
 
     main_presenter: MainPresenter
+    lifecycle_manager: AppLifecycleManager
+    packet_parser_manager: PacketParserManager
+    connection_session_factory: ConnectionSessionFactory
     connection_controller: ConnectionController
+    command_transmission_service: CommandTransmissionService
+    macro_runner: MacroRunner
+    traffic_monitor: TrafficMonitor
     data_handler: DataTrafficHandler
     file_transfer_manager: FileTransferManager
     port_scan_manager: PortScanManager
     macro_script_manager: MacroScriptManager
+    port_presenter: PortPresenter
+    macro_presenter: MacroPresenter
+    file_presenter: FilePresenter
     packet_presenter: PacketPresenter
+    manual_control_presenter: ManualControlPresenter
+    macro_execution_coordinator: MacroExecutionCoordinator
+    logging_coordinator: LoggingCoordinator
     settings_coordinator: SettingsCoordinator
     control_state_coordinator: ControlStateCoordinator
+    shutdown_coordinator: ShutdownCoordinator
     status_coordinator: StatusCoordinator
 
 
@@ -191,13 +204,26 @@ class ApplicationBootstrapper:
 
         return ApplicationComponents(
             main_presenter=main_presenter,
+            lifecycle_manager=lifecycle_manager,
+            packet_parser_manager=packet_parser_manager,
+            connection_session_factory=connection_session_factory,
             connection_controller=connection_controller,
+            command_transmission_service=command_transmission_service,
+            macro_runner=macro_runner,
+            traffic_monitor=traffic_monitor,
             data_handler=data_handler,
             file_transfer_manager=file_transfer_manager,
             port_scan_manager=port_scan_manager,
             macro_script_manager=macro_script_manager,
+            port_presenter=port_presenter,
+            macro_presenter=macro_presenter,
+            file_presenter=file_presenter,
             packet_presenter=packet_presenter,
+            manual_control_presenter=manual_control_presenter,
+            macro_execution_coordinator=macro_execution_coordinator,
+            logging_coordinator=logging_coordinator,
             settings_coordinator=settings_coordinator,
             control_state_coordinator=control_state_coordinator,
+            shutdown_coordinator=shutdown_coordinator,
             status_coordinator=status_coordinator,
         )

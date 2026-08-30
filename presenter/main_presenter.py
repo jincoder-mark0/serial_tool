@@ -135,6 +135,8 @@ class MainPresenter(QObject):
         )
 
     def on_macro_finished(self) -> None:
+        if not self.macro_runner.last_run_succeeded:
+            return
         self._log_success("Macro finished")
         self.view.show_status_message(
             language_manager.get_text("main_status_msg_macro_finished"),

@@ -229,7 +229,7 @@ class MainLeftSection(QWidget):
                 port_states.append(widget.get_state())
 
         return {
-            "manual_control_panel": manual_state,
+            "manual_control": manual_state,
             "ports": port_states,
         }
 

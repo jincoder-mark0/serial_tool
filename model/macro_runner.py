@@ -48,6 +48,7 @@ class MacroRunner(QThread):
         self._expect_matcher: Optional[ExpectMatcher] = None
         self._expect_found = False
         self._send_handler: Optional[Callable[[ManualCommand], MacroSendResult]] = None
+        self._last_run_succeeded = False
 
     def set_send_handler(
         self, handler: Optional[Callable[[ManualCommand], MacroSendResult]]
@@ -55,6 +56,11 @@ class MacroRunner(QThread):
         self._send_handler = handler
 
     def load_macro(self, entries: List[Tuple[int, MacroEntry] | MacroEntry]) -> None:
+        if self.isRunning():
+            self.error_occurred.emit(
+                MacroErrorEvent(message="Cannot replace macro entries while running.")
+            )
+            return
         self._entries = [
             item if isinstance(item, tuple) else (index, item)
             for index, item in enumerate(entries)
@@ -67,11 +73,15 @@ class MacroRunner(QThread):
         broadcast_enabled: bool = False,
         stop_on_error: bool = True,
     ) -> None:
+        if self.isRunning():
+            self.error_occurred.emit(MacroErrorEvent(message="Macro is already running."))
+            return
         if not self._entries:
             self.error_occurred.emit(MacroErrorEvent(message="No macro entries loaded."))
             return
 
         self._mutex.lock()
+        self._last_run_succeeded = True
         self._is_running = True
         self._is_paused = False
         self._loop_count = loop_count
@@ -84,6 +94,7 @@ class MacroRunner(QThread):
         super().start()
 
     def stop(self) -> None:
+        self._last_run_succeeded = False
         self._stop_internal(reason="User stopped macro")
         self.wait()
 
@@ -207,6 +218,7 @@ class MacroRunner(QThread):
                         delay = entry.delay_ms if entry.delay_ms > 0 else 10
                         self._interruptible_sleep(delay)
                     else:
+                        self._last_run_succeeded = False
                         error_event = MacroErrorEvent(message=error_msg, row_index=row_idx)
                         self.error_occurred.emit(error_event)
                         if self.stop_on_error:
@@ -219,6 +231,7 @@ class MacroRunner(QThread):
                         self._interruptible_sleep(100)
 
                 except Exception as exc:
+                    self._last_run_succeeded = False
                     logger.error(f"Critical macro execution error at row {row_idx}: {exc}")
                     self.error_occurred.emit(
                         MacroErrorEvent(message=str(exc), row_index=row_idx)
@@ -231,6 +244,11 @@ class MacroRunner(QThread):
 
         self._stop_internal()
         self.macro_finished.emit()
+
+    @property
+    def last_run_succeeded(self) -> bool:
+        """직전 실행이 오류나 외부 중단 없이 끝났는지 반환합니다."""
+        return self._last_run_succeeded
 
     def _check_running(self) -> bool:
         self._mutex.lock()

@@ -85,9 +85,10 @@ class SerialTransport(BaseTransport):
 
     def close(self) -> None:
         """시리얼 포트 닫기 및 리소스 해제"""
-        if self._serial and self._serial.is_open:
-            self._serial.close()
+        serial_port = self._serial
         self._serial = None
+        if serial_port and serial_port.is_open:
+            serial_port.close()
 
     def is_open(self) -> bool:
         """
@@ -106,16 +107,10 @@ class SerialTransport(BaseTransport):
             size (int): 읽을 최대 바이트 수
 
         Returns:
-            bytes: 읽은 데이터 (에러 시 빈 bytes)
+            bytes: 읽은 데이터
         """
         if self.is_open():
-            try:
-                return self._serial.read(size)
-            except serial.SerialException:
-                # 치명적인 에러 (연결 끊김 등)
-                return b""
-            except Exception:
-                return b""
+            return self._serial.read(size)
         return b""
 
     def write(self, data: bytes) -> None:
@@ -149,15 +144,10 @@ class SerialTransport(BaseTransport):
         수신 버퍼에 대기 중인 바이트 수 반환
 
         Returns:
-            int: 대기 중인 바이트 수 (에러 시 0)
+            int: 대기 중인 바이트 수
         """
         if self.is_open():
-            try:
-                return self._serial.in_waiting
-            except serial.SerialException:
-                return 0
-            except Exception:
-                return 0
+            return self._serial.in_waiting
         return 0
 
     def set_broadcast(self, state: bool) -> None:

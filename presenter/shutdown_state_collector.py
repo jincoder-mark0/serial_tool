@@ -16,6 +16,7 @@ class ShutdownStateCollector:
     _VIEW_MANUAL_KEY = "manual_control"
     _VIEW_PORTS_KEY = "ports"
     _VIEW_MACRO_PANEL_KEY = "macro_panel"
+    _VIEW_RIGHT_TAB_KEY = "current_tab_index"
     _VIEW_MACRO_COMMANDS_KEY = "commands"
     _VIEW_MACRO_CONTROL_KEY = "control_state"
 
@@ -67,6 +68,10 @@ class ShutdownStateCollector:
             settings.set(ConfigKeys.PORTS_TABS_STATE, port_states)
 
         right_state = state.right_section_state or {}
+        right_tab_index = right_state.get(cls._VIEW_RIGHT_TAB_KEY)
+        if right_tab_index is not None:
+            settings.set(ConfigKeys.RIGHT_TAB_INDEX, right_tab_index)
+
         macro_panel_state = right_state.get(cls._VIEW_MACRO_PANEL_KEY)
         if isinstance(macro_panel_state, dict):
             commands = macro_panel_state.get(cls._VIEW_MACRO_COMMANDS_KEY)

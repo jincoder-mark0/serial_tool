@@ -5,9 +5,9 @@
 SerialTool은 Python/PyQt5 기반의 멀티포트 시리얼 통신·자동화·프로토콜 분석 도구입니다.
 현재 구조는 **Passive View + 명시적 Dependency Injection + Single Composition Root + direct Qt signal**을 핵심 원칙으로 사용합니다.
 
-> 현재 리팩토링 브랜치: `refactor/presenter-view-boundary`  
-> 상세 리팩토링 보고서: [`doc/refactoring_validation_report_20260830.md`](doc/refactoring_validation_report_20260830.md)  
-> 현재 작업 체크리스트: [`Task.MD`](Task.MD)  
+> 현재 리팩토링 브랜치: `refactor/presenter-view-boundary`
+> 상세 리팩토링 보고서: [`doc/refactoring_validation_report_20260830.md`](doc/refactoring_validation_report_20260830.md)
+> 현재 작업 체크리스트: [`Task.MD`](Task.MD)
 > AI/코딩 에이전트 규칙: [`AGENTS.md`](AGENTS.md)
 
 현재 브랜치는 구조 리팩토링 후 **전체 stale API/constructor 감사와 pytest/ruff 재검증 단계**입니다.
@@ -79,7 +79,8 @@ SerialTool은 Python/PyQt5 기반의 멀티포트 시리얼 통신·자동화·�
 - SPI/I2C Transport와 Plugin system은 후속 후보이며 현재 구현 범위가 아닙니다.
 - PyInstaller onedir 패키징 구성이 존재합니다.
 - GitHub Actions CI는 Windows pytest, language-key 검사, task-board 검사, ruff를 실행합니다.
-- 현재 리팩토링 브랜치는 CI/전체 pytest Green을 아직 확인하지 않았으므로 검증 완료로 선언하지 않습니다.
+- Python 3.13 로컬 검증은 전체 pytest 633개와 Ruff/저장소 정합 gate까지 Green입니다.
+- PR의 Python 3.11 GitHub Actions는 아직 확인하지 않았으므로 merge 준비 완료로 선언하지 않습니다.
 
 ---
 
@@ -491,4 +492,4 @@ onedir 결과는 `dist/SerialTool/`에 생성됩니다.
 8. PR/CI Green
 9. 검증 완료 후 squash/rebase 여부 판단
 
-현재 브랜치에서 전체 검증을 아직 실행하지 않았으므로 Green baseline 숫자는 검증 후 기록합니다.
+현재 로컬 기준선은 `633 passed, 0 failed, 0 skipped`입니다. 최종 merge 판정에는 PR GitHub Actions Green이 추가로 필요합니다.

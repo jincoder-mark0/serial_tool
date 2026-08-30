@@ -88,6 +88,7 @@ class ConfigKeys:
     SPLITTER_STATE = "ui.splitter_state"
     RIGHT_PANEL_VISIBLE = "ui.right_section_visible"
     SAVED_RIGHT_WIDTH = "ui.saved_right_section_width"
+    RIGHT_TAB_INDEX = "ui.right_tab_index"
 
     # Packet Inspector
     PACKET_PARSER_TYPE = "packet.parser_type"

@@ -275,7 +275,8 @@ class LanguageIntegrityChecker:
                 source = path.read_text(encoding="utf-8")
                 tree = ast.parse(source, filename=str(path))
             except (OSError, SyntaxError) as e:
-                print(f"[WARN] Could not parse {rel_path} for key usage check: {e}")
+                self.has_error = True
+                print(f"[ERROR] Could not parse {rel_path} for key usage check: {e}")
                 continue
 
             for node in ast.walk(tree):

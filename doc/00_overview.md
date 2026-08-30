@@ -108,7 +108,8 @@ ApplicationBootstrapper
 * 리팩토링 브랜치는 `main`과 큰 차이가 있으므로 merge 전 전체 stale API/constructor 감사와 실제 ruff/pytest/CI 검증이 필수입니다.
 * CI는 Windows에서 `QT_QPA_PLATFORM=offscreen`으로 전체 pytest를 실행하고, 별도로 Ruff, language key, task board consistency를 검사합니다.
 * 리팩토링 상세 현황과 검증 절차는 `doc/refactoring_validation_report_20260830.md`를 기준 문서로 사용합니다.
-* 현재 전체 Green test baseline은 아직 재확정되지 않았습니다. 과거 문서의 passed 개수를 현재 기준선으로 사용하지 않습니다.
+* Python 3.13 로컬 Green 기준선은 633 tests이며 Ruff/language/task-board gate도 통과했습니다.
+* Python 3.11 PR GitHub Actions는 아직 확인하지 않았으므로 로컬 Green과 merge 승인을 구분합니다.
 
 ---
 

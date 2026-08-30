@@ -80,7 +80,7 @@ class ConnectionController(QObject):
 
         try:
             self.packet_parser_manager.configure(name, config)
-        except ValueError as exc:
+        except (TypeError, ValueError) as exc:
             self._emit_error(name, f"Invalid packet parser configuration: {exc}")
             return False
 
@@ -100,8 +100,12 @@ class ConnectionController(QObject):
                 )
             )
         )
-        worker.connection_closed.connect(self.on_worker_closed)
-        worker.worker_terminated.connect(self.on_worker_terminated)
+        worker.connection_closed.connect(
+            lambda _name, n=name, w=worker: self.on_worker_closed(n, w)
+        )
+        worker.worker_terminated.connect(
+            lambda _name, n=name, w=worker: self.on_worker_terminated(n, w)
+        )
         worker.error_occurred.connect(lambda msg, n=name: self._emit_error(n, msg))
         worker.data_received.connect(
             lambda data, n=name: self._handle_data_received(n, data)
@@ -119,14 +123,24 @@ class ConnectionController(QObject):
                 worker.stop()
                 # worker의 cross-thread connection_closed는 main event loop에 queued될 수
                 # 있으므로 registry는 stop() 반환 직후 동기적으로도 정리합니다.
-                self.on_worker_closed(name)
+                self.on_worker_closed(name, worker)
             return
 
         for port_name in list(self.workers.keys()):
             self.close_connection(port_name)
 
-    def _cleanup_worker_registry(self, name: str) -> bool:
-        was_registered = name in self.workers
+    def _cleanup_worker_registry(
+        self,
+        name: str,
+        expected_worker: Optional[ConnectionWorker] = None,
+    ) -> bool:
+        current_worker = self.workers.get(name)
+        if current_worker is None:
+            return False
+        if expected_worker is not None and current_worker is not expected_worker:
+            return False
+
+        was_registered = True
         self.workers.pop(name, None)
 
         for packet in self.packet_parser_manager.remove(name):
@@ -135,8 +149,12 @@ class ConnectionController(QObject):
         self.connection_configs.pop(name, None)
         return was_registered
 
-    def on_worker_closed(self, name: str) -> None:
-        if self._cleanup_worker_registry(name):
+    def on_worker_closed(
+        self,
+        name: str,
+        worker: Optional[ConnectionWorker] = None,
+    ) -> None:
+        if self._cleanup_worker_registry(name, worker):
             self.connection_closed.emit(
                 PortConnectionEvent(
                     port=name,
@@ -144,8 +162,12 @@ class ConnectionController(QObject):
                 )
             )
 
-    def on_worker_terminated(self, name: str) -> None:
-        self._cleanup_worker_registry(name)
+    def on_worker_terminated(
+        self,
+        name: str,
+        worker: Optional[ConnectionWorker] = None,
+    ) -> None:
+        self._cleanup_worker_registry(name, worker)
 
     def _emit_error(self, port: str, message: str) -> None:
         self.error_occurred.emit(PortErrorEvent(port=port, message=message))

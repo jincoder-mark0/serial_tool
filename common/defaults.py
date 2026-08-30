@@ -22,7 +22,13 @@ from common.constants import (
     FONT_FAMILY_CONSOLAS,
     FONT_FAMILY_SEGOE,
 )
-from common.enums import ByteOrder, ConnectionProtocol, LanguageType, ThemeType
+from common.enums import (
+    ByteOrder,
+    ConnectionProtocol,
+    LanguageType,
+    NewlineMode,
+    ThemeType,
+)
 
 # ==========================================
 # Canonical Scalar Defaults
@@ -42,7 +48,7 @@ DEFAULT_RIGHT_PANEL_VISIBLE: bool = True
 
 DEFAULT_PORT_PROTOCOL: str = ConnectionProtocol.SERIAL
 DEFAULT_PORT_BYTESIZE: int = 8
-DEFAULT_PORT_NEWLINE: str = "\n"
+DEFAULT_PORT_NEWLINE: str = NewlineMode.LF.value
 DEFAULT_PORT_LOCAL_ECHO: bool = False
 DEFAULT_PORT_SCAN_INTERVAL_MS: int = 1000
 DEFAULT_SPI_SPEED: int = 1_000_000
@@ -106,6 +112,7 @@ DEFAULT_UI_SETTINGS = {
     "splitter_state": None,
     "right_section_visible": DEFAULT_RIGHT_PANEL_VISIBLE,
     "saved_right_section_width": None,
+    "right_tab_index": 0,
 }
 
 DEFAULT_COMMAND_SETTINGS = {

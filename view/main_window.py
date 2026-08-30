@@ -146,6 +146,11 @@ class MainWindow(QMainWindow):
             self.left_section.apply_state(state.left_section_state)
             self.right_section.apply_state(state.right_section_state)
 
+    def apply_proportional_font_size(self, size: int) -> None:
+        """현재 proportional font family를 유지하며 크기를 즉시 적용합니다."""
+        family, _ = self.theme_manager.get_proportional_font_info()
+        self.theme_manager.set_proportional_font(family, size)
+
     def get_window_state(self) -> MainWindowState:
         state = MainWindowState()
         state.width = self.width()

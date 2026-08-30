@@ -3,8 +3,8 @@
 이 문서는 SerialTool 저장소에서 작업하는 AI/코딩 에이전트의 **최상위 실행 지침**이다.
 목표는 빠른 변경보다 **정확한 아키텍처 경계, 데이터 보존, 테스트 가능성, 검증 가능한 변경**을 우선하는 것이다.
 
-> 현재 리팩토링 기준 문서: `doc/refactoring_validation_report_20260830.md`  
-> 현재 개발 브랜치: `refactor/presenter-view-boundary`  
+> 현재 리팩토링 기준 문서: `doc/refactoring_validation_report_20260830.md`
+> 현재 개발 브랜치: `refactor/presenter-view-boundary`
 > 안정 기준 브랜치: `main`
 
 ---

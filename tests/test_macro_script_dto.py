@@ -7,6 +7,7 @@ import pytest
 from common.dtos import MacroScriptData
 from model.macro_script_manager import MacroScriptManager
 from presenter.macro_presenter import MacroPresenter
+from view.panels.macro_panel import MacroPanel
 
 
 @pytest.fixture
@@ -96,3 +97,14 @@ def test_save_then_load_round_trip_preserves_json_format(
 def test_presenter_requires_explicit_script_manager(mock_panel, mock_runner):
     with pytest.raises(TypeError):
         MacroPresenter(panel=mock_panel, runner=mock_runner)
+
+
+def test_loading_empty_script_clears_existing_macro_entries(qapp, qtbot):
+    panel = MacroPanel()
+    qtbot.addWidget(panel)
+    panel.apply_state({"commands": [{"command": "AT"}]})
+    assert len(panel.get_macro_entries()) == 1
+
+    panel.apply_state({"commands": []})
+
+    assert panel.get_macro_entries() == []

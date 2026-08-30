@@ -40,6 +40,7 @@ def test_apply_preferences_updates_all_runtime_consumers():
     state = PreferencesState(
         theme="dark",
         language="ko",
+        font_size=13,
         max_log_lines=1234,
         local_echo_enabled=True,
     )
@@ -59,6 +60,7 @@ def test_apply_preferences_updates_all_runtime_consumers():
     apply_state.assert_called_once_with(settings, state)
     settings.save_settings.assert_called_once()
     view.switch_theme.assert_called_once_with("dark")
+    view.apply_proportional_font_size.assert_called_once_with(13)
     set_language.assert_called_once_with("ko")
     port.apply_max_log_lines.assert_called_once_with(1234)
     manual.update_local_echo_setting.assert_called_once_with(True)

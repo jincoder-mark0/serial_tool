@@ -20,6 +20,7 @@ S-058 신규 테스트: PreferencesCoordinator (presenter/preferences_coordinato
   불필요)를 그대로 사용한다.
 """
 from common.constants import ConfigKeys
+from common.defaults import DEFAULT_PORT_NEWLINE
 from common.dtos import PreferencesState
 from presenter.preferences_coordinator import PreferencesCoordinator
 
@@ -41,7 +42,7 @@ class TestPreferencesCoordinatorBuildState:
         assert state.font_size == 10
         assert state.max_log_lines == 2000
         assert state.baudrate == 115200
-        assert state.newline == "\n"
+        assert state.newline == DEFAULT_PORT_NEWLINE
         assert state.local_echo_enabled is False
         assert state.scan_interval_ms == 1000
         assert state.command_prefix == ""

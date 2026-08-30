@@ -57,7 +57,7 @@ class ParserType:
     def from_preference_index(cls, index: int) -> str:
         try:
             preference = ParserPreferenceIndex(index)
-        except ValueError:
+        except (TypeError, ValueError):
             return cls.RAW
         return cls._PREFERENCE_INDEX_MAP.get(preference, cls.RAW)
 

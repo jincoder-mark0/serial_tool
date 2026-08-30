@@ -3,9 +3,9 @@
 이 파일은 Claude 계열 코딩 에이전트가 SerialTool 저장소에서 작업할 때 사용하는 보조 지침이다.
 **최상위 정본은 [`AGENTS.md`](AGENTS.md)** 이며, 충돌 시 `AGENTS.md`와 현재 코드/architecture contract를 우선한다.
 
-> 현재 작업 브랜치: `refactor/presenter-view-boundary`  
-> 안정 브랜치: `main`  
-> 현재 작업 보드: [`Task.MD`](Task.MD)  
+> 현재 작업 브랜치: `refactor/presenter-view-boundary`
+> 안정 브랜치: `main`
+> 현재 작업 보드: [`Task.MD`](Task.MD)
 > 리팩토링 보고서: [`doc/refactoring_validation_report_20260830.md`](doc/refactoring_validation_report_20260830.md)
 
 ---

@@ -63,6 +63,7 @@ class SettingsCoordinator(QObject):
         self._settings.save_settings()
 
         self._view.switch_theme(state.theme.lower())
+        self._view.apply_proportional_font_size(state.font_size)
         language_manager.set_language(state.language)
         self._port_presenter.apply_max_log_lines(state.max_log_lines)
         self._manual_control_presenter.update_local_echo_setting(
