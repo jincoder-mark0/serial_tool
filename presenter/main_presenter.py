@@ -27,7 +27,6 @@ from core.logger import logger
 from core.settings_manager import SettingsManager
 from view.main_window import MainWindow
 from view.managers.language_manager import language_manager
-from view.panels.port_panel import PortPanel
 
 from .preferences_coordinator import PreferencesCoordinator
 
@@ -80,11 +79,6 @@ class MainPresenter(QObject):
         self.file_presenter = components.file_presenter
         self.packet_presenter = components.packet_presenter
         self.manual_control_presenter = components.manual_control_presenter
-
-    @property
-    def _sys_log_writer(self):
-        """S-055 기존 테스트/외부 코드 호환용 읽기 전용 alias."""
-        return self.logging_coordinator.system_log_writer
 
     def _connect_signals(self) -> None:
         self.connection_controller.connection_opened.connect(self.on_port_opened)
@@ -308,30 +302,3 @@ class MainPresenter(QObject):
 
     def on_shortcut_clear(self) -> None:
         self.port_presenter.clear_log_current_port()
-
-    # ------------------------------------------------------------------
-    # Compatibility delegates — 구현 책임은 LoggingCoordinator가 소유합니다.
-    # ------------------------------------------------------------------
-    def _connect_logging_signals(self) -> None:
-        self.logging_coordinator.connect_signals()
-
-    def _connect_single_port_logging(self, panel: PortPanel) -> None:
-        self.logging_coordinator.connect_port_panel(panel)
-
-    def _on_logging_start_requested(self, panel: PortPanel) -> None:
-        self.logging_coordinator.on_port_logging_start_requested(panel)
-
-    def _on_logging_stop_requested(self, panel: PortPanel) -> None:
-        self.logging_coordinator.on_port_logging_stop_requested(panel)
-
-    def _on_sys_logging_start_requested(self) -> None:
-        self.logging_coordinator.on_system_logging_start_requested()
-
-    def _on_sys_logging_stop_requested(self) -> None:
-        self.logging_coordinator.on_system_logging_stop_requested()
-
-    def _close_sys_log_writer(self) -> None:
-        self.logging_coordinator.close_system_log()
-
-    def _on_system_log_line_appended(self, text: str) -> None:
-        self.logging_coordinator.on_system_log_line_appended(text)
