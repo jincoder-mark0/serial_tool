@@ -2,7 +2,7 @@
 포트 프레젠터 모듈
 
 MainLeftSection(View)과 ConnectionController(Model) 사이에서 포트 스캔/연결/상태 갱신을 중재합니다.
-설정은 composition root에서 생성된 SettingsManager를 주입받아 사용합니다.
+Production에서는 composition root의 SettingsManager를 주입받고, None은 레거시 테스트 호환용입니다.
 """
 from typing import List, Optional
 
@@ -19,13 +19,7 @@ from common.defaults import (
     DEFAULT_PACKET_LENGTH_INCLUDES_HEADER,
     DEFAULT_PACKET_PARSER_TYPE,
 )
-from common.dtos import (
-    PortConfig,
-    PortConnectionEvent,
-    PortErrorEvent,
-    PortInfo,
-    SystemLogEvent,
-)
+from common.dtos import PortConfig, PortConnectionEvent, PortErrorEvent, PortInfo, SystemLogEvent
 from common.enums import LogLevel
 from core.logger import logger
 from core.settings_manager import SettingsManager
@@ -37,24 +31,19 @@ from view.sections.main_left_section import MainLeftSection
 
 
 class PortPresenter(QObject):
-    """포트 설정 View와 연결 Model을 중재합니다."""
-
     def __init__(
         self,
         left_section: MainLeftSection,
         connection_controller: ConnectionController,
-        settings_manager: SettingsManager,
+        settings_manager: Optional[SettingsManager] = None,
     ) -> None:
         super().__init__()
         self.left_section = left_section
         self.connection_controller = connection_controller
-        self.settings_manager = settings_manager
+        self.settings_manager = settings_manager or SettingsManager()
         self._scan_worker: Optional[PortScanWorker] = None
 
-        max_lines = self.settings_manager.get(
-            ConfigKeys.RX_MAX_LINES,
-            DEFAULT_LOG_MAX_LINES,
-        )
+        max_lines = self.settings_manager.get(ConfigKeys.RX_MAX_LINES, DEFAULT_LOG_MAX_LINES)
         current_panel = self.left_section.get_current_port_panel()
         if current_panel:
             current_panel.set_max_log_lines(max_lines)
@@ -79,7 +68,6 @@ class PortPresenter(QObject):
             panel.connect_requested.disconnect(self.handle_open_request)
         except TypeError:
             pass
-
         try:
             panel.disconnect_requested.disconnect()
         except TypeError:
@@ -130,34 +118,21 @@ class PortPresenter(QObject):
 
     def _apply_packet_parser_settings(self, config: PortConfig) -> None:
         settings = self.settings_manager
-        config.parser_type = settings.get(
-            ConfigKeys.PACKET_PARSER_TYPE,
-            DEFAULT_PACKET_PARSER_TYPE,
-        )
-        delimiters = settings.get(
-            ConfigKeys.PACKET_DELIMITERS,
-            list(DEFAULT_PACKET_DELIMITERS),
-        )
+        config.parser_type = settings.get(ConfigKeys.PACKET_PARSER_TYPE, DEFAULT_PACKET_PARSER_TYPE)
+        delimiters = settings.get(ConfigKeys.PACKET_DELIMITERS, list(DEFAULT_PACKET_DELIMITERS))
         config.packet_delimiter = delimiters[0] if delimiters else ""
-        config.packet_length = settings.get(
-            ConfigKeys.PACKET_LENGTH,
-            DEFAULT_PACKET_LENGTH,
-        )
+        config.packet_length = settings.get(ConfigKeys.PACKET_LENGTH, DEFAULT_PACKET_LENGTH)
         config.length_field_offset = settings.get(
-            ConfigKeys.PACKET_LENGTH_FIELD_OFFSET,
-            DEFAULT_PACKET_LENGTH_FIELD_OFFSET,
+            ConfigKeys.PACKET_LENGTH_FIELD_OFFSET, DEFAULT_PACKET_LENGTH_FIELD_OFFSET
         )
         config.length_field_size = settings.get(
-            ConfigKeys.PACKET_LENGTH_FIELD_SIZE,
-            DEFAULT_PACKET_LENGTH_FIELD_SIZE,
+            ConfigKeys.PACKET_LENGTH_FIELD_SIZE, DEFAULT_PACKET_LENGTH_FIELD_SIZE
         )
         config.length_field_endian = settings.get(
-            ConfigKeys.PACKET_LENGTH_FIELD_ENDIAN,
-            DEFAULT_PACKET_LENGTH_FIELD_ENDIAN,
+            ConfigKeys.PACKET_LENGTH_FIELD_ENDIAN, DEFAULT_PACKET_LENGTH_FIELD_ENDIAN
         )
         config.length_includes_header = settings.get(
-            ConfigKeys.PACKET_LENGTH_INCLUDES_HEADER,
-            DEFAULT_PACKET_LENGTH_INCLUDES_HEADER,
+            ConfigKeys.PACKET_LENGTH_INCLUDES_HEADER, DEFAULT_PACKET_LENGTH_INCLUDES_HEADER
         )
         config.gap_ms = settings.get(ConfigKeys.PACKET_GAP_MS, DEFAULT_PACKET_GAP_MS)
 
@@ -175,28 +150,21 @@ class PortPresenter(QObject):
 
     def _log_event(self, message: str, level: LogLevel) -> None:
         if hasattr(self.left_section, "log_system_message"):
-            self.left_section.log_system_message(
-                SystemLogEvent(message=message, level=level.value)
-            )
+            self.left_section.log_system_message(SystemLogEvent(message=message, level=level.value))
 
     def on_connection_opened(self, event: PortConnectionEvent) -> None:
-        port_name = event.port
-        self.left_section.set_port_connection_state(port_name, True)
-        self._log_event(f"[{port_name}] Port opened", LogLevel.SUCCESS)
+        self.left_section.set_port_connection_state(event.port, True)
+        self._log_event(f"[{event.port}] Port opened", LogLevel.SUCCESS)
 
     def on_connection_closed(self, event: PortConnectionEvent) -> None:
-        port_name = event.port
-        self.left_section.set_port_connection_state(port_name, False)
-        self._log_event(f"[{port_name}] Port closed", LogLevel.INFO)
+        self.left_section.set_port_connection_state(event.port, False)
+        self._log_event(f"[{event.port}] Port closed", LogLevel.INFO)
 
     def on_error(self, event: PortErrorEvent) -> None:
         logger.error(f"Port Error ({event.port}): {event.message}")
         self.left_section.set_port_connection_state(event.port, False)
         title = language_manager.get_text("port_title_error")
-        detail = language_manager.get_text("port_msg_error_detail").format(
-            event.port,
-            event.message,
-        )
+        detail = language_manager.get_text("port_msg_error_detail").format(event.port, event.message)
         self.left_section.show_error_message(title, detail)
         self._log_event(f"[{event.port}] Error: {event.message}", LogLevel.ERROR)
 
@@ -205,20 +173,18 @@ class PortPresenter(QObject):
         if not panel:
             return
         config = panel.get_port_config()
-        port_name = config.port
-        if port_name and not self.connection_controller.is_connection_open(port_name):
+        if config.port and not self.connection_controller.is_connection_open(config.port):
             self._apply_packet_parser_settings(config)
             self.connection_controller.open_connection(config)
-        elif not port_name:
+        elif not config.port:
             logger.warning("No port selected")
 
     def disconnect_current_port(self) -> None:
         panel = self.left_section.get_current_port_panel()
-        if not panel:
-            return
-        port_name = panel.get_port_name()
-        if port_name and self.connection_controller.is_connection_open(port_name):
-            self.connection_controller.close_connection(port_name)
+        if panel:
+            port_name = panel.get_port_name()
+            if port_name and self.connection_controller.is_connection_open(port_name):
+                self.connection_controller.close_connection(port_name)
 
     def clear_log_current_port(self) -> None:
         panel = self.left_section.get_current_port_panel()
