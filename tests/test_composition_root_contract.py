@@ -47,20 +47,25 @@ def test_bootstrapper_is_the_concrete_object_graph_owner():
     assert "status_coordinator.start()" in source
 
 
-def test_bootstrapper_restores_view_before_view_aware_presenters():
+def test_bootstrapper_restores_state_in_safe_order():
     source = inspect.getsource(ApplicationBootstrapper.build)
     restore = source.index("lifecycle_manager.initialize_view()")
+    manual_presenter = source.index("manual_control_presenter = ManualControlPresenter(")
+    manual_apply = source.index("manual_control_presenter.apply_state(")
+    control_state = source.index("control_state_coordinator = ControlStateCoordinator(")
+
     assert restore < source.index("port_presenter = PortPresenter(")
     assert restore < source.index("macro_presenter = MacroPresenter(")
-    assert restore < source.index("manual_control_presenter = ManualControlPresenter(")
+    assert restore < manual_presenter < manual_apply < control_state
 
 
-def test_main_presenter_owns_its_minimal_dependency_contract():
+def test_main_presenter_owns_only_minimal_display_dependencies():
     source = inspect.getsource(MainPresenter)
     signature = inspect.signature(MainPresenter.__init__)
     assert "ApplicationBootstrapper" not in source
     assert "ApplicationComponents" not in source
     assert "SettingsManager" not in source
+    assert "AppLifecycleManager" not in source
     assert set(signature.parameters) == {"self", "view", "dependencies"}
     assert inspect.isclass(MainPresenterDependencies)
 
@@ -95,6 +100,7 @@ def test_main_presenter_does_not_construct_or_own_policy_components():
     assert "self._apply_dependencies(dependencies)" in source
     for hidden_policy in (
         "settings_manager",
+        "lifecycle_manager",
         "data_handler",
         "file_transfer_manager",
         "port_scan_manager",
@@ -120,7 +126,10 @@ def test_lifecycle_does_not_own_or_call_main_presenter():
     assert "create_status_timer" not in source
 
 
-def test_port_presenter_uses_injected_settings_for_packet_configuration():
-    source = inspect.getsource(PortPresenter._apply_packet_parser_settings)
-    assert "settings = self.settings_manager" in source
+def test_port_presenter_uses_only_injected_runtime_dependencies():
+    source = inspect.getsource(PortPresenter)
+    signature = inspect.signature(PortPresenter.__init__)
     assert "SettingsManager()" not in source
+    assert "PortScanManager()" not in source
+    assert signature.parameters["settings_manager"].default is inspect.Parameter.empty
+    assert signature.parameters["port_scan_manager"].default is inspect.Parameter.empty
