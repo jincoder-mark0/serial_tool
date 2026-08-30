@@ -1,8 +1,8 @@
 """
 포트 프레젠터 모듈.
 
-MainLeftSection(View)과 ConnectionController(Model) 사이에서 포트 스캔/연결/상태 갱신을 중재합니다.
-Production에서는 composition root의 SettingsManager를 주입받고, None은 레거시 테스트 호환용입니다.
+MainLeftSection(View)과 ConnectionController(Model) 사이에서 포트 연결/상태와 스캔 결과를
+중재합니다. 스캔 QThread 생명주기는 PortScanManager가 소유합니다.
 """
 from typing import List, Optional
 from weakref import WeakSet
@@ -25,27 +25,30 @@ from common.enums import LogLevel
 from core.logger import logger
 from core.settings_manager import SettingsManager
 from model.connection_controller import ConnectionController
-from model.port_scanner import PortScanWorker
+from model.port_scan_manager import PortScanManager
 from view.managers.language_manager import language_manager
 from view.panels.port_panel import PortPanel
 from view.sections.main_left_section import MainLeftSection
 
 
 class PortPresenter(QObject):
-    """PortPanel collection과 연결 Model 사이의 중재자."""
+    """PortPanel collection과 연결/스캔 Model 사이의 중재자."""
 
     def __init__(
         self,
         left_section: MainLeftSection,
         connection_controller: ConnectionController,
         settings_manager: Optional[SettingsManager] = None,
+        port_scan_manager: Optional[PortScanManager] = None,
     ) -> None:
         super().__init__()
         self.left_section = left_section
         self.connection_controller = connection_controller
         self.settings_manager = settings_manager or SettingsManager()
-        self._scan_worker: Optional[PortScanWorker] = None
+        self.port_scan_manager = port_scan_manager or PortScanManager()
         self._connected_panels: WeakSet[PortPanel] = WeakSet()
+
+        self.port_scan_manager.ports_found.connect(self._on_scan_finished)
 
         self.apply_max_log_lines(
             self.settings_manager.get(ConfigKeys.RX_MAX_LINES, DEFAULT_LOG_MAX_LINES)
@@ -62,8 +65,8 @@ class PortPresenter(QObject):
         self.connection_controller.error_occurred.connect(self.on_error)
 
     def get_active_port_name(self) -> Optional[str]:
-        panel = self.left_section.get_current_port_panel()
-        return panel.get_port_name() if panel else None
+        """레거시 호출 호환용 현재 포트 이름 facade."""
+        return self.left_section.get_current_port_name() or None
 
     def apply_max_log_lines(self, max_lines: int) -> None:
         """모든 PortPanel의 표시 로그 상한을 동일하게 적용합니다."""
@@ -103,24 +106,16 @@ class PortPresenter(QObject):
         self.scan_ports()
 
     def scan_ports(self) -> None:
-        if self._scan_worker and self._scan_worker.isRunning():
-            logger.debug("Port scan already in progress.")
-            return
-        logger.debug("Starting async port scan...")
-        self._scan_worker = PortScanWorker()
-        self._scan_worker.ports_found.connect(self._on_scan_finished)
-        self._scan_worker.start()
+        """비동기 스캔 시작 여부/worker 소유권은 PortScanManager에 위임합니다."""
+        self.port_scan_manager.request_scan()
 
     def stop_pending_scan(self) -> None:
-        if self._scan_worker and self._scan_worker.isRunning():
-            logger.debug("Waiting for pending port scan to finish before shutdown...")
-            self._scan_worker.wait(2000)
-        self._scan_worker = None
+        """레거시 종료 호출 호환용 delegate."""
+        self.port_scan_manager.stop()
 
     def _on_scan_finished(self, port_list: List[PortInfo]) -> None:
         logger.debug(f"Scan finished. Found ports: {[item.device for item in port_list]}")
         self.left_section.set_port_list_for_all(port_list)
-        self._scan_worker = None
 
     def _apply_packet_parser_settings(self, config: PortConfig) -> None:
         settings = self.settings_manager
