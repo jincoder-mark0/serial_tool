@@ -22,14 +22,15 @@ from common.constants import (
     FONT_FAMILY_CONSOLAS,
     FONT_FAMILY_SEGOE,
 )
+from common.enums import ByteOrder, LanguageType, ThemeType
 
 # ==========================================
 # Canonical Scalar Defaults
 # ==========================================
 SETTINGS_VERSION: str = "1.3"
 
-DEFAULT_THEME: str = "dark"
-DEFAULT_LANGUAGE: str = "ko"
+DEFAULT_THEME: str = ThemeType.DARK.value
+DEFAULT_LANGUAGE: str = LanguageType.KOREAN.value
 DEFAULT_PROP_FONT_FAMILY: str = FONT_FAMILY_SEGOE
 DEFAULT_PROP_FONT_SIZE: int = 10
 DEFAULT_FIXED_FONT_FAMILY: str = FONT_FAMILY_CONSOLAS
@@ -59,7 +60,7 @@ DEFAULT_PACKET_REALTIME: bool = True
 DEFAULT_PACKET_AUTOSCROLL: bool = True
 DEFAULT_PACKET_LENGTH_FIELD_OFFSET: int = 0
 DEFAULT_PACKET_LENGTH_FIELD_SIZE: int = 1
-DEFAULT_PACKET_LENGTH_FIELD_ENDIAN: str = "big"
+DEFAULT_PACKET_LENGTH_FIELD_ENDIAN: str = ByteOrder.BIG.value
 DEFAULT_PACKET_LENGTH_INCLUDES_HEADER: bool = False
 DEFAULT_PACKET_GAP_MS: int = 5
 DEFAULT_PACKET_CHECKSUM_ALGORITHM: str = "none"
