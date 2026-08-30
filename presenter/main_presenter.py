@@ -27,7 +27,6 @@ from common.enums import LogLevel
 from core.logger import logger
 from core.settings_manager import SettingsManager
 from view.main_window import MainWindow
-from view.managers.color_manager import color_manager
 from view.managers.language_manager import language_manager
 from view.panels.port_panel import PortPanel
 
@@ -150,7 +149,6 @@ class MainPresenter(QObject):
         self.view.file_transfer_dialog_opened.connect(
             self.file_presenter.on_file_transfer_dialog_opened
         )
-        self.view.port_tab_added.connect(self._on_port_tab_added)
 
         self.manual_control_presenter.broadcast_changed.connect(
             lambda _: self._update_controls_state_for_current_tab()
@@ -394,10 +392,6 @@ class MainPresenter(QObject):
 
     def on_shortcut_clear(self) -> None:
         self.port_presenter.clear_log_current_port()
-
-    def _on_port_tab_added(self, panel: PortPanel) -> None:
-        self.logging_coordinator.on_port_tab_added(panel)
-        panel.set_data_log_color_rules(color_manager.rules)
 
     def _connect_logging_signals(self) -> None:
         self.logging_coordinator.connect_signals()
