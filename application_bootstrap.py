@@ -18,6 +18,7 @@ from model.port_scan_manager import PortScanManager
 from model.traffic_monitor import TrafficMonitor
 from presenter.data_handler import DataTrafficHandler
 from presenter.file_presenter import FilePresenter
+from presenter.logging_coordinator import LoggingCoordinator
 from presenter.macro_execution_coordinator import MacroExecutionCoordinator
 from presenter.macro_presenter import MacroPresenter
 from presenter.manual_control_presenter import ManualControlPresenter
@@ -39,6 +40,7 @@ class ApplicationComponents:
     macro_execution_coordinator: MacroExecutionCoordinator
     traffic_monitor: TrafficMonitor
     data_handler: DataTrafficHandler
+    logging_coordinator: LoggingCoordinator
     port_presenter: PortPresenter
     macro_presenter: MacroPresenter
     file_presenter: FilePresenter
@@ -77,6 +79,7 @@ class ApplicationBootstrapper:
         )
         traffic_monitor = TrafficMonitor()
         data_handler = DataTrafficHandler(self._view, traffic_monitor)
+        logging_coordinator = LoggingCoordinator(self._view.port_view)
 
         port_presenter = PortPresenter(
             self._view.port_view,
@@ -116,6 +119,7 @@ class ApplicationBootstrapper:
             macro_execution_coordinator=macro_execution_coordinator,
             traffic_monitor=traffic_monitor,
             data_handler=data_handler,
+            logging_coordinator=logging_coordinator,
             port_presenter=port_presenter,
             macro_presenter=macro_presenter,
             file_presenter=file_presenter,
