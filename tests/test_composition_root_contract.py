@@ -21,6 +21,7 @@ def test_bootstrapper_is_the_concrete_object_graph_owner():
     source = inspect.getsource(ApplicationBootstrapper.build)
 
     for constructor in (
+        "AppLifecycleManager(",
         "PacketParserManager()",
         "ConnectionSessionFactory()",
         "ConnectionController(",
@@ -47,10 +48,20 @@ def test_bootstrapper_is_the_concrete_object_graph_owner():
     assert "macro_script_manager," in source
 
 
+def test_bootstrapper_restores_view_before_view_aware_presenters():
+    source = inspect.getsource(ApplicationBootstrapper.build)
+
+    restore = source.index("lifecycle_manager.initialize_view()")
+    assert restore < source.index("port_presenter = PortPresenter(")
+    assert restore < source.index("macro_presenter = MacroPresenter(")
+    assert restore < source.index("manual_control_presenter = ManualControlPresenter(")
+
+
 def test_main_presenter_does_not_construct_concrete_runtime_components():
     source = inspect.getsource(MainPresenter)
 
     for constructor in (
+        "AppLifecycleManager(",
         "ConnectionController(",
         "PacketParserManager(",
         "ConnectionSessionFactory(",
@@ -72,6 +83,7 @@ def test_main_presenter_does_not_construct_concrete_runtime_components():
 
     assert "ApplicationBootstrapper(" in source  # 남은 test compatibility fallback
     assert "self._apply_components(runtime)" in source
+    assert "self.lifecycle_manager = components.lifecycle_manager" in source
     assert "self.logging_coordinator = components.logging_coordinator" in source
     assert "self.port_scan_manager = components.port_scan_manager" in source
     assert "self.macro_script_manager = components.macro_script_manager" in source
