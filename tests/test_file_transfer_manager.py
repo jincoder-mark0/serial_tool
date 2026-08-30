@@ -71,7 +71,6 @@ def test_manager_creates_and_schedules_service_once():
     thread_pool.start.assert_called_once_with(service)
     assert manager.is_active is True
 
-    # 활성 세션이 있는 동안 두 번째 service를 만들지 않습니다.
     assert manager.start_transfer("b.bin", "COM1") is False
     assert service_cls.call_count == 1
 
@@ -85,6 +84,30 @@ def test_cancel_is_delegated_to_active_service():
     manager.cancel_transfer()
 
     service.cancel.assert_called_once()
+
+
+def test_shutdown_cancels_then_waits_for_owned_pool():
+    thread_pool = MagicMock()
+    manager = FileTransferManager(_controller(), thread_pool)
+    service = MagicMock()
+    manager._active_service = service
+    order = []
+    service.cancel.side_effect = lambda: order.append("cancel")
+    thread_pool.waitForDone.side_effect = lambda: order.append("wait")
+
+    manager.shutdown()
+
+    assert order == ["cancel", "wait"]
+    assert manager.is_active is False
+
+
+def test_default_manager_owns_a_non_global_thread_pool(qapp):
+    manager = FileTransferManager(_controller())
+
+    # 전용 pool이어야 shutdown()이 다른 기능의 QRunnable을 기다리지 않습니다.
+    from PyQt5.QtCore import QThreadPool
+
+    assert manager._thread_pool is not QThreadPool.globalInstance()
 
 
 def test_completion_releases_service_before_reemitting():
