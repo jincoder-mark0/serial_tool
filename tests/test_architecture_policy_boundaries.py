@@ -6,6 +6,7 @@ from presenter.main_presenter import MainPresenter
 from presenter.manual_control_presenter import ManualControlPresenter
 from presenter.port_presenter import PortPresenter
 from presenter.shutdown_coordinator import ShutdownCoordinator
+from view.main_window import MainWindow
 from view.sections.main_left_section import MainLeftSection
 
 
@@ -62,3 +63,28 @@ def test_port_presenter_does_not_own_qthread_scan_worker():
     assert "PortScanWorker" not in source
     assert "_scan_worker" not in source
     assert "port_scan_manager.request_scan()" in source
+
+
+def test_main_window_routes_model_affecting_menu_commands_to_presenter_signals():
+    source = inspect.getsource(MainWindow._connect_menu_signals)
+
+    assert "connect_requested.connect(self.shortcut_connect_requested.emit)" in source
+    assert "theme_changed.connect(self.theme_change_requested.emit)" in source
+    assert "language_changed.connect(self.language_change_requested.emit)" in source
+
+    assert "left_section.open_current_port" not in source
+    assert "theme_changed.connect(self.switch_theme)" not in source
+    assert "language_manager.set_language" not in source
+
+
+def test_main_presenter_owns_theme_and_language_persistence():
+    theme_source = inspect.getsource(MainPresenter.on_theme_change_requested)
+    language_source = inspect.getsource(MainPresenter.on_language_change_requested)
+
+    assert "ConfigKeys.THEME" in theme_source
+    assert "settings_manager.save_settings()" in theme_source
+    assert "view.switch_theme" in theme_source
+
+    assert "ConfigKeys.LANGUAGE" in language_source
+    assert "settings_manager.save_settings()" in language_source
+    assert "language_manager.set_language" in language_source
