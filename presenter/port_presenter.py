@@ -116,6 +116,7 @@ class PortPresenter(QObject):
         Logic:
             - 중복 연결 방지를 위해 기존 연결 해제 시도 (disconnect)
             - 설정 위젯의 스캔, 연결, 해제 시그널 연결
+            - 연결 해제 요청은 sender() 추론 대신 해당 PortPanel을 명시적으로 캡처
             - 브로드캐스트 변경 시그널 연결 (람다를 사용하여 위젯 컨텍스트 캡처)
 
         Args:
@@ -127,14 +128,22 @@ class PortPresenter(QObject):
         try:
             panel.port_scan_requested.disconnect(self.scan_ports)
             panel.connect_requested.disconnect(self.handle_open_request)
-            panel.disconnect_requested.disconnect(self.handle_close_request)
+        except TypeError:
+            pass
+
+        # disconnect_requested는 람다를 연결하므로 슬롯 지정 disconnect가 어렵다.
+        # 이 패널에서 Presenter가 관리하는 연결을 한 번 초기화한 뒤 다시 연결한다.
+        try:
+            panel.disconnect_requested.disconnect()
         except TypeError:
             pass
 
         # 시그널 연결
         panel.port_scan_requested.connect(self.scan_ports)
         panel.connect_requested.connect(self.handle_open_request)
-        panel.disconnect_requested.connect(self.handle_close_request)
+        panel.disconnect_requested.connect(
+            lambda w=panel: self.handle_close_request(w.get_port_config())
+        )
 
         # Broadcast 체크박스 시그널 연결
         try:
@@ -286,22 +295,21 @@ class PortPresenter(QObject):
         self._apply_packet_parser_settings(config)
         self.connection_controller.open_connection(config)
 
-    def handle_close_request(self) -> None:
+    def handle_close_request(self, config: PortConfig) -> None:
         """
         포트 닫기 요청 처리 (View Signal Slot).
 
-        Logic:
-            - 요청을 보낸 위젯(sender)을 식별
-            - 해당 위젯에서 현재 설정(포트명) 추출 (Facade)
-            - Controller에 닫기 요청
-        """
-        sender = self.sender()
+        WHY:
+            - `QObject.sender()`는 현재 Qt 시그널 호출 문맥에 의존하는 암묵적 상태다.
+              테스트에서 직접 슬롯을 호출하거나 연결 방식이 바뀌면 sender가 None이 될 수 있다.
+            - 연결 시점에 해당 PortPanel을 명시적으로 캡처해 PortConfig를 넘기면
+              닫을 대상이 함수 인자로 드러나고 Presenter 로직을 독립적으로 테스트할 수 있다.
 
-        # sender가 PortPanel이라고 가정하고 인터페이스 호출 (시그널 중계로 인해 sender는 PortPanel임)
-        if sender and hasattr(sender, 'get_port_config'):
-            config = sender.get_port_config()
-            if config and config.port:
-                self.connection_controller.close_connection(config.port)
+        Args:
+            config (PortConfig): 해제할 포트의 현재 설정 DTO.
+        """
+        if config and config.port:
+            self.connection_controller.close_connection(config.port)
 
     def handle_tab_closed(self, port_name: str) -> None:
         """
