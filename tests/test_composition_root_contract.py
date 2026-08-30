@@ -59,6 +59,19 @@ def test_bootstrapper_restores_state_in_safe_order():
     assert restore < manual_presenter < manual_apply < control_state
 
 
+def test_bootstrapper_owns_fixed_command_routing():
+    source = inspect.getsource(ApplicationBootstrapper.build)
+
+    assert "shortcut_connect_requested.connect(" in source
+    assert "port_presenter.connect_current_port" in source
+    assert "shortcut_disconnect_requested.connect(" in source
+    assert "port_presenter.disconnect_current_port" in source
+    assert "shortcut_clear_requested.connect(" in source
+    assert "port_presenter.clear_log_current_port" in source
+    assert "file_transfer_dialog_opened.connect(" in source
+    assert "file_presenter.on_file_transfer_dialog_opened" in source
+
+
 def test_main_presenter_owns_only_minimal_display_dependencies():
     source = inspect.getsource(MainPresenter)
     signature = inspect.signature(MainPresenter.__init__)
@@ -109,10 +122,15 @@ def test_main_presenter_does_not_construct_or_own_policy_components():
         "status_coordinator",
         "settings_coordinator",
         "control_state_coordinator",
+        "port_presenter",
         "macro_presenter",
         "packet_presenter",
     ):
         assert f"self.{hidden_policy} =" not in source
+
+    assert "on_shortcut_connect" not in source
+    assert "on_shortcut_disconnect" not in source
+    assert "on_shortcut_clear" not in source
 
 
 def test_lifecycle_does_not_own_or_call_main_presenter():
