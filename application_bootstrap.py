@@ -68,10 +68,9 @@ class ApplicationBootstrapper:
         )
         manual_control_presenter = ManualControlPresenter(
             self._view.manual_control_view,
+            self._view.port_view,
             connection_controller,
             command_transmission_service,
-            self._view.append_local_echo_data,
-            port_presenter.get_active_port_name,
         )
 
         return ApplicationComponents(
