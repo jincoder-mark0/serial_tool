@@ -35,6 +35,7 @@ S-039 회귀 테스트: TX 데이터 유실 2건 (close 시 flush 부재 + write
   `serial.Serial` 생성자 호출 인자를 가로챈다.
 """
 import pytest
+from threading import Event, Thread
 
 from common.constants import LOOPBACK_PORT_NAME, WRITE_TIMEOUT_S
 from common.dtos import PortConfig
@@ -92,6 +93,18 @@ class _FlakyTransport(BaseTransport):
     @property
     def in_waiting(self) -> int:
         return 0
+
+
+class _BlockingWriteTransport(_FlakyTransport):
+    def __init__(self):
+        super().__init__()
+        self.started = Event()
+        self.release = Event()
+
+    def write(self, data: bytes) -> None:
+        self.started.set()
+        self.release.wait(2)
+        self.written.append(data)
 
 
 # -----------------------------------------------------------------------------
@@ -185,6 +198,24 @@ def test_drain_surfaces_error_with_full_lost_count_when_write_raises():
     # drained=1(OK), 유실=2("FAIL" 자신 + 아직 큐에 남아있던 "NEVER")
     assert "1 chunk(s) sent" in errors[0]
     assert "2 chunk(s) discarded" in errors[0]
+    assert worker.get_write_error() == "simulated write timeout"
+
+
+def test_write_idle_includes_in_flight_transport_write():
+    transport = _BlockingWriteTransport()
+    worker = ConnectionWorker(transport, LOOPBACK_PORT_NAME)
+    worker.send_data(b"BLOCKED")
+
+    writer = Thread(target=worker._write_next_queued_chunk)
+    writer.start()
+    assert transport.started.wait(1)
+
+    assert worker.get_write_queue_size() == 0
+    assert worker.is_write_idle() is False
+
+    transport.release.set()
+    writer.join(timeout=1)
+    assert worker.is_write_idle() is True
 
 
 # -----------------------------------------------------------------------------

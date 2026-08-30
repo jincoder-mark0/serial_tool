@@ -4,6 +4,84 @@
 
 ---
 
+### 전체 diff 감사 잔여 lifecycle·전송 finding 해결 (2026-08-30)
+
+- Port scan과 Macro script load의 blocking OS/file I/O를 daemon I/O thread로
+  분리하고, QThread는 interruption polling과 1초 bounded wait로 종료하도록
+  변경했습니다. 반환하지 않는 OS API나 네트워크 파일 읽기 때문에 앱 shutdown이
+  무기한 멈추지 않습니다.
+- Python thread는 안전하게 강제 종료할 수 없으므로 manager가 반환 전 helper를
+  추적하고, helper가 살아 있는 동안 retry를 거부해 작업별 stuck helper를 최대
+  1개로 제한합니다. 해당 daemon helper는 process 종료 시 OS가 정리합니다.
+- ConnectionWorker의 opened/error/data queued signal도 Worker identity를 검증해
+  재연결된 새 세션에 old event가 섞이지 않게 했습니다. 새 세션이 없는 explicit
+  close에서는 retiring Worker의 마지막 RX batch만 termination 전까지 보존합니다.
+- ConnectionWorker가 Queue 대기뿐 아니라 실제 `transport.write()` in-flight/terminal
+  error 상태도 추적하며, FileTransferService는 write 성공과 idle을 모두 확인한 뒤에만
+  성공 완료를 알립니다.
+- Port scan 실패를 `scan_failed` signal로 Loopback fallback과 구분하고, 초기 scan을
+  LoggingCoordinator/MainPresenter 연결 후 시작해 시스템 로그에 오류를 표시합니다.
+- blocking fake와 실제 composition graph/ConnectionWorker를 사용하는 회귀 테스트
+  10개를 추가했습니다.
+
+검증 결과는 `643 passed`, Ruff 0건, language/task-board gate Green입니다.
+
+---
+
+### main 전체 diff 감사 및 merge blocker 교정 (2026-08-30)
+
+- 이전 Worker의 queued 종료 signal이 동일 포트의 새 연결 registry를 삭제할 수 있던
+  race를 Worker identity 검사로 차단했습니다.
+- USB Serial 분리/read 오류를 빈 데이터로 숨기지 않고 Worker 오류/종료 경로로
+  전파하도록 수정했습니다.
+- DataLogger write/stop 및 Loopback write/close 경쟁 구간을 lock으로 보호했습니다.
+- 잘못된 parser preference 타입은 Raw parser로 안전하게 fallback하고, newline
+  기본값을 UI enum의 canonical `LF`로 통일했습니다.
+- `ApplicationComponents`가 모든 runtime owner에 명시적인 strong reference를
+  유지하도록 완전한 composition graph를 반환합니다.
+- Macro 실행 중 재시작/목록 교체를 거부하고, 중단/실패를 성공 완료로 표시하지
+  않도록 실행 결과 의미를 분리했습니다.
+- 빈 Macro script load, 우측 탭 저장/복원, Manual View state key, 빈 탭 삭제 후
+  control refresh, Preferences font size 즉시 반영을 수정했습니다.
+- 언어 키 검사 중 Python parse 오류를 CI 실패로 처리하고 관련 회귀 테스트를
+  추가했습니다.
+
+전체 diff 감사 교정 후 Python 3.13 로컬 결과는 `643 passed`, Ruff 0건,
+language/task-board gate Green입니다. Python 3.11 PR CI와 실제 PyInstaller 산출물
+smoke test는 별도 merge gate/잔여 리스크로 유지합니다.
+
+---
+
+### Presenter/View 리팩토링 로컬 검증 및 마지막 교정 (2026-08-30)
+
+- stale API/constructor 감사에서 남아 있던 `controller.parsers` 테스트 접근을
+  `PacketParserManager` public diagnostic API로 이동했습니다.
+- shutdown 및 system logging 통합 fixture를 실제 ManualControl View 계약에 맞춰
+  Auto Tx 상태와 interval을 명시했습니다.
+- `PortPresenter` 테스트의 `QObject` 우회 생성을 제거하고 explicit dependency
+  constructor로 조립했습니다.
+- MainPresenter dependency DTO와 lowercase theme canonical 계약에 맞게 stale
+  assertion을 정리했습니다.
+- Ruff unused import 3건과 Preferences dialog line-length 3건을 수정했습니다.
+- 루트 `Task.MD`가 현재 검증만 관리하도록 바뀐 문서 체계에 맞춰 과거 S-xxx
+  정합 검사를 태스크 파일과 `tasks/README.md`의 2중 검사로 조정했습니다.
+
+로컬 검증 결과:
+
+```text
+architecture contract: 33 passed
+lifecycle/data-preservation: 45 passed
+core feature: 75 passed
+full pytest: 622 passed, 0 failed, 0 skipped
+ruff check .: 0 errors
+language key integrity: success
+task board consistency: 78 historical tasks consistent
+```
+
+PR GitHub Actions와 `main` 대비 전체 diff 검토는 아직 남아 있습니다.
+
+---
+
 ### 고속 수신 시 완결 패킷 유실 수정 (2026-08-22, S-064)
 
 AT/Delimiter/FixedLength 파서가 한 번에 큰 데이터를 받을 때(예: 8192바이트 이상)

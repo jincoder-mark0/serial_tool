@@ -88,6 +88,7 @@ class ConfigKeys:
     SPLITTER_STATE = "ui.splitter_state"
     RIGHT_PANEL_VISIBLE = "ui.right_section_visible"
     SAVED_RIGHT_WIDTH = "ui.saved_right_section_width"
+    RIGHT_TAB_INDEX = "ui.right_tab_index"
 
     # Packet Inspector
     PACKET_PARSER_TYPE = "packet.parser_type"
@@ -161,6 +162,10 @@ WRITE_TIMEOUT_S: float = 1.0
 # FORCE로 루프를 강제 종료 요청한 뒤 남은 개수를 경고로 표면화한다.
 DATA_LOGGER_STOP_DRAIN_TIMEOUT_S: float = 1.0
 DATA_LOGGER_STOP_FORCE_TIMEOUT_S: float = 0.5
+
+# OS/파일 I/O를 감싼 interruption-aware QThread의 polling/종료 상한.
+BACKGROUND_IO_POLL_S: float = 0.05
+BACKGROUND_WORKER_STOP_TIMEOUT_MS: int = 1000
 
 # 더미 포트 예약명 (S-033) — 실기기 없이 송수신 경로를 디버깅하기 위한 루프백 에코 포트.
 # 실제 장치명(COMx 등)과 충돌하지 않는 이름으로 고정.

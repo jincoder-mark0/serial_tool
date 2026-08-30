@@ -1,18 +1,19 @@
 """
-작업 보드 상태 정합 검사 (태스크 파일 Status / Task.MD / tasks/README.md 3중 교차 검증).
+과거 태스크 상태 정합 검사 (태스크 파일 Status / tasks/README.md 교차 검증).
 
 UI/UX나 코드가 아니라 **작업 기록의 신뢰성**을 지키는 도구입니다.
 
 ## WHY
-태스크 상태가 세 곳에 중복 기록된다 — 태스크 파일 상단 `- Status:`, 루트 `Task.MD`의
-표, `tasks/README.md`의 표. 사람이 세 곳을 손으로 맞추다 보니 실제로 어긋났다
+태스크 상태가 태스크 파일 상단 `- Status:`와 `tasks/README.md`의 표에 중복
+기록된다. 사람이 두 곳을 손으로 맞추다 보니 실제로 어긋났다
 (2026-08-22 발견: 감사 계열 태스크 다수가 보드는 완료인데 파일 헤더는 TODO였고,
 S-036은 Task.MD 안에서만 두 번 등장해 완료/대기를 동시에 말하고 있었다).
 보드가 거짓을 말하면 다음 세션이 끝난 일을 다시 하거나 남은 일을 끝난 것으로
-착각한다 — `doc/mistakes.md` #6과 같은 계열의 사고다.
+착각한다. 루트 `Task.MD`는 2026-08-30부터 현재 검증 작업만 관리하므로 과거
+S-xxx 상태를 중복하지 않는다.
 
 ## WHAT
-* 상태 어긋남: 같은 태스크 ID가 세 소스에서 다른 상태로 기록된 경우
+* 상태 어긋남: 같은 태스크 ID가 두 소스에서 다른 상태로 기록된 경우
 * 중복 행: 한 보드 안에 같은 ID가 다른 상태로 두 번 등장하는 경우
 * 미등재: `tasks/S-xxx-*.md`는 있는데 보드 표에 행이 없는 경우
 * 유령 행: 보드가 태스크 파일을 링크했는데 그 파일이 없는 경우
@@ -30,7 +31,6 @@ from pathlib import Path
 
 PROJECT = Path(__file__).resolve().parents[1]
 TASKS_DIR = PROJECT / "tasks"
-TASK_MD = PROJECT / "Task.MD"
 README_MD = TASKS_DIR / "README.md"
 
 TASK_ID = re.compile(r"S-\d{3}")
@@ -50,8 +50,7 @@ def normalize(raw: str) -> str:
     """
     자유 서술 상태 문자열에서 판정 토큰만 뽑아낸다.
 
-    보드마다 표기가 다르다 — 태스크 파일은 `TODO`/`DONE`, Task.MD는 `✅ 완료`,
-    착수 전 사유가 있는 항목은 `⏸ 대기`, 근거 있는 중단은 `⛔ 보류`.
+    태스크 파일은 `TODO`/`DONE`, 보드는 `DONE`/`TODO`와 `⛔ 보류` 등을 사용한다.
     `대기`는 "아직 시작하지 않음"이라 TODO와 같은 판정으로 본다 (사유는 비고에 남는다).
 
     판정은 **부연을 떼어낸 선두 부분**으로만 내린다. `DONE (러너 확인 대기)`,
@@ -137,7 +136,7 @@ def read_board(path: Path, label: str) -> Board:
 
 def main() -> int:
     files = read_task_files()
-    boards = [read_board(TASK_MD, "Task.MD"), read_board(README_MD, "tasks/README.md")]
+    boards = [read_board(README_MD, "tasks/README.md")]
 
     problems = []
 
@@ -174,10 +173,10 @@ def main() -> int:
         print("[FAIL] 작업 보드 정합 위반 %d건" % len(problems))
         for item in problems:
             print("  - %s" % item)
-        print("\n태스크 파일 Status / Task.MD / tasks/README.md 를 같은 판정으로 맞추십시오.")
+        print("\n태스크 파일 Status와 tasks/README.md를 같은 판정으로 맞추십시오.")
         return 1
 
-    print("[OK] 태스크 %d건의 상태가 3개 보드에서 일치합니다." % len(files))
+    print("[OK] 태스크 %d건의 상태가 과거 태스크 인덱스와 일치합니다." % len(files))
     return 0
 
 

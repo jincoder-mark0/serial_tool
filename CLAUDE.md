@@ -1,107 +1,269 @@
-﻿# SerialTool — 프로젝트 규칙
+# CLAUDE.md — SerialTool 작업 지침
 
-PyQt5 기반 멀티포트 시리얼 통신 유틸리티. **Strict MVP** + **EventBus** + **Fast Path** 아키텍처.
-현재 상태: 핵심 기능(멀티포트/매크로/파일 전송/로깅/테마/다국어) 구현 완료,
-테스트 기준선 **497개 통과**. PyInstaller 패키징·CI·AutoTx·벤치마크 도입 완료,
-SPI/I2C Transport·플러그인은 미착수 (Task.MD 참조).
+이 파일은 Claude 계열 코딩 에이전트가 SerialTool 저장소에서 작업할 때 사용하는 보조 지침이다.
+**최상위 정본은 [`AGENTS.md`](AGENTS.md)** 이며, 충돌 시 `AGENTS.md`와 현재 코드/architecture contract를 우선한다.
 
-## 실행·검증 명령
+> 현재 작업 브랜치: `refactor/presenter-view-boundary`
+> 안정 브랜치: `main`
+> 현재 작업 보드: [`Task.MD`](Task.MD)
+> 리팩토링 보고서: [`doc/refactoring_validation_report_20260830.md`](doc/refactoring_validation_report_20260830.md)
 
+---
+
+## 1. 작업 시작
+
+작업 전 다음 순서로 확인한다.
+
+1. `AGENTS.md`
+2. `Task.MD`
+3. 작업 대상 소스와 호출부
+4. 관련 tests
+5. `doc/refactoring_validation_report_20260830.md`
+6. 필요 시 `.agent/rules/`
+
+과거 문서의 설명이 현재 코드와 다르면 현재 코드와 architecture contract를 우선한다.
+
+특히 다음 과거 구조를 복구하지 않는다.
+
+```text
+EventBus -> EventRouter -> MainPresenter
+MainPresenter가 RX buffer/throttling 소유
+MainPresenter가 SettingsManager/Worker/Service를 내부 생성
+FilePresenter가 QThreadPool/FileTransferService를 직접 생성
+MacroPresenter가 script file I/O/QThread를 직접 소유
 ```
-.venv\Scripts\python main.py                                  # GUI 실행
-$env:QT_QPA_PLATFORM="offscreen"; .venv\Scripts\python -m pytest -q   # 전체 테스트 (GUI 불필요)
-.venv\Scripts\python -m pytest tests/test_model.py            # 부분 테스트
-.venv\Scripts\python tools\check_language_keys.py             # 언어 키 무결성 검사 (en↔ko, [TODO] 스캔)
-.venv\Scripts\python tools\check_task_boards.py               # 작업 보드 상태 정합 (파일/Task.MD/README 3중)
+
+---
+
+## 2. 현재 핵심 Architecture
+
+```text
+main.py
+  ↓
+ApplicationBootstrapper
+  ├─ View state restore
+  ├─ Model / Service 생성
+  ├─ Presenter 생성
+  ├─ Coordinator 생성
+  ├─ static signal wiring
+  ├─ MainPresenter 생성
+  └─ ApplicationComponents
 ```
 
-- Python 3.10+, 의존성: PyQt5, pyserial, commentjson, jsonschema (`requirements.txt`).
-- 테스트는 실제 시리얼 장비 없이 전부 실행 가능 (Mock Transport / offscreen).
+### Dependency direction
 
-작업 현황은 **[Task.MD](Task.MD)** (작업 보드) + **`tasks/S-0xx-*.md`** (세부 절차 —
-하위 모델용 자족적 문서, 시작 방법은 `tasks/README.md`)로 관리한다.
-태스크 시작·완료 시 반드시 갱신한다. 모델 분담(상위=Task 작성·판단 / 하위=Steps 수행)은 RULES.md §8.
-과거 Phase별 완료 체크리스트는 `doc/task.md`(이력 문서 — 추가만, 재구성 금지).
+```text
+Common <- Core <- Model <- Presenter/Coordinator <- View
+```
 
-## 절대 규칙 (아키텍처 불변식)
+해석:
 
-- 의존성 방향: `View → Presenter → Model → Core ← Common`. 역방향 import 금지.
-  - **View는 Model을 import하지 않는다** (Passive View — 시그널 emit + 인터페이스 메서드만).
-  - **Model은 View/위젯을 모른다**. UI 갱신은 Presenter가 중재한다.
-- 계층 간 데이터 전달은 `dict` 금지, `common/dtos.py`의 DTO만 사용.
-- 상태·이벤트 전달은 목적에 따라 두 채널을 구분해 쓴다: **Qt 직접 시그널**(소유 관계가 명확한
-  인접 계층 1:1/1:N — Model ↔ 그것을 소유한 Presenter, 예: `connection_closed`)과 **EventBus**
-  (`core/event_bus.py`, 계층을 건너뛰거나 소유 관계가 없는 다자 팬아웃). 대량 RX 데이터는 EventBus를
-  우회하는 **Fast Path**(ConnectionController → MainPresenter 직접 시그널)를 예외로 허용한다.
-  새 Fast Path를 임의로 늘리지 않는다.
-- 수신 데이터의 UI 반영은 MainPresenter의 **30ms Throttling** 버퍼를 거친다. 위젯 직접 갱신 금지.
-- 워커 스레드(ConnectionWorker/MacroRunner/FileTransferService)에서 위젯 직접 접근 금지 —
-  Qt 시그널로만 UI 스레드에 전달.
-- 설정 접근은 `SettingsManager`만 (JSON Schema 검증·마이그레이션 내장). 임의 파일 I/O로 설정을 읽고 쓰지 않는다.
-- UI 문자열 하드코딩 금지 — `resources/languages/*.json` 키 경유, 키 형식은 `[context]_[type]_[name]`.
-  키 추가·변경 시 en/ko 동기화(`tools/manage_language_keys.py`) 후 `tools/check_language_keys.py` 통과 필수.
-- 전역 상수·이벤트 토픽·설정 키는 `common/constants.py` 단일 관리. 사용처에 매직 넘버 직접 쓰지 않는다.
-- 색·스타일은 QSS 테마(`resources/themes/`)와 View 매니저(`view/managers/`) 경유. 위젯 코드에 색 리터럴 금지.
+- `common/`: shared DTO/enum/default/constants. 상위 계층 import 금지.
+- `core/`: infrastructure. model/presenter/view import 금지.
+- `model/`: runtime/business/I/O. presenter/view import 금지.
+- `presenter/`: View/Model orchestration. QtWidgets concrete creation 금지.
+- `view/`: Passive View. Model 직접 import/호출 금지.
 
-## 작업 방식
+기계적 검사는 `tests/test_layer_dependencies.py`가 담당한다.
 
-- 구현 전 가정을 한 줄로 밝히고 즉시 진행. 질문은 결과가 근본적으로 달라지고 되돌리기 어려운 경우만.
-- 요구사항을 충족하는 최소 구현. 요청하지 않은 기능·추상화 금지.
-- 기존 코드 수정 시 요청과 직접 관련된 줄만. 관련 없는 dead code는 삭제하지 말고 보고.
-- 변경 후 가장 작은 관련 검증부터 실행하고, 실행한 명령·결과·Mock/실장 여부를 정확히 보고.
-  검증 없이 "완료/정상 동작" 표현 금지. 실제 시리얼 포트 검증이 필요한 항목은 "실기기 미검증"으로 구분.
-- 코딩 표준은 `.agent/rules/` 5종을 따른다: 코드 스타일(code_style_guide), 주석(comment_guide —
-  Google Style Docstring + 모듈 헤더 WHY/WHAT/HOW), 명명(naming_convention_guide), Git(git_guide),
-  **UI(ui_guide — 색·대비·잘림·다국어·테마·상태 저장, `tests/test_ui_guidelines.py`가 강제)**.
-- 주석·Docstring은 한국어, 타입 힌트 필수.
+---
 
-## 자가 진화
+## 3. Runtime Event 규칙
 
-- 실수/빌드 오류/규약 위반은 `doc/mistakes.md`에 기록: `YYYY-MM-DD | 증상 | 원인 | 일회성: 예/아니오 | 조치`.
-- 동일 원인 2회 반복 시: ① 기계적 차단(테스트/도구/훅) → ② `.claude/skills/` 절차 갱신 → ③ CLAUDE.md·RULES.md 규칙 추가.
-  규칙화 커밋 메시지는 `Rule: <무엇을 왜>`, 해당 mistakes 항목에 `→ 규칙화됨` 표시.
-- 존재하지 않는 hook/자동화를 있는 것처럼 쓰지 않는다.
+production 주요 이벤트는 **direct Qt signal**을 사용한다.
 
-## 대화 로그 / Git
+`EventRouter`는 제거됐다. 다시 만들지 않는다.
 
-- 일자별 로그: `chatlog/chat_SerialTool_YY-MM-DD.md` — `.claude/settings.json` 훅이 자동 기록
-  (SessionStart/UserPromptSubmit/Stop). 읽기는 `python tools\chatlog.py tail --lines 200`만
-  (전체 읽기는 사용자가 복기 요청 시). 훅 미동작 시 수동: `python tools\chatlog.py append --role AGENT --text "..."`.
-- 커밋 메시지는 **한국어**, 형식은 `Feat:/Fix:/Docs:/Refactor:/Style:/Test:/Rule:` 접두어 +
-  명령형 제목 1줄, 필요 시 빈 줄 후 본문(왜를 쓴다 — 무엇은 diff가 말한다). 상세: `.agent/rules/git_guide.md`.
-- 테스트 통과 구현/규칙 변경/설계 결정 단위로 pathspec 커밋(`git commit <경로...>`). 비밀정보 커밋 금지.
-- 브랜치: `main`(안정) / `feature/기능명`(개발).
-- 세션 종료 시 주요 변경은 `doc/CHANGELOG.md`에, 세션 기록은 `doc/history/session_summary_YYYYMMDD.md`에 남긴다.
+```text
+ConnectionController
+  ├─ connection_opened
+  ├─ connection_closing
+  ├─ connection_closed
+  ├─ error_occurred
+  ├─ data_received
+  ├─ data_sent
+  └─ packet_received
+```
 
-## 문서 구조
+`core/event_bus.py`가 legacy/test utility로 남아 있을 수 있지만 새 production feature의 기본 event mechanism으로 선택하지 않는다.
 
-| 문서 | 목적 |
-|---|---|
-| `README.md` | 사용자용 개요·설치·아키텍처 (기능 변경 시 현행화) |
-| `Task.MD` | **작업 보드** (현재 상태·우선순위·잔여 작업) |
-| `tasks/` | 태스크별 세부 절차 (하위 모델용 자족 문서, `tasks/README.md`부터) |
-| `doc/00_overview.md` | 아키텍처·모듈 요약 |
-| `doc/implementation_plan.md` | 단계별 구현 계획 |
-| `doc/task.md` | Phase별 완료 체크리스트 (이력) |
-| `doc/CHANGELOG.md` | 변경 이력 |
-| `doc/mistakes.md` | 실수 대장 (자가 진화 §) |
-| `doc/history/` | 세션별 작업 기록 |
-| `tests/README.md` | 테스트 실행·해석 가이드 |
-| `.agent/rules/` | 코드 스타일·주석·명명·Git·UI 가이드 (표준) |
+동일 이벤트를 다음과 같이 중복 전달하지 않는다.
 
-## 구조 안내
+```text
+Qt Signal + EventBus + Router
+```
 
-- `common/` — 의존성 최하위: `constants.py`(상수·EventTopics·ConfigKeys), `dtos.py`, `enums.py`, `app_info.py`
-- `core/` — 인프라: `event_bus.py`, `settings_manager.py`(+`settings_schema.py`), `logger.py`,
-  `error_handler.py`, `data_logger.py`(Raw/Hex/Pcap), `structures.py`(RingBuffer 등),
-  `command_processor.py`, `resource_path.py`, `transport/`(base + serial_transport)
-- `model/` — 비즈니스 로직: `connection_controller.py`(Fast Path 기점), `connection_worker.py`(I/O QThread),
-  `macro_runner.py`, `file_transfer_service.py`(Backpressure), `packet_parser.py`, `port_scanner.py`
-- `presenter/` — 중재자: `main_presenter.py`(Throttling·Fast Path 수신), `lifecycle_manager.py`,
-  `event_router.py`(EventBus→Qt Signal), port/macro/file/packet/manual_control presenter
-- `view/` — Passive View: `main_window.py`, `panels/`, `sections/`, `widgets/`, `dialogs/`,
-  `custom_qt/`, `managers/`(Theme/Language/Color), `services/`
-- `resources/` — `languages/`(en/ko JSON), `themes/`(QSS), `icons/`(SVG), `configs/`(settings.json 기본값)
-- `tools/` — `chatlog.py`(대화 로그), `check_language_keys.py`·`check_task_boards.py`(CI 검사),
-  `manage_language_keys.py`(키 동기화), `ux_capture.py`(실행 화면 캡처), `benchmark.py`(성능 측정)
-- 진입점: `main.py` (Manager 초기화 순서가 곧 조립 순서 — Settings → Language/Theme/Color → MainWindow → MainPresenter)
+worker thread에서 View/QWidget 상태를 읽지 않는다.
+
+---
+
+## 4. 현재 책임 소유권
+
+### Connection
+
+- `ConnectionController`: session registry/open/close/send/broadcast/lifecycle signal
+- `ConnectionSessionFactory`: concrete Transport + ConnectionWorker 생성
+- `PacketParserManager`: parser lifecycle/feed/flush
+
+### Transmission
+
+- `CommandTransmissionService`: command processing, prefix/suffix, target resolution, validation, send
+
+### Port
+
+- `PortPresenter`: View ↔ ConnectionController
+- `PortScanManager`: scan QThread lifecycle
+
+### Manual
+
+- `ManualControlPresenter`: ManualCommand snapshot, AutoTx UI orchestration, RTS/DTR
+
+### Macro
+
+- `MacroPresenter`: Macro UI
+- `MacroRunner`: execution QThread
+- `MacroScriptManager`: JSON save/load + load thread
+- `MacroExecutionCoordinator`: target snapshot/send/connection-close policy
+
+### File Transfer
+
+- `FileTransferManager`: transfer service/QThreadPool/session/cancel/progress
+- `FilePresenter`: dialog/View presentation
+
+### Logging / Traffic
+
+- `LoggingCoordinator`: recording control/system log writer
+- `TrafficMonitor`: Tx/Rx logging/statistics
+- `DataTrafficHandler`: RX UI batching
+- `StatusCoordinator`: status timer/statistics rendering
+
+### Settings / State
+
+- `SettingsCoordinator`: Preferences/Theme/Language/Font persistence
+- `PreferencesCoordinator`: PreferencesState mapping
+- `ControlStateCoordinator`: current connection + broadcast enable policy
+- `AppLifecycleManager`: initial View restore
+- `ShutdownCoordinator`: shutdown sequence/state save
+
+---
+
+## 5. 절대 금지
+
+- `main` branch에 사용자 승인 없이 직접 write
+- Presenter 내부에서 `SettingsManager()`/Manager/Service fallback 생성
+- EventRouter 재도입
+- worker thread → QWidget 접근
+- Presenter 간 callback으로 숨은 수평 의존 생성
+- broad `signal.disconnect()`로 다른 listener 제거
+- View에서 Model 직접 호출
+- Controller에 parser/file-transfer/transport creation 책임 재집중
+- 테스트를 맞추기 위해 production architecture를 옛 구조로 되돌리기
+- 실행하지 않은 테스트를 통과했다고 보고
+
+---
+
+## 6. DTO / Settings / UI 규칙
+
+- 계층 간 의미 있는 payload는 `common/dtos.py` DTO를 우선한다.
+- 설정 persistence는 `SettingsManager`와 전용 Coordinator를 사용한다.
+- Config key는 `ConfigKeys`를 사용한다.
+- canonical 기본값은 `common/defaults.py` / `common/constants.py`를 사용한다.
+- UI 사용자 문자열은 language resource를 사용한다.
+- 테마/색상은 resource/QSS/View manager를 통해 적용한다.
+- 주석과 Docstring은 한국어, Why/How 중심으로 작성한다.
+- public 함수/중요 내부 함수는 타입 힌트를 유지한다.
+
+세부 코딩 규칙은 `.agent/rules/`를 따른다.
+
+---
+
+## 7. 현재 검증 순서
+
+현재 브랜치는 구조 구현보다 **검증이 최우선**이다.
+
+```text
+stale API / constructor audit
+        ↓
+ruff check .
+        ↓
+architecture contract tests
+        ↓
+lifecycle/threading tests
+        ↓
+feature tests
+        ↓
+full pytest
+        ↓
+language/task checks
+        ↓
+PR CI
+```
+
+Windows CI와 동일한 기본 명령:
+
+```powershell
+$env:QT_QPA_PLATFORM = "offscreen"
+python -m pytest -q
+ruff check .
+python tools/check_language_keys.py
+python tools/check_task_boards.py
+```
+
+세부 대상은 `Task.MD`의 P0 체크리스트를 따른다.
+
+---
+
+## 8. 실패 교정 원칙
+
+### constructor mismatch
+
+새 explicit DI 계약으로 호출부/test를 이동한다.
+optional fallback을 production에 다시 추가하지 않는다.
+
+### removed internal attribute
+
+실제 owner의 public API를 사용한다.
+MainPresenter를 service locator로 되돌리지 않는다.
+
+### signal mismatch
+
+direct Qt signal topology를 기준으로 고친다.
+EventBus/EventRouter bridge를 복구하지 않는다.
+
+### QThread/QRunnable failure
+
+해당 worker의 실제 owner Manager에서 수정한다.
+Presenter가 worker를 다시 소유하게 만들지 않는다.
+
+### state persistence mismatch
+
+View DTO shape와 Settings shape 사이에 explicit adapter를 둔다.
+
+---
+
+## 9. 완료 조건
+
+다음 모두 확인돼야 현재 리팩토링 검증을 완료로 본다.
+
+- stale API/constructor 감사 완료
+- ruff 0건
+- architecture contract tests Green
+- lifecycle/threading tests Green
+- full pytest Green
+- language key 검사 Green
+- task board 검사 Green
+- GitHub Actions PR CI Green
+- README/AGENTS/CLAUDE/RULES/overview와 코드 정합
+
+실제 실행 전에는 테스트 개수 기준선을 문서에 확정하지 않는다.
+
+---
+
+## 10. Git / 문서
+
+- 현재 리팩토링 작업은 `refactor/presenter-view-boundary`에만 반영한다.
+- destructive squash/rebase는 검증 Green 이후 사용자 승인 후 수행한다.
+- 문서 변경도 코드 구조와 함께 커밋한다.
+- 현재 상태는 `Task.MD`에 체크한다.
+- 중요한 설계 변경은 `doc/CHANGELOG.md`에 기록한다.
+- 반복 실수는 `doc/mistakes.md`에 기록한다.

@@ -1,16 +1,17 @@
 ﻿# tasks/ — 세부 태스크 문서
 
-루트 [Task.MD](../Task.MD)(작업 보드)의 각 항목을 **하위 모델이 프로젝트 전체 파악 없이
-Steps 그대로 수행할 수 있는 수준**으로 상세화한 문서 모음.
+완료·보류된 S-xxx 작업과 후속 기능 후보의 상세 기록입니다. 루트
+[`Task.MD`](../Task.MD)는 현재 검증 작업만 관리하며, 이 문서는 과거 태스크 파일의
+상태 인덱스를 유지합니다.
 
 ## 사용 방법 (모든 세션)
 
-1. CLAUDE.md·RULES.md를 먼저 읽는다.
-2. 루트 `Task.MD`에서 현재 위치를 파악하고, 아래 표에서 다음 TODO를 고른다
-   (의존 순서 준수, **Recommended model 확인 — 상위 모델 권장 태스크를 하위 모델이 시작하지 않는다**).
-3. 태스크 파일의 "Skills to load"에 적힌 스킬을 로드한다 (`.claude/skills/`: task-done, lang-keys).
-4. Steps를 그대로 따르고, Acceptance criteria 전부 충족 후 **task-done 스킬 절차**로 마감한다
-   (검증 3단계 → Task.MD·태스크 파일 Status 갱신 → doc/CHANGELOG.md → 커밋).
+1. `AGENTS.md`와 루트 `Task.MD`를 먼저 읽는다.
+2. 루트 `Task.MD`에서 현재 작업과 우선순위를 확인한다. 신규 기능 착수 승인이 있을 때만
+   아래 표의 TODO/보류 항목과 의존 관계를 참고한다.
+3. 태스크 파일의 과거 "Skills to load" 항목은 현재 환경에 같은 skill이 있을 때만 참고한다.
+4. Steps를 그대로 따르고 Acceptance criteria를 충족한 뒤 태스크 파일 Status,
+   이 인덱스와 `doc/CHANGELOG.md`를 함께 갱신한다.
 5. **Task 파일 밖의 재량 판단이 필요해지면 진행을 멈추고** 현재 상태를 보고한 뒤 상위 모델 검토를 요청한다.
 
 ## 공통 환경 (모든 태스크)
@@ -18,7 +19,7 @@ Steps 그대로 수행할 수 있는 수준**으로 상세화한 문서 모음.
 ```powershell
 Set-Location e:\Python\serial_tool
 $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
-.venv\Scripts\python -m pytest -q          # 전체 테스트 (기준선 497개)
+.venv\Scripts\python -m pytest -q          # 2026-08-30 로컬 기준선 622개
 ```
 
 ## 태스크 목록 (의존 순서)
@@ -131,7 +132,7 @@ $env:QT_QPA_PLATFORM="offscreen"          # GUI 없는 환경 필수
 
 - **하위 가능**: Steps가 자족적으로 작성됨. Steps 밖 판단이 필요해지면 즉시 중단·보고.
 - **상위 전용/권장**: 설계·판단이 본체인 태스크. 하위 모델은 시작하지 않는다.
-- 상태 값: `TODO` / `DOING` / `DONE` / `⛔ 보류(사유)` — 태스크 파일 상단 Status와 이 표, Task.MD를 함께 갱신.
+- 상태 값: `TODO` / `DOING` / `DONE` / `⛔ 보류(사유)` — 태스크 파일 상단 Status와 이 표를 함께 갱신.
 
 ## 태스크 파일 형식 (새 태스크 작성 시 — 상위 모델만)
 

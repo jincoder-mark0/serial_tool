@@ -234,6 +234,7 @@ class PortTabPanel(QTabWidget):
         # 연결 정리 요청 (포트가 선택되지 않은 빈 탭이면 emit하지 않음)
         if port_name:
             self.port_tab_closed.emit(port_name)
+        self.currentChanged.emit(self.currentIndex())
 
     def on_tab_changed(self, index: int) -> None:
         """

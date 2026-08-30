@@ -309,7 +309,7 @@ class MacroPanel(QWidget):
         try:
             # 커맨드 리스트 로드
             commands = state.get("commands", [])
-            if commands:
+            if "commands" in state:
                 self._macro_list.apply_state(commands)
 
             # 컨트롤 설정 로드

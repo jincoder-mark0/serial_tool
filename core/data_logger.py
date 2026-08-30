@@ -21,7 +21,7 @@
 """
 from typing import Optional, Dict
 from queue import Queue, Empty
-from threading import Thread
+from threading import Lock, Thread
 import os
 import time
 import struct
@@ -46,6 +46,7 @@ class DataLogger:
         self._queue: Queue = Queue() # (timestamp, data) 튜플 저장
         self._thread: Optional[Thread] = None
         self._is_logging = False
+        self._state_lock = Lock()
         # stop_logging()이 드레인 상한을 넘겨 루프를 강제 종료할 때만 True로 설정
         self._force_stop_drain = False
         self.file_path: str = ""
@@ -87,7 +88,8 @@ class DataLogger:
             if self.format == LogFormat.PCAP:
                 self._write_pcap_global_header()
 
-            self._is_logging = True
+            with self._state_lock:
+                self._is_logging = True
 
             # 백그라운드 스레드 시작
             self._thread = Thread(target=self._write_loop, daemon=True)
@@ -110,7 +112,8 @@ class DataLogger:
             - 그래도 큐에 남은 항목이 있으면 조용히 버리지 않고 개수를 경고 로그로
               표면화한다 (S-039의 TX 드레인 유실 방지와 동일한 원칙).
         """
-        self._is_logging = False
+        with self._state_lock:
+            self._is_logging = False
 
         if self._thread and self._thread.is_alive():
             # 1차: 정상적으로 큐를 비우며 종료할 시간을 준다.
@@ -148,7 +151,9 @@ class DataLogger:
         Args:
             data: 기록할 바이트 데이터
         """
-        if self._is_logging:
+        with self._state_lock:
+            if not self._is_logging:
+                return
             timestamp = time.time()
             self._queue.put((timestamp, data))
 

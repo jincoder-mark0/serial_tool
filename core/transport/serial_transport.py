@@ -21,7 +21,8 @@ import serial
 from typing import Optional
 from core.transport.base_transport import BaseTransport
 from common.dtos import PortConfig
-from common.constants import WRITE_TIMEOUT_S
+from common.constants import DEFAULT_PORT_TIMEOUT, WRITE_TIMEOUT_S
+from common.enums import SerialFlowControl
 
 class SerialTransport(BaseTransport):
     """
@@ -47,7 +48,7 @@ class SerialTransport(BaseTransport):
         Logic:
             - DTO에서 설정값 로드
             - 흐름 제어 설정 (RTS/CTS)
-            - Non-blocking I/O 설정 (timeout=0)
+            - Non-blocking I/O 설정 (DEFAULT_PORT_TIMEOUT)
             - Write Timeout 설정 (WRITE_TIMEOUT_S — 쓰기 완료 확인, S-039)
               워커 스레드(ConnectionWorker)에서만 블로킹되므로 UI는 멈추지 않음
             - serial.Serial 객체 생성
@@ -62,8 +63,8 @@ class SerialTransport(BaseTransport):
         try:
             # DTO 속성 사용 (타입 안전성 확보)
             flowctrl = self.config.flowctrl
-            rtscts = (flowctrl == 'RTS/CTS')
-            xonxoff = (flowctrl == 'XON/XOFF')
+            rtscts = (flowctrl == SerialFlowControl.RTS_CTS.value)
+            xonxoff = (flowctrl == SerialFlowControl.XON_XOFF.value)
 
             self._serial = serial.Serial(
                 port=self.config.port,
@@ -71,7 +72,7 @@ class SerialTransport(BaseTransport):
                 bytesize=self.config.bytesize,
                 parity=self.config.parity,
                 stopbits=self.config.stopbits,
-                timeout=0,                    # Read timeout (Non-blocking)
+                timeout=DEFAULT_PORT_TIMEOUT,  # Read timeout (Non-blocking)
                 write_timeout=WRITE_TIMEOUT_S, # Write timeout (완료 확인, S-039)
                 xonxoff=xonxoff,
                 rtscts=rtscts,
@@ -84,9 +85,10 @@ class SerialTransport(BaseTransport):
 
     def close(self) -> None:
         """시리얼 포트 닫기 및 리소스 해제"""
-        if self._serial and self._serial.is_open:
-            self._serial.close()
+        serial_port = self._serial
         self._serial = None
+        if serial_port and serial_port.is_open:
+            serial_port.close()
 
     def is_open(self) -> bool:
         """
@@ -105,16 +107,10 @@ class SerialTransport(BaseTransport):
             size (int): 읽을 최대 바이트 수
 
         Returns:
-            bytes: 읽은 데이터 (에러 시 빈 bytes)
+            bytes: 읽은 데이터
         """
         if self.is_open():
-            try:
-                return self._serial.read(size)
-            except serial.SerialException:
-                # 치명적인 에러 (연결 끊김 등)
-                return b""
-            except Exception:
-                return b""
+            return self._serial.read(size)
         return b""
 
     def write(self, data: bytes) -> None:
@@ -148,15 +144,10 @@ class SerialTransport(BaseTransport):
         수신 버퍼에 대기 중인 바이트 수 반환
 
         Returns:
-            int: 대기 중인 바이트 수 (에러 시 0)
+            int: 대기 중인 바이트 수
         """
         if self.is_open():
-            try:
-                return self._serial.in_waiting
-            except serial.SerialException:
-                return 0
-            except Exception:
-                return 0
+            return self._serial.in_waiting
         return 0
 
     def set_broadcast(self, state: bool) -> None:

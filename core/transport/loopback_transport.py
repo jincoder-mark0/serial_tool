@@ -53,13 +53,14 @@ class LoopbackTransport(BaseTransport):
         Returns:
             bool: 항상 True (실패할 하드웨어가 없음)
         """
-        self._is_open = True
+        with self._lock:
+            self._is_open = True
         return True
 
     def close(self) -> None:
         """루프백 연결 닫기 및 내부 버퍼 초기화"""
-        self._is_open = False
         with self._lock:
+            self._is_open = False
             self._buffer.clear()
 
     def is_open(self) -> bool:
@@ -69,7 +70,8 @@ class LoopbackTransport(BaseTransport):
         Returns:
             bool: 열려있으면 True
         """
-        return self._is_open
+        with self._lock:
+            return self._is_open
 
     def read(self, size: int) -> bytes:
         """
@@ -81,9 +83,9 @@ class LoopbackTransport(BaseTransport):
         Returns:
             bytes: 읽은 데이터 (닫혀있거나 버퍼가 비어있으면 빈 bytes)
         """
-        if not self._is_open:
-            return b""
         with self._lock:
+            if not self._is_open:
+                return b""
             if not self._buffer:
                 return b""
             chunk = bytes(self._buffer[:size])
@@ -97,9 +99,9 @@ class LoopbackTransport(BaseTransport):
         Args:
             data (bytes): 전송할 바이트 데이터. 다음 read() 호출 시 동일하게 반환됨.
         """
-        if not self._is_open:
-            return
         with self._lock:
+            if not self._is_open:
+                return
             self._buffer.extend(data)
 
     @property

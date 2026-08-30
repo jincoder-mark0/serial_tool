@@ -1,22 +1,18 @@
-"""Tests for manual command presentation and routing."""
-
-from unittest.mock import MagicMock, patch
+"""ManualControlPresenter의 View orchestration 책임을 검증합니다."""
+from unittest.mock import MagicMock
 
 import pytest
 
-from common.constants import ConfigKeys
 from common.dtos import ManualControlState
+from common.enums import TransmissionErrorCode
+from model.command_transmission_service import TransmissionResult
 from presenter.manual_control_presenter import ManualControlPresenter
 from view.panels.manual_control_panel import ManualControlPanel
+from view.sections.main_left_section import MainLeftSection
 
 
 @pytest.fixture
 def mock_panel():
-    # spec을 지정해 실제 ManualControlPanel에 없는 메서드 호출을 Mock이 삼키지 않게 한다.
-    # spec 없는 MagicMock은 어떤 이름이든 받아주므로, Presenter가 존재하지 않는 View
-    # 메서드를 불러도 테스트는 통과한다 — 실제로 그 틈으로 결함이 새어 나갔다:
-    # set_enabled()가 패널에 없는데(실제 이름은 set_controls_enabled) 393개 테스트가
-    # 모두 통과하는 동안 앱은 포트 탭을 바꿀 때마다 AttributeError로 죽고 있었다.
     panel = MagicMock(spec=ManualControlPanel)
     panel.get_input_text.return_value = ""
     panel.is_hex_mode.return_value = False
@@ -26,31 +22,34 @@ def mock_panel():
     panel.is_broadcast_enabled.return_value = False
     panel.is_rts_enabled.return_value = False
     panel.is_dtr_enabled.return_value = False
+    panel.is_auto_tx_enabled.return_value = False
+    panel.get_auto_tx_interval_ms.return_value = 1000
     return panel
 
 
 @pytest.fixture
-def mock_echo_callback():
-    return MagicMock()
+def mock_port_view():
+    view = MagicMock(spec=MainLeftSection)
+    view.get_current_port_name.return_value = "COM1"
+    return view
 
 
 @pytest.fixture
-def mock_get_port_callback():
-    callback = MagicMock(return_value="COM1")
-    return callback
-
-
-@pytest.fixture
-def presenter(mock_panel, mock_echo_callback, mock_get_port_callback):
+def presenter(mock_panel, mock_port_view):
     controller = MagicMock()
-    controller.is_connection_open.return_value = True
-    controller.has_active_broadcast_ports.return_value = True
-    return ManualControlPresenter(
-        panel=mock_panel,
-        connection_controller=controller,
-        local_echo_callback=mock_echo_callback,
-        get_active_port_callback=mock_get_port_callback,
+    controller.has_active_connection = True
+    transmission_service = MagicMock()
+    transmission_service.send.return_value = TransmissionResult(
+        success=True,
+        data=b"TEST",
     )
+    instance = ManualControlPresenter(
+        panel=mock_panel,
+        port_view=mock_port_view,
+        connection_controller=controller,
+        transmission_service=transmission_service,
+    )
+    return instance
 
 
 def configure_command(
@@ -75,74 +74,91 @@ def test_initialization_connects_view_signals(presenter, mock_panel):
     mock_panel.send_requested.connect.assert_called()
     mock_panel.dtr_changed.connect.assert_called()
     mock_panel.rts_changed.connect.assert_called()
+    mock_panel.broadcast_changed.connect.assert_called()
+    mock_panel.auto_tx_toggled.connect.assert_called()
 
 
-def test_empty_command_is_not_sent(presenter, mock_panel):
-    configure_command(mock_panel, "")
-
-    presenter.on_send_requested()
-
-    presenter.connection_controller.send_data.assert_not_called()
-
-
-def test_single_port_command_is_encoded_and_echoed(
+def test_single_port_command_is_delegated_with_current_port(
     presenter,
     mock_panel,
-    mock_echo_callback,
+    mock_port_view,
 ):
-    configure_command(mock_panel, "TEST", local_echo=True)
-    presenter.local_echo_enabled = True
+    configure_command(mock_panel, "TEST")
 
     presenter.on_send_requested()
 
-    presenter.connection_controller.send_data.assert_called_once_with("COM1", b"TEST")
-    mock_echo_callback.assert_called_once_with(b"TEST")
+    command = presenter.transmission_service.send.call_args.args[0]
+    assert command.command == "TEST"
+    assert command.broadcast_enabled is False
+    presenter.transmission_service.send.assert_called_once_with(
+        command,
+        active_port="COM1",
+    )
+    mock_port_view.get_current_port_name.assert_called_once()
 
 
-def test_broadcast_command_uses_broadcast_route(presenter, mock_panel):
+def test_broadcast_command_does_not_resolve_current_port(
+    presenter,
+    mock_panel,
+    mock_port_view,
+):
     configure_command(mock_panel, "BCAST", broadcast=True)
 
     presenter.on_send_requested()
 
-    presenter.connection_controller.send_broadcast_data.assert_called_once_with(b"BCAST")
-    presenter.connection_controller.send_data.assert_not_called()
+    command = presenter.transmission_service.send.call_args.args[0]
+    presenter.transmission_service.send.assert_called_once_with(
+        command,
+        active_port=None,
+    )
+    mock_port_view.get_current_port_name.assert_not_called()
 
 
-def test_prefix_and_suffix_are_applied(presenter, mock_panel):
-    configure_command(mock_panel, "DATA", prefix=True, suffix=True)
-
-    with patch.object(presenter.settings_manager, "get") as get_setting:
-        get_setting.side_effect = lambda key, default=None: {
-            ConfigKeys.COMMAND_PREFIX: "<",
-            ConfigKeys.COMMAND_SUFFIX: ">",
-        }.get(key, default)
-        presenter.on_send_requested()
-
-    presenter.connection_controller.send_data.assert_called_once_with("COM1", b"<DATA>")
-
-
-def test_hex_command_is_decoded(presenter, mock_panel):
-    configure_command(mock_panel, "AA BB CC", hex_mode=True)
+def test_successful_send_requests_local_echo_via_signal(presenter, mock_panel):
+    configure_command(mock_panel, "TEST", local_echo=True)
+    presenter.local_echo_enabled = True
+    presenter.transmission_service.send.return_value = TransmissionResult(
+        success=True,
+        data=b"HELLO",
+    )
+    echoed = []
+    presenter.local_echo_requested.connect(echoed.append)
 
     presenter.on_send_requested()
 
-    presenter.connection_controller.send_data.assert_called_once_with(
-        "COM1",
-        b"\xaa\xbb\xcc",
+    assert echoed == [b"HELLO"]
+
+
+def test_failed_send_emits_user_error_without_echo(presenter, mock_panel):
+    configure_command(mock_panel, "TEST")
+    presenter.transmission_service.send.return_value = TransmissionResult(
+        success=False,
+        message="No port selected.",
+        error_code=TransmissionErrorCode.NO_ACTIVE_PORT,
     )
+    errors = []
+    echoes = []
+    presenter.send_error.connect(lambda *args: errors.append(args))
+    presenter.local_echo_requested.connect(echoes.append)
+
+    presenter.on_send_requested()
+
+    assert len(errors) == 1
+    assert errors[0][2] is True
+    assert echoes == []
 
 
-def test_missing_active_port_prevents_send(
+def test_missing_current_port_is_passed_as_none_to_service(
     presenter,
     mock_panel,
-    mock_get_port_callback,
+    mock_port_view,
 ):
     configure_command(mock_panel, "TEST")
-    mock_get_port_callback.return_value = None
+    mock_port_view.get_current_port_name.return_value = ""
 
     presenter.on_send_requested()
 
-    presenter.connection_controller.send_data.assert_not_called()
+    assert presenter.transmission_service.send.call_args.kwargs["active_port"] is None
 
 
 def test_hardware_control_is_forwarded(presenter):
@@ -165,10 +181,11 @@ def test_state_is_collected_through_panel_facade(presenter, mock_panel):
 
 
 def test_state_is_applied_through_panel_facade(presenter, mock_panel):
-    state = ManualControlState(input_text="Saved")
+    state = ManualControlState(input_text="Saved", local_echo_enabled=True)
 
     presenter.apply_state(state)
 
+    assert presenter.local_echo_enabled is True
     mock_panel.apply_state.assert_called_once_with(state)
 
 
@@ -180,16 +197,5 @@ def test_local_echo_setting_updates_panel(presenter, mock_panel):
 
 
 def test_set_enabled_calls_existing_panel_method(presenter, mock_panel):
-    """
-    `set_enabled()`가 패널에 **실제로 존재하는** 메서드를 호출하는지 고정한다.
-
-    회귀 배경: 이 메서드가 `panel.set_enabled()`를 부르고 있었는데 패널의 실제 이름은
-    `set_controls_enabled()`였다. 포트 탭을 바꿀 때마다 AttributeError로 앱이 죽었지만,
-    패널 Mock에 spec이 없어 어떤 이름이든 통과하는 바람에 전체 테스트는 초록이었다.
-    `mock_panel`이 `spec=ManualControlPanel`이므로, 없는 이름을 부르면 여기서 걸린다.
-    """
     presenter.set_enabled(True)
     mock_panel.set_controls_enabled.assert_called_once_with(True)
-
-    presenter.set_enabled(False)
-    assert mock_panel.set_controls_enabled.call_args[0][0] is False

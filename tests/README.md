@@ -1,106 +1,315 @@
-﻿# 테스트 가이드 (Testing Guide)
+# 테스트 가이드 (Testing Guide)
 
-이 문서는 `pytest`를 이용한 프로젝트 테스트 실행과 결과 해석 방법을 설명합니다.
+이 문서는 SerialTool의 pytest/ruff 실행 순서와 결과 해석 규칙을 설명합니다.
 
-## 1. 테스트 실행 (Running Tests)
+> 현재 리팩토링 검증 체크리스트: [`../Task.MD`](../Task.MD)
+> 구조 변경 상세: [`../doc/refactoring_validation_report_20260830.md`](../doc/refactoring_validation_report_20260830.md)
 
-본 프로젝트는 `pytest` 프레임워크를 사용하여 단위 테스트(Unit Test)와 통합 테스트(Integration Test)를 수행합니다.
-
-### 1.1 사전 준비
-가상 환경이 활성화되어 있어야 합니다.
-```bash
-# Windows
-.venv\Scripts\activate
-
-# Linux/Mac
-source .venv/bin/activate
-```
-
-### 1.2 기본 실행 방법
-
-- **전체 테스트 실행**:
-  ```bash
-  python -m pytest -q
-  ```
-
-- **특정 파일 테스트 실행**:
-  ```bash
-  python -m pytest tests/test_core_refinement.py
-  ```
-
-- **특정 테스트 함수만 실행**:
-  ```bash
-  # 파일명::함수명 형식
-  python -m pytest tests/test_core_refinement.py::TestCommandProcessor::test_process_ascii_command
-  ```
-
-Windows의 GUI 없는 환경에서는 먼저 `$env:QT_QPA_PLATFORM='offscreen'`을 설정합니다.
-
-현재 기준선은 **497 tests passed**입니다.
-
-### 1.3 자주 사용하는 Pytest 옵션 (Arguments)
-
-테스트 실행 시 유용한 옵션들입니다. 여러 옵션을 조합하여 사용할 수 있습니다. (예: `pytest -v -s`)
-
-| 옵션 (Short) | 옵션 (Long) | 설명 | 추천 상황 |
-| :---: | :--- | :--- | :--- |
-| **`-v`** | `--verbose` | **상세 모드**. 각 테스트 파일과 케이스별 성공/실패 여부를 목록으로 보여줍니다. | 어떤 테스트가 실행되고 있는지 확인할 때 |
-| **`-s`** | `--capture=no` | **표준 출력 표시**. 코드 내의 `print()` 문이나 로그가 콘솔에 그대로 출력됩니다. (기본적으로는 숨겨짐) | 디버깅을 위해 로그를 확인해야 할 때 |
-| **`-k`** | `--keyword` | **키워드 검색**. 특정 문자열이 이름에 포함된 테스트만 실행합니다. | 특정 기능(예: `Macro`) 관련 테스트만 돌릴 때 (`-k "Macro"`) |
-| **`-x`** | `--exitfirst` | **첫 실패 시 중단**. 테스트가 하나라도 실패하면 즉시 실행을 멈춥니다. | 에러를 빠르게 잡고 싶을 때 |
-| **`-lf`** | `--last-failed` | **실패한 테스트만 재실행**. 직전 실행에서 실패했던 케이스들만 다시 돌립니다. | 수정 후 확인 시 유용 |
-| | `--durations=0` | **소요 시간 표시**. 실행 시간이 가장 오래 걸린 테스트 순으로 보여줍니다. (0은 전체 표시) | 테스트 속도 최적화가 필요할 때 |
+현재 `refactor/presenter-view-boundary` 브랜치는 대규모 constructor/API 변경 후 전체 검증 단계입니다.
+**과거의 497 passed 같은 숫자를 현재 기준선으로 사용하지 않습니다.** 전체 pytest를 실제 실행해 Green을 확인한 뒤 새 baseline을 기록합니다.
 
 ---
 
-## 2. 테스트 결과 해석 (Interpreting Results)
+## 1. 테스트 환경
 
-`pytest` 실행 후 출력되는 결과의 의미는 다음과 같습니다.
+가상 환경 활성화:
 
-### 2.1 진행 상태 표시 (Progress)
-테스트 실행 중 각 점(`.`)이나 글자는 하나의 테스트 케이스를 의미합니다.
+Windows:
 
-- **`.` (Dot)**: **성공 (PASSED)**. 테스트가 문제없이 통과됨.
-- **`F` (Fail)**: **실패 (FAILED)**. `assert` 문이 실패하거나 예상치 못한 결과 발생.
-- **`E` (Error)**: **에러 (ERROR)**. 테스트 코드 자체의 오류나 픽스처(Fixture) 설정 중 예외 발생.
-- **`s` (Skip)**: **건너뜀 (SKIPPED)**. `@pytest.mark.skip` 등으로 인해 실행되지 않음.
-- **`x` (XFail)**: **예상된 실패 (XFAIL)**. 실패할 것을 알고 있는 테스트 (실패해도 통과로 간주).
-
-### 2.2 결과 요약 예시
-
-```text
-tests/test_model.py::test_port_controller_eventbus_bridge PASSED         [ 25%]
-tests/test_model.py::test_macro_runner_basic_flow FAILED                 [ 50%]
-...
-=================================== FAILURES ===================================
-_________________________ test_macro_runner_basic_flow _________________________
-... (에러 상세 내용 및 Traceback 표시) ...
-E       pytestqt.exceptions.TimeoutError: Signal macro_finished() not emitted after 2000 ms
-
-=========================== short test summary info ============================
-FAILED tests/test_model.py::test_macro_runner_basic_flow - TimeoutError...
-========================= 1 failed, 3 passed in 3.35s ==========================
+```powershell
+.venv\Scripts\activate
+$env:QT_QPA_PLATFORM = "offscreen"
 ```
 
-1.  **FAILURES 섹션**: 실패한 테스트의 상세 원인과 코드 위치를 보여줍니다.
-2.  **Summary Info**: 실패한 테스트의 목록을 요약해 줍니다.
-3.  **마지막 줄**: 전체 성공/실패 개수와 소요 시간을 보여줍니다. **초록색**이면 전체 성공, **빨간색**이면 하나 이상의 실패가 있음을 의미합니다.
+Linux/macOS:
 
-## View Mock 규율 (S-070)
+```bash
+source .venv/bin/activate
+export QT_QPA_PLATFORM=offscreen
+```
 
-Presenter 테스트에서 View/Panel을 Mock으로 만들 때는 **반드시 `spec=`을 지정한다.**
+의존성:
+
+```bash
+pip install -r requirements.txt
+```
+
+ruff가 없다면:
+
+```bash
+pip install ruff
+```
+
+---
+
+## 2. 현재 권장 검증 순서
+
+대규모 리팩토링에서는 전체 pytest부터 돌리기보다 실패 범위를 좁히는 순서로 실행합니다.
+
+### 2.1 Ruff
+
+```bash
+ruff check .
+```
+
+먼저 import/undefined-name/unused 항목을 정리합니다.
+
+### 2.2 Architecture contract
+
+```bash
+python -m pytest -q \
+  tests/test_layer_dependencies.py \
+  tests/test_composition_root_contract.py \
+  tests/test_architecture_policy_boundaries.py \
+  tests/test_direct_event_topology.py \
+  tests/test_presenter_view_contract.py \
+  tests/test_port_presenter_sender_contract.py
+```
+
+Windows PowerShell에서는 한 줄로 실행하거나 backtick을 사용합니다.
+
+검증 대상:
+
+- layer 역방향 import
+- Single Composition Root
+- EventRouter 재도입 여부
+- hidden runtime fallback
+- Presenter → 존재하지 않는 View API
+- broad signal disconnect / sender inference 회귀
+
+### 2.3 Lifecycle / Threading
+
+```bash
+python -m pytest -q \
+  tests/test_shutdown_coordinator.py \
+  tests/test_shutdown_data_logger.py \
+  tests/test_file_transfer_manager.py \
+  tests/test_port_scan_shutdown.py \
+  tests/test_macro_script_manager.py \
+  tests/test_manual_control_transient_state.py \
+  tests/test_port_tab_cleanup.py
+```
+
+검증 대상:
+
+- running QThread/QRunnable 정리
+- shutdown ordering
+- queued RX data loss
+- FileTransfer cancel
+- PortScan/MacroScript worker lifetime
+- Auto Tx transient state
+
+### 2.4 핵심 기능
+
+```bash
+python -m pytest -q \
+  tests/test_command_transmission_service.py \
+  tests/test_presenter_manual_control.py \
+  tests/test_auto_tx.py \
+  tests/test_macro_execution_coordinator.py \
+  tests/test_parser_and_protocol.py \
+  tests/test_presenter_packet.py \
+  tests/test_file_transfer.py \
+  tests/test_integration_refactored.py
+```
+
+### 2.5 전체 테스트
+
+```bash
+python -m pytest -q
+```
+
+전체 테스트가 Green이면 그 실행 결과의 정확한 passed/failed/skipped 수를 현재 baseline으로 기록합니다.
+
+---
+
+## 3. CI 보조 검사
+
+```bash
+python tools/check_language_keys.py
+python tools/check_task_boards.py
+```
+
+GitHub Actions의 현재 핵심 job:
+
+- Windows full pytest (`QT_QPA_PLATFORM=offscreen`)
+- language key integrity
+- task-board consistency
+- `ruff check .`
+
+PR에서 CI Green을 확인해야 merge-ready로 판단합니다.
+
+---
+
+## 4. 특정 테스트 실행
+
+파일:
+
+```bash
+python -m pytest tests/test_command_transmission_service.py -v
+```
+
+함수:
+
+```bash
+python -m pytest tests/test_command_transmission_service.py::test_single_send -v
+```
+
+키워드:
+
+```bash
+python -m pytest -k "shutdown" -v
+```
+
+직전 실패만:
+
+```bash
+python -m pytest -lf
+```
+
+첫 실패에서 중단:
+
+```bash
+python -m pytest -x
+```
+
+느린 테스트 확인:
+
+```bash
+python -m pytest --durations=20
+```
+
+---
+
+## 5. 결과 해석
+
+- `.`: PASSED
+- `F`: FAILED
+- `E`: setup/runtime ERROR
+- `s`: SKIPPED
+- `x`: XFAIL
+
+대규모 리팩토링에서 `TypeError`, `AttributeError`, import error가 나오면 바로 production에 compatibility fallback을 추가하지 않습니다.
+먼저 stale test/API인지 판정합니다.
+
+---
+
+## 6. Stale API / Constructor 판정
+
+### MainPresenter
+
+현재 production MainPresenter는 Bootstrapper가 생성합니다.
+
+테스트가 직접 두 번째 MainPresenter를 만들기보다 가능한 경우:
 
 ```python
-panel = MagicMock(spec=ManualControlPanel)   # O
-panel = MagicMock()                          # X — 없는 메서드도 통과한다
+runtime = ApplicationBootstrapper(view, settings).build()
+presenter = runtime.main_presenter
 ```
 
-`spec` 없는 `MagicMock`은 어떤 이름이든 받아준다. Presenter가 존재하지 않는 View
-메서드를 불러도 테스트는 초록이고, 앱은 실행 시 `AttributeError`로 죽는다.
-실제로 그런 일이 있었다 — `panel.set_enabled()`(실제 이름은 `set_controls_enabled`)
-때문에 393개 테스트가 전부 통과하는 동안 앱은 포트 탭을 바꿀 때마다 죽었다(S-067).
+을 사용합니다.
 
-`spec`은 **테스트가 지나가는 경로만** 막는다. Presenter의 View 호출 대부분은 테스트가
-닿지 않으므로, `tests/test_presenter_view_contract.py`가 소스를 정적으로 훑어 전수
-확인한다(현재 147건). 새 Presenter를 만들 때 View 파라미터에 **타입 주석을 달고**
-`self.X = param` 형태로 보관하면 자동으로 검사 대상이 된다.
+### Explicit DI
+
+다음과 같은 옛 호출은 stale일 수 있습니다.
+
+```python
+PortPresenter(view, controller)
+MacroPresenter(panel, runner)
+```
+
+현재 필수 Manager/Settings dependency를 production 계약에 맞게 주입합니다.
+
+### 제거된 EventRouter
+
+다음과 같은 구조는 복구하지 않습니다.
+
+```python
+presenter.event_router.packet_received.emit(...)
+```
+
+현재 owner의 direct Qt signal을 사용합니다.
+
+### 제거된 MainPresenter 내부 필드
+
+테스트가 다음을 MainPresenter에서 직접 찾으면 stale 가능성이 큽니다.
+
+```text
+data_handler
+settings_manager
+status_coordinator
+file_transfer_manager
+port_scan_manager
+macro_script_manager
+macro_presenter
+packet_presenter
+port_presenter
+_sys_log_writer
+```
+
+실제 owner의 public API나 `ApplicationComponents`를 사용합니다.
+
+---
+
+## 7. View Mock 규율
+
+Presenter 테스트에서 concrete View/Panel mock을 만들 때 가능한 경우 `spec=`을 사용합니다.
+
+```python
+panel = MagicMock(spec=ManualControlPanel)   # 권장
+panel = MagicMock()                          # interface drift를 삼킬 수 있음
+```
+
+`spec`만으로 모든 path를 보장하지 못하므로 `tests/test_presenter_view_contract.py`가 source를 정적으로 검사합니다.
+
+새 Presenter/Coordinator에서 View dependency를 추가할 때 타입 주석과 명확한 `self.attr = dependency` 형태를 유지하면 contract 검사 추적성이 좋아집니다.
+
+---
+
+## 8. Threading 테스트 규율
+
+QThread/QRunnable을 테스트할 때는 다음을 구분합니다.
+
+- thread start 자체가 성공했는지
+- 실제 작업이 완료됐는지
+- signal이 main thread에 전달됐는지
+- cancel/stop 후 `isRunning()`이 false인지
+- 테스트 teardown에서 background object가 남지 않는지
+
+`time.sleep()`만으로 완료를 추정하지 말고 가능한 경우 `qtbot.waitUntil`, `waitSignal`, 실제 lifecycle state를 사용합니다.
+
+---
+
+## 9. Hardware / LOOPBACK / Mock 구분
+
+테스트 결과를 보고할 때 다음을 구분합니다.
+
+- Mock Serial
+- LOOPBACK Transport
+- 실제 serial hardware
+
+LOOPBACK/Mock으로 통과한 것을 실제 장비 flow-control/timing 검증으로 표현하지 않습니다.
+
+---
+
+## 10. 완료 기준
+
+현재 리팩토링 테스트 검증 완료 조건:
+
+```text
+ruff Green
+  +
+architecture contract Green
+  +
+lifecycle/threading Green
+  +
+feature tests Green
+  +
+full pytest Green
+  +
+language/task checks Green
+  +
+PR CI Green
+```
+
+검증하지 않은 항목은 `Task.MD`에서 체크하지 않습니다.
