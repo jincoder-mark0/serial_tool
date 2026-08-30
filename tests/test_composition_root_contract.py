@@ -20,16 +20,19 @@ def test_main_composition_root_injects_settings_manager():
 
 def test_main_presenter_passes_same_settings_to_runtime_components():
     source = inspect.getsource(MainPresenter)
-    assert "AppLifecycleManager(self, self.settings_manager)" in source
+    assert "AppLifecycleManager(\n            self.view,\n            self.settings_manager" in source
     assert "self.connection_controller,\n            self.settings_manager" in source
     assert "self.view.packet_view,\n            self.connection_controller,\n            self.settings_manager" in source
     assert "self.view.port_view,\n            self.connection_controller,\n            self.settings_manager" in source
 
 
-def test_lifecycle_does_not_unconditionally_create_settings_manager():
-    source = inspect.getsource(AppLifecycleManager.__init__)
-    assert "self.settings_manager = settings_manager" in source
-    assert "self.settings_manager = SettingsManager()" not in source
+def test_lifecycle_does_not_own_or_call_main_presenter():
+    source = inspect.getsource(AppLifecycleManager)
+    assert "main_presenter" not in source
+    assert "self.mp" not in source
+    assert "_init_core_systems" not in source
+    assert "_init_sub_presenters" not in source
+    assert "_connect_signals" not in source
 
 
 def test_port_presenter_uses_injected_settings_for_packet_configuration():
