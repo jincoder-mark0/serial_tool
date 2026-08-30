@@ -20,28 +20,34 @@ def test_main_builds_and_injects_runtime_components():
 def test_bootstrapper_is_the_concrete_object_graph_owner():
     source = inspect.getsource(ApplicationBootstrapper.build)
 
-    assert "PacketParserManager()" in source
-    assert "ConnectionSessionFactory()" in source
-    assert "ConnectionController(" in source
+    for constructor in (
+        "PacketParserManager()",
+        "ConnectionSessionFactory()",
+        "ConnectionController(",
+        "CommandTransmissionService(",
+        "FileTransferManager(",
+        "PortScanManager()",
+        "MacroRunner()",
+        "MacroScriptManager()",
+        "MacroExecutionCoordinator(",
+        "TrafficMonitor()",
+        "LoggingCoordinator(",
+        "PortPresenter(",
+        "MacroPresenter(",
+        "FilePresenter(",
+        "PacketPresenter(",
+        "ManualControlPresenter(",
+    ):
+        assert constructor in source
+
+    assert "DataTrafficHandler(self._view, traffic_monitor)" in source
     assert "packet_parser_manager," in source
     assert "connection_session_factory," in source
-    assert "CommandTransmissionService(" in source
-    assert "FileTransferManager(" in source
-    assert "PortScanManager()" in source
-    assert "MacroRunner()" in source
-    assert "MacroScriptManager()" in source
-    assert "TrafficMonitor()" in source
-    assert "DataTrafficHandler(self._view, traffic_monitor)" in source
-    assert "PortPresenter(" in source
     assert "port_scan_manager," in source
-    assert "MacroPresenter(" in source
     assert "macro_script_manager," in source
-    assert "FilePresenter(file_transfer_manager)" in source
-    assert "PacketPresenter(" in source
-    assert "ManualControlPresenter(" in source
 
 
-def test_main_presenter_does_not_construct_concrete_model_or_sub_presenter():
+def test_main_presenter_does_not_construct_concrete_runtime_components():
     source = inspect.getsource(MainPresenter)
 
     for constructor in (
@@ -53,7 +59,9 @@ def test_main_presenter_does_not_construct_concrete_model_or_sub_presenter():
         "PortScanManager(",
         "MacroRunner(",
         "MacroScriptManager(",
+        "MacroExecutionCoordinator(",
         "TrafficMonitor(",
+        "LoggingCoordinator(",
         "PortPresenter(",
         "MacroPresenter(",
         "FilePresenter(",
@@ -62,8 +70,9 @@ def test_main_presenter_does_not_construct_concrete_model_or_sub_presenter():
     ):
         assert constructor not in source
 
-    assert "ApplicationBootstrapper(" in source  # compatibility fallback only
+    assert "ApplicationBootstrapper(" in source  # 남은 test compatibility fallback
     assert "self._apply_components(runtime)" in source
+    assert "self.logging_coordinator = components.logging_coordinator" in source
     assert "self.port_scan_manager = components.port_scan_manager" in source
     assert "self.macro_script_manager = components.macro_script_manager" in source
     assert "self.traffic_monitor = components.traffic_monitor" in source
