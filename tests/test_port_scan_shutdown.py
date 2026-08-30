@@ -8,7 +8,6 @@ from presenter.port_presenter import PortPresenter
 
 
 def test_manager_waits_for_running_scan_without_leaking_worker(qapp):
-    """종료와 스캔이 겹쳐도 worker가 실행 중인 채로 남지 않아야 합니다."""
     manager = PortScanManager()
 
     def _slow_comports():
@@ -23,7 +22,6 @@ def test_manager_waits_for_running_scan_without_leaking_worker(qapp):
         worker = manager._worker
         assert worker is not None
         assert worker.isRunning() is True
-
         manager.stop()
 
     assert worker.isRunning() is False
@@ -53,21 +51,20 @@ def test_manager_stop_without_worker_is_idempotent():
     assert manager._worker is None
 
 
-def test_port_presenter_does_not_own_or_construct_scan_worker():
+def test_port_presenter_does_not_own_construct_or_stop_scan_worker():
     source = inspect.getsource(PortPresenter)
 
     assert "PortScanWorker" not in source
     assert "_scan_worker" not in source
+    assert "PortScanManager()" not in source
+    assert "stop_pending_scan" not in source
     assert "self.port_scan_manager.request_scan()" in source
-    assert "self.port_scan_manager.stop()" in source
 
 
-def test_port_presenter_scan_methods_delegate_to_manager():
+def test_port_presenter_scan_request_delegates_to_injected_manager():
     presenter = object.__new__(PortPresenter)
     presenter.port_scan_manager = MagicMock()
 
     presenter.scan_ports()
-    presenter.stop_pending_scan()
 
     presenter.port_scan_manager.request_scan.assert_called_once()
-    presenter.port_scan_manager.stop.assert_called_once()
