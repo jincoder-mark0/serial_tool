@@ -5,7 +5,7 @@
 순서를 관리합니다. S-059의 데이터 보존 순서(connection close -> processEvents -> logger stop)를
 보존합니다.
 """
-from typing import Callable
+from typing import Callable, Optional
 
 from PyQt5.QtCore import QCoreApplication
 
@@ -35,7 +35,6 @@ class ShutdownCoordinator:
         settings_manager: SettingsManager,
         connection_controller: ConnectionController,
         file_transfer_manager: FileTransferManager,
-        transaction_manager: TransactionManager,
         macro_runner: MacroRunner,
         macro_script_manager: MacroScriptManager,
         port_scan_manager: PortScanManager,
@@ -44,12 +43,12 @@ class ShutdownCoordinator:
         data_handler: DataTrafficHandler,
         close_system_log: Callable[[], None],
         status_coordinator: StatusCoordinator,
+        transaction_manager: Optional[TransactionManager] = None,
     ) -> None:
         self._view = view
         self._settings_manager = settings_manager
         self._connection_controller = connection_controller
         self._file_transfer_manager = file_transfer_manager
-        self._transaction_manager = transaction_manager
         self._macro_runner = macro_runner
         self._macro_script_manager = macro_script_manager
         self._port_scan_manager = port_scan_manager
@@ -58,6 +57,7 @@ class ShutdownCoordinator:
         self._data_handler = data_handler
         self._close_system_log = close_system_log
         self._status_coordinator = status_coordinator
+        self._transaction_manager = transaction_manager
 
     def shutdown(self) -> None:
         """백그라운드 작업, 상태 저장, 연결 및 logger를 안전한 순서로 종료합니다."""
@@ -72,7 +72,8 @@ class ShutdownCoordinator:
         # background 작업부터 정리합니다. SPI/I2C session도 별도 lifecycle owner가
         # 있으므로 Serial worker와 독립적으로 여기서 명시적으로 종료합니다.
         self._file_transfer_manager.shutdown()
-        self._transaction_manager.shutdown()
+        if self._transaction_manager is not None:
+            self._transaction_manager.shutdown()
         self._macro_script_manager.stop()
         self._port_scan_manager.stop()
         self._data_handler.stop()
