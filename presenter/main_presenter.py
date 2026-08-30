@@ -85,6 +85,7 @@ class MainPresenter(QObject):
             view=self.view,
             settings_manager=self.settings_manager,
             connection_controller=self.connection_controller,
+            file_transfer_manager=self.file_transfer_manager,
             macro_runner=self.macro_runner,
             macro_script_manager=self.macro_script_manager,
             port_scan_manager=self.port_scan_manager,
