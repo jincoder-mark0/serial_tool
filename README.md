@@ -2,91 +2,91 @@
 
 **최종 업데이트: 2026-08-30**
 
-SerialTool은 Python/PyQt5 기반의 멀티포트 시리얼 통신·자동화·프로토콜 분석 도구입니다.
-현재 구조는 **Passive View + 명시적 Dependency Injection + Single Composition Root + direct Qt signal**을 핵심 원칙으로 사용합니다.
+SerialTool은 Python/PyQt5 기반 멀티포트 Serial 통신·자동화·프로토콜 분석 도구입니다.
+현재 정본 브랜치는 `main`이며, Presenter/View Boundary 리팩토링은 PR #1에서 squash merge 완료했습니다.
 
-> 현재 리팩토링 브랜치: `refactor/presenter-view-boundary`
-> 상세 리팩토링 보고서: [`doc/refactoring_validation_report_20260830.md`](doc/refactoring_validation_report_20260830.md)
-> 현재 작업 체크리스트: [`Task.MD`](Task.MD)
+> 현재 기준 브랜치: `main`
+> 현재 작업 보드: [`Task.MD`](Task.MD)
 > AI/코딩 에이전트 규칙: [`AGENTS.md`](AGENTS.md)
+> 리팩토링 기록: [`doc/refactoring_validation_report_20260830.md`](doc/refactoring_validation_report_20260830.md)
 
-현재 브랜치는 구조 리팩토링과 `main` 전체 diff 감사를 마쳤고, **로컬 및 PR GitHub Actions 검증까지 Green**입니다.
-남은 단계는 실제 검증 범위/제한사항 기록과 merge/history 정리 판단입니다.
+## 1. 현재 상태
+
+2026-08-30 기준 구조 리팩토링과 검증은 완료됐습니다.
+
+```text
+Local Windows / Python 3.13.15
+  pytest: 643 passed, 0 failed, 0 skipped
+  Ruff: 0 errors
+  language key integrity: Green
+  task board consistency: Green
+
+PR #1 / GitHub Actions / Python 3.11
+  test-windows: success
+  lang-keys: success
+  task-boards: success
+  lint: success
+
+main post-merge CI
+  squash merge push: Green
+  latest documentation push: Green
+```
+
+검증 범위와 알려진 제한사항은 [`Task.MD`](Task.MD)에 기록합니다.
 
 ---
 
-## 1. 주요 기능
+## 2. 주요 기능
 
-### 통신
+### Serial / Connection
 
-- 다중 Serial 포트 연결/해제
-- LOOPBACK 디버그 포트
+- 다중 Serial port tab
+- 연결/해제 및 per-port 설정
+- LOOPBACK debug transport
 - ASCII / HEX 송신
-- Prefix / Suffix
-- Local Echo
-- Broadcast 송신
-- RTS / DTR 제어
+- Prefix / Suffix / Newline mode
+- Local Echo / Broadcast
+- RTS / DTR
 - 비동기 Port Scan
 
 ### Auto Tx / Macro
 
 - 주기 Auto Tx
-- Macro List 순차/반복 실행
+- Macro list 저장/로드/실행
 - Delay / Expect / Timeout
-- Broadcast Macro
-- JSON script 저장/비동기 로드
-- 전송 실패 결과를 실제 Macro 실행 결과에 반영
+- 반복/Broadcast 실행
+- 실제 전송 성공/실패를 Macro 결과에 반영
 
 ### File Transfer
 
-- Chunk 기반 파일 전송
-- Backpressure 제어
-- 진행률 / 속도 / ETA
-- 취소 가능
-- 대상 포트 종료 또는 앱 shutdown 시 안전한 cancellation
+- Chunk 기반 비동기 전송
+- Backpressure
+- progress / speed / ETA
+- cancel / port-close / shutdown 대응
+- Queue뿐 아니라 실제 `transport.write()` idle/error까지 확인 후 완료 판정
 
-### RX / Logging
+### RX / Logging / Packet
 
-- 대량 RX 데이터를 UI에 batch/throttle 처리
-- Tx/Rx byte statistics
-- Raw / Hex Dump / PCAP 저장
-- 전이중 Tx/Rx logging
-- 시스템 로그 파일 저장
-- 색상 규칙 기반 로그 강조 및 검색
+- 대량 RX UI batching/throttling
+- Tx/Rx statistics
+- BIN / HEX / PCAP logging
+- System log
+- Raw / AT / Delimiter / Fixed-Length / Length-Field / Gap framing
+- checksum validation
 
-### Packet Inspection
+### UI / Settings
 
-- Raw / AT / Delimiter / Fixed Length
-- Length Field framing
-- Gap framing
-- Checksum validation
-- packet buffer / realtime / autoscroll 설정
-
-### UI / 설정
-
-- Dark / Light / Dracula / Classic 테마
+- Dark / Light / Dracula / Classic theme
 - 한국어 / 영어
 - proportional / fixed font
-- 설정 schema validation + migration
-- 번들 실행 시 사용자 설정/로그 경로 분리
-
----
-
-## 2. 현재 구현 범위
-
-- 실제 하드웨어 Transport는 `SerialTransport`가 중심입니다.
-- LOOPBACK Transport는 테스트/디버깅용으로 제공합니다.
-- SPI/I2C Transport와 Plugin system은 후속 후보이며 현재 구현 범위가 아닙니다.
-- PyInstaller onedir 패키징 구성이 존재합니다.
-- GitHub Actions CI는 Windows pytest, language-key 검사, task-board 검사, ruff를 실행합니다.
-- Python 3.13 로컬 검증은 전체 pytest 643개와 Ruff/저장소 정합 gate까지 Green입니다.
-- PR #1의 Python 3.11 GitHub Actions는 `test-windows`, `lang-keys`, `task-boards`, `lint` 4개 job 모두 Green입니다.
+- schema validation + migration
+- 사용자 설정/로그 경로 분리
 
 ---
 
 ## 3. 설치 및 실행
 
-### 요구 사항
+요구 사항:
 
 - Python 3.10+
 - PyQt5
@@ -120,8 +120,6 @@ python main.py
 
 ## 4. 검증
 
-GitHub CI와 동일한 핵심 검증은 다음입니다.
-
 Windows / PowerShell:
 
 ```powershell
@@ -132,231 +130,90 @@ python tools/check_language_keys.py
 python tools/check_task_boards.py
 ```
 
-현재 리팩토링 검증 순서는 다음과 같이 수행했습니다.
+GitHub Actions는 `.github/workflows/ci.yml`의 `SerialTool CI`가 담당합니다.
 
-```text
-stale API/constructor audit
-        ↓
-ruff
-        ↓
-architecture contract tests
-        ↓
-lifecycle/threading tests
-        ↓
-feature tests
-        ↓
-full pytest
-        ↓
-GitHub Actions CI
-```
-
-검증 결과:
-
-```text
-Local Windows / Python 3.13.15 / offscreen
-  full pytest: 643 passed, 0 failed, 0 skipped
-  ruff: 0 errors
-  language key integrity: Green
-  task board consistency: Green
-
-PR #1 / GitHub Actions / Python 3.11
-  test-windows: success
-  lang-keys: success
-  task-boards: success
-  lint: success
-```
-
-상세 체크리스트는 [`Task.MD`](Task.MD)를 사용합니다.
+- `test-windows`: Windows + Python 3.11 전체 pytest
+- `lang-keys`: language key integrity
+- `task-boards`: Task/tasks consistency
+- `lint`: Ruff
+- `workflow_dispatch`: 수동 실행 지원
 
 ---
 
-## 5. 현재 아키텍처
+## 5. 현재 Architecture
 
-### 5.1 Single Composition Root
-
-`application_bootstrap.py`의 `ApplicationBootstrapper`가 완전한 runtime object graph를 생성합니다.
+핵심 원칙은 **Single Composition Root + Passive View + explicit DI + direct Qt signal**입니다.
 
 ```text
 main.py
-  │
-  ├─ ResourcePath / Settings / Theme / Language 준비
-  │
-  ▼
+  |
+  v
 ApplicationBootstrapper
-  │
-  ├─ View state restore
-  ├─ Model / Service 생성
-  ├─ Presenter 생성
-  ├─ Coordinator 생성
-  ├─ static signal wiring
-  ├─ MainPresenter 생성
-  └─ ApplicationComponents 반환
+  +-- View state restore
+  +-- Model / Service 생성
+  +-- Presenter 생성
+  +-- Coordinator 생성
+  +-- static signal wiring
+  +-- MainPresenter 생성
+  |
+  v
+ApplicationComponents
 ```
 
-`main.py`는 개별 Model/Presenter를 조립하지 않습니다.
-
-### 5.2 계층 방향
+Dependency direction:
 
 ```text
-Common
-  ↑
-Core
-  ↑
-Model
-  ↑
-Presenter / Coordinator
-  ↑
-View
+Common <- Core <- Model <- Presenter/Coordinator <- View
 ```
 
 핵심 규칙:
 
-- View는 Model을 직접 import/호출하지 않습니다.
-- Model은 Presenter/View를 알지 않습니다.
-- Presenter/Coordinator는 concrete QtWidgets를 직접 생성하지 않습니다.
-- 계층 간 의미 있는 데이터 전달은 DTO를 우선 사용합니다.
-- worker thread에서 QWidget/View 상태를 직접 읽지 않습니다.
-
-이 규칙은 `tests/test_layer_dependencies.py` 및 architecture contract tests로 검사합니다.
-
-### 5.3 Event topology
-
-현재 production 주요 runtime event는 **direct Qt signal**을 사용합니다.
-
-```text
-ConnectionWorker
-      ↓
-ConnectionController
-  ├─ connection_opened
-  ├─ connection_closing
-  ├─ connection_closed
-  ├─ error_occurred
-  ├─ data_received
-  ├─ data_sent
-  └─ packet_received
-```
-
-`EventRouter`는 제거됐습니다. 같은 이벤트를 `Qt Signal + EventBus + Router`로 중복 전달하지 않습니다.
-`core/event_bus.py`가 legacy/test utility로 남아 있을 수 있으나 production 주요 runtime path의 기본 event mechanism으로 사용하지 않습니다.
-
-### 5.4 RX data path
-
-```text
-SerialTransport
-      ↓
-ConnectionWorker
-      ↓
-ConnectionController.data_received
-      ├─ DataTrafficHandler ── 30ms UI batching ──> MainWindow/View
-      ├─ MacroRunner Expect
-      └─ PacketParserManager / PacketPresenter path
-
-TrafficMonitor
-      ├─ Tx/Rx logging
-      └─ statistics
-```
-
-MainPresenter는 RX buffer/throttling을 소유하지 않습니다.
+- View -> Model 직접 import/호출 금지
+- Model -> Presenter/View import 금지
+- Presenter/Coordinator의 concrete QtWidgets 생성 금지
+- worker -> QWidget/View 접근 금지
+- Presenter 내부 hidden singleton/manager fallback 금지
+- `EventRouter` 재도입 금지
+- production 주요 event는 direct Qt signal
 
 ---
 
-## 6. 주요 책임 구조
+## 6. 주요 책임 소유권
 
 ### Connection
 
-- `ConnectionController`
-  - connection registry
-  - open / close
-  - send / broadcast routing
-  - lifecycle signal
-- `ConnectionSessionFactory`
-  - Transport 선택
-  - ConnectionWorker 생성
-- `PacketParserManager`
-  - parser 생성 / registry / feed / flush
+- `ConnectionController`: session registry, open/close/send/broadcast, lifecycle signal
+- `ConnectionSessionFactory`: Transport 선택 + ConnectionWorker 생성
+- `PacketParserManager`: parser lifecycle/feed/flush
 
-### Command Transmission
+### Transmission
 
-- `CommandTransmissionService`
-  - Prefix/Suffix
-  - HEX/ASCII command processing
-  - single/broadcast target resolution
-  - connection validation
-  - 실제 send
-  - `TransmissionResult`
+- `CommandTransmissionService`: command processing, prefix/suffix, target resolution, validation, send
 
-Manual/Macro Presenter는 send policy를 복제하지 않습니다.
+### Port / Macro / File
 
-### Port
+- `PortPresenter`: Port View 중재
+- `PortScanManager`: scan worker lifecycle
+- `MacroPresenter`: Macro UI
+- `MacroRunner`: execution QThread
+- `MacroScriptManager`: script I/O + load worker lifecycle
+- `MacroExecutionCoordinator`: target snapshot/send/port-close policy
+- `FileTransferManager`: transfer lifecycle/QThreadPool/progress/cancel
+- `FilePresenter`: dialog/View presentation
 
-- `PortPresenter`
-  - Port View와 ConnectionController 중재
-- `PortScanManager`
-  - Port scan QThread lifecycle
+### Logging / State
 
-### Manual Control
-
-- `ManualControlPresenter`
-  - View state → `ManualCommand`
-  - Auto Tx UI orchestration
-  - RTS/DTR
-  - Local Echo signal
-
-### Macro
-
-- `MacroPresenter`
-  - Macro UI orchestration
-- `MacroRunner`
-  - execution QThread
-- `MacroScriptManager`
-  - JSON save/load + loader thread lifecycle
-- `MacroExecutionCoordinator`
-  - target-port snapshot
-  - CommandTransmissionService 호출
-  - target port close interruption
-
-### File Transfer
-
-- `FileTransferManager`
-  - Service/session 생성
-  - QThreadPool scheduling
-  - progress/speed/ETA
-  - cancel/shutdown
-- `FilePresenter`
-  - dialog/View presentation
-
-### Logging / Traffic
-
-- `LoggingCoordinator`
-  - port/system recording control
-  - system TextLogWriter lifecycle
-- `TrafficMonitor`
-  - Tx/Rx logging/statistics
-- `DataTrafficHandler`
-  - RX UI buffer/throttling
-- `StatusCoordinator`
-  - 상태바 timer/statistics 표시
-
-### Settings / UI state
-
-- `SettingsCoordinator`
-  - Preferences / Theme / Language / Font persistence
-- `PreferencesCoordinator`
-  - PreferencesState ↔ SettingsManager mapping
-- `ControlStateCoordinator`
-  - current connection + broadcast 기반 Manual/Macro enable policy
-- `AppLifecycleManager`
-  - 초기 View state 복원
-- `ShutdownCoordinator`
-  - runtime shutdown 순서 및 state 저장
+- `LoggingCoordinator`: port/system recording control
+- `TrafficMonitor`: Tx/Rx logging/statistics
+- `DataTrafficHandler`: RX UI batching
+- `StatusCoordinator`: status timer/statistics
+- `SettingsCoordinator`: Preferences/Theme/Language/Font persistence
+- `ControlStateCoordinator`: Manual/Macro enable policy
+- `ShutdownCoordinator`: shutdown ordering/state save
 
 ---
 
-## 7. Shutdown 규칙
-
-종료는 background producer와 logger의 데이터 보존 때문에 순서가 중요합니다.
-
-대표 순서:
+## 7. Shutdown Data-Preservation Rule
 
 ```text
 Macro/FileTransfer/MacroScript/PortScan/AutoTx stop
@@ -374,138 +231,37 @@ QCoreApplication.processEvents()
 DataLogger stop_all()
 ```
 
-특히 connection worker가 종료 직전 emit한 queued RX를 전달하기 전에 data logger를 닫지 않습니다.
+connection worker 종료 직전 queued RX가 전달되기 전에 DataLogger를 닫지 않습니다.
 
 ---
 
-## 8. 프로젝트 구조
+## 8. 문서 체계
 
-```text
-serial_tool/
-├─ main.py
-├─ application_bootstrap.py
-├─ common/
-├─ core/
-├─ model/
-│  ├─ connection_controller.py
-│  ├─ connection_session_factory.py
-│  ├─ connection_worker.py
-│  ├─ command_transmission_service.py
-│  ├─ packet_parser_manager.py
-│  ├─ port_scan_manager.py
-│  ├─ macro_runner.py
-│  ├─ macro_script_manager.py
-│  ├─ file_transfer_service.py
-│  ├─ file_transfer_manager.py
-│  └─ traffic_monitor.py
-├─ presenter/
-│  ├─ main_presenter.py
-│  ├─ port_presenter.py
-│  ├─ manual_control_presenter.py
-│  ├─ macro_presenter.py
-│  ├─ packet_presenter.py
-│  ├─ file_presenter.py
-│  ├─ lifecycle_manager.py
-│  ├─ macro_execution_coordinator.py
-│  ├─ settings_coordinator.py
-│  ├─ control_state_coordinator.py
-│  ├─ logging_coordinator.py
-│  ├─ status_coordinator.py
-│  └─ shutdown_coordinator.py
-├─ view/
-├─ resources/
-├─ tests/
-├─ tools/
-├─ tasks/
-└─ doc/
-```
-
-Coordinator가 현재 `presenter/`에 함께 위치하지만, 기능 경계가 안정된 후 별도 application/coordinator package로 이동하는 것은 후속 후보입니다.
-
----
-
-## 9. 설정 및 리소스
-
-`SettingsManager`는 JSON Schema validation과 migration을 담당합니다.
-
-- 개발 모드: 프로젝트의 개발용 설정 경로 사용
-- 번들 모드: `%APPDATA%\SerialTool\` 사용자 경로 사용
-- 손상 설정 파일은 안전한 fallback/backup 정책을 적용
-
-리소스:
-
-```text
-resources/
-├─ configs/
-├─ languages/
-├─ themes/
-└─ icons/
-```
-
-UI 문자열을 추가하거나 변경하면 한국어/영어 리소스를 함께 갱신하고 다음을 실행합니다.
-
-```bash
-python tools/check_language_keys.py
-```
-
----
-
-## 10. PyInstaller
-
-```powershell
-pip install pyinstaller
-pyinstaller serial_tool.spec --noconfirm
-```
-
-onedir 결과는 `dist/SerialTool/`에 생성됩니다.
-
----
-
-## 11. 개발 규칙
-
-작업 전 [`AGENTS.md`](AGENTS.md)를 읽습니다.
-
-핵심 원칙:
-
-- 현재 코드와 architecture contract를 과거 문서보다 우선
-- explicit DI 유지
-- EventRouter 재도입 금지
-- worker → QWidget 접근 금지
-- hidden singleton/fallback 재도입 금지
-- broad `signal.disconnect()` 금지
-- 변경 후 가장 작은 테스트부터 전체 테스트까지 확대
-- 실행하지 않은 검증을 통과했다고 표현하지 않음
-
----
-
-## 12. 문서
-
-| 문서 | 목적 |
+| 문서 | 역할 |
 |---|---|
-| `AGENTS.md` | AI/코딩 에이전트 최상위 작업 규칙 |
-| `Task.MD` | 현재 완료/잔여 작업 체크리스트 |
-| `doc/00_overview.md` | 현재 아키텍처 요약 |
-| `doc/refactoring_validation_report_20260830.md` | main 대비 리팩토링 결과와 검증 계획 |
-| `doc/implementation_plan.md` | 초기 설계/과거 계획 보존 문서 |
-| `doc/history/` | 과거 세션별 작업·결정 기록 |
+| `AGENTS.md` | 최상위 작업/architecture 규칙 |
+| `Task.MD` | 현재 작업 보드 및 post-merge backlog |
+| `RULES.md` | 검증/커밋/운영 규율 |
+| `CLAUDE.md` | Claude 계열 보조 지침 |
+| `doc/00_overview.md` | architecture overview |
+| `doc/refactoring_validation_report_20260830.md` | PR #1 리팩토링 감사/검증 기록 |
 | `doc/CHANGELOG.md` | 변경 이력 |
-| `doc/mistakes.md` | 반복 실수/교정 기록 |
-| `tasks/` | 세부 S-xxx 작업 이력 |
+| `doc/history/` | 세션별 작업/결정 기록 |
+| `tasks/` | S-xxx 상세 작업 이력 |
+
+`doc/refactoring_validation_report_20260830.md`는 merge 당시 검증 snapshot을 보존하는 기록 문서이며 현재 작업 상태는 `Task.MD`를 우선합니다.
 
 ---
 
-## 13. 현재 다음 작업
+## 9. 현재 다음 작업
 
-현재 자동 검증 gate는 모두 Green입니다.
+현재 구조/CI gate는 Green입니다. 신규 작업 우선순위는 [`Task.MD`](Task.MD)의 **Post-merge backlog**를 따릅니다.
 
-1. Mock / LOOPBACK / 실기기 검증 범위 기록
-2. 알려진 제한사항 확정
-3. commit history squash/rebase 여부 판단
-4. merge 방식 결정 및 최종 merge
+주요 후보:
 
-현재 검증 기준:
-
-```text
-Local Python 3.13: 643 passed / Ruff Green / repository gates Green
-PR #1 Python 3.11: 4/4 GitHub Actions jobs Green
-```
+- Windows com0com / Linux socat / 실제 USB Serial 검증
+- 최신 HEAD PyInstaller smoke 재검증
+- RX/Serial I/O 성능 재평가
+- Plugin system
+- SPI/I2C/TCP/UDP 확장
+- Packet filter/annotation/export
