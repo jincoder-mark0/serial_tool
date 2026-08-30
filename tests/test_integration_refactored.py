@@ -34,7 +34,10 @@ def mock_main_window(qapp):
 
 @pytest.fixture
 def integration_system(mock_main_window, mock_serial_port, mock_settings_manager):
-    presenter = MainPresenter(mock_main_window)
+    presenter = MainPresenter(
+        mock_main_window,
+        settings_manager=mock_settings_manager,
+    )
     yield presenter, mock_main_window, mock_serial_port
 
     presenter.data_handler.stop()
@@ -51,6 +54,7 @@ def test_system_initialization_wires_facade_views(integration_system):
     assert presenter.macro_presenter is not None
     assert presenter.manual_control_presenter is not None
     assert presenter.packet_presenter is not None
+    assert not hasattr(presenter, "event_router")
     window.connect_port_tab_changed.assert_called_once()
     window.manual_control_view.send_requested.connect.assert_called()
 
@@ -63,9 +67,6 @@ def test_connection_send_and_close_flow(
     controller = presenter.connection_controller
 
     assert controller.open_connection(sample_port_config) is True
-    # 의도적으로 worker.is_running()(transport open 완료 플래그) 대기 없이 곧바로
-    # send한다 — S-037 수정 전에는 이 타이밍의 send가 조용히 유실되었다
-    # (회귀 테스트: tests/test_send_before_open_race.py).
     controller.send_data(sample_port_config.port, b"TEST_MSG")
 
     assert wait_until(lambda: mock_serial.write.called)
@@ -98,8 +99,8 @@ def test_packet_event_is_formatted_for_packet_view(integration_system):
         ),
     )
 
-    presenter.event_router.packet_received.emit(event)
-    presenter.packet_presenter._flush_pending_packets()  # S-061: 버퍼링되므로 명시적 flush 필요
+    presenter.connection_controller.packet_received.emit(event)
+    presenter.packet_presenter._flush_pending_packets()
 
     view_data = window.packet_view.append_packet.call_args[0][0]
     assert view_data.data_hex == "AA BB"
