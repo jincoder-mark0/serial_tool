@@ -116,7 +116,16 @@ WHY:
 
 상세: [`extension_platform_plan.md`](doc/plans/extension_platform_plan.md)
 
-8. [-] 구조화 packet filter
+8. [x] 구조화 packet filter
+   - `model/packet_filter.py`에 pure `PacketFilterEngine` / immutable filter context 추가
+   - Raw RX Fast Path와 parser 내부는 건드리지 않고 완결 `PacketEvent` 이후 `PacketPresenter`에서 filtering
+   - semicolon-separated declarative DSL, 모든 rule은 AND 조건
+   - 지원: `port/type` equality, `len` range, HEX/ASCII contains/prefix, byte/range/mask, checksum state
+   - arbitrary Python expression 미지원
+   - malformed rule은 compile 단계에서 `PacketFilterSyntaxError`; 직전 valid filter 유지 + PacketPanel 오류 feedback
+   - PacketPanel에 Filter enable checkbox + expression input 추가
+   - filter off 시 기존 packet 표시 path 유지
+   - PR #10 구현 HEAD: Windows Python 3.11 full pytest `678 passed, 2 external warnings`, GitHub Actions 4/4 Green
 9. [-] packet annotation / selected-range export
 
 WHY:
@@ -192,6 +201,7 @@ WHY:
 - [x] 다중 Serial port tab과 연결/해제/설정
 - [x] Manual TX/RX, Auto Tx, Macro, File Transfer
 - [x] Packet Inspector 및 주요 parser
+- [x] Structured Packet Filter
 - [x] Logging / Theme / Localization / Settings
 - [x] Single Composition Root (`ApplicationBootstrapper`)
 - [x] Passive View + explicit DI

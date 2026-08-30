@@ -20,37 +20,137 @@ P3에서는 **실제 사용 사례가 분명한 기능부터** 진행하고, 범
 
 ---
 
-# 2. Phase 1 — Structured Packet Filter
+# 2. Phase 1 — Structured Packet Filter — 완료
 
-## 목표
+## 최종 구조
 
-PacketParser 이후의 완결 Packet DTO를 대상으로 filtering한다.
+PacketParser 이후의 완결 Packet/Event만 filtering한다.
 
 ```text
 Raw RX
- -> Parser
- -> Packet DTO
- -> Filter Engine
- -> Packet Presenter/View
+ -> PacketParserManager
+ -> PacketEvent
+ -> PacketPresenter
+ -> PacketFilterEngine
+ -> PacketViewData
+ -> PacketPanel
 ```
 
-Raw RX Fast Path 앞에 filter를 넣지 않는다.
+Raw RX Fast Path와 parser 내부에는 filter를 넣지 않는다.
 
-초기 rule 후보:
+## Owner / Boundary
 
-- field equality
-- numeric range
-- mask/bit condition
-- contains/prefix
-- checksum validity
+`model/packet_filter.py`:
 
-초기에는 declarative rule을 우선하고 arbitrary Python expression은 피한다.
+- `PacketFilterEngine`: expression compile 책임
+- `CompiledPacketFilter`: immutable compiled rule collection
+- `PacketFilterContext`: filter가 읽는 packet snapshot
+- `PacketFilterSyntaxError`: malformed expression의 단일 오류 surface
+
+`PacketPresenter`:
+
+- 현재 valid compiled filter 보유
+- filter enable 상태 보유
+- `PacketEvent`에서 context 생성 후 match 판정
+- malformed expression이면 기존 valid filter 유지
+
+`PacketPanel`:
+
+- Filter enable checkbox
+- expression input
+- syntax error feedback
+- filter 자체의 parsing/matching logic은 소유하지 않음
+
+## DSL
+
+semicolon(`;`)으로 분리된 모든 clause를 AND 조건으로 평가한다.
+
+```text
+port=COM3
+ type=AT
+len=8
+len=8..32
+hex*=DE AD
+hex^=AA55
+ascii*=OK
+ascii^=AT+
+byte[0]=0xAA
+byte[1]=10..20
+byte[0]&0xF0=0xA0
+checksum=ok
+checksum=fail
+checksum=none
+```
+
+지원 범위:
+
+- port/type equality
+- packet length equality/range
+- raw byte sequence contains/prefix
+- latin-1 text contains/prefix
+- byte offset equality/range
+- masked byte condition
+- checksum state
+
+초기 제외:
+
+- arbitrary Python expression
+- regex
+- OR / nested boolean group
+- user-defined callback
+- raw RX filtering
+
+WHY:
+
+- arbitrary expression은 execution/sandbox/error surface를 불필요하게 확대
+- 1차 목표는 predictable, compile-time validated, testable filtering
+- 복잡한 boolean DSL은 실제 요구가 확인될 때 확장
+
+## Malformed Rule Policy
+
+```text
+사용자 expression 편집
+ -> compile 성공
+    -> active compiled filter 교체
+    -> error feedback clear
+
+ -> compile 실패
+    -> 직전 valid compiled filter 유지
+    -> PacketPanel에 error 표시
+    -> RX/Parser runtime에는 예외 전달 안 함
+```
+
+## Checksum 공유
+
+`checksum=...` filtering과 CHK 컬럼 표시가 서로 다른 결과를 만들지 않도록
+`PacketPresenter`가 checksum을 한 번 계산하고 FilterContext와 PacketViewData가 같은 값을 공유한다.
+
+## 검증
+
+- pure engine DSL unit tests
+- filter off 기존 path regression
+- matching/non-matching packet integration
+- invalid expression이 직전 valid filter를 유지하는지 검증
+- language key integrity
+- full pytest / Ruff / task-board checks
+
+PR #10 구현 HEAD 검증:
+
+```text
+Windows / Python 3.11
+  full pytest: 678 passed, 2 external lark warnings
+  lint: success
+  lang-keys: success
+  task-boards: success
+```
 
 Acceptance:
 
-- filter off 시 기존 경로와 behavior 동일
-- 대량 packet에서 UI/RX Fast Path blocking 없음
-- malformed rule이 runtime을 깨지 않음
+- filter off 시 기존 경로와 behavior 동일 — 완료
+- Raw RX Fast Path 영향 없음 — 완료
+- malformed rule runtime isolation — 완료
+- View가 filter parsing logic을 소유하지 않음 — 완료
+- full CI Green — 완료
 
 ---
 
@@ -285,7 +385,7 @@ Plugin 적합 후보:
 # 9. 최종 Delivery 순서
 
 ```text
-1. Structured Packet Filter
+1. Structured Packet Filter [완료]
 2. Packet Annotation / Selected-range Export
 3. SPI/I2C backend & capability model
 4. SPI/I2C Transport implementation

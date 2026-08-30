@@ -13,37 +13,41 @@
 * PacketModel을 통한 데이터 관리 및 버퍼 크기 제한
 * 캡처 제어(Start/Stop) 및 초기화(Clear) 툴바
 * 자동 스크롤 제어
+* declarative packet filter 입력/활성화/오류 표시
 
 ## HOW
 * QAbstractTableModel을 상속받아 고성능 데이터 모델 구현
 * deque를 사용하여 고정 크기 버퍼(Ring Buffer) 구현
 * Presenter로부터 DTO(PacketViewData)를 받아 모델 업데이트
+* Filter 문법 검증은 Presenter/Model에 위임하고 View는 입력과 feedback만 담당
 """
-from typing import Any
 from collections import deque
+from typing import Any
 
+from PyQt5.QtCore import QAbstractTableModel, QModelIndex, Qt, QVariant, pyqtSignal
 from PyQt5.QtWidgets import (
-    QWidget, QVBoxLayout, QHBoxLayout, QTableView,
-    QPushButton, QCheckBox, QHeaderView, QLabel, QAbstractItemView
+    QAbstractItemView,
+    QCheckBox,
+    QHBoxLayout,
+    QHeaderView,
+    QLabel,
+    QLineEdit,
+    QPushButton,
+    QTableView,
+    QVBoxLayout,
+    QWidget,
 )
-from PyQt5.QtCore import Qt, pyqtSignal, QAbstractTableModel, QModelIndex, QVariant
 
-from view.managers.language_manager import language_manager
-from common.dtos import PacketViewData
 from common.constants import LAYOUT_MARGIN_NONE, LAYOUT_SPACING_TIGHT
+from common.dtos import PacketViewData
+from view.managers.language_manager import language_manager
+
+_FILTER_SYNTAX_EXAMPLE = "type=AT; len=8..32; ascii*=OK"
 
 
 class PacketModel(QAbstractTableModel):
-    """
-    패킷 데이터를 관리하는 테이블 모델 클래스
+    """패킷 데이터를 관리하는 bounded table model."""
 
-    QAbstractTableModel을 상속받아 QTableView에 데이터를 제공합니다.
-    최대 버퍼 크기를 관리하여 메모리 사용량을 제어합니다.
-    """
-
-    # 컬럼 정의 — 표시 문자열은 언어 키 경유 (S-071에서 CHK 추가하며 전환).
-    # 헤더는 언어 전환 시 `headerDataChanged`로 다시 그려야 하므로 상수 문자열을
-    # 갖지 않고 키만 갖는다.
     COLUMN_KEYS = [
         "packet_col_time",
         "packet_col_type",
@@ -52,40 +56,21 @@ class PacketModel(QAbstractTableModel):
         "packet_col_checksum",
     ]
 
-    # 체크섬 검증 결과 표시 문자열 (언어 무관 기술 표기 — 로그/스크린샷 대조 용이)
     CHECKSUM_PASS_TEXT = "OK"
     CHECKSUM_FAIL_TEXT = "FAIL"
 
     def __init__(self, buffer_size: int = 100):
-        """
-        PacketModel 초기화
-
-        Args:
-            buffer_size (int): 최대 패킷 저장 개수.
-        """
         super().__init__()
         self._buffer_size = buffer_size
         self._data: deque = deque(maxlen=buffer_size)
 
     def rowCount(self, parent: QModelIndex = QModelIndex()) -> int:
-        """행 개수 반환"""
         return len(self._data)
 
     def columnCount(self, parent: QModelIndex = QModelIndex()) -> int:
-        """열 개수 반환"""
         return len(self.COLUMN_KEYS)
 
     def data(self, index: QModelIndex, role: int = Qt.DisplayRole) -> Any:
-        """
-        데이터 반환 (DisplayRole)
-
-        Args:
-            index (QModelIndex): 요청 인덱스.
-            role (int): 데이터 역할.
-
-        Returns:
-            Any: 셀 데이터.
-        """
         if not index.isValid() or role != Qt.DisplayRole:
             return QVariant()
 
@@ -94,132 +79,99 @@ class PacketModel(QAbstractTableModel):
 
         if col == 0:
             return packet.time_str
-        elif col == 1:
+        if col == 1:
             return packet.packet_type
-        elif col == 2:
+        if col == 2:
             return packet.data_hex
-        elif col == 3:
+        if col == 3:
             return packet.data_ascii
-        elif col == 4:
-            # None(검증 안 함)은 빈칸으로 둔다 — "통과"와 "검증하지 않음"을
-            # 같은 모양으로 보여주면 설정이 안 걸린 것을 통과로 오인한다.
+        if col == 4:
             if packet.checksum_ok is None:
                 return ""
             return self.CHECKSUM_PASS_TEXT if packet.checksum_ok else self.CHECKSUM_FAIL_TEXT
         return QVariant()
 
-    def headerData(self, section: int, orientation: Qt.Orientation, role: int = Qt.DisplayRole) -> Any:
-        """헤더 데이터 반환"""
+    def headerData(
+        self,
+        section: int,
+        orientation: Qt.Orientation,
+        role: int = Qt.DisplayRole,
+    ) -> Any:
         if role == Qt.DisplayRole and orientation == Qt.Horizontal:
             return language_manager.get_text(self.COLUMN_KEYS[section])
         return QVariant()
 
     def retranslate_headers(self) -> None:
-        """언어 전환 시 헤더를 다시 그리도록 알린다."""
         self.headerDataChanged.emit(Qt.Horizontal, 0, len(self.COLUMN_KEYS) - 1)
 
     def append_packet(self, packet: PacketViewData) -> None:
-        """
-        패킷 데이터를 추가합니다.
-        버퍼가 가득 찬 경우 가장 오래된 데이터를 제거합니다.
-
-        Args:
-            packet (PacketViewData): 추가할 패킷 데이터 DTO.
-        """
-        # 버퍼가 가득 찼다면 행 제거 신호를 보냄
         if len(self._data) >= self._buffer_size:
             self.beginRemoveRows(QModelIndex(), 0, 0)
-            # deque는 자동으로 오래된 것을 밀어내지만, Qt View 갱신을 위해 명시적으로 알림 필요
-            # 그러나 deque의 append는 기존 데이터를 덮어쓰거나 밀어내므로
-            # 여기서는 beginInsertRows 전에 remove를 먼저 처리하는 것이 안전함.
-            # 하지만 deque 특성상 append 시 자동 popleft가 발생하므로,
-            # Qt 모델 동기화를 위해 popleft를 먼저 수행.
             self._data.popleft()
             self.endRemoveRows()
 
-        # 새 행 추가
         row = len(self._data)
         self.beginInsertRows(QModelIndex(), row, row)
         self._data.append(packet)
         self.endInsertRows()
 
     def clear(self) -> None:
-        """모든 데이터 삭제"""
         self.beginResetModel()
         self._data.clear()
         self.endResetModel()
 
     def set_buffer_size(self, size: int) -> None:
-        """
-        버퍼 크기를 변경합니다.
-        기존 데이터는 유지하되, 새 크기에 맞춰 조정됩니다.
-
-        Args:
-            size (int): 새 버퍼 크기.
-        """
         if size == self._buffer_size:
             return
 
         self.beginResetModel()
         self._buffer_size = size
-        # deque 리사이징 (새 maxlen 적용)
         self._data = deque(self._data, maxlen=size)
         self.endResetModel()
 
 
 class PacketPanel(QWidget):
-    """
-    패킷 분석 뷰 위젯
+    """Packet Presenter에 passive facade를 제공하는 분석 패널."""
 
-    QTableView와 제어 도구(Toolbar)를 포함합니다.
-    외부(Presenter)에서는 내부 위젯에 직접 접근할 수 없으며,
-    제공된 Facade 메서드를 통해 제어해야 합니다.
-    """
-
-    # 사용자 액션 시그널
     clear_requested = pyqtSignal()
     capture_toggled = pyqtSignal(bool)
+    filter_toggled = pyqtSignal(bool)
+    filter_expression_changed = pyqtSignal(str)
 
     def __init__(self, parent: QWidget = None) -> None:
-        """
-        PacketPanel 초기화
-
-        Args:
-            parent (QWidget, optional): 부모 위젯.
-        """
         super().__init__(parent)
 
-        # UI 컴포넌트
         self._packet_table: QTableView = None
         self._packet_model: PacketModel = None
         self._autoscroll_chk: QCheckBox = None
         self._capture_chk: QCheckBox = None
+        self._filter_chk: QCheckBox = None
+        self._filter_edit: QLineEdit = None
+        self._filter_error_lbl: QLabel = None
         self._clear_btn: QPushButton = None
         self._title_lbl: QLabel = None
 
         self._autoscroll_enabled = True
 
         self.init_ui()
-
-        # 언어 변경 연결
         language_manager.language_changed.connect(self.retranslate_ui)
 
     def init_ui(self) -> None:
-        """UI 구성 및 레이아웃 설정"""
         layout = QVBoxLayout(self)
-        layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE,
-                                   LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
+        layout.setContentsMargins(
+            LAYOUT_MARGIN_NONE,
+            LAYOUT_MARGIN_NONE,
+            LAYOUT_MARGIN_NONE,
+            LAYOUT_MARGIN_NONE,
+        )
         layout.setSpacing(LAYOUT_SPACING_TIGHT)
 
-        # 1. 툴바 (Toolbar)
         toolbar_layout = QHBoxLayout()
 
-        # 타이틀
         self._title_lbl = QLabel(language_manager.get_text("packet_grp_title"))
         self._title_lbl.setProperty("class", "section-title")
         self._title_lbl.setToolTip(language_manager.get_text("packet_grp_title_tooltip"))
 
-        # 제어 버튼들
         self._capture_chk = QCheckBox(language_manager.get_text("packet_chk_capture"))
         self._capture_chk.setChecked(True)
         self._capture_chk.setToolTip(language_manager.get_text("packet_chk_capture_tooltip"))
@@ -230,41 +182,59 @@ class PacketPanel(QWidget):
         self._autoscroll_chk.setToolTip(language_manager.get_text("packet_chk_autoscroll_tooltip"))
         self._autoscroll_chk.toggled.connect(self._on_autoscroll_toggled)
 
+        # Filter라는 technical UI term은 기존 Data Log의 localization key를 재사용한다.
+        self._filter_chk = QCheckBox(language_manager.get_text("data_log_chk_filter"))
+        self._filter_chk.setChecked(False)
+        self._filter_chk.setToolTip(
+            language_manager.get_text("data_log_chk_filter_tooltip")
+        )
+        self._filter_chk.toggled.connect(self.filter_toggled.emit)
+
+        self._filter_edit = QLineEdit()
+        self._filter_edit.setClearButtonEnabled(True)
+        self._filter_edit.setPlaceholderText(_FILTER_SYNTAX_EXAMPLE)
+        self._filter_edit.setToolTip(_FILTER_SYNTAX_EXAMPLE)
+        self._filter_edit.editingFinished.connect(self._emit_filter_expression)
+
         self._clear_btn = QPushButton(language_manager.get_text("packet_btn_clear"))
         self._clear_btn.setToolTip(language_manager.get_text("packet_btn_clear_tooltip"))
         self._clear_btn.clicked.connect(self.clear_requested.emit)
 
         toolbar_layout.addWidget(self._title_lbl)
         toolbar_layout.addStretch()
+        toolbar_layout.addWidget(self._filter_chk)
+        toolbar_layout.addWidget(self._filter_edit, 1)
         toolbar_layout.addWidget(self._capture_chk)
         toolbar_layout.addWidget(self._autoscroll_chk)
         toolbar_layout.addWidget(self._clear_btn)
 
-        # 2. 패킷 테이블 (Table View)
+        self._filter_error_lbl = QLabel("")
+        self._filter_error_lbl.setProperty("class", "error-text")
+        self._filter_error_lbl.setVisible(False)
+        self._filter_error_lbl.setWordWrap(True)
+
         self._packet_table = QTableView()
         self._packet_model = PacketModel()
-        self._columns_sized = False  # 시각 컬럼 폭 1회 보정 여부 (S-071)
+        self._columns_sized = False
         self._packet_table.setModel(self._packet_model)
 
-        # 테이블 스타일 설정
         self._packet_table.setSelectionBehavior(QAbstractItemView.SelectRows)
         self._packet_table.setAlternatingRowColors(True)
         self._packet_table.verticalHeader().setVisible(False)
         self._packet_table.setProperty("class", "fixed-font")
 
-        # 컬럼 너비 조정
         header = self._packet_table.horizontalHeader()
-        header.setSectionResizeMode(0, QHeaderView.ResizeToContents) # Time
-        header.setSectionResizeMode(1, QHeaderView.ResizeToContents) # Type
-        header.setSectionResizeMode(2, QHeaderView.Stretch)          # HEX (가변)
-        header.setSectionResizeMode(3, QHeaderView.Stretch)          # ASCII (가변)
-        header.setSectionResizeMode(4, QHeaderView.ResizeToContents) # 체크섬 검증 (S-071)
+        header.setSectionResizeMode(0, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(1, QHeaderView.ResizeToContents)
+        header.setSectionResizeMode(2, QHeaderView.Stretch)
+        header.setSectionResizeMode(3, QHeaderView.Stretch)
+        header.setSectionResizeMode(4, QHeaderView.ResizeToContents)
 
         layout.addLayout(toolbar_layout)
+        layout.addWidget(self._filter_error_lbl)
         layout.addWidget(self._packet_table)
 
     def retranslate_ui(self) -> None:
-        """언어 변경 시 텍스트 업데이트"""
         self._title_lbl.setText(language_manager.get_text("packet_grp_title"))
         self._title_lbl.setToolTip(language_manager.get_text("packet_grp_title_tooltip"))
         self._clear_btn.setText(language_manager.get_text("packet_btn_clear"))
@@ -273,54 +243,45 @@ class PacketPanel(QWidget):
         self._capture_chk.setToolTip(language_manager.get_text("packet_chk_capture_tooltip"))
         self._autoscroll_chk.setText(language_manager.get_text("packet_chk_autoscroll"))
         self._autoscroll_chk.setToolTip(language_manager.get_text("packet_chk_autoscroll_tooltip"))
-        # 표 헤더도 다시 그린다 (S-071 — 생성자에서 한 번만 넣으면 전환 시 남는다)
+        self._filter_chk.setText(language_manager.get_text("data_log_chk_filter"))
+        self._filter_chk.setToolTip(
+            language_manager.get_text("data_log_chk_filter_tooltip")
+        )
+        self._filter_edit.setPlaceholderText(_FILTER_SYNTAX_EXAMPLE)
+        self._filter_edit.setToolTip(_FILTER_SYNTAX_EXAMPLE)
         self._packet_model.retranslate_headers()
 
-    # -------------------------------------------------------------------------
-    # Public Methods (Presenter에서 호출 - Facade Interface)
-    # -------------------------------------------------------------------------
     def set_buffer_size(self, size: int) -> None:
-        """
-        패킷 버퍼 크기를 설정합니다.
-
-        Args:
-            size (int): 버퍼 크기.
-        """
         self._packet_model.set_buffer_size(size)
 
     def set_autoscroll(self, enabled: bool) -> None:
-        """
-        자동 스크롤 설정을 변경합니다 (설정 로드 시).
-
-        Args:
-            enabled (bool): 활성화 여부.
-        """
         self._autoscroll_enabled = enabled
         self._autoscroll_chk.setChecked(enabled)
 
     def set_capture_state(self, enabled: bool) -> None:
-        """
-        캡처 상태를 UI에 반영합니다.
-
-        Args:
-            enabled (bool): 활성화 여부.
-        """
         self._capture_chk.setChecked(enabled)
 
-    def append_packet(self, data: PacketViewData) -> None:
-        """
-        새 패킷 데이터를 뷰에 추가합니다.
+    def set_filter_state(self, enabled: bool) -> None:
+        self._filter_chk.setChecked(enabled)
 
-        Args:
-            data (PacketViewData): 패킷 데이터 DTO.
-        """
+    def set_filter_error(self, message: str) -> None:
+        """Malformed rule feedback를 입력 바로 아래에 표시합니다."""
+        self._filter_error_lbl.setText(message)
+        self._filter_error_lbl.setToolTip(message)
+        self._filter_error_lbl.setVisible(True)
+        self._filter_edit.setProperty("validationError", True)
+        self._refresh_filter_style()
+
+    def clear_filter_error(self) -> None:
+        self._filter_error_lbl.clear()
+        self._filter_error_lbl.setToolTip("")
+        self._filter_error_lbl.setVisible(False)
+        self._filter_edit.setProperty("validationError", False)
+        self._refresh_filter_style()
+
+    def append_packet(self, data: PacketViewData) -> None:
         self._packet_model.append_packet(data)
 
-        # 첫 행이 들어온 시점에 한 번만 시각 컬럼 폭을 내용에 맞춘다 (S-071).
-        # `ResizeToContents`는 표가 비어 있을 때 헤더 라벨 폭으로 정해지는데, 그 뒤
-        # Stretch 컬럼(HEX/ASCII)이 남는 폭을 모두 가져가 버려 데이터가 도착해도
-        # 시각 컬럼이 최소 폭(49px)에 눌린 채 "12:0…"으로 잘렸다(실측 확인).
-        # 매 행마다 재계산하면 S-061이 없앤 비용이 되살아나므로 최초 1회로 제한한다.
         if not self._columns_sized:
             self._columns_sized = True
             self._packet_table.resizeColumnToContents(0)
@@ -329,20 +290,20 @@ class PacketPanel(QWidget):
             self._packet_table.scrollToBottom()
 
     def clear_view(self) -> None:
-        """테이블 뷰를 초기화합니다."""
         self._packet_model.clear()
         self._columns_sized = False
 
-    # -------------------------------------------------------------------------
-    # Internal Slots
-    # -------------------------------------------------------------------------
-    def _on_autoscroll_toggled(self, checked: bool) -> None:
-        """
-        자동 스크롤 체크박스 토글 핸들러
+    def _emit_filter_expression(self) -> None:
+        self.filter_expression_changed.emit(self._filter_edit.text())
 
-        Args:
-            checked (bool): 체크 상태.
-        """
+    def _refresh_filter_style(self) -> None:
+        """Dynamic property 변경을 현재 theme/QSS에 즉시 반영합니다."""
+        style = self._filter_edit.style()
+        style.unpolish(self._filter_edit)
+        style.polish(self._filter_edit)
+        self._filter_edit.update()
+
+    def _on_autoscroll_toggled(self, checked: bool) -> None:
         self._autoscroll_enabled = checked
         if checked:
             self._packet_table.scrollToBottom()
