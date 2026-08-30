@@ -1,8 +1,7 @@
 """
 MainPresenter 초기화/배선 회귀 테스트.
 
-EventRouter 제거 후 핵심 Model/Service/Presenter가 생성되고 View와 직접 signal로
-연결되는 composition 계약을 검증합니다.
+현재 direct-signal topology와 composition 계약을 검증합니다.
 """
 from unittest.mock import MagicMock, patch
 
@@ -34,6 +33,8 @@ def mock_main_window():
 
     view.settings_save_requested = MagicMock()
     view.font_settings_changed = MagicMock()
+    view.theme_change_requested = MagicMock()
+    view.language_change_requested = MagicMock()
     view.close_requested = MagicMock()
     view.preferences_requested = MagicMock()
     view.shortcut_connect_requested = MagicMock()
@@ -54,7 +55,11 @@ class TestMainPresenterInit:
 
         assert presenter.connection_controller is not None
         assert presenter.command_transmission_service is not None
+        assert presenter.file_transfer_manager is not None
+        assert presenter.port_scan_manager is not None
         assert presenter.macro_runner is not None
+        assert presenter.macro_script_manager is not None
+        assert presenter.traffic_monitor is not None
         assert presenter.data_handler is not None
         assert not hasattr(presenter, "event_router")
 
@@ -97,6 +102,8 @@ class TestMainPresenterInit:
 
         mock_main_window.close_requested.connect.assert_called()
         mock_main_window.settings_save_requested.connect.assert_called()
+        mock_main_window.theme_change_requested.connect.assert_called()
+        mock_main_window.language_change_requested.connect.assert_called()
         mock_main_window.connect_port_tab_changed.assert_called()
 
         assert presenter.connection_controller.connection_opened is not None
