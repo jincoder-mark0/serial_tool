@@ -3,7 +3,9 @@
 
 ManualControlPanel의 사용자 의도를 받아 CommandTransmissionService에 전송을 위임합니다.
 현재 포트는 MainLeftSection facade에서 명시적으로 조회하고 Local Echo는 signal로 요청합니다.
+Auto Tx의 실행 여부는 세션성(transient) 상태로 취급하여 앱 재시작 시 자동 재개하지 않습니다.
 """
+from dataclasses import replace
 from typing import Optional
 
 from PyQt5.QtCore import QObject, pyqtSignal
@@ -38,8 +40,6 @@ class ManualControlPresenter(QObject):
         self.port_view = port_view
         self.connection_controller = connection_controller
         self.transmission_service = transmission_service
-
-        # 로컬 에코는 View/Preferences 상태이며 전송 서비스의 책임이 아닙니다.
         self.local_echo_enabled = self.panel.is_local_echo_enabled()
 
         self.auto_tx_scheduler = AutoTxScheduler()
@@ -105,7 +105,6 @@ class ManualControlPresenter(QObject):
 
     @staticmethod
     def _resolve_error_message(result: TransmissionResult) -> str:
-        """서비스의 실패 분류를 현재 언어의 사용자 메시지로 변환합니다."""
         if result.error_code is TransmissionErrorCode.INVALID_COMMAND:
             return language_manager.get_text("manual_control_msg_invalid_command").format(
                 result.message
@@ -124,7 +123,6 @@ class ManualControlPresenter(QObject):
         return result.message
 
     def _report_send_error(self, is_auto_tx: bool, title: str, message: str) -> None:
-        """단발/반복 전송에 따른 오류 알림 정책을 적용합니다."""
         if is_auto_tx:
             if self._auto_tx_failing:
                 return
@@ -149,12 +147,17 @@ class ManualControlPresenter(QObject):
             )
             return
 
+        self.stop_auto_tx()
+
+    def stop_auto_tx(self) -> None:
+        """Auto Tx scheduler와 UI 체크 상태를 idempotent하게 함께 정지합니다."""
         self.auto_tx_scheduler.stop()
+        self._auto_tx_failing = False
+        self.panel.set_auto_tx_checked(False)
 
     def _on_connection_closed(self, _event=None) -> None:
         if not self.connection_controller.has_active_connection:
-            self.auto_tx_scheduler.stop()
-            self.panel.set_auto_tx_checked(False)
+            self.stop_auto_tx()
 
     def on_dtr_changed(self, state: bool) -> None:
         self.connection_controller.set_dtr(state)
@@ -186,5 +189,7 @@ class ManualControlPresenter(QObject):
         )
 
     def apply_state(self, state: ManualControlState) -> None:
-        self.local_echo_enabled = state.local_echo_enabled
-        self.panel.apply_state(state)
+        """지속 설정을 복원하되 Auto Tx 실행 상태는 항상 꺼진 상태로 시작합니다."""
+        restored = replace(state, auto_tx_enabled=False)
+        self.local_echo_enabled = restored.local_echo_enabled
+        self.panel.apply_state(restored)
