@@ -6,7 +6,9 @@ import pytest
 from common.constants import LOOPBACK_PORT_NAME
 from common.dtos import PortConfig
 from common.enums import SerialFlowControl, SerialParity, SerialStopBits
+from core.transport.base_transport import BaseTransport
 from model.connection_controller import ConnectionController
+from model.connection_worker import ConnectionWorker
 from model.file_transfer_service import FileTransferService
 
 
@@ -41,10 +43,21 @@ class _FakeConnectionController:
         self.send_succeeds = send_succeeds
         self.sent_chunks = []
         self.queue_size_query_count = 0
+        self.write_idle = True
+        self.write_error = None
 
     def get_write_queue_size(self, port_name) -> int:
         self.queue_size_query_count += 1
         return self.queue_size
+
+    def is_write_idle(self, port_name) -> bool:
+        return self.write_idle and self.queue_size == 0
+
+    def is_connection_open(self, port_name) -> bool:
+        return True
+
+    def get_write_error(self, port_name):
+        return self.write_error
 
     def send_data_to_connection(self, port_name, chunk) -> bool:
         if not self.send_succeeds:
@@ -52,6 +65,40 @@ class _FakeConnectionController:
         self.sent_chunks.append(chunk)
         return True
 
+
+class _DelayedIdleController(_FakeConnectionController):
+    def __init__(self):
+        super().__init__()
+        self.idle_query_count = 0
+
+    def is_write_idle(self, port_name) -> bool:
+        self.idle_query_count += 1
+        return self.idle_query_count >= 3
+
+
+class _FailingWriteTransport(BaseTransport):
+    def __init__(self):
+        self._open = False
+
+    def open(self) -> bool:
+        self._open = True
+        return True
+
+    def close(self) -> None:
+        self._open = False
+
+    def is_open(self) -> bool:
+        return self._open
+
+    def read(self, size: int) -> bytes:
+        return b""
+
+    def write(self, data: bytes) -> None:
+        raise OSError("simulated device write failure")
+
+    @property
+    def in_waiting(self) -> int:
+        return 0
 
 def test_successful_transfer_over_loopback_delivers_bytes_in_order(qapp, tmp_path):
     content = bytes((index % 256) for index in range(5000))
@@ -112,6 +159,65 @@ def test_missing_file_emits_error_and_failed_completion(qapp, tmp_path):
     assert "not found" in errors[0].message.lower()
     assert len(completed) == 1
     assert completed[0].success is False
+
+
+def test_completion_waits_for_in_flight_transport_write(qapp, tmp_path):
+    file_path = tmp_path / "payload.bin"
+    file_path.write_bytes(b"PAYLOAD")
+    controller = _DelayedIdleController()
+    config = _rts_cts_config("COM1")
+    service = FileTransferService(controller, str(file_path), config)
+    completed = []
+    service.signals.transfer_completed.connect(completed.append)
+
+    service.run()
+
+    assert controller.idle_query_count == 3
+    assert completed[-1].success is True
+
+
+def test_transport_write_failure_cannot_report_success(qapp, tmp_path):
+    file_path = tmp_path / "payload.bin"
+    file_path.write_bytes(b"PAYLOAD")
+    controller = _FakeConnectionController()
+    controller.write_error = "simulated timeout"
+    config = _rts_cts_config("COM1")
+    service = FileTransferService(controller, str(file_path), config)
+    completed = []
+    errors = []
+    service.signals.transfer_completed.connect(completed.append)
+    service.signals.error_occurred.connect(errors.append)
+
+    service.run()
+
+    assert errors
+    assert "simulated timeout" in errors[-1].message
+    assert completed[-1].success is False
+
+
+def test_real_worker_write_failure_reaches_file_transfer_completion(qapp, tmp_path):
+    file_path = tmp_path / "payload.bin"
+    file_path.write_bytes(b"PAYLOAD")
+    config = _rts_cts_config("COM_FAIL")
+    controller = ConnectionController()
+    worker = ConnectionWorker(_FailingWriteTransport(), config.port)
+    controller.session_factory.create_worker = lambda _config: worker
+    completed = []
+    errors = []
+
+    try:
+        assert controller.open_connection(config) is True
+        service = FileTransferService(controller, str(file_path), config)
+        service.signals.transfer_completed.connect(completed.append)
+        service.signals.error_occurred.connect(errors.append)
+
+        service.run()
+
+        assert errors
+        assert "simulated device write failure" in errors[-1].message
+        assert completed[-1].success is False
+    finally:
+        controller.close_connection()
 
 
 def test_cancel_stops_before_remaining_chunks_and_emits_failed_completion(qapp, tmp_path):

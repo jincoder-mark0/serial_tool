@@ -110,10 +110,24 @@ class FileTransferService(QRunnable):
                 self._emit_failure("Transfer cancelled by user.")
                 return
 
-            while self.connection_controller.get_write_queue_size(self.port_name) > 0:
+            while not self.connection_controller.is_write_idle(self.port_name):
+                write_error = self.connection_controller.get_write_error(self.port_name)
+                if write_error:
+                    self._emit_failure(f"Transport write failed: {write_error}")
+                    return
+                if not self.connection_controller.is_connection_open(self.port_name):
+                    self._emit_failure(
+                        f"Port {self.port_name} closed before queued data was written."
+                    )
+                    return
                 if self._wait_or_cancel(FILE_TRANSFER_BACKPRESSURE_WAIT_S):
                     self._emit_failure("Transfer cancelled by user.")
                     return
+
+            write_error = self.connection_controller.get_write_error(self.port_name)
+            if write_error:
+                self._emit_failure(f"Transport write failed: {write_error}")
+                return
 
             self.signals.transfer_completed.emit(
                 FileCompletionEvent(

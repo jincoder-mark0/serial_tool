@@ -1,7 +1,7 @@
 """Integration tests for the current MVP component contracts."""
 
 import time
-from unittest.mock import MagicMock
+from unittest.mock import MagicMock, patch
 
 import pytest
 from PyQt5.QtCore import QCoreApplication
@@ -64,6 +64,35 @@ def test_system_initialization_wires_facade_views(integration_system):
     assert runtime.control_state_coordinator is not None
     assert runtime.settings_coordinator is not None
     window.manual_control_view.send_requested.connect.assert_called()
+
+
+def test_initial_port_scan_failure_reaches_system_log(
+    mock_main_window,
+    mock_settings_manager,
+):
+    with patch(
+        "model.port_scanner.serial.tools.list_ports.comports",
+        side_effect=OSError("registry unavailable"),
+    ):
+        runtime = ApplicationBootstrapper(
+            mock_main_window,
+            mock_settings_manager,
+        ).build()
+        try:
+            def scan_failure_logged():
+                return any(
+                    "Port scan failed: registry unavailable" in call.args[0].message
+                    for call in mock_main_window.log_system_message.call_args_list
+                )
+
+            assert wait_until(scan_failure_logged)
+        finally:
+            runtime.status_coordinator.stop()
+            runtime.data_handler.stop()
+            runtime.packet_presenter.stop()
+            runtime.file_transfer_manager.shutdown()
+            runtime.macro_script_manager.stop()
+            runtime.port_scan_manager.stop()
 
 
 def test_connection_send_and_close_flow(integration_system, sample_port_config):

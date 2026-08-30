@@ -17,11 +17,13 @@
 """
 import re
 import serial.tools.list_ports
+from queue import Empty, Queue
+from threading import Thread
 from PyQt5.QtCore import QThread, pyqtSignal
 from typing import List
 from core.logger import logger
 from common.dtos import PortInfo
-from common.constants import LOOPBACK_PORT_NAME
+from common.constants import BACKGROUND_IO_POLL_S, LOOPBACK_PORT_NAME
 
 class PortScanWorker(QThread):
     """
@@ -32,6 +34,7 @@ class PortScanWorker(QThread):
     """
     # (device, description) 튜플 리스트 전달
     ports_found = pyqtSignal(list)
+    scan_failed = pyqtSignal(str)
 
     def run(self) -> None:
         """
@@ -42,9 +45,32 @@ class PortScanWorker(QThread):
             2. Natural Sort (COM1 -> COM2 -> COM10) 정렬
             3. 시그널 발행
         """
+        result_queue = Queue()
+
+        def collect_ports() -> None:
+            try:
+                result_queue.put((True, serial.tools.list_ports.comports()))
+            except Exception as exc:
+                result_queue.put((False, exc))
+
+        # OS API가 반환하지 않아도 QThread는 interruption 요청에 응답해야 합니다.
+        Thread(target=collect_ports, daemon=True).start()
+
+        while not self.isInterruptionRequested():
+            try:
+                succeeded, payload = result_queue.get(timeout=BACKGROUND_IO_POLL_S)
+                break
+            except Empty:
+                continue
+        else:
+            return
+
+        if not succeeded:
+            self._emit_scan_failure(str(payload))
+            return
+
         try:
-            # 1. 포트 정보 수집
-            raw_ports = serial.tools.list_ports.comports()
+            raw_ports = payload
 
             # (device, description) 튜플 리스트로 먼저 정렬
             temp_list = []
@@ -73,8 +99,12 @@ class PortScanWorker(QThread):
             self.ports_found.emit(port_list)
 
         except Exception as e:
-            logger.error(f"Port scan failed: {e}")
-            # 실패 시에도 루프백 항목만은 상시 제공
-            self.ports_found.emit(
-                [PortInfo(device=LOOPBACK_PORT_NAME, description="Loopback (debug echo)")]
-            )
+            self._emit_scan_failure(str(e))
+
+    def _emit_scan_failure(self, message: str) -> None:
+        """실패를 별도 signal로 표면화하면서 Loopback fallback도 제공합니다."""
+        logger.error(f"Port scan failed: {message}")
+        self.scan_failed.emit(message)
+        self.ports_found.emit(
+            [PortInfo(device=LOOPBACK_PORT_NAME, description="Loopback (debug echo)")]
+        )

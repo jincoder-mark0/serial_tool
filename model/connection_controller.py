@@ -63,6 +63,16 @@ class ConnectionController(QObject):
         worker = self.workers.get(name)
         return worker.get_write_queue_size() if worker else 0
 
+    def is_write_idle(self, name: str) -> bool:
+        """대상 Worker의 Queue와 in-flight transport write가 모두 끝났는지 확인합니다."""
+        worker = self.workers.get(name)
+        return worker is not None and worker.is_write_idle()
+
+    def get_write_error(self, name: str) -> Optional[str]:
+        """대상 Worker의 terminal transport write 오류를 반환합니다."""
+        worker = self.workers.get(name)
+        return worker.get_write_error() if worker else None
+
     def open_connection(self, config: PortConfig) -> bool:
         name = config.port
         if not name:

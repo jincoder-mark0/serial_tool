@@ -62,6 +62,8 @@ class ConnectionWorker(QThread):
         self._is_running = False
         self._stop_requested = False
         self._broadcast_enabled = False
+        self._write_in_progress = False
+        self._write_error: Optional[str] = None
 
         self._mutex = QMutex()
         self._write_queue = ThreadSafeQueue() # 비동기 전송용 Queue
@@ -113,9 +115,7 @@ class ConnectionWorker(QThread):
 
                         # 4. TX Queue 처리 (비동기 전송)
                         while not self._write_queue.is_empty():
-                            data = self._write_queue.dequeue()
-                            if data:
-                                self.transport.write(data)
+                            self._write_next_queued_chunk()
 
                         # 5. CPU 부하 방지
                         # 데이터가 없으면 긴 sleep, 있으면 짧은 sleep
@@ -171,9 +171,7 @@ class ConnectionWorker(QThread):
         drained = 0
         try:
             while not self._write_queue.is_empty():
-                data = self._write_queue.dequeue()
-                if data:
-                    self.transport.write(data)  # 실패 시 여기서 raise (data는 이미 dequeue됨)
+                if self._write_next_queued_chunk():
                     drained += 1
         except Exception as e:
             # write()가 실패한 청크는 이미 dequeue되어 큐에서 빠진 뒤이므로
@@ -184,6 +182,24 @@ class ConnectionWorker(QThread):
                 f"TX queue drain failed on close after {drained} chunk(s) sent, "
                 f"{failed_and_left} chunk(s) discarded: {str(e)}"
             )
+
+    def _write_next_queued_chunk(self) -> bool:
+        """다음 TX chunk의 dequeue부터 transport.write 반환까지 in-flight로 표시합니다."""
+        with QMutexLocker(self._mutex):
+            self._write_in_progress = True
+        try:
+            data = self._write_queue.dequeue()
+            if not data:
+                return False
+            self.transport.write(data)
+            return True
+        except Exception as exc:
+            with QMutexLocker(self._mutex):
+                self._write_error = str(exc)
+            raise
+        finally:
+            with QMutexLocker(self._mutex):
+                self._write_in_progress = False
 
     def is_running(self) -> bool:
         """
@@ -265,6 +281,17 @@ class ConnectionWorker(QThread):
             int: 큐 사이즈
         """
         return self._write_queue.qsize()
+
+    def is_write_idle(self) -> bool:
+        """대기 Queue와 실제 transport write가 모두 끝났는지 반환합니다."""
+        with QMutexLocker(self._mutex):
+            write_in_progress = self._write_in_progress
+        return not write_in_progress and self._write_queue.is_empty()
+
+    def get_write_error(self) -> Optional[str]:
+        """현재 세션에서 발생한 terminal transport write 오류를 반환합니다."""
+        with QMutexLocker(self._mutex):
+            return self._write_error
 
     # ---------------------------------------------------------
     # 하드웨어 제어 신호 위임

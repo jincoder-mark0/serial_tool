@@ -169,6 +169,11 @@ class ApplicationBootstrapper:
         settings_coordinator.info_requested.connect(
             logging_coordinator.info_requested.emit
         )
+        port_scan_manager.scan_failed.connect(
+            lambda message: logging_coordinator.error_requested.emit(
+                f"Port scan failed: {message}"
+            )
+        )
         settings_coordinator.connect_signals()
 
         shutdown_coordinator = ShutdownCoordinator(
@@ -199,6 +204,8 @@ class ApplicationBootstrapper:
             ),
         )
 
+        # 초기 scan은 오류 subscriber까지 완전히 연결된 뒤 시작합니다.
+        port_presenter.scan_ports()
         status_coordinator.start()
         lifecycle_manager.log_initialized()
 

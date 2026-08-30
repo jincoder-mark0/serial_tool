@@ -54,7 +54,6 @@ class PortPresenter(QObject):
             self.settings_manager.get(ConfigKeys.RX_MAX_LINES, DEFAULT_LOG_MAX_LINES)
         )
 
-        self.scan_ports()
         for panel in self.left_section.get_port_panels():
             self._connect_tab_signals(panel)
 

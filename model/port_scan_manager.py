@@ -9,6 +9,7 @@ from typing import Optional
 from PyQt5.QtCore import QObject, pyqtSignal
 
 from core.logger import logger
+from common.constants import BACKGROUND_WORKER_STOP_TIMEOUT_MS
 from model.port_scanner import PortScanWorker
 
 
@@ -16,6 +17,7 @@ class PortScanManager(QObject):
     """한 번에 하나의 PortScanWorker를 관리합니다."""
 
     ports_found = pyqtSignal(object)
+    scan_failed = pyqtSignal(str)
 
     def __init__(self) -> None:
         super().__init__()
@@ -40,6 +42,7 @@ class PortScanManager(QObject):
         logger.debug("Starting async port scan...")
         worker = PortScanWorker()
         worker.ports_found.connect(self._on_ports_found)
+        worker.scan_failed.connect(self.scan_failed.emit)
         worker.finished.connect(lambda w=worker: self._on_worker_finished(w))
         self._worker = worker
         worker.start()
@@ -49,9 +52,8 @@ class PortScanManager(QObject):
         """
         실행 중인 scan worker 종료를 기다립니다.
 
-        앱 shutdown의 기본 호출(`stop()`)은 timeout 없이 완료를 기다려 실행 중인
-        QThread가 QObject 파괴 시점까지 남지 않도록 합니다. 진단/테스트에서만
-        명시적 timeout을 줄 수 있습니다.
+        blocking OS 호출은 worker 내부 daemon I/O thread가 담당하고 QThread는
+        interruption을 polling하므로 shutdown은 상한 안에 종료됩니다.
 
         Returns:
             bool: worker가 완전히 종료됐거나 처음부터 없었으면 True.
@@ -61,11 +63,13 @@ class PortScanManager(QObject):
             return True
 
         if worker.isRunning():
-            logger.debug("Waiting for pending port scan to finish before shutdown...")
-            if timeout_ms is None:
-                worker.wait()
-            else:
-                worker.wait(timeout_ms)
+            logger.debug("Stopping pending port scan before shutdown...")
+            worker.requestInterruption()
+            worker.wait(
+                BACKGROUND_WORKER_STOP_TIMEOUT_MS
+                if timeout_ms is None
+                else timeout_ms
+            )
 
         if worker.isRunning():
             logger.warning("Port scan worker did not finish before the requested timeout.")

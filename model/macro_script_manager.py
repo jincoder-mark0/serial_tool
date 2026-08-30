@@ -5,6 +5,8 @@ MacroPresenter가 직접 수행하던 JSON 파일 I/O와 QThread 생성/종료�
 이동합니다. Presenter는 사용자 요청과 성공/실패 표시만 담당합니다.
 """
 from typing import Optional
+from queue import Empty, Queue
+from threading import Thread
 
 try:
     import commentjson
@@ -14,6 +16,7 @@ except ImportError:
 from PyQt5.QtCore import QObject, QThread, pyqtSignal
 
 from common.dtos import MacroScriptData
+from common.constants import BACKGROUND_IO_POLL_S, BACKGROUND_WORKER_STOP_TIMEOUT_MS
 from core.logger import logger
 
 
@@ -28,12 +31,33 @@ class _MacroScriptLoadWorker(QThread):
         self._file_path = file_path
 
     def run(self) -> None:
-        try:
-            with open(self._file_path, "r", encoding="utf-8") as file:
-                data = commentjson.load(file)
-            self.load_finished.emit(MacroScriptData.from_dict(self._file_path, data))
-        except Exception as exc:
-            self.load_failed.emit(str(exc))
+        result_queue = Queue()
+
+        def load_file() -> None:
+            try:
+                with open(self._file_path, "r", encoding="utf-8") as file:
+                    data = commentjson.load(file)
+                result_queue.put((True, data))
+            except Exception as exc:
+                result_queue.put((False, exc))
+
+        Thread(target=load_file, daemon=True).start()
+
+        while not self.isInterruptionRequested():
+            try:
+                succeeded, payload = result_queue.get(timeout=BACKGROUND_IO_POLL_S)
+                break
+            except Empty:
+                continue
+        else:
+            return
+
+        if succeeded:
+            self.load_finished.emit(
+                MacroScriptData.from_dict(self._file_path, payload)
+            )
+        else:
+            self.load_failed.emit(str(payload))
 
 
 class MacroScriptManager(QObject):
@@ -83,16 +107,18 @@ class MacroScriptManager(QObject):
         return True
 
     def stop(self, timeout_ms: Optional[int] = None) -> bool:
-        """진행 중 load worker 종료를 기다립니다. shutdown 기본은 완료까지 대기합니다."""
+        """진행 중 load QThread에 interruption을 요청하고 bounded wait합니다."""
         worker = self._load_worker
         if worker is None:
             return True
 
         if worker.isRunning():
-            if timeout_ms is None:
-                worker.wait()
-            else:
-                worker.wait(timeout_ms)
+            worker.requestInterruption()
+            worker.wait(
+                BACKGROUND_WORKER_STOP_TIMEOUT_MS
+                if timeout_ms is None
+                else timeout_ms
+            )
 
         if worker.isRunning():
             logger.warning("Macro script load worker did not finish before timeout.")

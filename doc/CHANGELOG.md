@@ -4,6 +4,24 @@
 
 ---
 
+### 전체 diff 감사 잔여 lifecycle·전송 finding 해결 (2026-08-30)
+
+- Port scan과 Macro script load의 blocking OS/file I/O를 daemon I/O thread로
+  분리하고, QThread는 interruption polling과 1초 bounded wait로 종료하도록
+  변경했습니다. 반환하지 않는 OS API나 네트워크 파일 읽기 때문에 앱 shutdown이
+  무기한 멈추지 않습니다.
+- ConnectionWorker가 Queue 대기뿐 아니라 실제 `transport.write()` in-flight/terminal
+  error 상태도 추적하며, FileTransferService는 write 성공과 idle을 모두 확인한 뒤에만
+  성공 완료를 알립니다.
+- Port scan 실패를 `scan_failed` signal로 Loopback fallback과 구분하고, 초기 scan을
+  LoggingCoordinator/MainPresenter 연결 후 시작해 시스템 로그에 오류를 표시합니다.
+- blocking fake와 실제 composition graph/ConnectionWorker를 사용하는 회귀 테스트
+  8개를 추가했습니다.
+
+검증 결과는 `641 passed`, Ruff 0건, language/task-board gate Green입니다.
+
+---
+
 ### main 전체 diff 감사 및 merge blocker 교정 (2026-08-30)
 
 - 이전 Worker의 queued 종료 signal이 동일 포트의 새 연결 registry를 삭제할 수 있던
@@ -22,7 +40,7 @@
 - 언어 키 검사 중 Python parse 오류를 CI 실패로 처리하고 관련 회귀 테스트를
   추가했습니다.
 
-전체 diff 감사 교정 후 Python 3.13 로컬 결과는 `633 passed`, Ruff 0건,
+전체 diff 감사 교정 후 Python 3.13 로컬 결과는 `641 passed`, Ruff 0건,
 language/task-board gate Green입니다. Python 3.11 PR CI와 실제 PyInstaller 산출물
 smoke test는 별도 merge gate/잔여 리스크로 유지합니다.
 

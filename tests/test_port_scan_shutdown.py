@@ -1,6 +1,7 @@
 """PortScanManager의 QThread 생명주기와 Presenter 위임 계약을 검증합니다."""
 import inspect
 import time
+from threading import Event
 from unittest.mock import MagicMock, patch
 
 from model.port_scan_manager import PortScanManager
@@ -49,6 +50,43 @@ def test_manager_stop_without_worker_is_idempotent():
     manager.stop()
     manager.stop()
     assert manager._worker is None
+
+
+def test_manager_interrupts_scan_even_when_os_query_is_blocked(qapp):
+    release = Event()
+
+    with patch(
+        "model.port_scanner.serial.tools.list_ports.comports",
+        side_effect=lambda: (release.wait(5) or []),
+    ):
+        manager = PortScanManager()
+        assert manager.request_scan() is True
+        started_at = time.monotonic()
+        assert manager.stop() is True
+        elapsed = time.monotonic() - started_at
+        release.set()
+
+    assert elapsed < 0.5
+    assert manager._worker is None
+
+
+def test_scan_failure_is_distinct_from_loopback_fallback(qapp, qtbot):
+    manager = PortScanManager()
+    failures = []
+    found = []
+    manager.scan_failed.connect(failures.append)
+    manager.ports_found.connect(found.append)
+
+    with patch(
+        "model.port_scanner.serial.tools.list_ports.comports",
+        side_effect=OSError("registry unavailable"),
+    ):
+        assert manager.request_scan() is True
+        qtbot.waitUntil(lambda: bool(failures) and bool(found), timeout=2000)
+
+    assert failures == ["registry unavailable"]
+    assert [port.device for port in found[0]] == ["LOOPBACK"]
+    manager.stop()
 
 
 def test_port_presenter_does_not_own_construct_or_stop_scan_worker():

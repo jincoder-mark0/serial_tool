@@ -994,7 +994,7 @@ logger를 먼저 닫아 테스트를 통과시키는 수정은 금지한다.
 - [x] `python tools/check_language_keys.py` 성공
 - [x] `python tools/check_task_boards.py` 성공
 - [x] 구조 contract tests 전체 성공
-- [x] 전체 `python -m pytest -q` 성공 (`633 passed`)
+- [x] 전체 `python -m pytest -q` 성공 (`641 passed`)
 - [x] QThread/QTimer 종료 warning 없음
 - [x] 테스트 종료 시 background thread leak 없음
 - [x] `EventRouter` production 참조 0건

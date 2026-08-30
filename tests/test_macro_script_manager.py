@@ -1,6 +1,7 @@
 """MacroScriptManager와 MacroPresenter의 책임 경계를 검증합니다."""
 import inspect
 import time
+from threading import Event
 from unittest.mock import patch
 
 from common.dtos import MacroScriptData
@@ -82,4 +83,24 @@ def test_overlapping_load_is_rejected(qapp, tmp_path):
 def test_stop_without_load_is_idempotent():
     manager = MacroScriptManager()
     assert manager.stop() is True
+
+
+def test_stop_interrupts_qthread_when_file_read_is_blocked(qapp, tmp_path):
+    manager = MacroScriptManager()
+    file_path = tmp_path / "blocked.json"
+    file_path.write_text("{}", encoding="utf-8")
+    release = Event()
+
+    with patch(
+        "model.macro_script_manager.commentjson.load",
+        side_effect=lambda _file: (release.wait(5) or {}),
+    ):
+        assert manager.request_load(str(file_path)) is True
+        started_at = time.monotonic()
+        assert manager.stop() is True
+        elapsed = time.monotonic() - started_at
+        release.set()
+
+    assert elapsed < 0.5
+    assert manager._load_worker is None
     assert manager.stop() is True

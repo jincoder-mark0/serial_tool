@@ -82,6 +82,7 @@ def test_bootstrapper_restores_state_in_safe_order():
     assert restore < source.index("port_presenter = PortPresenter(")
     assert restore < source.index("macro_presenter = MacroPresenter(")
     assert restore < manual_presenter < manual_apply < control_state < main_presenter
+    assert main_presenter < source.index("port_presenter.scan_ports()")
 
 
 def test_bootstrapper_owns_fixed_command_routing():
