@@ -92,7 +92,7 @@ class MainPresenter(QObject):
             settings_manager=self.settings_manager,
             connection_controller=self.connection_controller,
             macro_runner=self.macro_runner,
-            port_presenter=self.port_presenter,
+            port_scan_manager=self.port_scan_manager,
             manual_control_presenter=self.manual_control_presenter,
             packet_presenter=self.packet_presenter,
             data_handler=self.data_handler,
@@ -110,6 +110,7 @@ class MainPresenter(QObject):
         self.connection_controller = components.connection_controller
         self.command_transmission_service = components.command_transmission_service
         self.file_transfer_manager = components.file_transfer_manager
+        self.port_scan_manager = components.port_scan_manager
         self.macro_runner = components.macro_runner
         self.data_handler = components.data_handler
         self.port_presenter = components.port_presenter
