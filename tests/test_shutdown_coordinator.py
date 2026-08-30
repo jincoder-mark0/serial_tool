@@ -8,6 +8,7 @@ def _make_coordinator():
     view = MagicMock()
     settings = MagicMock()
     controller = MagicMock()
+    file_transfer = MagicMock()
     macro = MagicMock()
     macro_script = MagicMock()
     port_scan = MagicMock()
@@ -21,6 +22,7 @@ def _make_coordinator():
         view=view,
         settings_manager=settings,
         connection_controller=controller,
+        file_transfer_manager=file_transfer,
         macro_runner=macro,
         macro_script_manager=macro_script,
         port_scan_manager=port_scan,
@@ -35,6 +37,7 @@ def _make_coordinator():
         view,
         settings,
         controller,
+        file_transfer,
         macro,
         macro_script,
         port_scan,
@@ -52,6 +55,7 @@ def test_shutdown_stops_runtime_services_and_saves_state():
         view,
         settings,
         controller,
+        file_transfer,
         macro,
         macro_script,
         port_scan,
@@ -77,6 +81,7 @@ def test_shutdown_stops_runtime_services_and_saves_state():
 
     macro.stop.assert_called_once()
     macro.wait.assert_called_once_with(1000)
+    file_transfer.shutdown.assert_called_once()
     macro_script.stop.assert_called_once()
     port_scan.stop.assert_called_once()
     data.stop.assert_called_once()
@@ -89,7 +94,7 @@ def test_shutdown_stops_runtime_services_and_saves_state():
 
 
 def test_connection_closes_before_queued_events_and_data_logger_stop():
-    coordinator, _, _, controller, macro, *_ = _make_coordinator()
+    coordinator, _, _, controller, _, macro, *_ = _make_coordinator()
     macro.isRunning.return_value = False
     controller.has_active_connection = True
     order = []
