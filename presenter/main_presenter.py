@@ -7,7 +7,7 @@ runtime graph의 public signal을 연결하고 사용자 표시 상태를 조정
 """
 from typing import Optional
 
-from PyQt5.QtCore import QDateTime, QObject, QTimer
+from PyQt5.QtCore import QObject
 
 from application_bootstrap import ApplicationBootstrapper, ApplicationComponents
 from common.constants import ConfigKeys
@@ -30,7 +30,6 @@ from view.managers.language_manager import language_manager
 from view.panels.port_panel import PortPanel
 
 from .preferences_coordinator import PreferencesCoordinator
-from .shutdown_coordinator import ShutdownCoordinator
 
 
 class MainPresenter(QObject):
@@ -45,7 +44,6 @@ class MainPresenter(QObject):
         super().__init__()
         self.view = view
         self.settings_manager = settings_manager or SettingsManager()
-        self.status_timer: Optional[QTimer] = None
 
         runtime = components or ApplicationBootstrapper(
             self.view,
@@ -64,24 +62,6 @@ class MainPresenter(QObject):
         self.logging_coordinator.error_requested.connect(self._log_error)
         self.logging_coordinator.connect_signals()
 
-        self.status_timer = self.lifecycle_manager.create_status_timer(
-            self.update_status_bar
-        )
-        self.shutdown_coordinator = ShutdownCoordinator(
-            view=self.view,
-            settings_manager=self.settings_manager,
-            connection_controller=self.connection_controller,
-            file_transfer_manager=self.file_transfer_manager,
-            macro_runner=self.macro_runner,
-            macro_script_manager=self.macro_script_manager,
-            port_scan_manager=self.port_scan_manager,
-            manual_control_presenter=self.manual_control_presenter,
-            packet_presenter=self.packet_presenter,
-            data_handler=self.data_handler,
-            close_system_log=self.logging_coordinator.close_system_log,
-            status_timer=self.status_timer,
-        )
-
         self._connect_signals()
         self.view.connect_port_tab_changed(self._on_port_tab_changed)
         self.lifecycle_manager.log_initialized()
@@ -98,6 +78,8 @@ class MainPresenter(QObject):
         self.traffic_monitor = components.traffic_monitor
         self.data_handler = components.data_handler
         self.logging_coordinator = components.logging_coordinator
+        self.status_coordinator = components.status_coordinator
+        self.shutdown_coordinator = components.shutdown_coordinator
         self.port_presenter = components.port_presenter
         self.macro_presenter = components.macro_presenter
         self.file_presenter = components.file_presenter
@@ -322,12 +304,6 @@ class MainPresenter(QObject):
 
     def on_file_transfer_error(self, event: FileErrorEvent) -> None:
         self._log_error(f"File Transfer Error: {event.message}")
-
-    def update_status_bar(self) -> None:
-        self.view.update_status_bar_stats(self.traffic_monitor.take_statistics())
-        self.view.update_status_bar_time(
-            QDateTime.currentDateTime().toString("HH:mm:ss")
-        )
 
     def on_shortcut_connect(self) -> None:
         self.port_presenter.connect_current_port()
