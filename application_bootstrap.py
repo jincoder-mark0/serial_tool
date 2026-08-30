@@ -1,9 +1,9 @@
 """
 SerialTool application composition root helper.
 
-View 상태 복원, 구체 runtime object graph 생성, 변하지 않는 cross-component signal wiring을
-한 곳에서 수행합니다. MainPresenter에는 사용자 표시 orchestration에 필요한 최소 dependency
-contract만 전달합니다.
+View 상태 복원, 구체 runtime object graph 생성, 초기 Presenter 상태 복원, 변하지 않는
+cross-component signal wiring을 한 곳에서 순서대로 수행합니다. MainPresenter에는 사용자
+표시 orchestration에 필요한 최소 dependency contract만 전달합니다.
 """
 from dataclasses import dataclass
 
@@ -58,7 +58,7 @@ class ApplicationBootstrapper:
         self._settings_manager = settings_manager
 
     def build(self) -> ApplicationComponents:
-        """View restore → Model/Service → Presenter/Coordinator → static wiring 순으로 조립합니다."""
+        """View restore → Model/Service → Presenter state → Coordinator → static wiring 순으로 조립합니다."""
         lifecycle_manager = AppLifecycleManager(self._view, self._settings_manager)
         lifecycle_manager.initialize_view()
 
@@ -111,6 +111,13 @@ class ApplicationBootstrapper:
             connection_controller,
             command_transmission_service,
         )
+
+        # 저장된 ManualControl 상태를 먼저 적용한 뒤 enable policy를 계산합니다.
+        # apply_state()는 broadcast_changed를 emit하지 않으므로 이 순서가 중요합니다.
+        manual_control_presenter.apply_state(
+            lifecycle_manager.create_manual_control_state()
+        )
+
         settings_coordinator = SettingsCoordinator(
             self._view,
             self._settings_manager,
@@ -156,7 +163,6 @@ class ApplicationBootstrapper:
         )
 
         main_presenter_dependencies = MainPresenterDependencies(
-            lifecycle_manager=lifecycle_manager,
             connection_controller=connection_controller,
             macro_runner=macro_runner,
             macro_execution_coordinator=macro_execution_coordinator,
@@ -168,6 +174,7 @@ class ApplicationBootstrapper:
         )
 
         status_coordinator.start()
+        lifecycle_manager.log_initialized()
 
         return ApplicationComponents(
             main_presenter_dependencies=main_presenter_dependencies,
