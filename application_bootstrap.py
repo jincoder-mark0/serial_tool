@@ -9,6 +9,7 @@ from dataclasses import dataclass
 from core.settings_manager import SettingsManager
 from model.command_transmission_service import CommandTransmissionService
 from model.connection_controller import ConnectionController
+from model.connection_session_factory import ConnectionSessionFactory
 from model.file_transfer_manager import FileTransferManager
 from model.macro_runner import MacroRunner
 from model.macro_script_manager import MacroScriptManager
@@ -53,7 +54,11 @@ class ApplicationBootstrapper:
     def build(self) -> ApplicationComponents:
         """의존 순서에 따라 Model/Service/Presenter를 생성하고 정적 배선을 구성합니다."""
         packet_parser_manager = PacketParserManager()
-        connection_controller = ConnectionController(packet_parser_manager)
+        connection_session_factory = ConnectionSessionFactory()
+        connection_controller = ConnectionController(
+            packet_parser_manager,
+            connection_session_factory,
+        )
         command_transmission_service = CommandTransmissionService(
             connection_controller,
             self._settings_manager,
