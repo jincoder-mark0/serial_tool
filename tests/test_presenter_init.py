@@ -53,7 +53,6 @@ class TestMainPresenterInit:
             "macro_execution_coordinator",
             "logging_coordinator",
             "shutdown_coordinator",
-            "port_presenter",
             "file_presenter",
             "manual_control_presenter",
         ):
@@ -70,6 +69,7 @@ class TestMainPresenterInit:
             "status_coordinator",
             "settings_coordinator",
             "control_state_coordinator",
+            "port_presenter",
             "macro_presenter",
             "packet_presenter",
         ):
@@ -97,10 +97,14 @@ class TestMainPresenterInit:
 
     def test_signal_connections(self, mock_main_window, mock_settings_manager):
         presenter = _build_presenter(mock_main_window, mock_settings_manager)
-        # Settings/control-state 관련 signal은 전용 coordinator가 연결합니다.
+        # Settings/control/static command 관련 signal은 전용 coordinator/bootstrap이 연결합니다.
         mock_main_window.settings_save_requested.connect.assert_called()
         mock_main_window.theme_change_requested.connect.assert_called()
         mock_main_window.language_change_requested.connect.assert_called()
+        mock_main_window.shortcut_connect_requested.connect.assert_called()
+        mock_main_window.shortcut_disconnect_requested.connect.assert_called()
+        mock_main_window.shortcut_clear_requested.connect.assert_called()
+        mock_main_window.file_transfer_dialog_opened.connect.assert_called()
         mock_main_window.close_requested.connect.assert_called()
         assert presenter.connection_controller.connection_opened is not None
         assert presenter.macro_runner.macro_started is not None
@@ -115,4 +119,7 @@ class TestMainPresenterInit:
         assert "connection_controller.data_received.connect(data_handler.on_fast_data_received)" in source
         assert "connection_controller.data_sent.connect(data_handler.on_data_sent)" in source
         assert "connection_controller.data_received.connect(macro_runner.on_data_received)" in source
+        assert "shortcut_connect_requested.connect" in source
+        assert "port_presenter.connect_current_port" in source
+        assert "file_transfer_dialog_opened.connect" in source
         assert "ControlStateCoordinator(" in source
