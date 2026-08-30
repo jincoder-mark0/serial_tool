@@ -20,7 +20,6 @@ from common.dtos import (
     PortConnectionEvent,
     PortDataEvent,
     PortErrorEvent,
-    PortStatistics,
     PreferencesState,
     SystemLogEvent,
 )
@@ -108,6 +107,7 @@ class MainPresenter(QObject):
         self.port_scan_manager = components.port_scan_manager
         self.macro_runner = components.macro_runner
         self.macro_script_manager = components.macro_script_manager
+        self.traffic_monitor = components.traffic_monitor
         self.data_handler = components.data_handler
         self.port_presenter = components.port_presenter
         self.macro_presenter = components.macro_presenter
@@ -364,13 +364,8 @@ class MainPresenter(QObject):
         self._log_error(f"File Transfer Error: {event.message}")
 
     def update_status_bar(self) -> None:
-        stats = PortStatistics(
-            rx_bytes=self.data_handler.rx_byte_count,
-            tx_bytes=self.data_handler.tx_byte_count,
-            bps=0,
-        )
-        self.view.update_status_bar_stats(stats)
-        self.data_handler.reset_counts()
+        """현재 interval의 트래픽 통계를 소비해 상태바를 갱신합니다."""
+        self.view.update_status_bar_stats(self.traffic_monitor.take_statistics())
         self.view.update_status_bar_time(
             QDateTime.currentDateTime().toString("HH:mm:ss")
         )
