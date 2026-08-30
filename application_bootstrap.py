@@ -11,6 +11,7 @@ from model.command_transmission_service import CommandTransmissionService
 from model.connection_controller import ConnectionController
 from model.file_transfer_manager import FileTransferManager
 from model.macro_runner import MacroRunner
+from model.port_scan_manager import PortScanManager
 from presenter.data_handler import DataTrafficHandler
 from presenter.file_presenter import FilePresenter
 from presenter.macro_presenter import MacroPresenter
@@ -27,6 +28,7 @@ class ApplicationComponents:
     connection_controller: ConnectionController
     command_transmission_service: CommandTransmissionService
     file_transfer_manager: FileTransferManager
+    port_scan_manager: PortScanManager
     macro_runner: MacroRunner
     data_handler: DataTrafficHandler
     port_presenter: PortPresenter
@@ -51,6 +53,7 @@ class ApplicationBootstrapper:
             self._settings_manager,
         )
         file_transfer_manager = FileTransferManager(connection_controller)
+        port_scan_manager = PortScanManager()
         macro_runner = MacroRunner()
         data_handler = DataTrafficHandler(self._view)
 
@@ -58,6 +61,7 @@ class ApplicationBootstrapper:
             self._view.port_view,
             connection_controller,
             self._settings_manager,
+            port_scan_manager,
         )
         macro_presenter = MacroPresenter(self._view.macro_view, macro_runner)
         file_presenter = FilePresenter(file_transfer_manager)
@@ -82,6 +86,7 @@ class ApplicationBootstrapper:
             connection_controller=connection_controller,
             command_transmission_service=command_transmission_service,
             file_transfer_manager=file_transfer_manager,
+            port_scan_manager=port_scan_manager,
             macro_runner=macro_runner,
             data_handler=data_handler,
             port_presenter=port_presenter,
