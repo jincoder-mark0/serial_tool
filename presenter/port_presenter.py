@@ -100,11 +100,8 @@ class PortPresenter(QObject):
         self.left_section.current_tab_changed.connect(self.update_current_port_panel)
 
         # 탭 닫기 시 연결 정리 (좀비 연결 방지, S-040)
-        # MainLeftSection에는 아직 전용 중계 시그널이 없어(범위 밖 변경 최소화),
-        # 기존에 이미 공개된 port_tab_panel 접근자(Facade property, LoD 상 허용된
-        # 기존 패턴 — MainLeftSection.port_tab_panel은 view/main_window.py 등에서도
-        # 직접 사용 중)를 통해 PortTabPanel의 시그널을 직접 구독한다.
-        self.left_section.port_tab_panel.port_tab_closed.connect(self.handle_tab_closed)
+        # PortTabPanel 내부 구현을 직접 노출하지 않고 MainLeftSection의 중계 시그널을 구독한다.
+        self.left_section.port_tab_closed.connect(self.handle_tab_closed)
 
         # Model Signal 연결 (DTO 수신)
         self.connection_controller.connection_opened.connect(self.on_connection_opened)
