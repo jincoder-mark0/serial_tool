@@ -20,7 +20,11 @@ def test_main_builds_and_injects_runtime_components():
 def test_bootstrapper_is_the_concrete_object_graph_owner():
     source = inspect.getsource(ApplicationBootstrapper.build)
 
-    assert "ConnectionController()" in source
+    assert "PacketParserManager()" in source
+    assert "ConnectionSessionFactory()" in source
+    assert "ConnectionController(" in source
+    assert "packet_parser_manager," in source
+    assert "connection_session_factory," in source
     assert "CommandTransmissionService(" in source
     assert "FileTransferManager(" in source
     assert "PortScanManager()" in source
@@ -40,18 +44,24 @@ def test_bootstrapper_is_the_concrete_object_graph_owner():
 def test_main_presenter_does_not_construct_concrete_model_or_sub_presenter():
     source = inspect.getsource(MainPresenter)
 
-    assert "ConnectionController()" not in source
-    assert "CommandTransmissionService(" not in source
-    assert "FileTransferManager(" not in source
-    assert "PortScanManager()" not in source
-    assert "MacroRunner()" not in source
-    assert "MacroScriptManager()" not in source
-    assert "TrafficMonitor()" not in source
-    assert "PortPresenter(" not in source
-    assert "MacroPresenter(" not in source
-    assert "FilePresenter(" not in source
-    assert "PacketPresenter(" not in source
-    assert "ManualControlPresenter(" not in source
+    for constructor in (
+        "ConnectionController(",
+        "PacketParserManager(",
+        "ConnectionSessionFactory(",
+        "CommandTransmissionService(",
+        "FileTransferManager(",
+        "PortScanManager(",
+        "MacroRunner(",
+        "MacroScriptManager(",
+        "TrafficMonitor(",
+        "PortPresenter(",
+        "MacroPresenter(",
+        "FilePresenter(",
+        "PacketPresenter(",
+        "ManualControlPresenter(",
+    ):
+        assert constructor not in source
+
     assert "ApplicationBootstrapper(" in source  # compatibility fallback only
     assert "self._apply_components(runtime)" in source
     assert "self.port_scan_manager = components.port_scan_manager" in source
