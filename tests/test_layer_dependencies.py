@@ -9,12 +9,17 @@
   import(try/except로 감싼 함수 내부 import)를 끌어들여 위반 1건을 만들었고,
   수작업 감사로는 이런 재발을 막지 못했다. S-056은 core/error_handler.py의 view
   의존을 콜백 주입 방식으로 제거하면서, 동시에 이 불변식을 기계적으로 고정한다.
+* Presenter는 Qt event/signal orchestration을 위해 QtCore를 사용할 수 있지만,
+  QMessageBox 같은 구체 UI 구현은 View facade 뒤에 있어야 한다. 따라서
+  `presenter/`의 `PyQt5.QtWidgets` 직접 import도 별도 불변식으로 고정한다.
 
 ## WHAT
 * `common/`: core·model·presenter·view import 금지 (의존성 최하위).
 * `core/`: model·presenter·view import 금지 (인프라는 공급자/화면을 모른다).
 * `model/`: presenter·view import 금지 (Model은 View/위젯을 모른다).
 * `view/`: model import 금지 (Passive View - Model 직접 접근 금지, Presenter가 중재).
+* `presenter/`: `PyQt5.QtWidgets` 직접 import 금지. 구체 위젯/다이얼로그 생성은
+  View facade가 소유하며, Presenter의 `PyQt5.QtCore` 사용은 허용한다.
   (presenter->view, presenter->model, view->core/common 은 허용된 정상 의존이라
   검사 대상이 아니다 - MVP에서 Presenter가 View/Model 양쪽을 중재하는 것은 정상이고,
   core/common은 인프라 유틸리티라 모든 상위 계층이 직접 사용 가능하다.)
@@ -23,6 +28,8 @@
 * `ast`로 각 레이어 디렉터리의 .py 파일을 파싱해, 함수/클래스 내부의 지연 import를
   포함한 모든 절대 import(레벨 0)의 최상위 패키지명만 추출한다(문자열 검색이 아니라
   AST 기반이라 "# from view import ..." 같은 주석은 오탐하지 않는다).
+* Presenter의 QtWidgets 규칙은 import module 전체 경로를 별도로 추출해서
+  `PyQt5.QtWidgets` 및 그 하위 모듈 import를 정확히 탐지한다.
 * 상대 import(`from . import x`, level > 0)는 같은 패키지 내부 참조이므로 제외한다.
 """
 import ast
@@ -79,6 +86,21 @@ def _top_level_imports(path: Path) -> Set[str]:
     return names
 
 
+def _absolute_import_modules(path: Path) -> Set[str]:
+    """파일 안의 절대 import 전체 모듈 경로 집합을 반환한다."""
+    source = path.read_text(encoding="utf-8")
+    tree = ast.parse(source, filename=str(path))
+    modules: Set[str] = set()
+    for node in ast.walk(tree):
+        if isinstance(node, ast.Import):
+            for alias in node.names:
+                modules.add(alias.name)
+        elif isinstance(node, ast.ImportFrom):
+            if node.level == 0 and node.module:
+                modules.add(node.module)
+    return modules
+
+
 def _rel(path: Path) -> str:
     return path.relative_to(PROJECT_ROOT).as_posix()
 
@@ -129,4 +151,27 @@ def test_view_does_not_import_model():
     violations = _find_violations("view")
     assert not violations, (
         "view/에서 model import 발견 (Presenter를 거치지 않은 직접 접근):\n" + "\n".join(violations)
+    )
+
+
+def test_presenter_does_not_import_qtwidgets():
+    """
+    Presenter는 구체 QtWidgets를 직접 생성하지 않는다.
+
+    QtCore(QObject, QTimer 등)는 orchestration에 사용할 수 있지만 QMessageBox,
+    QFileDialog 같은 화면 구현은 View facade를 통해 요청해야 한다.
+    """
+    violations: List[str] = []
+    for path in _iter_py_files("presenter"):
+        modules = _absolute_import_modules(path)
+        hit = sorted(
+            module for module in modules
+            if module == "PyQt5.QtWidgets" or module.startswith("PyQt5.QtWidgets.")
+        )
+        if hit:
+            violations.append(f"{_rel(path)}: imports {hit}")
+
+    assert not violations, (
+        "presenter/에서 PyQt5.QtWidgets 직접 import 발견 "
+        "(구체 UI는 View facade가 소유해야 함):\n" + "\n".join(violations)
     )
