@@ -26,6 +26,8 @@ def test_bootstrapper_is_the_concrete_object_graph_owner():
     assert "PortScanManager()" in source
     assert "MacroRunner()" in source
     assert "MacroScriptManager()" in source
+    assert "TrafficMonitor()" in source
+    assert "DataTrafficHandler(self._view, traffic_monitor)" in source
     assert "PortPresenter(" in source
     assert "port_scan_manager," in source
     assert "MacroPresenter(" in source
@@ -44,6 +46,7 @@ def test_main_presenter_does_not_construct_concrete_model_or_sub_presenter():
     assert "PortScanManager()" not in source
     assert "MacroRunner()" not in source
     assert "MacroScriptManager()" not in source
+    assert "TrafficMonitor()" not in source
     assert "PortPresenter(" not in source
     assert "MacroPresenter(" not in source
     assert "FilePresenter(" not in source
@@ -53,6 +56,7 @@ def test_main_presenter_does_not_construct_concrete_model_or_sub_presenter():
     assert "self._apply_components(runtime)" in source
     assert "self.port_scan_manager = components.port_scan_manager" in source
     assert "self.macro_script_manager = components.macro_script_manager" in source
+    assert "self.traffic_monitor = components.traffic_monitor" in source
 
 
 def test_lifecycle_does_not_own_or_call_main_presenter():
