@@ -1,9 +1,11 @@
-name: CI
+name: SerialTool CI
 
 on:
   push:
     branches: [main]
   pull_request:
+    branches: [main]
+  workflow_dispatch:
 
 jobs:
   test-windows:
@@ -38,9 +40,6 @@ jobs:
       - uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      # 태스크 상태가 태스크 파일·Task.MD·tasks/README.md 세 곳에 기록된다.
-      # 손으로 맞추다 실제로 어긋나 다음 세션이 끝난 일을 다시 하거나 남은 일을
-      # 끝난 것으로 착각할 위험이 있어(2026-08-22 실측 30건) 기계로 고정한다.
       - name: Check task board consistency
         run: python tools/check_task_boards.py
 
@@ -53,8 +52,5 @@ jobs:
           python-version: "3.11"
       - name: Install ruff
         run: pip install ruff
-      # S-047 도입 시점의 기존 위반 44건은 S-057에서 전량 정리됐다(0건 달성).
-      # 이제 실제 차단 게이트다 — 새 위반이 들어오면 CI가 막는다.
-      # 억제가 꼭 필요한 줄은 코드에 `# noqa: <규칙> - <사유>`로 남긴다(무근거 억제 금지).
       - name: Run ruff check
         run: ruff check .
