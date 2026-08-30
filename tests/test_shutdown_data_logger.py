@@ -12,7 +12,7 @@ S-059 회귀 테스트: 앱 종료 시 RX 데이터 로거 미정리 결함
 ## HOW
 * View는 MagicMock, SettingsManager는 임시 경로 fixture를 사용한다.
 * Production과 동일하게 ApplicationBootstrapper가 View 복원/런타임 조립을 수행하고
-  MainPresenter에는 완성된 components를 명시적으로 주입한다.
+  MainPresenter에는 최소 dependency contract를 명시적으로 주입한다.
 * LOOPBACK_PORT_NAME을 사용해 실제 QThread 기반 ConnectionWorker를 구동한다.
 """
 from unittest.mock import MagicMock
@@ -72,7 +72,6 @@ def mock_main_window():
     view.shortcut_disconnect_requested = MagicMock()
     view.shortcut_clear_requested = MagicMock()
     view.file_transfer_dialog_opened = MagicMock()
-
     view.get_port_tabs_count.return_value = 0
     view.get_window_state.return_value = MainWindowState(
         left_section_state={}, right_section_state={}
@@ -89,7 +88,7 @@ def presenter(mock_main_window, mock_settings_manager):
     p = MainPresenter(
         mock_main_window,
         settings_manager=mock_settings_manager,
-        components=components,
+        dependencies=components.main_presenter_dependencies,
     )
     yield p
     data_logger_manager.stop_all()
@@ -112,14 +111,11 @@ class TestShutdownStopsDataLogger:
         self, presenter, loopback_config, tmp_path, qapp, qtbot
     ):
         assert presenter.connection_controller.open_connection(loopback_config) is True
-
         file_path = tmp_path / "rx_shutdown.bin"
         panel = _make_logging_panel(LOOPBACK_PORT_NAME, str(file_path))
-
         presenter.logging_coordinator.on_port_logging_start_requested(panel)
         panel.set_logging_active.assert_any_call(True)
         assert data_logger_manager.is_logging(LOOPBACK_PORT_NAME) is True
-
         payload = b"HELLO-RX-SHUTDOWN"
         worker = presenter.connection_controller.workers[LOOPBACK_PORT_NAME]
         worker.transport.write(payload)
@@ -127,16 +123,10 @@ class TestShutdownStopsDataLogger:
         def _fully_written_to_logger() -> bool:
             qapp.processEvents()
             dl = data_logger_manager._loggers.get(LOOPBACK_PORT_NAME)
-            return (
-                dl is not None
-                and dl._file is not None
-                and dl._queue.empty()
-                and dl._file.tell() >= len(payload)
-            )
+            return dl is not None and dl._file is not None and dl._queue.empty() and dl._file.tell() >= len(payload)
 
         qtbot.waitUntil(_fully_written_to_logger, timeout=2000)
         presenter.on_close_requested()
-
         assert data_logger_manager.is_logging(LOOPBACK_PORT_NAME) is False
         assert data_logger_manager.get_filepath(LOOPBACK_PORT_NAME) == ""
         assert presenter.connection_controller.has_active_connection is False
@@ -146,19 +136,15 @@ class TestShutdownStopsDataLogger:
         self, presenter, loopback_config, tmp_path, qapp, qtbot
     ):
         import struct
-
         global_header_format = "IHHIIII"
         global_header_size = struct.calcsize(global_header_format)
         packet_header_format = "IIII"
         packet_header_size = struct.calcsize(packet_header_format)
-
         assert presenter.connection_controller.open_connection(loopback_config) is True
-
         file_path = tmp_path / "rx_shutdown.pcap"
         panel = _make_logging_panel(LOOPBACK_PORT_NAME, str(file_path))
         presenter.logging_coordinator.on_port_logging_start_requested(panel)
         assert data_logger_manager.is_logging(LOOPBACK_PORT_NAME) is True
-
         payload = b"PCAP-PAYLOAD-ON-SHUTDOWN"
         worker = presenter.connection_controller.workers[LOOPBACK_PORT_NAME]
         worker.transport.write(payload)
@@ -167,33 +153,21 @@ class TestShutdownStopsDataLogger:
         def _fully_written_to_logger() -> bool:
             qapp.processEvents()
             dl = data_logger_manager._loggers.get(LOOPBACK_PORT_NAME)
-            return (
-                dl is not None
-                and dl._file is not None
-                and dl._queue.empty()
-                and dl._file.tell() >= expected_min_bytes
-            )
+            return dl is not None and dl._file is not None and dl._queue.empty() and dl._file.tell() >= expected_min_bytes
 
         qtbot.waitUntil(_fully_written_to_logger, timeout=2000)
         presenter.on_close_requested()
-
         assert data_logger_manager.is_logging(LOOPBACK_PORT_NAME) is False
-
         data = file_path.read_bytes()
         assert len(data) >= global_header_size + packet_header_size
-        magic, major, minor, _thiszone, _sigfigs, _snaplen, _network = struct.unpack(
-            global_header_format, data[:global_header_size]
-        )
+        magic, major, minor, _thiszone, _sigfigs, _snaplen, _network = struct.unpack(global_header_format, data[:global_header_size])
         assert magic == 0xA1B2C3D4
         assert major == 2
         assert minor == 4
-
         packet_section = data[global_header_size:]
         header_bytes = packet_section[:packet_header_size]
         payload_bytes = packet_section[packet_header_size:]
-        _ts_sec, ts_usec, incl_len, orig_len = struct.unpack(
-            packet_header_format, header_bytes
-        )
+        _ts_sec, ts_usec, incl_len, orig_len = struct.unpack(packet_header_format, header_bytes)
         assert incl_len == orig_len == len(payload)
         assert 0 <= ts_usec < 1_000_000
         assert payload_bytes == payload
@@ -210,25 +184,17 @@ class TestShutdownOrderingClosesConnectionBeforeLogger:
     ):
         monkeypatch.setattr("model.connection_worker.BATCH_SIZE_THRESHOLD", 10_000_000)
         monkeypatch.setattr("model.connection_worker.BATCH_TIMEOUT_MS", 10_000_000)
-
         assert presenter.connection_controller.open_connection(loopback_config) is True
         worker = presenter.connection_controller.workers[LOOPBACK_PORT_NAME]
-
         file_path = tmp_path / "rx_leftover.bin"
         panel = _make_logging_panel(LOOPBACK_PORT_NAME, str(file_path))
         presenter.logging_coordinator.on_port_logging_start_requested(panel)
         assert data_logger_manager.is_logging(LOOPBACK_PORT_NAME) is True
-
         payload = b"LEFTOVER-BATCH-ON-EXIT"
         worker.transport.write(payload)
         qtbot.waitUntil(lambda: worker.transport.in_waiting == 0, timeout=2000)
-
         dl_before = data_logger_manager._loggers.get(LOOPBACK_PORT_NAME)
         assert dl_before is not None and dl_before._queue.empty()
-
         presenter.on_close_requested()
-
         assert data_logger_manager.is_logging(LOOPBACK_PORT_NAME) is False
-        assert file_path.read_bytes() == payload, (
-            "워커 종료 직전 flush된 마지막 배치가 logger close 전에 파일에 도달하지 못했다"
-        )
+        assert file_path.read_bytes() == payload, "워커 종료 직전 flush된 마지막 배치가 logger close 전에 파일에 도달하지 못했다"
