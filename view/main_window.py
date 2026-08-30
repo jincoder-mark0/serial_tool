@@ -57,628 +57,285 @@ class MainWindow(QMainWindow):
     필요한 인터페이스를 프로퍼티와 메서드로 추상화하여 제공합니다.
     """
 
-    # -------------------------------------------------------------------------
-    # Signals (Presenter 통신용)
-    # -------------------------------------------------------------------------
-    # 종료 및 설정 저장 요청
     close_requested = pyqtSignal()
-    settings_save_requested = pyqtSignal(object)  # PreferencesState DTO 전달
+    settings_save_requested = pyqtSignal(object)
     preferences_requested = pyqtSignal()
-
-    # 폰트 설정 변경 (FontConfig DTO 전달)
     font_settings_changed = pyqtSignal(object)
-
-    # 전역 단축키 시그널
     shortcut_connect_requested = pyqtSignal()
     shortcut_disconnect_requested = pyqtSignal()
     shortcut_clear_requested = pyqtSignal()
-
-    # 파일 전송 다이얼로그 오픈 알림 (Presenter 연결용)
-    # dialog 객체와 target_port 문자열을 함께 전달
     file_transfer_dialog_opened = pyqtSignal(object, str)
-
-    # 하위 컴포넌트 시그널 중계 (Bubbling)
-    send_requested = pyqtSignal(object)      # ManualCommand DTO
-    port_tab_added = pyqtSignal(object)      # PortPanel Widget
+    send_requested = pyqtSignal(object)
+    port_tab_added = pyqtSignal(object)
 
     def __init__(self) -> None:
-        """
-        MainWindow를 초기화합니다.
-
-        MVP 원칙에 따라 Model/Core(SettingsManager)를 직접 생성하지 않습니다.
-        초기 상태 복원은 Presenter가 apply_state()를 호출하여 수행합니다.
-        """
         super().__init__()
-
-        # ThemeManager는 View Helper로서 사용 (싱글톤 인스턴스)
         self.theme_manager = theme_manager
         self.language_manager = language_manager
         self.color_manager = color_manager
-
-        # 기본 타이틀 및 크기 설정
         self.setWindowTitle(f"{language_manager.get_text('main_title')} v1.0")
         self.resize(1400, 900)
-
-        # 우측 패널 숨김/복원 시 왼쪽 패널 너비 저장용 변수
         self._saved_left_width: Optional[int] = None
-        # 우측 패널을 숨기기 직전의 창 폭 (다시 켤 때 그대로 복원, S-074)
         self._saved_window_width: Optional[int] = None
         self._right_section_width: Optional[int] = None
-
-        # UI 초기화
         self.init_ui()
-
-        # 메뉴바 초기화
         self.menu_bar = MainMenuBar(self)
         self.setMenuBar(self.menu_bar)
         self._connect_menu_signals()
-
-        # 단축키 초기화
         self.init_shortcuts()
-
-        # 언어 변경 시그널 연결 (동적 번역)
         self.language_manager.language_changed.connect(self.on_language_changed)
 
     def init_ui(self) -> None:
-        """
-        UI 레이아웃 및 주요 컴포넌트를 초기화합니다.
-
-        Logic:
-            1. 중앙 위젯 및 메인 레이아웃 생성
-            2. 좌(포트/제어)/우(매크로/분석) 섹션 생성
-            3. QSplitter를 사용하여 섹션 배치 및 비율 설정
-            4. 하위 섹션의 시그널을 MainWindow 시그널로 연결 (Chaining)
-            5. 전역 상태바 설정
-        """
         self.central_widget = QWidget()
         self.setCentralWidget(self.central_widget)
-
         main_layout = QVBoxLayout(self.central_widget)
-        main_layout.setContentsMargins(LAYOUT_MARGIN_DEFAULT, LAYOUT_MARGIN_DEFAULT,
-                                        LAYOUT_MARGIN_DEFAULT, LAYOUT_MARGIN_DEFAULT)
+        main_layout.setContentsMargins(
+            LAYOUT_MARGIN_DEFAULT,
+            LAYOUT_MARGIN_DEFAULT,
+            LAYOUT_MARGIN_DEFAULT,
+            LAYOUT_MARGIN_DEFAULT,
+        )
         main_layout.setSpacing(LAYOUT_SPACING_DEFAULT)
-
-        # 스플리터 구성 (좌: 포트/제어, 우: 커맨드/인스펙터)
         self.splitter = QSplitter(Qt.Horizontal)
-
         self.left_section = MainLeftSection()
         self.right_section = MainRightSection()
-
         self.splitter.addWidget(self.left_section)
         self.splitter.addWidget(self.right_section)
-
-        # 기본 비율 설정 (1:1)
         self.splitter.setStretchFactor(0, 1)
         self.splitter.setStretchFactor(1, 1)
-
-        # 왼쪽 패널이 완전히 사라지는 것을 방지 (Collapsible False)
         self.splitter.setCollapsible(0, False)
         self.splitter.setCollapsible(1, True)
-
-        # 시그널 체이닝 (하위 -> 상위)
         self.left_section.send_requested.connect(self.send_requested.emit)
         self.left_section.port_tab_added.connect(self.port_tab_added.emit)
-
         main_layout.addWidget(self.splitter)
-
-        # 전역 상태바 설정
         self.global_status_bar = MainStatusBar()
         self.setStatusBar(self.global_status_bar)
 
-    # --------------------------------------------------------
-    # State Management (MVP Support)
-    # --------------------------------------------------------
     def apply_state(self, state: MainWindowState, font_config: FontConfig) -> None:
-        """
-        Presenter로부터 전달받은 상태 DTO를 UI에 적용합니다.
-
-        Logic:
-            1. 폰트 및 테마 적용
-            2. 윈도우 크기 및 위치 복원
-            3. 우측 패널 표시 여부 및 스플리터 상태 복원
-            4. 하위 섹션(Left/Right)에 상태 복원 위임
-
-        Args:
-            state (MainWindowState): 메인 윈도우 상태 DTO.
-            font_config (FontConfig): 폰트 설정 DTO.
-        """
-        # 1. 폰트 적용 (ThemeManager 위임)
         if font_config:
-            self.theme_manager.set_proportional_font(font_config.prop_family, font_config.prop_size, apply_now=False)
-            self.theme_manager.set_fixed_font(font_config.fixed_family, font_config.fixed_size, apply_now=False)
-
-            # 애플리케이션 전체 폰트 적용 (Proportional Font 기준)
+            self.theme_manager.set_proportional_font(
+                font_config.prop_family, font_config.prop_size, apply_now=False
+            )
+            self.theme_manager.set_fixed_font(
+                font_config.fixed_family, font_config.fixed_size, apply_now=False
+            )
             prop_font = self.theme_manager.get_proportional_font()
             QApplication.instance().setFont(prop_font)
-
-            # 확실하게 적용하기 위해 현재 테마로 1회 갱신:
             self.theme_manager.apply_theme(self.theme_manager.get_current_theme())
 
-        # 2. 윈도우 지오메트리 복원
         if state:
             if state.width > 0 and state.height > 0:
                 self.resize(state.width, state.height)
             if state.x is not None and state.y is not None:
                 self.move(state.x, state.y)
-
-            # 3. 우측 패널 표시 상태 복원
             self.menu_bar.set_right_section_checked(state.right_panel_visible)
             self.right_section.setVisible(state.right_panel_visible)
             self._right_section_width = state.right_section_width
-
-            # 4. 스플리터 상태 복원
             if state.splitter_state:
                 try:
-                    self.splitter.restoreState(QByteArray.fromBase64(state.splitter_state.encode()))
+                    self.splitter.restoreState(
+                        QByteArray.fromBase64(state.splitter_state.encode())
+                    )
                 except Exception:
                     pass
             else:
-                # 기본 비율 설정
                 self.splitter.setStretchFactor(0, 1)
                 self.splitter.setStretchFactor(1, 1)
-
-            # 5. 하위 섹션 상태 복원
             self.left_section.apply_state(state.left_section_state)
             self.right_section.apply_state(state.right_section_state)
 
     def get_window_state(self) -> MainWindowState:
-        """
-        현재 윈도우 및 하위 UI의 상태를 DTO로 반환합니다.
-        (설정 저장을 위해 Presenter가 호출)
-
-        Returns:
-            MainWindowState: 윈도우 및 하위 위젯 상태 DTO.
-        """
         state = MainWindowState()
-
-        # 1. 윈도우 기본 정보 수집
         state.width = self.width()
         state.height = self.height()
         state.x = self.x()
         state.y = self.y()
         state.splitter_state = self.splitter.saveState().toBase64().data().decode()
         state.right_panel_visible = self.right_section.isVisible()
-
-        # 우측 패널 너비 저장 (보일 때만 갱신)
         if self.right_section.isVisible():
             state.right_section_width = self.right_section.width()
         else:
             state.right_section_width = getattr(self, '_right_section_width', None)
-
-        # 2. 하위 섹션 상태 수집 (Recursive)
         state.left_section_state = self.left_section.get_state()
         state.right_section_state = self.right_section.get_state()
-
         return state
 
-    # --------------------------------------------------------
-    # Presenter Interface (View Facade Properties)
-    # --------------------------------------------------------
     @property
     def port_view(self) -> MainLeftSection:
-        """
-        PortPresenter용 뷰 인터페이스(LeftSection)를 반환합니다.
-        """
         return self.left_section
 
     @property
     def macro_view(self):
-        """
-        MacroPresenter용 뷰 인터페이스(MacroPanel)를 반환합니다.
-        Presenter가 right_section 내부 구조를 알 필요 없이 접근 가능하게 합니다.
-        """
         return self.right_section.macro_panel
 
     @property
     def packet_view(self):
-        """
-        PacketPresenter용 뷰 인터페이스(PacketPanel)를 반환합니다.
-        """
         return self.right_section.packet_panel
 
     @property
     def manual_control_view(self):
-        """
-        ManualControlPresenter용 뷰 인터페이스(ManualControlPanel)를 반환합니다.
-        """
         return self.left_section.manual_control_panel
 
-    # --------------------------------------------------------
-    # Presenter Interface (Facade Methods)
-    # --------------------------------------------------------
     def is_current_port_connected(self) -> bool:
-        """
-        현재 활성화된 포트 탭이 연결된 상태인지 반환합니다.
-        (MainPresenter의 UI 동기화 로직용)
-
-        Returns:
-            bool: 연결 여부.
-        """
         if hasattr(self.left_section, 'is_current_port_connected'):
             return self.left_section.is_current_port_connected()
         return False
 
     def connect_port_tab_changed(self, slot: Callable[[int], None]) -> None:
-        """
-        포트 탭 변경 시그널을 외부 슬롯에 연결합니다.
-        Presenter가 내부 위젯(port_tab_panel)에 직접 접근하지 않도록 합니다.
-
-        Args:
-            slot (Callable): 연결할 슬롯 함수.
-        """
         if hasattr(self.left_section, 'connect_tab_changed_signal'):
             self.left_section.connect_tab_changed_signal(slot)
 
     def get_port_tabs_count(self) -> int:
-        """현재 열려있는 포트 탭의 개수를 반환합니다."""
         return self.left_section.get_port_tabs_count()
 
     def get_port_tab_widget(self, index: int) -> QWidget:
-        """
-        인덱스에 해당하는 포트 탭 위젯을 반환합니다.
-
-        Args:
-            index (int): 탭 인덱스.
-
-        Returns:
-            QWidget: 포트 패널 위젯.
-        """
         return self.left_section.get_port_panel_at(index)
 
     def log_system_message(self, event: SystemLogEvent) -> None:
-        """
-        시스템 로그 위젯에 메시지를 추가합니다.
-
-        Args:
-            event (SystemLogEvent): 시스템 로그 이벤트 DTO.
-        """
         self.left_section.log_system_message(event)
 
     def update_status_bar_stats(self, stats: PortStatistics) -> None:
-        """
-        상태바의 통계(RX/TX/Error) 정보를 업데이트합니다.
-
-        Args:
-            stats (PortStatistics): 통계 정보 DTO.
-        """
         self.global_status_bar.update_statistics(stats)
 
     def update_status_bar_time(self, time_str: str) -> None:
-        """
-        상태바의 현재 시간을 업데이트합니다.
-
-        Args:
-            time_str (str): 포맷팅된 시간 문자열.
-        """
         self.global_status_bar.update_time(time_str)
 
     def update_status_bar_port(self, port_name: str, connected: bool) -> None:
-        """
-        상태바의 포트 연결 상태 표시를 업데이트합니다.
-
-        Args:
-            port_name (str): 포트 이름.
-            connected (bool): 연결 여부.
-        """
         self.global_status_bar.update_port_status(port_name, connected)
 
     def show_status_message(self, message: str, timeout: int = 0) -> None:
-        """
-        상태바에 임시 메시지를 표시합니다.
-
-        Args:
-            message (str): 표시할 메시지.
-            timeout (int): 표시 시간(ms). 0이면 계속 표시.
-        """
         self.global_status_bar.show_message(message, timeout)
 
     def show_alert_message(self, title: str, message: str) -> None:
-        """
-        경고(Alert) 메시지 박스를 표시합니다.
-
-        Logic:
-            - **현재 호출 스택이 풀린 뒤**에 띄운다 (S-082).
-
-        Why:
-            모달 대화상자는 중첩 이벤트 루프를 돌린다. 그래서 이 메서드가 어딘가의
-            정리 작업 도중에 불리면, 그 작업이 끝나기 전에 다른 이벤트들이 끼어들어
-            정리 중이던 객체가 발밑에서 파괴된다.
-
-            실제로 그런 사슬이 있었다 — 포트를 닫으면
-            `close_connection()` → `on_worker_closed()` → `EventBus.publish()` →
-            (메인 스레드 발행은 **동기 재진입**이다) → `on_port_closed()` →
-            `_notify_macro_error()` → 여기. 즉 워커를 정리하는 함수의 스택 위에서
-            모달이 열렸다. offscreen 플랫폼에서는 이 경로가 8/8 access violation으로
-            죽었다(네이티브에서는 죽지 않았다).
-
-            반환값을 쓰는 호출자가 없으므로(순수 알림), 한 턴 미뤄도 의미가 바뀌지
-            않는다. 사용자에게는 같은 순간으로 보인다.
-
-        Args:
-            title (str): 다이얼로그 제목.
-            message (str): 표시할 내용.
-        """
         QTimer.singleShot(0, lambda: QMessageBox.warning(self, title, message))
 
     def manual_save_log(self) -> None:
-        """
-        현재 활성 탭의 로그 저장 다이얼로그를 호출합니다.
-        (메뉴바의 'Save Log' 액션 핸들러)
-        """
         self.left_section.trigger_current_port_log_save()
 
     def append_local_echo_data(self, data: bytes) -> None:
-        """
-        Local Echo 데이터를 현재 활성화된 포트 탭에 추가합니다.
-        (송신 데이터를 수신창에 표시)
-
-        Args:
-            data (bytes): 표시할 송신 데이터.
-        """
         self.left_section.append_data_to_current_port(data)
 
     def append_rx_data(self, batch: LogDataBatch) -> None:
-        """
-        수신된 데이터를 해당 포트의 로그 뷰어에 추가합니다.
-        (Fast Path를 통한 UI 업데이트)
-
-        Logic:
-            - DTO를 LeftSection으로 전달 (포트 탭 관리 책임 위임)
-
-        Args:
-            batch (LogDataBatch): 로그 데이터 배치 DTO.
-        """
         self.left_section.append_rx_data(batch)
 
-    # --------------------------------------------------------
-    # 내부 로직 (Internal Logic)
-    # --------------------------------------------------------
     def init_shortcuts(self) -> None:
-        """전역 단축키를 초기화하고 시그널을 연결합니다."""
-        # F2: 연결
         self.shortcut_connect = QShortcut(QKeySequence("F2"), self)
         self.shortcut_connect.activated.connect(self.shortcut_connect_requested.emit)
-
-        # F3: 연결 해제
         self.shortcut_disconnect = QShortcut(QKeySequence("F3"), self)
         self.shortcut_disconnect.activated.connect(self.shortcut_disconnect_requested.emit)
-
-        # F5: 로그 지우기
         self.shortcut_clear = QShortcut(QKeySequence("F5"), self)
         self.shortcut_clear.activated.connect(self.shortcut_clear_requested.emit)
 
     def closeEvent(self, event: QCloseEvent) -> None:
-        """
-        윈도우 종료 이벤트를 처리합니다.
-
-        Logic:
-            - Presenter에게 종료 요청 시그널(close_requested) 발송
-            - Presenter가 설정 저장 및 리소스 정리를 수행하도록 함
-            - 이벤트를 수락하여 종료 진행
-
-        Args:
-            event (QCloseEvent): 종료 이벤트.
-        """
         self.close_requested.emit()
         event.accept()
 
     def _connect_menu_signals(self) -> None:
-        """
-        메뉴바의 액션 시그널을 내부 메서드 또는 외부 시그널에 연결합니다.
-        """
-        # File Menu
         self.menu_bar.tab_new_requested.connect(self.left_section.add_new_port_tab)
         self.menu_bar.exit_requested.connect(self.close)
-        self.menu_bar.connect_requested.connect(self.left_section.open_current_port)
+        # Ctrl+O와 F2는 동일한 Presenter command path를 사용합니다.
+        self.menu_bar.connect_requested.connect(self.shortcut_connect_requested.emit)
         self.menu_bar.tab_close_requested.connect(self.left_section.close_current_tab)
         self.menu_bar.data_log_save_requested.connect(self.manual_save_log)
-
-        # View Menu
         self.menu_bar.theme_changed.connect(self.switch_theme)
         self.menu_bar.font_settings_requested.connect(self.open_font_settings_dialog)
-        self.menu_bar.language_changed.connect(lambda lang: language_manager.set_language(lang))
+        self.menu_bar.language_changed.connect(
+            lambda lang: language_manager.set_language(lang)
+        )
         self.menu_bar.preferences_requested.connect(self.preferences_requested.emit)
         self.menu_bar.toggle_right_section_requested.connect(self.toggle_right_section)
-
-        # Tools Menu
         self.menu_bar.file_transfer_requested.connect(self.open_file_transfer_dialog)
-
-        # Help Menu
         self.menu_bar.about_requested.connect(self.open_about_dialog)
 
     def clear_log(self) -> None:
-        """현재 활성 탭의 로그를 삭제합니다 (단축키 처리용)."""
         self.left_section.clear_current_port_log()
 
     def switch_theme(self, theme_name: str) -> None:
-        """
-        애플리케이션 테마를 전환합니다.
-
-        Logic:
-            - ThemeManager를 통해 테마 적용 (theme_name 전달)
-            - 메뉴바의 테마 체크 상태 동기화
-            - 상태바 메시지 출력
-
-        Args:
-            theme_name (str): 테마 이름 (예: 'dark', 'light').
-        """
         self.theme_manager.apply_theme(theme_name)
         self.color_manager.apply_theme(theme_name)
-
-        # '+' 탭 아이콘 테마 전환 갱신 (dark/light/dracula 아이콘 동기화)
         if hasattr(self.left_section, 'port_tab_panel') and self.left_section.port_tab_panel:
             self.left_section.port_tab_panel.update_plus_tab_icon()
-
-        # 메뉴바의 테마 체크 표시 업데이트
         if hasattr(self, 'menu_bar'):
             self.menu_bar.set_current_theme(theme_name)
-
-        # 시스템 로그 위젯에 색상 규칙 주입 (Facade 활용 권장)
         if hasattr(self.left_section, 'set_system_log_color_rules'):
             self.left_section.set_system_log_color_rules(self.color_manager.rules)
-
         msg = f"Theme changed to {theme_name.capitalize()}"
         self.show_status_message(msg, 2000)
 
     def open_font_settings_dialog(self) -> None:
-        """
-        폰트 설정 대화상자를 엽니다.
-
-        Logic:
-            - FontSettingsDialog 실행 (Modal)
-            - 다이얼로그 종료 후 변경 사항이 있으면 시그널(font_settings_changed) 발행
-            - UI에 즉시 반영
-        """
         dialog = FontSettingsDialog(self.theme_manager, self)
         if dialog.exec_():
-            # 폰트 설정 DTO 획득
             font_config = self.theme_manager.get_font_settings()
             self.font_settings_changed.emit(font_config)
-
-            # 애플리케이션 전체 폰트 적용 (UI 즉시 반영)
             prop_font = self.theme_manager.get_proportional_font()
             QApplication.instance().setFont(prop_font)
-
             self.show_status_message("Font settings updated", 2000)
 
     def open_preferences_dialog(self, state: PreferencesState) -> None:
-        """
-        설정 대화상자를 엽니다.
-
-        Args:
-            state (PreferencesState): 현재 설정 상태 DTO.
-        """
         dialog = PreferencesDialog(self, state)
-        # 설정 변경 시그널을 MainWindow 핸들러로 연결
         dialog.settings_changed.connect(self.on_settings_change_requested)
         dialog.exec_()
 
     def open_about_dialog(self) -> None:
-        """정보(About) 대화상자를 엽니다."""
         dialog = AboutDialog(self)
         dialog.exec_()
 
     def open_file_transfer_dialog(self) -> None:
-        """
-        파일 전송 대화상자를 엽니다.
-
-        Logic:
-            - 현재 활성화된 포트 이름 확인
-            - 다이얼로그 생성
-            - Presenter에 다이얼로그 인스턴스와 타겟 포트를 전달 (Signal)
-            - 다이얼로그 실행
-        """
-        # 현재 활성 포트 이름 획득 (Facade)
         target_port = self.left_section.get_current_port_name()
-
         dialog = FileTransferDialog(self)
-        # 다이얼로그 객체와 타겟 포트를 함께 전달
         self.file_transfer_dialog_opened.emit(dialog, target_port)
         dialog.exec_()
 
     def on_settings_change_requested(self, new_state: PreferencesState) -> None:
-        """
-        설정 대화상자에서 변경 요청이 왔을 때 중계합니다.
-
-        Args:
-            new_state (PreferencesState): 변경된 설정 상태 DTO.
-        """
         self.settings_save_requested.emit(new_state)
 
     def on_language_changed(self, language_code: Optional[str] = None) -> None:
-        """
-        언어 변경 시 UI 텍스트를 업데이트합니다.
-
-        Args:
-            language_code (Optional[str]): 변경된 언어 코드 (사용되지 않더라도 시그널 호환성을 위해 유지).
-        """
         self.setWindowTitle(f"{language_manager.get_text('main_title')} v1.0")
-
-        # 상태바 및 메뉴바 재번역
         if hasattr(self, 'global_status_bar'):
             self.global_status_bar.retranslate_ui()
         if hasattr(self, 'menu_bar'):
             self.menu_bar.retranslate_ui()
 
     def toggle_right_section(self, visible: bool) -> None:
-        """
-        우측 패널의 가시성을 토글하고 윈도우 크기를 조정합니다.
-
-        Logic:
-            - 표시: 윈도우 폭을 늘리고 패널 표시, 스플리터 비율 조정
-            - 숨김: 패널 너비 저장, 패널 숨김, 윈도우 폭을 줄여서 빈 공간 제거
-
-        Args:
-            visible (bool): 표시 여부.
-        """
         if self.isMaximized():
             self.right_section.setVisible(visible)
             self.menu_bar.set_right_section_checked(visible)
             return
 
-        # 현재 상태 측정
         current_width = self.width()
         handle_width = self.splitter.handleWidth()
-
-        # 깜빡임 방지
         self.setUpdatesEnabled(False)
-
         try:
             if visible:
-                # 보이기: 윈도우 폭 증가
-                # 저장된 오른쪽 패널 너비가 있으면 사용, 없으면 기본값 400
-                if hasattr(self, '_right_section_width') and self._right_section_width is not None:
+                if self._right_section_width is not None:
                     target_right_width = self._right_section_width
                 else:
                     target_right_width = max(int(self.width() * 0.3), 300)
-
-                # 숨기기 직전의 좌측 폭을 복원한다 (S-074).
-                # 지금 값을 쓰면 안 된다 — 숨길 때 좌측 패널이 남는 폭을 흡수해
-                # 넓어져 있기 때문이다.
                 if self._saved_left_width is not None:
                     left_width = self._saved_left_width
                 else:
                     left_width = self.left_section.width()
-
-                # 창 폭도 숨기기 직전 값으로 되돌린다 (S-074 — 왕복을 항등으로).
-                # `현재 폭 + 우측 폭 + 핸들`로 계산하면 안 된다: 숨길 때는 창 최소
-                # 폭에 막혀 의도한 만큼 줄지 못하는데(실측 1400 -> 1274, -126만),
-                # 켤 때는 막힘없이 다 늘어나(+586) 켤 때마다 창이 커진다.
-                # 줄어든 양과 늘어나는 양이 다른 것이 이 결함의 뿌리다.
                 if self._saved_window_width is not None:
                     self.resize(self._saved_window_width, self.height())
                 else:
-                    self.resize(current_width + target_right_width + handle_width, self.height())
+                    self.resize(
+                        current_width + target_right_width + handle_width,
+                        self.height(),
+                    )
                 self.right_section.setVisible(True)
-
-                # 스플리터 크기 설정: 왼쪽 패널 크기 유지, 오른쪽 패널 크기 설정
                 self.splitter.setSizes([left_width, target_right_width])
-
-                # 복원 후 저장된 값 초기화
                 self._saved_left_width = None
                 self._saved_window_width = None
                 self._right_section_width = None
-
             else:
-                # 숨기기: 윈도우 폭 감소
-                # 현재 패널 너비 저장
                 self._right_section_width = self.right_section.width()
-                # 좌측 폭과 창 폭을 **지금** 저장한다 (S-074). 아래 resize가 창
-                # 최소 폭에 막혀 클램프되면 좌측 패널이 남는 폭을 흡수해 넓어지므로,
-                # 그 뒤에 읽으면 둘 다 원래 값이 아니다.
                 self._saved_left_width = self.left_section.width()
                 self._saved_window_width = self.width()
-
-                # 왼쪽 패널의 현재 너비를 기준으로 윈도우 크기 재조정
-                # 중앙 위젯의 좌우 마진을 동적으로 계산
                 margins = self.centralWidget().layout().contentsMargins()
                 total_margin = margins.left() + margins.right()
-
                 new_window_width = self.left_section.width() + total_margin
                 self.right_section.setVisible(False)
                 self.resize(new_window_width, self.height())
-
             self.menu_bar.set_right_section_checked(visible)
-
         finally:
             self.setUpdatesEnabled(True)
