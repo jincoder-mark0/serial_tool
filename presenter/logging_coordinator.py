@@ -1,20 +1,14 @@
 """
 포트/시스템 로그 생명주기 조정자.
 
-MainPresenter에 섞여 있던 DataLoggerManager 제어, 저장 경로 선택, 시스템 로그
-TextLogWriter 생명주기를 한 곳으로 모읍니다.
-
-## WHY
-* MainPresenter는 전역 이벤트 조율에 집중하고 로그 저장 구현 세부사항을 알지 않습니다.
-* 포트 로그와 시스템 로그는 모두 "저장 경로 선택 -> 기록 시작/중지 -> UI 상태 반영"
-  흐름을 공유하므로 하나의 coordinator가 일관된 정책을 적용합니다.
-* 시스템 로그 writer의 close는 앱 종료에서도 재사용되어야 하므로 명시적인 생명주기
-  객체가 소유하는 편이 안전합니다.
-* 중복 연결을 막기 위해 `signal.disconnect()`로 모든 구독자를 지우지 않고 coordinator가
-  이미 연결한 패널만 추적합니다. 다른 Presenter/확장 기능의 listener를 침범하지 않습니다.
+DataLoggerManager 제어, 저장 경로 선택, 시스템 로그 TextLogWriter 생명주기를 한 곳에서
+관리합니다. 상위 계층에 로그 메시지를 전달할 때 callback을 주입받지 않고 Qt signal을
+발행하므로 composition root에서 독립적으로 생성할 수 있습니다.
 """
-from typing import Callable, Optional
+from typing import Optional
 from weakref import WeakSet
+
+from PyQt5.QtCore import QObject, pyqtSignal
 
 from core.data_logger import data_logger_manager
 from core.text_log_writer import TextLogWriter
@@ -23,24 +17,23 @@ from view.panels.port_panel import PortPanel
 from view.sections.main_left_section import MainLeftSection
 
 
-LogCallback = Callable[[str], None]
-
-
-class LoggingCoordinator:
+class LoggingCoordinator(QObject):
     """포트 데이터 로그와 시스템 로그 REC의 UI/저장 흐름을 관리합니다."""
 
-    def __init__(
-        self,
-        port_view: MainLeftSection,
-        log_info: LogCallback,
-        log_error: LogCallback,
-    ) -> None:
+    info_requested = pyqtSignal(str)
+    error_requested = pyqtSignal(str)
+
+    def __init__(self, port_view: MainLeftSection) -> None:
+        super().__init__()
         self._port_view = port_view
-        self._log_info = log_info
-        self._log_error = log_error
         self._system_log_writer: Optional[TextLogWriter] = None
         self._connected_panels: WeakSet[PortPanel] = WeakSet()
         self._system_signals_connected = False
+
+    @property
+    def system_log_writer(self) -> Optional[TextLogWriter]:
+        """진단/테스트용 현재 시스템 로그 writer를 반환합니다."""
+        return self._system_log_writer
 
     def connect_signals(self) -> None:
         """기존/신규 포트 패널과 시스템 로그 recording signal을 연결합니다."""
@@ -50,7 +43,6 @@ class LoggingCoordinator:
         if self._system_signals_connected:
             return
 
-        # 신규 탭의 logging wiring도 coordinator가 직접 소유합니다.
         self._port_view.port_tab_added.connect(self.on_port_tab_added)
         self._port_view.sys_logging_start_requested.connect(
             self.on_system_logging_start_requested
@@ -105,13 +97,13 @@ class LoggingCoordinator:
         log_format = LoggingFormatResolver.resolve(file_path)
         if data_logger_manager.start_logging(port, file_path, log_format):
             panel.set_logging_active(True)
-            self._log_info(
+            self.info_requested.emit(
                 f"[{port}] Logging started ({log_format.value}): {file_path}"
             )
             return
 
         panel.set_logging_active(False)
-        self._log_error(f"[{port}] Failed to start logging")
+        self.error_requested.emit(f"[{port}] Failed to start logging")
 
     def on_port_logging_stop_requested(self, panel: PortPanel) -> None:
         """포트 데이터 로그 기록을 중지합니다."""
@@ -119,7 +111,7 @@ class LoggingCoordinator:
         if port:
             data_logger_manager.stop_logging(port)
         panel.set_logging_active(False)
-        self._log_info(f"[{port}] Logging stopped")
+        self.info_requested.emit(f"[{port}] Logging stopped")
 
     def on_system_logging_start_requested(self) -> None:
         """시스템 로그 텍스트 기록을 시작합니다."""
@@ -132,7 +124,7 @@ class LoggingCoordinator:
             writer.open(file_path)
         except OSError as exc:
             self._port_view.set_logging_active(False)
-            self._log_error(
+            self.error_requested.emit(
                 f"Failed to start system log recording ({file_path}): {exc}"
             )
             return
@@ -140,13 +132,13 @@ class LoggingCoordinator:
         self.close_system_log()
         self._system_log_writer = writer
         self._port_view.set_logging_active(True)
-        self._log_info(f"System log recording enabled: {file_path}")
+        self.info_requested.emit(f"System log recording enabled: {file_path}")
 
     def on_system_logging_stop_requested(self) -> None:
         """시스템 로그 텍스트 기록을 중지합니다."""
         self.close_system_log()
         self._port_view.set_logging_active(False)
-        self._log_info("System log recording stopped")
+        self.info_requested.emit("System log recording stopped")
 
     def close_system_log(self) -> None:
         """열린 시스템 로그 writer를 idempotent하게 닫습니다."""
@@ -167,4 +159,6 @@ class LoggingCoordinator:
             self._system_log_writer = None
             writer.close()
             self._port_view.set_logging_active(False)
-            self._log_error(f"System log write failed, recording stopped: {exc}")
+            self.error_requested.emit(
+                f"System log write failed, recording stopped: {exc}"
+            )
