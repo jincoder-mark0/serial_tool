@@ -2,7 +2,7 @@
 포트 프레젠터 모듈
 
 MainLeftSection(View)과 ConnectionController(Model) 사이에서 포트 스캔/연결/상태 갱신을 중재합니다.
-View 내부 구현은 facade/signal을 통해 접근하고 설정 기본값과 로그 레벨은 common 정본을 사용합니다.
+설정은 composition root에서 생성된 SettingsManager를 주입받아 사용합니다.
 """
 from typing import List, Optional
 
@@ -43,14 +43,18 @@ class PortPresenter(QObject):
         self,
         left_section: MainLeftSection,
         connection_controller: ConnectionController,
+        settings_manager: SettingsManager,
     ) -> None:
         super().__init__()
         self.left_section = left_section
         self.connection_controller = connection_controller
+        self.settings_manager = settings_manager
         self._scan_worker: Optional[PortScanWorker] = None
 
-        settings = SettingsManager()
-        max_lines = settings.get(ConfigKeys.RX_MAX_LINES, DEFAULT_LOG_MAX_LINES)
+        max_lines = self.settings_manager.get(
+            ConfigKeys.RX_MAX_LINES,
+            DEFAULT_LOG_MAX_LINES,
+        )
         current_panel = self.left_section.get_current_port_panel()
         if current_panel:
             current_panel.set_max_log_lines(max_lines)
@@ -125,7 +129,7 @@ class PortPresenter(QObject):
         self._scan_worker = None
 
     def _apply_packet_parser_settings(self, config: PortConfig) -> None:
-        settings = SettingsManager()
+        settings = self.settings_manager
         config.parser_type = settings.get(
             ConfigKeys.PACKET_PARSER_TYPE,
             DEFAULT_PACKET_PARSER_TYPE,
