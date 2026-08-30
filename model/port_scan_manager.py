@@ -40,7 +40,7 @@ class PortScanManager(QObject):
         logger.debug("Starting async port scan...")
         worker = PortScanWorker()
         worker.ports_found.connect(self._on_ports_found)
-        worker.finished.connect(self._on_worker_finished)
+        worker.finished.connect(lambda w=worker: self._on_worker_finished(w))
         self._worker = worker
         worker.start()
         return True
@@ -62,8 +62,7 @@ class PortScanManager(QObject):
         """worker 결과를 manager public signal로 중계합니다."""
         self.ports_found.emit(port_list)
 
-    def _on_worker_finished(self) -> None:
-        """현재 worker가 종료되면 소유 참조를 해제합니다."""
-        worker = self.sender()
+    def _on_worker_finished(self, worker: PortScanWorker) -> None:
+        """명시적으로 전달된 현재 worker가 종료되면 소유 참조를 해제합니다."""
         if worker is self._worker:
             self._worker = None
