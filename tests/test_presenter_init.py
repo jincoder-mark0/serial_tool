@@ -56,12 +56,12 @@ class TestMainPresenterInit:
             "port_presenter",
             "file_presenter",
             "manual_control_presenter",
-            "lifecycle_manager",
         ):
             assert getattr(presenter, attr) is not None
         for internal_owner in (
             "event_router",
             "settings_manager",
+            "lifecycle_manager",
             "data_handler",
             "file_transfer_manager",
             "port_scan_manager",
@@ -75,9 +75,13 @@ class TestMainPresenterInit:
         ):
             assert not hasattr(presenter, internal_owner)
 
-    def test_bootstrapper_restores_view_before_presenter_construction(self):
+    def test_bootstrapper_restores_view_and_manual_state_before_control_policy(self):
         source = inspect.getsource(ApplicationBootstrapper.build)
         restore_pos = source.index("lifecycle_manager.initialize_view()")
+        manual_apply_pos = source.index("manual_control_presenter.apply_state(")
+        control_pos = source.index("control_state_coordinator = ControlStateCoordinator(")
+
+        assert restore_pos < manual_apply_pos < control_pos
         assert restore_pos < source.index("port_presenter = PortPresenter(")
         assert restore_pos < source.index("macro_presenter = MacroPresenter(")
 
@@ -87,6 +91,7 @@ class TestMainPresenterInit:
         assert "ApplicationBootstrapper" not in source
         assert "ApplicationComponents" not in source
         assert "SettingsManager" not in source
+        assert "AppLifecycleManager" not in source
         assert "MainPresenterDependencies" in source
         assert set(signature.parameters) == {"self", "view", "dependencies"}
 
