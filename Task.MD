@@ -358,14 +358,18 @@ python tools/check_task_boards.py
 
 - [x] `doc/refactoring_validation_report_20260830.md` 작성
 - [x] `AGENTS.md` 현재 구조 기준으로 전면 개편
-- [x] `doc/00_overview.md` EventBus/EventRouter 중심 설명 제거
+- [x] `README.md` 아키텍처/구조/검증 상태 현행화
+- [x] `CLAUDE.md` EventBus/EventRouter/Fast Path 과거 실행 규칙 제거
+- [x] `RULES.md` Single Composition Root/direct signal/검증 규율로 갱신
+- [x] `doc/00_overview.md` 현재 composition/direct-signal 구조로 갱신
+- [x] `tests/README.md` 과거 테스트 기준선/EventBus 예시 제거 및 새 검증 순서 반영
 - [x] `Task.MD` 현재 체크리스트로 재정리
-- [ ] `README.md` 아키텍처/구조/테스트 기준선 현행화
-- [ ] `CLAUDE.md` EventBus/EventRouter/Fast Path 과거 설명 정리
-- [ ] `RULES.md` 현재 Single Composition Root/direct signal 규칙과 충돌 여부 감사
-- [ ] `doc/implementation_plan.md` 완료/현재 구조와 충돌하는 계획 문구 감사
+- [x] `doc/implementation_plan.md` 감사 완료
+  - 초기 설계/역사 계획 문서로 의도적으로 보존
+  - 현재 구현 기준 문서로 사용하지 않음
+  - 현재 기준은 README / overview / refactoring report / Task.MD
 - [ ] `doc/CHANGELOG.md` 이번 리팩토링 세션 요약 추가
-- [ ] 필요 시 `doc/history/session_summary_20260830.md` 작성
+- [ ] `doc/history/session_summary_20260830.md` 작성
 
 ---
 
