@@ -44,7 +44,6 @@ def main() -> None:
     logger.configure(resource_path)
     logging.info(f"Base directory: {resource_path.base_dir}")
 
-    # 최상위 composition root: 공유 manager는 여기서 한 번만 생성합니다.
     settings_mgr = SettingsManager(resource_path)
     language_manager = LanguageManager(resource_path)
     theme_manager = ThemeManager(resource_path)
@@ -77,7 +76,7 @@ def main() -> None:
     presenter = MainPresenter(  # noqa: F841 - QObject signal wiring GC 방지
         window,
         settings_manager=settings_mgr,
-        components=components,
+        dependencies=components.main_presenter_dependencies,
     )
     window.show()
 
