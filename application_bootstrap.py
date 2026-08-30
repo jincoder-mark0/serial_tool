@@ -18,6 +18,7 @@ from model.port_scan_manager import PortScanManager
 from model.traffic_monitor import TrafficMonitor
 from presenter.data_handler import DataTrafficHandler
 from presenter.file_presenter import FilePresenter
+from presenter.macro_execution_coordinator import MacroExecutionCoordinator
 from presenter.macro_presenter import MacroPresenter
 from presenter.manual_control_presenter import ManualControlPresenter
 from presenter.packet_presenter import PacketPresenter
@@ -35,6 +36,7 @@ class ApplicationComponents:
     port_scan_manager: PortScanManager
     macro_runner: MacroRunner
     macro_script_manager: MacroScriptManager
+    macro_execution_coordinator: MacroExecutionCoordinator
     traffic_monitor: TrafficMonitor
     data_handler: DataTrafficHandler
     port_presenter: PortPresenter
@@ -67,6 +69,12 @@ class ApplicationBootstrapper:
         port_scan_manager = PortScanManager()
         macro_runner = MacroRunner()
         macro_script_manager = MacroScriptManager()
+        macro_execution_coordinator = MacroExecutionCoordinator(
+            macro_runner,
+            connection_controller,
+            command_transmission_service,
+            self._view.port_view,
+        )
         traffic_monitor = TrafficMonitor()
         data_handler = DataTrafficHandler(self._view, traffic_monitor)
 
@@ -105,6 +113,7 @@ class ApplicationBootstrapper:
             port_scan_manager=port_scan_manager,
             macro_runner=macro_runner,
             macro_script_manager=macro_script_manager,
+            macro_execution_coordinator=macro_execution_coordinator,
             traffic_monitor=traffic_monitor,
             data_handler=data_handler,
             port_presenter=port_presenter,
