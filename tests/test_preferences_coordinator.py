@@ -13,8 +13,7 @@ S-058 신규 테스트: PreferencesCoordinator (presenter/preferences_coordinato
   하드코딩 기본값과 동일한지 검증.
 * apply_state() 후 build_state()로 다시 읽으면 원래 DTO와 동일한 값이 나오는
   왕복(roundtrip) 검증.
-* theme 필드의 대소문자 비대칭 변환(읽기: capitalize, 쓰기: lower)이 유지되는지
-  검증.
+* theme 필드가 `ThemeType.value`와 같은 lowercase canonical 값을 유지하는지 검증.
 
 ## HOW
 * `tests/conftest.py`의 `mock_settings_manager`(임시 경로 SettingsManager, Qt
@@ -38,7 +37,7 @@ class TestPreferencesCoordinatorBuildState:
     def test_build_state_uses_expected_defaults_when_settings_empty(self, mock_settings_manager):
         state = PreferencesCoordinator.build_state(mock_settings_manager)
 
-        assert state.theme == "Dark"
+        assert state.theme == "dark"
         assert state.font_size == 10
         assert state.max_log_lines == 2000
         assert state.baudrate == 115200
@@ -68,15 +67,15 @@ class TestPreferencesCoordinatorBuildState:
 class TestPreferencesCoordinatorApplyState:
     """apply_state()가 SettingsManager에 기대한 키로 값을 반영하는지 검증한다."""
 
-    def test_apply_state_writes_theme_lowercased(self, mock_settings_manager):
-        state = PreferencesState(theme="Light")
+    def test_apply_state_writes_canonical_theme(self, mock_settings_manager):
+        state = PreferencesState(theme="light")
         PreferencesCoordinator.apply_state(mock_settings_manager, state)
 
         assert mock_settings_manager.get(ConfigKeys.THEME) == "light"
 
     def test_apply_state_writes_all_mapped_keys(self, mock_settings_manager):
         state = PreferencesState(
-            theme="Dark",
+            theme="dark",
             language="ko",
             font_size=12,
             max_log_lines=5000,
@@ -127,7 +126,7 @@ class TestPreferencesCoordinatorRoundtrip:
 
     def test_roundtrip_preserves_values(self, mock_settings_manager):
         original = PreferencesState(
-            theme="Light",
+            theme="light",
             language="ko",
             font_size=14,
             max_log_lines=3000,

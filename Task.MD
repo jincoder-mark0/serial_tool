@@ -30,8 +30,8 @@
 10. 사용자 승인 후 squash/rebase 여부 결정
 ```
 
-현재 브랜치의 전체 pytest/ruff 통과는 아직 확인되지 않았다.
-검증 전에는 `완료`, `정상 동작`, `all tests passed`라고 선언하지 않는다.
+2026-08-30 로컬 검증에서 전체 pytest/ruff와 저장소 정합 검사는 Green을 확인했다.
+PR GitHub Actions와 `main` 대비 전체 diff 감사 전에는 merge 준비 완료로 선언하지 않는다.
 
 ---
 
@@ -144,76 +144,76 @@
 
 ## 4.1 stale API / constructor 전수 감사
 
-- [ ] `MainPresenter(...)` 직접 생성 전수 검사
+- [x] `MainPresenter(...)` 직접 생성 전수 검사
   - production은 Bootstrapper만 생성
   - test도 가능한 경우 `runtime.main_presenter` 사용
-- [ ] `PortPresenter(...)` 옛 optional dependency 호출 검사
-- [ ] `MacroPresenter(...)`의 MacroScriptManager 누락 호출 검사
-- [ ] `MacroExecutionCoordinator(...)` SettingsManager 누락 검사
-- [ ] 제거된 EventRouter import/fixture/reference 검사
-- [ ] `event_router.packet_received/settings_changed/port_closed` 검사
-- [ ] 제거된 MainPresenter 내부 필드 검사
+- [x] `PortPresenter(...)` 옛 optional dependency 호출 검사
+- [x] `MacroPresenter(...)`의 MacroScriptManager 누락 호출 검사
+- [x] `MacroExecutionCoordinator(...)` SettingsManager 누락 검사
+- [x] 제거된 EventRouter import/fixture/reference 검사
+- [x] `event_router.packet_received/settings_changed/port_closed` 검사
+- [x] 제거된 MainPresenter 내부 필드 검사
   - `data_handler`, `settings_manager`, `status_coordinator`
   - `file_transfer_manager`, `port_scan_manager`, `macro_script_manager`
   - `macro_presenter`, `packet_presenter`, `port_presenter`
-- [ ] 제거된 logging compatibility API 검사
-- [ ] `controller.parsers` 내부 registry 접근 검사
-- [ ] `_active_file_transfers` 및 register/unregister API 검사
-- [ ] Presenter `_scan_worker` / PortScanWorker ownership 가정 검사
-- [ ] Presenter `ScriptLoadWorker` import 검사
-- [ ] EventBus production runtime 재연결 코드 검사
+- [x] 제거된 logging compatibility API 검사
+- [x] `controller.parsers` 내부 registry 접근 검사
+- [x] `_active_file_transfers` 및 register/unregister API 검사
+- [x] Presenter `_scan_worker` / PortScanWorker ownership 가정 검사
+- [x] Presenter `ScriptLoadWorker` import 검사
+- [x] EventBus production runtime 재연결 코드 검사
 
 ## 4.2 Ruff
 
-- [ ] `ruff check .`
-- [ ] import/unused/undefined-name 정리
-- [ ] 필요한 noqa에 규칙 번호 + 이유 기록
-- [ ] ruff 0건 확인
+- [x] `ruff check .`
+- [x] import/unused/undefined-name 정리
+- [x] 필요한 noqa에 규칙 번호 + 이유 기록
+- [x] ruff 0건 확인
 
 ## 4.3 Architecture / contract tests
 
-- [ ] `tests/test_layer_dependencies.py`
-- [ ] `tests/test_composition_root_contract.py`
-- [ ] `tests/test_architecture_policy_boundaries.py`
-- [ ] `tests/test_direct_event_topology.py`
-- [ ] `tests/test_presenter_view_contract.py`
-- [ ] `tests/test_port_presenter_sender_contract.py`
+- [x] `tests/test_layer_dependencies.py`
+- [x] `tests/test_composition_root_contract.py`
+- [x] `tests/test_architecture_policy_boundaries.py`
+- [x] `tests/test_direct_event_topology.py`
+- [x] `tests/test_presenter_view_contract.py`
+- [x] `tests/test_port_presenter_sender_contract.py`
 
 Acceptance:
 
-- [ ] layer 역방향 import 0건
-- [ ] Single Composition Root 유지
-- [ ] runtime EventRouter 의존 0건
-- [ ] Presenter→View 없는 API 호출 0건
+- [x] layer 역방향 import 0건
+- [x] Single Composition Root 유지
+- [x] runtime EventRouter 의존 0건
+- [x] Presenter→View 없는 API 호출 0건
 
 ## 4.4 Lifecycle / Threading
 
-- [ ] `tests/test_shutdown_coordinator.py`
-- [ ] `tests/test_shutdown_data_logger.py`
-- [ ] `tests/test_file_transfer_manager.py`
-- [ ] `tests/test_port_scan_shutdown.py`
-- [ ] `tests/test_macro_script_manager.py`
-- [ ] `tests/test_manual_control_transient_state.py`
-- [ ] `tests/test_port_tab_cleanup.py`
-- [ ] Macro worker View 접근 회귀 테스트
+- [x] `tests/test_shutdown_coordinator.py`
+- [x] `tests/test_shutdown_data_logger.py`
+- [x] `tests/test_file_transfer_manager.py`
+- [x] `tests/test_port_scan_shutdown.py`
+- [x] `tests/test_macro_script_manager.py`
+- [x] `tests/test_manual_control_transient_state.py`
+- [x] `tests/test_port_tab_cleanup.py`
+- [x] Macro worker View 접근 회귀 테스트
 
 Acceptance:
 
-- [ ] running QThread/QRunnable 잔존 없음
-- [ ] shutdown data loss 없음
-- [ ] Auto Tx 저장 상태 불일치 없음
-- [ ] target port close 시 file/macro 정상 종료
+- [x] running QThread/QRunnable 잔존 없음
+- [x] shutdown data loss 없음
+- [x] Auto Tx 저장 상태 불일치 없음
+- [x] target port close 시 file/macro 정상 종료
 
 ## 4.5 핵심 기능
 
-- [ ] `tests/test_command_transmission_service.py`
-- [ ] `tests/test_presenter_manual_control.py`
-- [ ] `tests/test_auto_tx.py`
-- [ ] `tests/test_macro_execution_coordinator.py`
-- [ ] `tests/test_parser_and_protocol.py`
-- [ ] `tests/test_presenter_packet.py`
-- [ ] `tests/test_file_transfer.py`
-- [ ] `tests/test_integration_refactored.py`
+- [x] `tests/test_command_transmission_service.py`
+- [x] `tests/test_presenter_manual_control.py`
+- [x] `tests/test_auto_tx.py`
+- [x] `tests/test_macro_execution_coordinator.py`
+- [x] `tests/test_parser_and_protocol.py`
+- [x] `tests/test_presenter_packet.py`
+- [x] `tests/test_file_transfer.py`
+- [x] `tests/test_integration_refactored.py`
 
 ## 4.6 전체 검증
 
@@ -225,12 +225,24 @@ python tools/check_language_keys.py
 python tools/check_task_boards.py
 ```
 
-- [ ] 전체 pytest Green
-- [ ] ruff Green
-- [ ] language key integrity Green
-- [ ] task board consistency Green
-- [ ] 실제 passed/failed/skipped count 기록
+- [x] 전체 pytest Green
+- [x] ruff Green
+- [x] language key integrity Green
+- [x] task board consistency Green
+- [x] 실제 passed/failed/skipped count 기록
 - [ ] PR GitHub Actions Green
+
+2026-08-30 로컬 검증 결과 (Python 3.13.15, Windows, offscreen):
+
+```text
+architecture contract: 33 passed
+lifecycle/data-preservation: 45 passed
+core feature: 75 passed
+full pytest: 622 passed, 0 failed, 0 skipped, 2 dependency warnings
+ruff: 0 errors
+language keys: success (dynamic expression warnings 7건)
+task board: 78 historical tasks consistent
+```
 
 ---
 
@@ -278,7 +290,7 @@ python tools/check_task_boards.py
   - 초기 설계/역사 계획 문서로 의도적으로 보존
   - 현재 구현 기준으로 사용하지 않음
 - [x] `doc/history/session_summary_20260830.md`
-- [ ] `doc/CHANGELOG.md`
+- [x] `doc/CHANGELOG.md`
   - full pytest/ruff/CI 결과가 확정된 뒤 실제 검증 상태와 함께 최종 리팩토링 항목 추가
 
 ---
@@ -300,13 +312,13 @@ python tools/check_task_boards.py
 
 # 8. Merge / PR 준비
 
-- [ ] stale API/constructor 감사 완료
-- [ ] ruff Green
-- [ ] architecture contract Green
-- [ ] lifecycle/threading Green
-- [ ] full pytest Green
-- [ ] language/task consistency Green
-- [ ] `doc/CHANGELOG.md` 최종 기록
+- [x] stale API/constructor 감사 완료
+- [x] ruff Green
+- [x] architecture contract Green
+- [x] lifecycle/threading Green
+- [x] full pytest Green
+- [x] language/task consistency Green
+- [x] `doc/CHANGELOG.md` 최종 기록
 - [ ] README/AGENTS/CLAUDE/RULES/doc 최종 정합 확인
 - [ ] `main` 대비 최종 diff 재감사
 - [ ] PR 생성/업데이트

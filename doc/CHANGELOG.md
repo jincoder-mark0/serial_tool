@@ -4,6 +4,36 @@
 
 ---
 
+### Presenter/View 리팩토링 로컬 검증 및 마지막 교정 (2026-08-30)
+
+- stale API/constructor 감사에서 남아 있던 `controller.parsers` 테스트 접근을
+  `PacketParserManager` public diagnostic API로 이동했습니다.
+- shutdown 및 system logging 통합 fixture를 실제 ManualControl View 계약에 맞춰
+  Auto Tx 상태와 interval을 명시했습니다.
+- `PortPresenter` 테스트의 `QObject` 우회 생성을 제거하고 explicit dependency
+  constructor로 조립했습니다.
+- MainPresenter dependency DTO와 lowercase theme canonical 계약에 맞게 stale
+  assertion을 정리했습니다.
+- Ruff unused import 3건과 Preferences dialog line-length 3건을 수정했습니다.
+- 루트 `Task.MD`가 현재 검증만 관리하도록 바뀐 문서 체계에 맞춰 과거 S-xxx
+  정합 검사를 태스크 파일과 `tasks/README.md`의 2중 검사로 조정했습니다.
+
+로컬 검증 결과:
+
+```text
+architecture contract: 33 passed
+lifecycle/data-preservation: 45 passed
+core feature: 75 passed
+full pytest: 622 passed, 0 failed, 0 skipped
+ruff check .: 0 errors
+language key integrity: success
+task board consistency: 78 historical tasks consistent
+```
+
+PR GitHub Actions와 `main` 대비 전체 diff 검토는 아직 남아 있습니다.
+
+---
+
 ### 고속 수신 시 완결 패킷 유실 수정 (2026-08-22, S-064)
 
 AT/Delimiter/FixedLength 파서가 한 번에 큰 데이터를 받을 때(예: 8192바이트 이상)

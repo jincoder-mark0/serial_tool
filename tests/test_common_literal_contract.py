@@ -16,11 +16,9 @@ from common.defaults import (
 )
 from common.enums import (
     ByteOrder,
-    ConnectionEventState,
     ConnectionProtocol,
     LengthFieldSize,
     LogLevel,
-    MacroStepType,
     ParserPreferenceIndex,
     ParserType,
 )

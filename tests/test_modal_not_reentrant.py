@@ -5,10 +5,10 @@
 설계 점검 중 이런 호출 사슬이 나왔다:
 
     close_connection()          ← self.workers를 아직 정리하는 중
-     → on_worker_closed() → EventBus.publish()
-     → [메인 스레드 발행은 **동기 재진입**이다 — 실측 확인]
-     → EventRouter._on_port_closed → MainPresenter.on_port_closed
-     → _notify_macro_error → QMessageBox.warning()
+     → connection_closed direct Qt signal
+     → MainPresenter / Coordinator의 사용자 알림 요청
+     → MainWindow.show_alert_message()
+     → QMessageBox.warning()
 
 즉 워커를 정리하는 함수의 스택 위에서 모달이 열렸다. 모달은 중첩 이벤트 루프를
 돌리므로, 그동안 밀려 있던 이벤트들이 끼어들어 정리 중이던 객체가 발밑에서

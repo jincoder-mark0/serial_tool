@@ -314,7 +314,7 @@ class TestGapFlushOnConnectionClose:
         assert controller.open_connection(config) is True
         try:
             # 유휴 없이 한 조각만 넣는다 -> 아직 확정되지 않은 상태
-            controller.parsers[LOOPBACK_PORT_NAME].parse(b"TAIL")
+            controller.packet_parser_manager.feed(LOOPBACK_PORT_NAME, b"TAIL")
             assert received.call_count == 0, "유휴 전에는 프레임이 확정되면 안 된다"
         finally:
             controller.close_connection()

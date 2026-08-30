@@ -1,7 +1,7 @@
 """MacroScriptManager와 MacroPresenter의 책임 경계를 검증합니다."""
 import inspect
 import time
-from unittest.mock import MagicMock, patch
+from unittest.mock import patch
 
 from common.dtos import MacroScriptData
 from model.macro_script_manager import MacroScriptManager

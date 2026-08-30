@@ -296,9 +296,18 @@ class PreferencesDialog(QDialog):
         )
         self.length_includes_header_chk.setChecked(DEFAULT_PACKET_LENGTH_INCLUDES_HEADER)
 
-        length_field_layout.addRow(language_manager.get_text("pref_lbl_length_field_offset"), self.length_field_offset_spin)
-        length_field_layout.addRow(language_manager.get_text("pref_lbl_length_field_size"), self.length_field_size_combo)
-        length_field_layout.addRow(language_manager.get_text("pref_lbl_length_field_endian"), self.length_field_endian_combo)
+        length_field_layout.addRow(
+            language_manager.get_text("pref_lbl_length_field_offset"),
+            self.length_field_offset_spin,
+        )
+        length_field_layout.addRow(
+            language_manager.get_text("pref_lbl_length_field_size"),
+            self.length_field_size_combo,
+        )
+        length_field_layout.addRow(
+            language_manager.get_text("pref_lbl_length_field_endian"),
+            self.length_field_endian_combo,
+        )
         length_field_layout.addRow(self.length_includes_header_chk)
         length_field_group.setLayout(length_field_layout)
 

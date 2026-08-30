@@ -22,7 +22,7 @@ def test_main_presenter_consumes_injected_logging_coordinator():
     source = inspect.getsource(MainPresenter)
 
     assert "LoggingCoordinator(" not in source
-    assert "components.logging_coordinator" in source
+    assert "dependencies.logging_coordinator" in source
     assert "logging_coordinator.info_requested.connect" in source
     assert "logging_coordinator.error_requested.connect" in source
     assert "data_logger_manager" not in source

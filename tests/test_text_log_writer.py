@@ -151,6 +151,8 @@ def mock_main_window():
     view.manual_control_view.is_rts_enabled.return_value = False
     view.manual_control_view.is_dtr_enabled.return_value = False
     view.manual_control_view.is_broadcast_enabled.return_value = False
+    view.manual_control_view.is_auto_tx_enabled.return_value = False
+    view.manual_control_view.get_auto_tx_interval_ms.return_value = 1000
 
     view.settings_save_requested = MagicMock()
     view.font_settings_changed = MagicMock()

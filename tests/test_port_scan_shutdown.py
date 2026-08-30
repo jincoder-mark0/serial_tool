@@ -61,10 +61,21 @@ def test_port_presenter_does_not_own_construct_or_stop_scan_worker():
     assert "self.port_scan_manager.request_scan()" in source
 
 
-def test_port_presenter_scan_request_delegates_to_injected_manager():
-    presenter = object.__new__(PortPresenter)
-    presenter.port_scan_manager = MagicMock()
+def test_port_presenter_scan_request_delegates_to_injected_manager(qapp):
+    left_section = MagicMock()
+    left_section.get_port_panels.return_value = []
+    connection_controller = MagicMock()
+    settings_manager = MagicMock()
+    settings_manager.get.return_value = 2000
+    port_scan_manager = MagicMock()
+    presenter = PortPresenter(
+        left_section,
+        connection_controller,
+        settings_manager,
+        port_scan_manager,
+    )
+    port_scan_manager.request_scan.reset_mock()
 
     presenter.scan_ports()
 
-    presenter.port_scan_manager.request_scan.assert_called_once()
+    port_scan_manager.request_scan.assert_called_once()
