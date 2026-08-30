@@ -2,8 +2,8 @@
 SerialTool application composition root helper.
 
 View 상태 복원과 구체 runtime object graph 생성을 한 곳에서 순서대로 수행합니다.
-Port/Macro Presenter가 View collection을 관찰하기 전에 저장된 탭/패널 상태가 먼저
-복원되어야 하므로 `AppLifecycleManager.initialize_view()`를 build의 첫 단계로 둡니다.
+MainPresenter에는 전체 application graph가 아니라 Presenter가 정의한 최소 dependency
+contract만 전달할 수 있도록 `MainPresenterDependencies`를 조립합니다.
 """
 from dataclasses import dataclass
 
@@ -23,6 +23,7 @@ from presenter.lifecycle_manager import AppLifecycleManager
 from presenter.logging_coordinator import LoggingCoordinator
 from presenter.macro_execution_coordinator import MacroExecutionCoordinator
 from presenter.macro_presenter import MacroPresenter
+from presenter.main_presenter import MainPresenterDependencies
 from presenter.manual_control_presenter import ManualControlPresenter
 from presenter.packet_presenter import PacketPresenter
 from presenter.port_presenter import PortPresenter
@@ -33,25 +34,14 @@ from view.main_window import MainWindow
 
 @dataclass(frozen=True)
 class ApplicationComponents:
-    """MainPresenter가 사용하는 완성된 runtime component 집합."""
+    """Composition root가 소유하는 전체 runtime graph와 Presenter contract."""
 
-    lifecycle_manager: AppLifecycleManager
+    main_presenter_dependencies: MainPresenterDependencies
     connection_controller: ConnectionController
     file_transfer_manager: FileTransferManager
     port_scan_manager: PortScanManager
-    macro_runner: MacroRunner
     macro_script_manager: MacroScriptManager
-    macro_execution_coordinator: MacroExecutionCoordinator
-    traffic_monitor: TrafficMonitor
-    data_handler: DataTrafficHandler
-    logging_coordinator: LoggingCoordinator
     status_coordinator: StatusCoordinator
-    shutdown_coordinator: ShutdownCoordinator
-    port_presenter: PortPresenter
-    macro_presenter: MacroPresenter
-    file_presenter: FilePresenter
-    packet_presenter: PacketPresenter
-    manual_control_presenter: ManualControlPresenter
 
 
 class ApplicationBootstrapper:
@@ -140,24 +130,29 @@ class ApplicationBootstrapper:
             close_system_log=logging_coordinator.close_system_log,
             status_coordinator=status_coordinator,
         )
-        status_coordinator.start()
 
-        return ApplicationComponents(
+        main_presenter_dependencies = MainPresenterDependencies(
             lifecycle_manager=lifecycle_manager,
             connection_controller=connection_controller,
-            file_transfer_manager=file_transfer_manager,
-            port_scan_manager=port_scan_manager,
             macro_runner=macro_runner,
-            macro_script_manager=macro_script_manager,
             macro_execution_coordinator=macro_execution_coordinator,
-            traffic_monitor=traffic_monitor,
             data_handler=data_handler,
             logging_coordinator=logging_coordinator,
-            status_coordinator=status_coordinator,
             shutdown_coordinator=shutdown_coordinator,
             port_presenter=port_presenter,
             macro_presenter=macro_presenter,
             file_presenter=file_presenter,
             packet_presenter=packet_presenter,
             manual_control_presenter=manual_control_presenter,
+        )
+
+        status_coordinator.start()
+
+        return ApplicationComponents(
+            main_presenter_dependencies=main_presenter_dependencies,
+            connection_controller=connection_controller,
+            file_transfer_manager=file_transfer_manager,
+            port_scan_manager=port_scan_manager,
+            macro_script_manager=macro_script_manager,
+            status_coordinator=status_coordinator,
         )
