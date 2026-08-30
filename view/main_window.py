@@ -61,6 +61,8 @@ class MainWindow(QMainWindow):
     settings_save_requested = pyqtSignal(object)
     preferences_requested = pyqtSignal()
     font_settings_changed = pyqtSignal(object)
+    theme_change_requested = pyqtSignal(str)
+    language_change_requested = pyqtSignal(str)
     shortcut_connect_requested = pyqtSignal()
     shortcut_disconnect_requested = pyqtSignal()
     shortcut_clear_requested = pyqtSignal()
@@ -233,15 +235,12 @@ class MainWindow(QMainWindow):
     def _connect_menu_signals(self) -> None:
         self.menu_bar.tab_new_requested.connect(self.left_section.add_new_port_tab)
         self.menu_bar.exit_requested.connect(self.close)
-        # Ctrl+O와 F2는 동일한 Presenter command path를 사용합니다.
         self.menu_bar.connect_requested.connect(self.shortcut_connect_requested.emit)
         self.menu_bar.tab_close_requested.connect(self.left_section.close_current_tab)
         self.menu_bar.data_log_save_requested.connect(self.manual_save_log)
-        self.menu_bar.theme_changed.connect(self.switch_theme)
+        self.menu_bar.theme_changed.connect(self.theme_change_requested.emit)
         self.menu_bar.font_settings_requested.connect(self.open_font_settings_dialog)
-        self.menu_bar.language_changed.connect(
-            lambda lang: language_manager.set_language(lang)
-        )
+        self.menu_bar.language_changed.connect(self.language_change_requested.emit)
         self.menu_bar.preferences_requested.connect(self.preferences_requested.emit)
         self.menu_bar.toggle_right_section_requested.connect(self.toggle_right_section)
         self.menu_bar.file_transfer_requested.connect(self.open_file_transfer_dialog)
