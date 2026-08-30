@@ -1,9 +1,9 @@
 """
 애플리케이션 최상위 Presenter.
 
-조립된 runtime component를 받아 전역 이벤트와 UI 상태를 중재합니다. 구체 객체 생성은
-application_bootstrap.py, 초기 상태 복원/로그/매크로 전송/종료 같은 독립 유스케이스는
-전용 객체가 소유합니다.
+조립된 runtime component를 받아 전역 이벤트와 UI 상태를 중재합니다. 구체 객체 생성과
+View 초기 상태 복원 순서는 application_bootstrap.py가 소유하고, MainPresenter는 완성된
+runtime graph의 public signal을 연결하고 사용자 표시 상태를 조정합니다.
 """
 from typing import Optional
 
@@ -29,7 +29,6 @@ from view.main_window import MainWindow
 from view.managers.language_manager import language_manager
 from view.panels.port_panel import PortPanel
 
-from .lifecycle_manager import AppLifecycleManager
 from .preferences_coordinator import PreferencesCoordinator
 from .shutdown_coordinator import ShutdownCoordinator
 
@@ -47,12 +46,6 @@ class MainPresenter(QObject):
         self.view = view
         self.settings_manager = settings_manager or SettingsManager()
         self.status_timer: Optional[QTimer] = None
-
-        self.lifecycle_manager = AppLifecycleManager(
-            self.view,
-            self.settings_manager,
-        )
-        self.lifecycle_manager.initialize_view()
 
         runtime = components or ApplicationBootstrapper(
             self.view,
@@ -95,6 +88,7 @@ class MainPresenter(QObject):
 
     def _apply_components(self, components: ApplicationComponents) -> None:
         """Bootstrapper가 생성한 runtime component를 Presenter 필드에 배치합니다."""
+        self.lifecycle_manager = components.lifecycle_manager
         self.connection_controller = components.connection_controller
         self.file_transfer_manager = components.file_transfer_manager
         self.port_scan_manager = components.port_scan_manager
