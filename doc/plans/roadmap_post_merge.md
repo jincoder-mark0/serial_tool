@@ -8,73 +8,59 @@
 
 ## 1. 목적
 
-이 문서는 Presenter/View Boundary 리팩토링 이후 남은 업무를 **선행 의존성과 회귀 리스크 기준으로 실제 실행 순서화**한다.
+이 문서는 Presenter/View Boundary 리팩토링 이후 남은 업무를 **선행 의존성·회귀 리스크·검증 비용** 기준으로 실제 실행 순서화한다.
 
 상세 문서:
 
-- 환경/배포: [`environment_validation_plan.md`](environment_validation_plan.md)
 - 성능: [`performance_optimization_plan.md`](performance_optimization_plan.md)
 - 구조: [`architecture_cleanup_plan.md`](architecture_cleanup_plan.md)
 - 확장 기능: [`extension_platform_plan.md`](extension_platform_plan.md)
+- 최종 환경/배포 검증: [`environment_validation_plan.md`](environment_validation_plan.md)
 
 `Task.MD`는 실행 순서와 상태를 관리하고, 상세 설계/acceptance criteria는 본 문서군에서 관리한다.
 
 ---
 
-## 2. 우선순위 원칙
+## 2. 최종 우선순위 원칙
 
 ```text
-현재 main 실환경 baseline
-        ↓
 low-risk architecture cleanup
         ↓
 performance baseline / optimization
         ↓
 global state cleanup
         ↓
-existing Packet 기능 확장
+Packet 기능 확장
         ↓
-SPI/I2C hardware extension
+SPI/I2C extension
         ↓
 Plugin system
         ↓
 Trigger-based transmission
+        ↓
+final environment / deployment validation
 ```
 
 ### WHY
 
-- 실제 배포/Serial stack 기준선 없이 성능·구조 변경을 시작하면 회귀 원인 분리가 어려움
-- 작은 dead code/policy literal 정리는 benchmark 전에 끝내도 동작 영향이 거의 없음
-- Settings singleton 제거는 범위가 넓어 baseline 측정 후 수행하는 편이 안전함
-- Packet Filter/Annotation은 기존 구조를 이용하는 low-side-effect 확장이라 hardware/plugin보다 먼저 적합
-- Plugin API는 실제 extension 사례를 먼저 경험한 뒤 설계해야 내부 구조를 성급히 public contract로 고정하지 않음
-- Trigger는 RX→TX 순환 가능성과 Macro/AutoTx/Broadcast 교차 때문에 가장 마지막에 수행
+- PyInstaller/com0com/socat는 architecture 설계의 선행 조건보다 최종 제품 검증 성격이 강하다.
+- 단, Serial I/O 최적화처럼 실제 driver/stack 특성이 중요한 작업은 해당 작업 acceptance에서 최소 실기기 smoke를 수행한다.
+- 작은 dead code/policy literal 정리는 benchmark 전에 끝내도 동작 영향이 거의 없다.
+- Settings singleton 제거는 범위가 넓어 baseline 측정 후 수행한다.
+- Packet Filter/Annotation은 기존 구조를 이용하는 low-side-effect 확장이라 hardware/plugin보다 먼저 적합하다.
+- Plugin API는 실제 extension 사례를 먼저 경험한 뒤 설계해야 내부 구조를 성급히 public contract로 고정하지 않는다.
+- Trigger는 RX→TX 순환 가능성과 Macro/AutoTx/Broadcast 교차 때문에 가장 마지막 기능으로 둔다.
 
 ---
 
 ## 3. 실행 Wave
 
-### Wave 0 — Environment Baseline
-
-대상:
-
-1. 현재 main PyInstaller artifact smoke
-2. Windows com0com E2E
-3. 실제 USB Serial 최소 1종 smoke
-4. Linux socat — Linux 지원 대상일 때
-
-Gate:
-
-- packaging/runtime dependency 누락 없음
-- connect/reconnect/close/shutdown 기본 경로 정상
-- 실제 Serial stack에서 data loss/crash blocker 없음
-
 ### Wave 1 — Low-Risk Architecture Cleanup
 
 대상:
 
-5. timeout/status/poll duration 상수화
-6. legacy `core/event_bus.py` 제거
+1. timeout/status/poll duration 상수화
+2. legacy `core/event_bus.py` 제거
 
 Gate:
 
@@ -86,34 +72,36 @@ Gate:
 
 대상:
 
-7. benchmark scenario/baseline 고정
-8. RxLogView BatchRenderer 후보 비교
-9. Serial I/O loop 후보 비교
+3. benchmark scenario/baseline 고정
+4. RxLogView BatchRenderer 후보 비교
+5. Serial I/O loop 후보 비교/최적화
 
 Gate:
 
 - CPU / throughput / latency / backlog / shutdown responsiveness 기록
 - 이득이 측정 오차 수준이면 구현하지 않음
+- Serial I/O 최적화 완료 전 실제 USB Serial 최소 smoke + reconnect/disconnect 확인
 
 ### Wave 3 — Global State Cleanup
 
 대상:
 
-10. SettingsManager singleton 제거
-11. Coordinator package 이동 필요성 판단
+6. SettingsManager singleton 제거
+7. Coordinator package 이동 필요성 판단
 
 Gate:
 
 - test state isolation 개선
 - hidden global dependency 감소
 - Coordinator 이동은 dependency 명확성 개선 근거가 있을 때만 진행
+- 이동하지 않는 결정도 완료로 인정
 
 ### Wave 4 — Packet Feature Expansion
 
 대상:
 
-12. Structured Packet Filter
-13. Packet Annotation / Selected-range Export
+8. Structured Packet Filter
+9. Packet Annotation / Selected-range Export
 
 Gate:
 
@@ -124,9 +112,9 @@ Gate:
 
 대상:
 
-14. backend 선정 / capability matrix
-15. config DTO / Transport contract 결정
-16. 필요한 protocol/backend부터 구현
+10. backend 선정 / capability matrix
+11. config DTO / Transport contract 결정
+12. 필요한 protocol/backend부터 구현
 
 Gate:
 
@@ -139,10 +127,10 @@ Gate:
 
 대상:
 
-17. extension point 요구사항 정리
-18. PluginBase / PluginContext
-19. PluginLoader / lifecycle / failure isolation
-20. Example plugin
+13. extension point 요구사항 정리
+14. PluginBase / PluginContext
+15. PluginLoader / lifecycle / failure isolation
+16. Example plugin
 
 Gate:
 
@@ -154,7 +142,7 @@ Gate:
 
 대상:
 
-21. Trigger Engine / Action DTO / safety policy
+17. Trigger Engine / Action DTO / safety policy
 
 Gate:
 
@@ -162,6 +150,22 @@ Gate:
 - target snapshot
 - infinite-loop/reentrancy regression test
 - CommandTransmissionService 경유
+
+### Wave 8 — Final Environment / Deployment Validation
+
+대상:
+
+18. 현재 main PyInstaller artifact smoke
+19. Windows com0com E2E
+20. 실제 USB Serial 장치 종합 검증
+21. Linux socat — Linux 지원 대상일 때
+
+Gate:
+
+- packaging/runtime dependency 누락 없음
+- connect/reconnect/close/shutdown 기본 경로 정상
+- 장시간 RX/TX 및 주요 feature 조합에서 data loss/crash blocker 없음
+- 발견 이슈를 code defect / environment limitation으로 분류
 
 ---
 
@@ -194,9 +198,11 @@ targeted tests
 추가:
 
 - performance: benchmark evidence
-- hardware/transport: 실제 backend smoke
+- Serial I/O optimization: 실제 USB Serial 최소 smoke
+- SPI/I2C: 실제 backend/adapter smoke
 - plugin: failure isolation
 - trigger: loop/reentrancy safety
+- P4: packaged artifact + virtual/physical serial E2E
 
 ---
 

@@ -1,17 +1,22 @@
 # Environment / Deployment Validation Plan
 
-> 우선순위: P1
+> 우선순위: P4
 > 기준 브랜치: `main`
-> 목표: 구조/성능 변경 전에 실제 배포·통신 환경의 baseline 확보
+> 목표: P2/P3 완료 후 최종 packaged artifact와 virtual/physical Serial 환경을 제품 관점에서 종합 검증
 
 ---
 
-## 1. WHY
+## 1. 역할
 
-현재 자동 검증은 Mock Serial, LoopbackTransport, offscreen Qt와 GitHub-hosted runner를 중심으로 한다.
-성능 최적화나 추가 구조 변경 전에 실제 실행 환경에서 기준선을 확보하지 않으면 이후 회귀가 코드 변경 때문인지 환경 차이 때문인지 구분하기 어렵다.
+이 문서는 개발 선행 baseline이 아니라 **최종 환경/배포 검증 gate**다.
 
-따라서 post-merge 첫 단계는 **현재 main을 그대로 검증하는 것**이다.
+개별 작업 중 실기기 확인이 필요한 경우 해당 작업 acceptance에서 최소 smoke를 수행한다.
+예:
+
+- Serial I/O 최적화 → 실제 USB Serial 최소 smoke
+- SPI/I2C Transport → 실제 지원 adapter/backend 검증
+
+P4는 이들을 대체하지 않고, 모든 변경이 합쳐진 최신 `main`을 제품 관점에서 다시 검증한다.
 
 ---
 
@@ -19,7 +24,7 @@
 
 ### 2.1 PyInstaller artifact smoke
 
-현재 `main`으로 새 artifact를 생성한다.
+최신 `main`으로 새 artifact를 생성한다.
 
 ```powershell
 pyinstaller serial_tool.spec --noconfirm
@@ -27,20 +32,21 @@ pyinstaller serial_tool.spec --noconfirm
 
 확인:
 
-- application startup / shutdown
+- startup / shutdown
 - resource / icon / language / theme load
 - settings read/write
-- LOOPBACK 연결
+- LOOPBACK
 - Manual TX/RX
 - Macro 기본 실행
-- Packet Inspector 표시
-- File dialog / logging path
+- Packet Inspector
+- File Transfer 기본 경로
+- logging / file dialog path
 
-목적은 기능 전체 E2E가 아니라 packaging/runtime dependency 누락 검출이다.
+목적은 packaging/runtime dependency 누락과 bundled-path 문제 검출이다.
 
-### 2.2 Windows com0com
+### 2.2 Windows com0com E2E
 
-실제 Windows serial stack을 통과하는 가상 포트 pair로 검증한다.
+Windows serial stack을 통과하는 가상 포트 pair로 반복 가능한 E2E를 수행한다.
 
 확인:
 
@@ -50,9 +56,11 @@ pyinstaller serial_tool.spec --noconfirm
 - queued TX flush
 - file transfer
 - macro Expect
+- packet parsing/filter/annotation 관련 적용 기능
+- trigger 기능이 구현된 경우 loop safety
 - shutdown
 
-### 2.3 실제 USB Serial 장치
+### 2.3 실제 USB Serial 종합 검증
 
 지원 대상 hardware를 최소 1종 선정한다.
 
@@ -63,59 +71,59 @@ pyinstaller serial_tool.spec --noconfirm
 - baudrate 변경
 - RTS/DTR
 - 장시간 RX/TX
-- file transfer
+- Macro / File Transfer
+- logging
 - application shutdown
 
-실기기 결과는 사용한 adapter/device/driver를 기록한다.
+기록:
+
+- adapter/device
+- driver/version
+- baudrate
+- duration / data volume
+- observed limitation
 
 ### 2.4 Linux socat
 
 Linux가 실제 지원/배포 대상인 경우 수행한다.
-그렇지 않으면 필수 blocker가 아니라 별도 compatibility task로 유지한다.
+그렇지 않으면 compatibility task로 유지하고 release blocker로 사용하지 않는다.
 
 ---
 
-## 3. 기록할 Baseline
-
-각 환경에서 다음을 기록한다.
+## 3. 기록 형식
 
 ```text
 OS / version
-Python 또는 packaged artifact
+artifact or Python environment
 Serial backend / driver
-Port pair 또는 device
-Scenario
+port pair or physical device
+scenario
 Duration / data volume
 Result
 Known limitation
 ```
 
-성능 수치는 P2 benchmark 문서로 넘기고, 이 문서에서는 정상 동작/회귀 여부를 우선한다.
+성능 수치는 benchmark 문서가 정본이며, 이 문서에서는 정상 동작/회귀 여부를 우선한다.
 
 ---
 
 ## 4. Acceptance Criteria
 
-P1 완료 조건:
+P4 완료 조건:
 
-- 현재 main PyInstaller artifact smoke 성공
-- Windows serial stack 기반 가상 포트 E2E 성공
-- 실제 USB Serial 최소 1종 smoke 성공
-- 발견된 문제를 코드 defect / environment limitation으로 분류
+- 최신 main PyInstaller artifact smoke 성공
+- Windows com0com E2E 성공
+- 실제 USB Serial 최소 1종 종합 검증 성공
+- blocker 수준 data loss / crash / shutdown hang 없음
+- 발견 문제를 code defect / environment limitation으로 분류
 - 실행 환경과 결과 문서화
 
-Linux socat는 Linux 지원 필요성에 따라 별도 판정한다.
+Linux socat는 Linux 지원 여부에 따라 별도 판정한다.
 
 ---
 
-## 5. 다음 단계 연결
+## 5. 실패 시 처리
 
-P1 결과가 Green이면 작은 구조 cleanup과 성능 benchmark로 이동한다.
+P4에서 defect가 발견되면 해당 기능 owner로 되돌아가 수정하고 다시 관련 targeted test → full CI → P4 영향 범위를 재검증한다.
 
-```text
-Environment baseline
-    -> low-risk architecture cleanup
-    -> performance baseline / optimization
-```
-
-실환경에서 blocking/crash/data-loss 문제가 발견되면 P2 최적화보다 해당 defect 수정이 우선이다.
+P4 자체에서 architecture를 즉흥적으로 수정하지 않는다.
