@@ -17,6 +17,7 @@
 * Composition Root에서 ``AdapterBackendRegistry``와 함께 한 번 생성
 * 각 session마다 전용 ``TransactionSessionWorker`` 생성
 * discovery는 one-shot ``TransactionDiscoveryWorker`` 사용
+* blocking vendor helper가 남으면 기능별 최대 1개로 제한
 * worker signal을 manager public signal로 중계
 * worker 종료 signal을 기준으로 내부 strong reference 제거
 """
@@ -54,6 +55,7 @@ class TransactionManager(QObject):
         self._registry = registry
         self._workers: dict[str, TransactionSessionWorker] = {}
         self._discovery_worker: Optional[TransactionDiscoveryWorker] = None
+        self._pending_discovery_worker: Optional[TransactionDiscoveryWorker] = None
         self._request_sequence = 0
 
     @property
@@ -63,19 +65,28 @@ class TransactionManager(QObject):
 
     @property
     def is_discovering(self) -> bool:
-        """Adapter discovery worker가 현재 실행 중인지 반환합니다."""
+        """Adapter discovery QThread가 현재 실행 중인지 반환합니다."""
         worker = self._discovery_worker
         return worker is not None and worker.isRunning()
 
     def request_discovery(self) -> bool:
         """Background adapter discovery를 요청합니다.
 
-        동일 시점에는 하나의 discovery만 허용합니다. 결과는 ``adapters_found`` 또는
-        ``discovery_failed`` signal로 전달합니다.
+        동일 시점에는 하나의 discovery만 허용합니다. 이전 discovery의 vendor/OS helper가
+        아직 block된 경우에도 새 helper를 추가 생성하지 않습니다.
         """
         if self.is_discovering:
             logger.debug("Transaction adapter discovery already in progress.")
             return False
+
+        pending = self._pending_discovery_worker
+        if pending is not None:
+            if pending.has_pending_io:
+                logger.warning(
+                    "Previous transaction adapter discovery I/O is still blocked; retry rejected."
+                )
+                return False
+            self._pending_discovery_worker = None
 
         worker = TransactionDiscoveryWorker(self._registry)
         worker.adapters_found.connect(self.adapters_found.emit)
@@ -152,7 +163,7 @@ class TransactionManager(QObject):
         return True
 
     def stop_discovery(self, timeout_ms: int = 2000) -> bool:
-        """실행 중인 adapter discovery 종료를 bounded wait합니다."""
+        """실행 중인 adapter discovery QThread 종료를 bounded wait합니다."""
         worker = self._discovery_worker
         if worker is None:
             return True
@@ -167,6 +178,8 @@ class TransactionManager(QObject):
             )
             return False
 
+        if worker.has_pending_io:
+            self._pending_discovery_worker = worker
         self._discovery_worker = None
         return True
 
@@ -188,9 +201,12 @@ class TransactionManager(QObject):
         return self._request_sequence
 
     def _on_discovery_finished(self, worker: TransactionDiscoveryWorker) -> None:
-        """현재 등록된 동일 discovery worker 종료 시에만 strong reference를 제거합니다."""
-        if self._discovery_worker is worker:
-            self._discovery_worker = None
+        """현재 등록된 동일 discovery worker 종료 시 strong reference 상태를 정리합니다."""
+        if self._discovery_worker is not worker:
+            return
+        if worker.has_pending_io:
+            self._pending_discovery_worker = worker
+        self._discovery_worker = None
 
     def _on_worker_terminated(
         self,
