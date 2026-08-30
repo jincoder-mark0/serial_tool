@@ -1,9 +1,9 @@
 """
 SerialTool application composition root helper.
 
-View 상태 복원과 구체 runtime object graph 생성을 한 곳에서 순서대로 수행합니다.
-MainPresenter에는 전체 application graph가 아니라 Presenter가 정의한 최소 dependency
-contract만 전달할 수 있도록 `MainPresenterDependencies`를 조립합니다.
+View 상태 복원, 구체 runtime object graph 생성, 변하지 않는 cross-component signal wiring을
+한 곳에서 수행합니다. MainPresenter에는 사용자 표시 orchestration에 필요한 최소 dependency
+contract만 전달합니다.
 """
 from dataclasses import dataclass
 
@@ -52,15 +52,10 @@ class ApplicationBootstrapper:
         self._settings_manager = settings_manager
 
     def build(self) -> ApplicationComponents:
-        """View restore → Model/Service → Presenter/Coordinator 순으로 graph를 조립합니다."""
-        # 1. View collection을 소비하는 Presenter보다 상태 복원이 반드시 먼저입니다.
-        lifecycle_manager = AppLifecycleManager(
-            self._view,
-            self._settings_manager,
-        )
+        """View restore → Model/Service → Presenter/Coordinator → static wiring 순으로 조립합니다."""
+        lifecycle_manager = AppLifecycleManager(self._view, self._settings_manager)
         lifecycle_manager.initialize_view()
 
-        # 2. Model / application services
         packet_parser_manager = PacketParserManager()
         connection_session_factory = ConnectionSessionFactory()
         connection_controller = ConnectionController(
@@ -86,7 +81,6 @@ class ApplicationBootstrapper:
         logging_coordinator = LoggingCoordinator(self._view.port_view)
         status_coordinator = StatusCoordinator(self._view, traffic_monitor)
 
-        # 3. Presenter — 복원 완료된 View를 기준으로 초기 collection을 연결합니다.
         port_presenter = PortPresenter(
             self._view.port_view,
             connection_controller,
@@ -111,11 +105,14 @@ class ApplicationBootstrapper:
             command_transmission_service,
         )
 
+        # 변하지 않는 data path는 composition root에서 한 번만 배선합니다.
+        connection_controller.data_received.connect(data_handler.on_fast_data_received)
+        connection_controller.data_sent.connect(data_handler.on_data_sent)
+        connection_controller.data_received.connect(macro_runner.on_data_received)
         manual_control_presenter.local_echo_requested.connect(
             self._view.append_local_echo_data
         )
 
-        # 4. 종료 coordinator는 모든 runtime owner가 생성된 뒤 조립합니다.
         shutdown_coordinator = ShutdownCoordinator(
             view=self._view,
             settings_manager=self._settings_manager,
@@ -136,7 +133,6 @@ class ApplicationBootstrapper:
             connection_controller=connection_controller,
             macro_runner=macro_runner,
             macro_execution_coordinator=macro_execution_coordinator,
-            data_handler=data_handler,
             logging_coordinator=logging_coordinator,
             shutdown_coordinator=shutdown_coordinator,
             port_presenter=port_presenter,
