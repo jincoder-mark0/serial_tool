@@ -146,6 +146,24 @@ def test_cancel_stops_before_remaining_chunks_and_emits_failed_completion(qapp, 
     assert completed[0].success is False
 
 
+def test_cancel_interrupts_long_baudrate_wait_immediately(tmp_path):
+    file_path = tmp_path / "slow.bin"
+    file_path.write_bytes(b"A")
+    service = FileTransferService(
+        _FakeConnectionController(),
+        str(file_path),
+        PortConfig(port="SLOW", baudrate=50),
+    )
+
+    service.cancel()
+    started = time.monotonic()
+    was_cancelled = service._wait_or_cancel(60.0)
+    elapsed = time.monotonic() - started
+
+    assert was_cancelled is True
+    assert elapsed < 0.1
+
+
 def test_backpressure_loop_waits_while_queue_exceeds_threshold(qapp, tmp_path, monkeypatch):
     content = b"B" * 100
     file_path = tmp_path / "backpressure.bin"
@@ -153,20 +171,21 @@ def test_backpressure_loop_waits_while_queue_exceeds_threshold(qapp, tmp_path, m
 
     config = _rts_cts_config("FAKE_PORT")
     controller = _FakeConnectionController(queue_size=60)
-    sleep_calls = []
-
-    def _fake_sleep(seconds):
-        sleep_calls.append(seconds)
-        controller.queue_size = max(0, controller.queue_size - 20)
-
-    monkeypatch.setattr("model.file_transfer_service.time.sleep", _fake_sleep)
-
+    wait_calls = []
     service = FileTransferService(controller, str(file_path), config)
+
+    def _fake_wait(seconds):
+        wait_calls.append(seconds)
+        controller.queue_size = max(0, controller.queue_size - 20)
+        return False
+
+    monkeypatch.setattr(service, "_wait_or_cancel", _fake_wait)
+
     completed = []
     service.signals.transfer_completed.connect(completed.append)
     service.run()
 
-    assert sleep_calls
+    assert wait_calls
     assert controller.sent_chunks == [content]
     assert controller.queue_size == 0
     assert len(completed) == 1
