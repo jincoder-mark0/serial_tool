@@ -38,7 +38,6 @@ def integration_system(mock_main_window, mock_serial_port, mock_settings_manager
     components = ApplicationBootstrapper(mock_main_window, mock_settings_manager).build()
     presenter = MainPresenter(
         mock_main_window,
-        settings_manager=mock_settings_manager,
         dependencies=components.main_presenter_dependencies,
     )
     yield presenter, components, mock_main_window, mock_serial_port
@@ -60,10 +59,8 @@ def test_system_initialization_wires_facade_views(integration_system):
     assert presenter.packet_presenter is not None
     assert presenter.macro_execution_coordinator is not None
     assert presenter.shutdown_coordinator is not None
-    assert not hasattr(presenter, "event_router")
-    assert not hasattr(presenter, "data_handler")
-    assert not hasattr(presenter, "status_coordinator")
-    assert not hasattr(presenter, "file_transfer_manager")
+    for hidden in ("event_router", "settings_manager", "data_handler", "status_coordinator", "file_transfer_manager"):
+        assert not hasattr(presenter, hidden)
     window.connect_port_tab_changed.assert_called_once()
     window.manual_control_view.send_requested.connect.assert_called()
 
@@ -93,11 +90,7 @@ def test_packet_event_is_formatted_for_packet_view(integration_system):
     presenter, _, window, _ = integration_system
     event = PacketEvent(
         port="COM1",
-        packet=Packet(
-            data=b"\xaa\xbb",
-            timestamp=0,
-            metadata={"type": "TEST_PKT"},
-        ),
+        packet=Packet(data=b"\xaa\xbb", timestamp=0, metadata={"type": "TEST_PKT"}),
     )
     presenter.connection_controller.packet_received.emit(event)
     presenter.packet_presenter._flush_pending_packets()
