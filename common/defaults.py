@@ -22,7 +22,7 @@ from common.constants import (
     FONT_FAMILY_CONSOLAS,
     FONT_FAMILY_SEGOE,
 )
-from common.enums import ByteOrder, LanguageType, ThemeType
+from common.enums import ByteOrder, ConnectionProtocol, LanguageType, ThemeType
 
 # ==========================================
 # Canonical Scalar Defaults
@@ -40,9 +40,13 @@ DEFAULT_WINDOW_WIDTH: int = 1200
 DEFAULT_WINDOW_HEIGHT: int = 800
 DEFAULT_RIGHT_PANEL_VISIBLE: bool = True
 
+DEFAULT_PORT_PROTOCOL: str = ConnectionProtocol.SERIAL
+DEFAULT_PORT_BYTESIZE: int = 8
 DEFAULT_PORT_NEWLINE: str = "\n"
 DEFAULT_PORT_LOCAL_ECHO: bool = False
 DEFAULT_PORT_SCAN_INTERVAL_MS: int = 1000
+DEFAULT_SPI_SPEED: int = 1_000_000
+DEFAULT_SPI_MODE: int = 0
 
 DEFAULT_COMMAND_PREFIX: str = ""
 DEFAULT_COMMAND_SUFFIX: str = ""
