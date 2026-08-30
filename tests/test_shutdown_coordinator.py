@@ -16,7 +16,7 @@ def _make_coordinator():
     packet = MagicMock()
     data = MagicMock()
     close_system_log = MagicMock()
-    timer = MagicMock()
+    status = MagicMock()
 
     coordinator = ShutdownCoordinator(
         view=view,
@@ -30,7 +30,7 @@ def _make_coordinator():
         packet_presenter=packet,
         data_handler=data,
         close_system_log=close_system_log,
-        status_timer=timer,
+        status_coordinator=status,
     )
     return (
         coordinator,
@@ -45,7 +45,7 @@ def _make_coordinator():
         packet,
         data,
         close_system_log,
-        timer,
+        status,
     )
 
 
@@ -63,7 +63,7 @@ def test_shutdown_stops_runtime_services_and_saves_state():
         packet,
         data,
         close_system_log,
-        timer,
+        status,
     ) = _make_coordinator()
     macro.isRunning.return_value = True
     controller.has_active_connection = True
@@ -86,7 +86,7 @@ def test_shutdown_stops_runtime_services_and_saves_state():
     port_scan.stop.assert_called_once()
     data.stop.assert_called_once()
     packet.stop.assert_called_once()
-    timer.stop.assert_called_once()
+    status.stop.assert_called_once()
     close_system_log.assert_called_once()
     collect.assert_called_once_with(settings, window_state, manual_state)
     settings.save_settings.assert_called_once()
