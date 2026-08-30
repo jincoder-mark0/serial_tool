@@ -2,7 +2,7 @@
 import inspect
 from unittest.mock import MagicMock, patch
 
-from common.dtos import FileCompletionEvent, FileProgressState, PortConfig, PortConnectionEvent
+from common.dtos import FileCompletionEvent, FileProgressState, PortConfig
 from model.connection_controller import ConnectionController
 from model.file_transfer_manager import FileTransferManager
 from presenter.file_presenter import FilePresenter
@@ -87,8 +87,7 @@ def test_manager_creates_and_schedules_service_once():
 
 
 def test_cancel_is_delegated_to_active_service():
-    controller = _controller()
-    manager = FileTransferManager(controller, MagicMock())
+    manager = FileTransferManager(_controller(), MagicMock())
     service = MagicMock()
     manager._active_service = service
 
@@ -97,26 +96,24 @@ def test_cancel_is_delegated_to_active_service():
     service.cancel.assert_called_once()
 
 
-def test_target_connection_close_cancels_active_transfer():
-    controller = _controller()
-    manager = FileTransferManager(controller, MagicMock())
+def test_target_connection_closing_cancels_active_transfer():
+    manager = FileTransferManager(_controller(), MagicMock())
     service = MagicMock()
     manager._active_service = service
     manager._active_port = "COM1"
 
-    manager._on_connection_closed(PortConnectionEvent(port="COM1", state="closed"))
+    manager._on_connection_closing("COM1")
 
     service.cancel.assert_called_once()
 
 
-def test_other_connection_close_does_not_cancel_active_transfer():
-    controller = _controller()
-    manager = FileTransferManager(controller, MagicMock())
+def test_other_connection_closing_does_not_cancel_active_transfer():
+    manager = FileTransferManager(_controller(), MagicMock())
     service = MagicMock()
     manager._active_service = service
     manager._active_port = "COM1"
 
-    manager._on_connection_closed(PortConnectionEvent(port="COM2", state="closed"))
+    manager._on_connection_closing("COM2")
 
     service.cancel.assert_not_called()
 
