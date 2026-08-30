@@ -25,6 +25,12 @@ from common.enums import (
 from model.connection_controller import ConnectionController
 from model.macro_runner import MacroRunner
 from presenter.lifecycle_manager import AppLifecycleManager
+from presenter.main_presenter import (
+    MainPresenter,
+    STATUS_MESSAGE_ERROR_DURATION_MS,
+    STATUS_MESSAGE_INFO_DURATION_MS,
+    STATUS_MESSAGE_PERSISTENT_DURATION_MS,
+)
 from presenter.port_presenter import PortPresenter
 from view.dialogs.preferences_dialog import PreferencesDialog
 from view.widgets.port_settings import PortSettingsWidget
@@ -98,6 +104,21 @@ def test_lifecycle_system_log_uses_log_level_enum():
     source = inspect.getsource(AppLifecycleManager)
     assert "LogLevel.INFO.value" in source
     assert 'level="INFO"' not in source
+
+
+def test_main_presenter_uses_named_status_message_durations():
+    source = inspect.getsource(MainPresenter)
+
+    assert STATUS_MESSAGE_PERSISTENT_DURATION_MS == 0
+    assert STATUS_MESSAGE_INFO_DURATION_MS == 3000
+    assert STATUS_MESSAGE_ERROR_DURATION_MS == 5000
+
+    assert "STATUS_MESSAGE_PERSISTENT_DURATION_MS" in source
+    assert "STATUS_MESSAGE_INFO_DURATION_MS" in source
+    assert "STATUS_MESSAGE_ERROR_DURATION_MS" in source
+    assert "show_status_message(f\"Connected to {event.port}\", 3000)" not in source
+    assert "show_status_message(f\"Disconnected from {event.port}\", 3000)" not in source
+    assert "show_status_message(message, 5000)" not in source
 
 
 def test_log_level_values_are_stable():

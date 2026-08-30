@@ -36,7 +36,10 @@ main push CI: Green
 
 상세: [`architecture_cleanup_plan.md`](doc/plans/architecture_cleanup_plan.md)
 
-1. [-] timeout/status duration/poll interval 상수화
+1. [x] timeout/status duration/poll interval 상수화
+   - worker/background/file-transfer polling은 기존 canonical constant 사용 확인
+   - MainPresenter status message duration `0/3000/5000 ms`를 의미별 named constant로 정리
+   - literal contract regression test 추가, PR #2 GitHub Actions 4/4 Green
 2. [-] legacy `core/event_bus.py` 완전 삭제
 
 WHY:

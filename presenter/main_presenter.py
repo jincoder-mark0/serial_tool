@@ -36,6 +36,14 @@ if TYPE_CHECKING:
     from presenter.shutdown_coordinator import ShutdownCoordinator
 
 
+# Status bar message duration은 MainPresenter의 사용자 표시 정책이다.
+# 값이 우연히 같다는 이유로 다른 timer/worker timeout과 공유하면 한쪽 tuning이
+# 다른 lifecycle에 영향을 줄 수 있으므로 이 module에서 의미별로 소유한다.
+STATUS_MESSAGE_PERSISTENT_DURATION_MS: int = 0
+STATUS_MESSAGE_INFO_DURATION_MS: int = 3000
+STATUS_MESSAGE_ERROR_DURATION_MS: int = 5000
+
+
 @dataclass(frozen=True)
 class MainPresenterDependencies:
     """MainPresenter가 실제로 사용하는 최소 runtime dependency contract."""
@@ -115,23 +123,29 @@ class MainPresenter(QObject):
 
     def on_port_opened(self, event: PortConnectionEvent) -> None:
         self.view.update_status_bar_port(event.port, True)
-        self.view.show_status_message(f"Connected to {event.port}", 3000)
+        self.view.show_status_message(
+            f"Connected to {event.port}",
+            STATUS_MESSAGE_INFO_DURATION_MS,
+        )
 
     def on_port_closed(self, event: PortConnectionEvent) -> None:
         self.view.update_status_bar_port(event.port, False)
-        self.view.show_status_message(f"Disconnected from {event.port}", 3000)
+        self.view.show_status_message(
+            f"Disconnected from {event.port}",
+            STATUS_MESSAGE_INFO_DURATION_MS,
+        )
 
     def on_port_error(self, event: PortErrorEvent) -> None:
         self.view.show_status_message(
             f"Error ({event.port}): {event.message}",
-            5000,
+            STATUS_MESSAGE_ERROR_DURATION_MS,
         )
 
     def on_macro_started(self) -> None:
         self._log_info("Macro started")
         self.view.show_status_message(
             language_manager.get_text("main_status_msg_macro_running"),
-            0,
+            STATUS_MESSAGE_PERSISTENT_DURATION_MS,
         )
 
     def on_macro_finished(self) -> None:
@@ -140,20 +154,20 @@ class MainPresenter(QObject):
         self._log_success("Macro finished")
         self.view.show_status_message(
             language_manager.get_text("main_status_msg_macro_finished"),
-            3000,
+            STATUS_MESSAGE_INFO_DURATION_MS,
         )
 
     def on_macro_error(self, event: MacroErrorEvent) -> None:
         row_info = f"(Row {event.row_index})" if event.row_index >= 0 else ""
         msg = f"Macro Error {row_info}: {event.message}"
         self._log_error(msg)
-        self.view.show_status_message(msg, 5000)
+        self.view.show_status_message(msg, STATUS_MESSAGE_ERROR_DURATION_MS)
 
     def _notify_macro_error(self, message: str) -> None:
         logger.error(f"Macro stopped: {message}")
         self.view.show_status_message(
             language_manager.get_text("main_status_msg_macro_stopped").format(message),
-            5000,
+            STATUS_MESSAGE_ERROR_DURATION_MS,
         )
         self.view.show_alert_message(
             language_manager.get_text("main_title_macro_error"),
@@ -167,7 +181,7 @@ class MainPresenter(QObject):
         show_dialog: bool,
     ) -> None:
         self._log_error(f"Manual send failed: {message}")
-        self.view.show_status_message(message, 5000)
+        self.view.show_status_message(message, STATUS_MESSAGE_ERROR_DURATION_MS)
         if show_dialog:
             self.view.show_alert_message(title, message)
 
@@ -191,7 +205,7 @@ class MainPresenter(QObject):
             language_manager.get_text(
                 "main_status_msg_file_transfer_result"
             ).format(status_text),
-            3000,
+            STATUS_MESSAGE_INFO_DURATION_MS,
         )
 
     def on_file_transfer_error(self, event: FileErrorEvent) -> None:
