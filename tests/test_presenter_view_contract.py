@@ -19,8 +19,8 @@ Presenter의 View 호출은 대부분 테스트가 닿지 않는다. 그래서 �
 존재하는지** 확인한다.
 
 또한 `PortPresenter`는 `MainLeftSection`의 공개 facade까지만 사용하고,
-`left_section.port_tab_panel`처럼 하위 위젯 구현으로 직접 내려가지 않는 것을
-별도 계약으로 고정한다.
+`left_section.port_tab_panel`처럼 하위 위젯 구현으로 직접 내려가거나 탭 개수와
+인덱스를 직접 순회하지 않는 것을 별도 계약으로 고정한다.
 
 ## HOW
 클래스만 봐서는 부족하다 — `left_section` 같은 속성은 `__init__`에서 만들어져
@@ -209,27 +209,34 @@ def test_presenters_only_call_methods_that_exist_on_the_view(view_instances):
     )
 
 
-def test_port_presenter_does_not_reach_into_left_section_port_tab_panel():
+def test_port_presenter_uses_left_section_facades_for_tab_collection():
     """
     PortPresenter는 MainLeftSection의 공개 facade까지만 사용해야 한다.
 
-    `left_section.port_tab_panel`에 직접 접근하면 Presenter가 View 내부 구조를
-    다시 알게 되므로, 탭 닫기 같은 이벤트는 MainLeftSection 중계 시그널을 통해
-    받아야 한다.
+    금지하는 접근:
+      * `left_section.port_tab_panel`: 하위 위젯 구현 직접 접근
+      * `get_port_tabs_count()` + `get_port_panel_at()`: 탭 개수/인덱스 구조 직접 순회
+
+    개별 PortPanel 객체의 시그널 계약은 Presenter가 담당할 수 있지만, 패널 컬렉션의
+    저장 구조와 탐색 방식은 MainLeftSection이 소유해야 한다.
     """
     path = PRESENTER_DIR / "port_presenter.py"
     tree = ast.parse(path.read_text(encoding="utf-8"), filename=str(path))
     violations = []
+    forbidden_methods = {"get_port_tabs_count", "get_port_panel_at"}
 
     for node in ast.walk(tree):
         if not isinstance(node, ast.Attribute):
             continue
         chain = _attribute_chain(node)
-        if chain and len(chain) >= 2 and chain[:2] == ["left_section", "port_tab_panel"]:
+        if not chain or len(chain) < 2 or chain[0] != "left_section":
+            continue
+
+        if chain[1] == "port_tab_panel" or chain[1] in forbidden_methods:
             violations.append(f"{path.name}:{node.lineno}: self.{'.'.join(chain)}")
 
     assert not violations, (
-        "PortPresenter가 MainLeftSection 내부 PortTabPanel에 직접 접근한다. "
+        "PortPresenter가 MainLeftSection의 탭 내부 구조/순회 방식에 직접 의존한다. "
         "MainLeftSection facade/signal을 사용해야 한다:\n  "
         + "\n  ".join(violations)
     )
