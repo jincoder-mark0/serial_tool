@@ -144,7 +144,7 @@ DataTrafficHandler batching
 
 ---
 
-# 3. Serial Non-Blocking I/O Loop 최적화
+# 3. Serial Non-Blocking I/O Loop 최적화 — Software 완료 / Hardware Acceptance 대기
 
 현재 경로:
 
@@ -155,7 +155,7 @@ SerialTransport
      -> read
      -> RX batch
      -> TX queue drain
-     -> adaptive sleep
+     -> activity-aware scheduling
 ```
 
 유지할 invariant:
@@ -169,7 +169,7 @@ SerialTransport
 P2-B #3의 runtime benchmark는 실제 `ConnectionWorker(QThread)`와 synthetic
 `BaseTransport`를 사용해 mixed RX/TX workload를 동일 조건에서 반복 비교한다.
 
-현재 고정 metric:
+고정 metric:
 
 - `rx_mb_s`
 - `tx_mb_s`
@@ -177,35 +177,114 @@ P2-B #3의 runtime benchmark는 실제 `ConnectionWorker(QThread)`와 synthetic
 - `rx_batches`
 - `stop_ms`
 
-추가 실기기/후보 비교에서 볼 항목:
+## 3.1 발견된 Bottleneck
 
-- loop iterations/s
-- idle CPU
-- sustained RX CPU
-- RX latency p50/p95
-- TX queue drain latency
-- simultaneous RX/TX fairness
-- 1/2/4 port scaling
-- stop latency
+기존 loop는 batch emit 후 `batch_buffer`가 비면 transport에 다음 RX가 계속 대기 중이어도 idle로 판단할 수 있었다.
 
-후보안:
+더 중요한 실측 결과는 Windows에서 `QThread.usleep(100)` 같은 sub-millisecond sleep이 기대한 0.1 ms 수준의 scheduling primitive로 동작하지 않았다는 점이다.
 
-1. Sleep tuning
-2. Read chunk adaptation
-3. TX drain quota
-4. QWaitCondition 등 event-driven wakeup — 1~3으로 부족할 때만
+동일 synthetic workload:
 
-금지:
+```text
+RX       16 MiB
+TX        4 MiB
+chunk     4 KiB
+repeat    3
+```
 
-- `QThread.terminate()`
-- error를 빈 bytes/0으로 숨기기
-- shutdown drain 제거
-- TX 개선을 위해 RX starvation 유발
-- benchmark 없이 constant 임의 조정
+Baseline:
 
-## 3.1 실제 Serial acceptance
+```text
+10 s timeout
+RX 3,301,376 / 16,777,216 bytes
+TX 4,194,304 / 4,194,304 bytes
+```
 
-Serial I/O 최적화는 Mock/LOOPBACK Green만으로 완료 처리하지 않는다.
+Candidate A — activity-aware `usleep(100 us)`:
+
+```text
+10 s timeout
+RX 3,252,224 / 16,777,216 bytes
+TX 4,194,304 / 4,194,304 bytes
+```
+
+즉 activity를 정확히 분류해도 sub-ms sleep을 계속 사용하면 sustained RX 병목은 해결되지 않았다.
+
+## 3.2 채택안 — Active I/O Yield
+
+최종 scheduling policy:
+
+```text
+실제 RX/TX activity 있음
+    -> QThread.yieldCurrentThread()
+
+새 I/O 없음 + buffered RX/TX pending
+    -> usleep(WORKER_BUSY_WAIT_US)
+
+activity/pending 모두 없음
+    -> msleep(WORKER_IDLE_WAIT_MS)
+```
+
+WHY:
+
+- sustained I/O path에서 Windows scheduler granularity에 의한 강제 sleep stall 제거
+- 완전 busy-spin 대신 scheduler에 다른 ready thread 실행 기회 제공
+- pending-only 상태는 기존 busy wait 유지
+- idle 상태는 기존 1 ms wait 유지
+
+변경하지 않은 항목:
+
+- `BATCH_SIZE_THRESHOLD`
+- `BATCH_TIMEOUT_MS`
+- TX queue 전량 drain
+- read chunk size
+- queue-before-open
+- final RX flush
+- stop 시 TX drain
+- write error propagation
+
+## 3.3 Synthetic 결과
+
+GitHub Actions Windows / Python 3.11.9 / repeat=3:
+
+```text
+pytest       652 passed
+warnings     2 external lark warnings
+Ruff         Green
+lang-keys    Green
+task-boards  Green
+
+worker_loop
+  rx_mb_s       226.700 MB/s
+  tx_mb_s        56.675 MB/s
+  elapsed_ms     70.578 ms
+  rx_batches   2048
+  stop_ms         0.913 ms
+```
+
+상세 결과:
+
+- [`../benchmarks/worker_loop_optimization_20260830.md`](../benchmarks/worker_loop_optimization_20260830.md)
+
+이 수치는 in-memory synthetic transport의 software-loop ceiling이며 실제 UART 성능 보장이 아니다.
+
+## 3.4 추가 후보 판단
+
+현재 evidence로 다음 변경은 **도입하지 않는다**.
+
+- TX drain quota
+- adaptive read chunk
+- `QWaitCondition`
+
+WHY:
+
+- 관찰된 sustained RX bottleneck은 active sleep 제거만으로 해소
+- 추가 scheduling/queue policy는 regression surface를 넓힘
+- TX fairness/CPU 문제가 실제 장비나 별도 workload에서 확인될 때 독립 후보로 검증하는 편이 원인 분리에 유리
+
+## 3.5 실제 Serial acceptance — 미완료
+
+Serial I/O 최적화는 Mock/LOOPBACK/synthetic benchmark Green만으로 완료 처리하지 않는다.
 
 최소 확인:
 
@@ -213,14 +292,18 @@ Serial I/O 최적화는 Mock/LOOPBACK Green만으로 완료 처리하지 않는�
 실제 USB Serial 장치 1종
   + open / close
   + sustained RX/TX smoke
+  + simultaneous RX/TX
   + disconnect / reconnect
   + application shutdown
+  + byte loss/error surface 확인
 ```
 
 WHY:
 
-- pyserial/OS driver의 `in_waiting`, timeout, disconnect behavior는 Mock과 다를 수 있음
-- 이 검증은 P4 종합 실기기 검증을 대체하지 않고, 성능 변경 직후의 최소 regression gate 역할만 수행
+- pyserial/OS driver의 `in_waiting`, timeout, disconnect behavior는 synthetic transport와 다를 수 있음
+- 이 검증은 P4 종합 실기기 검증을 대체하지 않고, 이번 scheduling 변경 직후의 최소 regression gate 역할만 수행
+
+따라서 **software candidate 선정/구현은 완료**, Task #5의 최종 `[x]` 처리는 hardware acceptance 후 수행한다.
 
 ---
 
@@ -230,17 +313,19 @@ WHY:
 
 - `tests/test_runtime_benchmark_smoke.py`
 - `tests/test_rx_view_benchmark_smoke.py`
+- `tests/test_connection_worker_wait_policy.py`
 - `tests/test_tx_flush.py`
 - connection lifecycle tests
 - file transfer tests
 - high-speed parser/RX tests
 
-Serial I/O 후보 비교 추가 권장:
+추가 검증은 실제 evidence가 생길 때 수행:
 
 - simultaneous RX/TX fairness
-- 4-port sustained synthetic load
+- 4-port sustained physical load
 - heavy TX 중 worker stop
 - heavy RX 중 worker stop
+- idle CPU / sustained RX CPU
 
 ---
 
@@ -252,13 +337,13 @@ baseline commit
 candidate commit
 scenario matrix
 raw result summary
-median/p95 comparison
-CPU/memory comparison
+candidate comparison
 actual USB Serial smoke result (Serial I/O 변경 시)
 결론: 적용 / 보류 / 폐기
 ```
 
 - benchmark 정의/비교 규칙: `doc/runtime_benchmark_baseline_spec_20260830.md`
 - Rx View 판정 결과: `doc/benchmarks/rx_view_baseline_20260830.md`
+- Worker loop 판정 결과: `doc/benchmarks/worker_loop_optimization_20260830.md`
 - 과거 Core micro 결과: `doc/benchmark_20260822.md`
 - 이후 실제 측정 결과: `doc/benchmarks/` 아래 날짜별 보존

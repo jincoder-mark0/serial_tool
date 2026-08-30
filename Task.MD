@@ -63,7 +63,6 @@ WHY:
    - CI는 성능 threshold가 아니라 scenario 실행/byte-preservation/result schema만 검증
    - 기준 문서: [`doc/runtime_benchmark_baseline_spec_20260830.md`](doc/runtime_benchmark_baseline_spec_20260830.md)
    - PR #4 최신 검증: Python 3.11 `643 passed, 2 warnings`, GitHub Actions 4/4 Green
-   - 실제 개발 머신 runtime baseline 숫자는 후보 비교 착수 시 동일 환경에서 별도 기록
 4. [x] RxLogView `BatchRenderer` 필요성 benchmark 기반 재평가
    - 결론: **별도 BatchRenderer 도입하지 않음 / 현재 DataTrafficHandler + LogModel batching 유지**
    - `LogModel.add_logs()` batch insert는 single-row control 대비 약 `5.5~5.8x` 처리량
@@ -74,14 +73,21 @@ WHY:
    - 기준 결과: [`doc/benchmarks/rx_view_baseline_20260830.md`](doc/benchmarks/rx_view_baseline_20260830.md)
    - 실제 2/4-port 고속 RX, 실제 화면/HEX bottleneck이 확인될 때만 재검토
 5. [-] Serial non-blocking I/O loop 후보안 비교/최적화
-   - CPU / throughput / latency / shutdown responsiveness 함께 평가
-   - 완료 전 실제 USB Serial 최소 smoke + reconnect/disconnect 확인
+   - **software optimization 완료 / 실제 USB Serial acceptance 미완료**
+   - baseline: Windows synthetic mixed RX/TX에서 16 MiB RX를 10 s 내 완료하지 못함 (`3,301,376 / 16,777,216 bytes`)
+   - Candidate A (`usleep(100 us)` activity-aware): 동일하게 timeout -> 폐기
+   - Candidate B: 실제 I/O activity가 있으면 `yieldCurrentThread()`, pending-only는 busy wait, 완전 idle은 1 ms wait -> 채택
+   - Candidate B synthetic repeat=3: RX `226.700 MB/s`, TX `56.675 MB/s`, elapsed `70.578 ms`, stop `0.913 ms`
+   - Python 3.11 full pytest `652 passed, 2 warnings`, CI/benchmark Green 확인
+   - benchmark 결과: [`doc/benchmarks/worker_loop_optimization_20260830.md`](doc/benchmarks/worker_loop_optimization_20260830.md)
+   - TX drain quota / adaptive read / QWaitCondition은 현재 evidence로 불필요하여 도입하지 않음
+   - **남은 완료 조건:** 실제 USB Serial open/close + sustained RX/TX + disconnect/reconnect + shutdown smoke
 
 WHY:
 
 - 구조를 크게 바꾸기 전에 성능 baseline을 고정
 - 개선폭이 측정 오차 수준이면 구현하지 않는 것도 완료 판단
-- Serial I/O는 Mock/LOOPBACK만으로 실제 driver/stack 특성을 충분히 검증할 수 없음
+- Serial I/O는 Mock/LOOPBACK/synthetic transport만으로 실제 driver/stack 특성을 충분히 검증할 수 없음
 
 ## P2-C — Global state 및 package 구조 정리
 
@@ -190,6 +196,7 @@ WHY:
 
 - Mock Serial
 - LoopbackTransport
+- synthetic runtime benchmark
 - offscreen Qt
 - Windows/Ubuntu GitHub-hosted CI
 
@@ -198,7 +205,8 @@ WHY:
 - blocking OS port scan / macro file load helper는 Python thread 특성상 강제 종료하지 않음
 - manager가 outstanding helper를 기능별 최대 1개로 제한
 - language key 동적 표현식 7건은 정적 검사 불가
-- Python 3.13 외부 `lark` dependency warning 2건
+- 외부 `lark` dependency warning 2건
+- Serial worker scheduling 변경은 실제 USB Serial 장치 acceptance 미완료
 
 ---
 

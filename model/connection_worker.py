@@ -32,6 +32,7 @@ from common.constants import (
     WORKER_BUSY_WAIT_US,
 )
 
+
 class ConnectionWorker(QThread):
     """
     BaseTransport 기반 데이터 송수신 Worker Thread
@@ -66,7 +67,7 @@ class ConnectionWorker(QThread):
         self._write_error: Optional[str] = None
 
         self._mutex = QMutex()
-        self._write_queue = ThreadSafeQueue() # 비동기 전송용 Queue
+        self._write_queue = ThreadSafeQueue()  # 비동기 전송용 Queue
 
     def run(self) -> None:
         """
@@ -76,7 +77,7 @@ class ConnectionWorker(QThread):
             - Transport 열기 및 연결 확인
             - 수신 데이터 Batch 처리 (크기/시간 기준)
             - 전송 Queue 처리 (비동기 Write)
-            - CPU 부하 최소화 (Sleep 조절)
+            - 실제 I/O activity 기준 Sleep/Yield 조절
             - 에러 발생 시 안전한 종료 처리
         """
         batch_buffer = bytearray()
@@ -91,15 +92,22 @@ class ConnectionWorker(QThread):
                     self.connection_opened.emit(self.connection_name)
 
                 # Batch 처리용 버퍼 및 타이머
-                last_emit_time = time.monotonic() * 1000 # ms 단위
+                last_emit_time = time.monotonic() * 1000  # ms 단위
 
                 while self.is_running():
                     try:
+                        # 이번 iteration에서 실제 RX/TX가 수행됐는지 추적한다.
+                        # WHY: batch emit 직후 buffer가 비더라도 transport에는 다음 RX가
+                        # 이미 대기할 수 있다. 기존 코드는 buffer/queue만 보고 1ms idle
+                        # sleep에 들어가 sustained RX 처리량을 불필요하게 제한했다.
+                        had_io_activity = False
+
                         # 2. 데이터 읽기 (Transport 추상화)
                         if self.transport.in_waiting > 0:
                             chunk = self.transport.read(DEFAULT_READ_CHUNK_SIZE)
                             if chunk:
                                 batch_buffer.extend(chunk)
+                                had_io_activity = True
 
                         # 3. Batch 전송 로직
                         # 조건: 크기 임계값 초과 OR 시간 초과
@@ -114,15 +122,21 @@ class ConnectionWorker(QThread):
                                 last_emit_time = current_time
 
                         # 4. TX Queue 처리 (비동기 전송)
+                        # 기존 전량 drain semantics는 유지한다. TX backlog가 RX fairness를
+                        # 실제로 해치는 증거가 확인되면 quota는 별도 후보로 분리한다.
                         while not self._write_queue.is_empty():
-                            self._write_next_queued_chunk()
+                            if self._write_next_queued_chunk():
+                                had_io_activity = True
 
-                        # 5. CPU 부하 방지
-                        # 데이터가 없으면 긴 sleep, 있으면 짧은 sleep
-                        if len(batch_buffer) == 0 and self._write_queue.is_empty():
-                            self.msleep(WORKER_IDLE_WAIT_MS)
-                        else:
-                            self.usleep(WORKER_BUSY_WAIT_US)
+                        # 5. CPU 부하 / scheduler stall 균형
+                        # 실제 I/O가 있었던 iteration에는 sub-ms sleep을 강제하지 않고
+                        # thread yield로 다음 ready thread에 실행 기회를 준다. 새 I/O가
+                        # 없으면서 buffered data만 남은 경우에는 기존 busy wait를 유지해
+                        # batch timeout 대기 중 무의미한 spin을 피한다.
+                        self._wait_for_next_iteration(
+                            had_io_activity=had_io_activity,
+                            has_buffered_rx=bool(batch_buffer),
+                        )
 
                     except Exception as e:
                         self.error_occurred.emit(f"IO Error: {str(e)}")
@@ -137,11 +151,44 @@ class ConnectionWorker(QThread):
                 self.data_received.emit(bytes(batch_buffer))
             # close() 이전에 TX 큐를 마지막으로 드레인 (S-039)
             # while 루프는 최상단에서만 is_running()을 확인하므로, msleep(1) 중에
-            # stop()이 플래그를 내리면 L112-115의 큐 처리 블록을 한 번도 통과하지
-            # 못한 채 여기로 온다 — 여기서 마저 내보내지 않으면 큐잉 성공(True) 응답을
+            # stop()이 플래그를 내리면 큐 처리 블록을 한 번도 통과하지 못한 채
+            # 여기로 올 수 있다 — 여기서 마저 내보내지 않으면 큐잉 성공(True) 응답을
             # 받은 데이터가 조용히 유실된다.
             self._drain_write_queue_on_exit()
             self.close_connection()
+
+    def _wait_for_next_iteration(
+        self,
+        *,
+        had_io_activity: bool,
+        has_buffered_rx: bool,
+    ) -> None:
+        """이번 loop의 activity/pending 상태에 맞는 scheduling primitive를 선택합니다.
+
+        WHY:
+        Windows에서는 ``QThread.usleep(100)`` 같은 sub-millisecond sleep이 scheduler
+        granularity 영향으로 약 1 ms급 stall처럼 동작할 수 있습니다. sustained RX에서
+        매 read마다 이를 강제하면 worker 처리량이 Serial hardware가 아니라 scheduler
+        tick에 의해 제한될 수 있습니다.
+
+        HOW:
+        - 이번 iteration에 RX/TX가 실제 수행됨 -> sleep 대신 thread yield
+        - 새 I/O는 없지만 emit 전 RX batch 또는 TX queue가 남음 -> 기존 busy wait
+        - activity/pending 모두 없음 -> 기존 idle wait
+
+        ``WORKER_IDLE_WAIT_MS`` / ``WORKER_BUSY_WAIT_US`` 값 자체는 그대로 유지하고,
+        active I/O path의 scheduling primitive만 변경합니다. 따라서 batch threshold,
+        TX drain, shutdown/data-preservation semantics는 건드리지 않습니다.
+        """
+        if had_io_activity:
+            self.yieldCurrentThread()
+            return
+
+        if has_buffered_rx or not self._write_queue.is_empty():
+            self.usleep(WORKER_BUSY_WAIT_US)
+            return
+
+        self.msleep(WORKER_IDLE_WAIT_MS)
 
     def _drain_write_queue_on_exit(self) -> None:
         """
@@ -253,11 +300,9 @@ class ConnectionWorker(QThread):
               되지만, 실제 OS 스레드가 run()에 진입해 transport.open()을 마치기까지는
               지연이 있다. 그 틈에 들어온 send를 transport.is_open()으로 막으면
               큐잉이 조용히 실패해 데이터가 유실된다. run() 루프는 open 성공 후
-              TX 큐를 전량 드레인하므로(L111-115), 열리기 전에 큐잉해도 순서가
-              보존된다. open이 실패하면 큐는 드레인되지 않고 버려지지만(L127-128
-              경로는 while 루프 진입 자체가 없음), 이 경우 이미 별도로
-              "Failed to open connection" error_occurred가 발행되므로 상태 정보
-              누락은 아니다.
+              TX 큐를 전량 드레인하므로, 열리기 전에 큐잉해도 순서가 보존된다.
+              open이 실패하면 큐는 드레인되지 않고 버려지지만, 이 경우 이미 별도로
+              "Failed to open connection" error_occurred가 발행되므로 상태 정보 누락은 아니다.
             - 전송 큐에 데이터 추가
 
         Args:

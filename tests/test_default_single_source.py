@@ -168,8 +168,8 @@ def test_settings_schema_uses_common_theme_and_language_enums():
 
 
 def test_connection_worker_uses_common_sleep_timing_constants():
-    """Worker loop가 1/100 같은 magic timing literal을 다시 사용하지 않게 고정한다."""
-    source = inspect.getsource(ConnectionWorker.run)
+    """Worker wait policy가 1/100 같은 magic timing literal을 다시 사용하지 않게 고정한다."""
+    source = inspect.getsource(ConnectionWorker._wait_for_next_iteration)
 
     assert "msleep(WORKER_IDLE_WAIT_MS)" in source
     assert "usleep(WORKER_BUSY_WAIT_US)" in source
