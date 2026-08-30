@@ -1,126 +1,66 @@
 """
 파일 전송 서비스 모듈
 
-파일 전송 로직을 담당하는 엔진을 정의합니다.
-
-## WHY
-* 대용량 파일의 안정적인 전송 (Backpressure 제어 및 메모리 관리)
-* UI 블로킹 없는 비동기 실행 (QRunnable 활용)
-* 전송 진행 상황 실시간 피드백 및 취소 기능 제공
-
-## WHAT
-* FileTransferService: QRunnable 기반 전송 엔진
-* 파일 청크(Chunk) 분할 및 흐름 제어(Flow Control)
-* 전송 진행률, 완료, 에러 상태 시그널 발행 (DTO 기반)
-
-## HOW
-* 파일을 Chunk 단위로 읽어 ConnectionController로 전송
-* 전송 큐 크기를 모니터링하여 과부하 방지 (Backpressure)
-* EventBus와 PyQt Signal을 동시에 사용하여 상태 전파
+QRunnable 기반 파일 전송 엔진입니다. 진행/완료/에러는 FileTransferSignals로 직접 전달합니다.
 """
 import os
 import time
-from PyQt5.QtCore import QRunnable, QObject, pyqtSignal
 
-from model.connection_controller import ConnectionController
-from core.event_bus import event_bus
-from common.dtos import (
-    FileProgressState,
-    PortConfig,
-    FileCompletionEvent,
-    FileErrorEvent
-)
-from common.constants import EventTopics, FILE_TRANSFER_BACKPRESSURE_WAIT_S
+from PyQt5.QtCore import QObject, QRunnable, pyqtSignal
+
+from common.constants import FILE_TRANSFER_BACKPRESSURE_WAIT_S
+from common.dtos import FileCompletionEvent, FileErrorEvent, FileProgressState, PortConfig
 from common.enums import FileStatus, SerialFlowControl
+from model.connection_controller import ConnectionController
 
 
 class FileTransferSignals(QObject):
-    """
-    파일 전송 엔진에서 사용하는 시그널 정의 클래스
-
-    QRunnable은 QObject가 아니므로 시그널을 직접 가질 수 없어 별도 클래스로 분리합니다.
-    """
-    progress_updated = pyqtSignal(object)       # FileProgressState
-    transfer_completed = pyqtSignal(object)     # FileCompletionEvent
-    error_occurred = pyqtSignal(object)         # FileErrorEvent
+    progress_updated = pyqtSignal(object)
+    transfer_completed = pyqtSignal(object)
+    error_occurred = pyqtSignal(object)
 
 
 class FileTransferService(QRunnable):
-    """
-    파일 전송을 담당하는 엔진 (QRunnable 기반)
+    """파일을 청크 단위로 비동기 전송합니다."""
 
-    별도의 스레드 풀에서 실행되며, 파일을 청크 단위로 읽어 ConnectionController를 통해 전송합니다.
-    """
-
-    def __init__(self, connection_controller: ConnectionController, file_path: str, config: PortConfig):
-        """
-        FileTransferService 초기화
-
-        Args:
-            connection_controller (ConnectionController): 전송을 수행할 컨트롤러 인스턴스.
-            file_path (str): 전송할 파일의 절대 경로.
-            config (PortConfig): 포트 설정 DTO (Baudrate, Flow Control 등 정보 포함).
-        """
+    def __init__(
+        self,
+        connection_controller: ConnectionController,
+        file_path: str,
+        config: PortConfig,
+    ) -> None:
         super().__init__()
         self.connection_controller = connection_controller
         self.file_path = file_path
         self.config = config
-        self.port_name = config.port  # DTO에서 포트 이름 추출
-
+        self.port_name = config.port
         self.signals = FileTransferSignals()
-        self.event_bus = event_bus
         self._is_cancelled = False
 
-        # 청크 크기 설정 (Baudrate에 따른 적응형 크기)
-        # 고속 통신(115200 초과)에서는 4KB, 그 외에는 1KB 사용
         self.chunk_size = 4096 if self.config.baudrate > 115200 else 1024
-
-        # Backpressure 임계값 (큐에 쌓인 청크 개수)
-        # 큐가 이 값보다 많이 차면 전송을 일시 대기합니다.
         self.queue_threshold = 50
 
     def cancel(self) -> None:
-        """전송 취소를 요청합니다."""
         self._is_cancelled = True
 
     def run(self) -> None:
-        """
-        파일 전송 실행 로직 (스레드 진입점)
-
-        Logic:
-            1. 전송 시작을 Controller에 등록 (Race Condition 방지)
-            2. 파일 존재 여부 확인
-            3. 파일을 청크 단위로 읽으며 루프 실행
-            4. Backpressure 체크 (큐가 가득 차면 대기)
-            5. 데이터 전송 및 진행률 업데이트
-            6. 완료 또는 취소 시 결과 이벤트 발행
-            7. 종료 시 Controller 등록 해제
-        """
         try:
-            # 전송 시작 등록
             self.connection_controller.register_file_transfer(self.port_name, self)
 
-            # 파일 존재 확인
             if not os.path.exists(self.file_path):
                 msg = f"File not found: {self.file_path}"
-
-                # 에러 이벤트 생성 (DTO)
-                error_event = FileErrorEvent(message=msg, file_path=self.file_path)
-                self.signals.error_occurred.emit(error_event)
-
-                # 완료 이벤트 생성 (실패)
-                comp_event = FileCompletionEvent(success=False, message=msg, file_path=self.file_path)
-                self.signals.transfer_completed.emit(comp_event)
+                self._emit_failure(msg)
                 return
 
             total_size = os.path.getsize(self.file_path)
             sent_bytes = 0
 
-            with open(self.file_path, 'rb') as f:
+            with open(self.file_path, "rb") as file_obj:
                 while not self._is_cancelled:
-                    # Backpressure Control (역압 제어)
-                    # 전송 큐가 임계값을 초과하면 잠시 대기하여 메모리 폭증 방지
-                    while self.connection_controller.get_write_queue_size(self.port_name) > self.queue_threshold:
+                    while (
+                        self.connection_controller.get_write_queue_size(self.port_name)
+                        > self.queue_threshold
+                    ):
                         time.sleep(FILE_TRANSFER_BACKPRESSURE_WAIT_S)
                         if self._is_cancelled:
                             break
@@ -128,97 +68,74 @@ class FileTransferService(QRunnable):
                     if self._is_cancelled:
                         break
 
-                    chunk = f.read(self.chunk_size)
+                    chunk = file_obj.read(self.chunk_size)
                     if not chunk:
-                        break  # EOF (파일 끝 도달)
+                        break
 
-                    # 데이터 전송 시도
-                    success = self.connection_controller.send_data_to_connection(self.port_name, chunk)
-                    if not success:
-                        raise Exception(f"Port {self.port_name} is not open or unavailable.")
+                    if not self.connection_controller.send_data_to_connection(
+                        self.port_name,
+                        chunk,
+                    ):
+                        raise RuntimeError(
+                            f"Port {self.port_name} is not open or unavailable."
+                        )
 
-                    # 진행률 업데이트
                     sent_bytes += len(chunk)
-
-                    # 1. UI용 시그널 발행 (FileProgressState DTO)
-                    state = FileProgressState(
-                        file_path=self.file_path,
-                        sent_bytes=sent_bytes,
-                        total_bytes=total_size,
-                        status=FileStatus.SENDING.value
+                    self.signals.progress_updated.emit(
+                        FileProgressState(
+                            file_path=self.file_path,
+                            sent_bytes=sent_bytes,
+                            total_bytes=total_size,
+                            status=FileStatus.SENDING.value,
+                        )
                     )
-                    # 진행률은 **직접 시그널로만** 알린다 (S-083).
-                    # 예전에는 EventBus로도 같은 사실을 발행했으나 구독자가 하나도
-                    # 없었다 — 진행률을 실제로 쓰는 FilePresenter는 이 시그널에
-                    # 붙어 있다. 완료/에러 같은 생명주기 이벤트는 버스에 남는다.
-                    # 고빈도로 발생하는 진행률만 중복을 걷어냈다.
-                    self.signals.progress_updated.emit(state)
 
-                    # Speed Control (소프트웨어 흐름 제어)
-                    # 하드웨어 흐름 제어가 없는 경우, Baudrate에 맞춰 인위적 지연 추가
-                    if self.config.flowctrl in (SerialFlowControl.RTS_CTS.value, SerialFlowControl.XON_XOFF.value):
-                        pass  # 하드웨어/소프트웨어 핸드쉐이킹 신뢰
-                    else:
-                        # (데이터 크기 * 10비트) / Baudrate = 전송 소요 시간 (초)
+                    if self.config.flowctrl not in (
+                        SerialFlowControl.RTS_CTS.value,
+                        SerialFlowControl.XON_XOFF.value,
+                    ):
                         wait_time = (len(chunk) * 10) / self.config.baudrate
                         time.sleep(wait_time)
 
-            # 전송 완료 또는 취소 처리
             if self._is_cancelled:
-                msg = "Transfer cancelled by user."
+                self._emit_failure("Transfer cancelled by user.")
+                return
 
-                # 에러 이벤트 (취소도 에러의 일종으로 처리하거나 별도 처리 가능)
-                error_event = FileErrorEvent(message=msg, file_path=self.file_path)
-                self.signals.error_occurred.emit(error_event)
+            while self.connection_controller.get_write_queue_size(self.port_name) > 0:
+                if self._is_cancelled:
+                    self._emit_failure("Transfer cancelled by user.")
+                    return
+                time.sleep(FILE_TRANSFER_BACKPRESSURE_WAIT_S)
 
-                # 완료 이벤트 (실패)
-                comp_event = FileCompletionEvent(success=False, message=msg, file_path=self.file_path)
-                self.signals.transfer_completed.emit(comp_event)
+            self.signals.transfer_completed.emit(
+                FileCompletionEvent(
+                    success=True,
+                    message="Transfer successful",
+                    file_path=self.file_path,
+                )
+            )
 
-                self.event_bus.publish(EventTopics.FILE_COMPLETED, comp_event)
-            else:
-                # 완료 이벤트 발행 전 TX 큐가 실제로 비워질 때까지 대기 (S-039)
-                # 마지막 청크가 "큐에 들어간 시점"에 success=True를 발행하면,
-                # 전송 직후 포트를 닫는 운용에서 그 청크가 아직 전송되지 않은
-                # 채로 완료 보고가 먼저 나갈 수 있다. ConnectionWorker가 이미
-                # 제공하는 get_write_queue_size()로 폴링해 큐가 빌 때까지 대기한다.
-                # (포트가 이미 닫혀 워커가 사라진 경우 get_write_queue_size는 0을
-                # 반환해 대기가 즉시 끝난다 — 그 경로의 데이터 보존/표면화는
-                # ConnectionWorker._drain_write_queue_on_exit가 담당.)
-                while self.connection_controller.get_write_queue_size(self.port_name) > 0:
-                    if self._is_cancelled:
-                        break
-                    time.sleep(FILE_TRANSFER_BACKPRESSURE_WAIT_S)
-
-                # 완료 이벤트 (성공)
-                comp_event = FileCompletionEvent(success=True, message="Transfer successful", file_path=self.file_path)
-                self.signals.transfer_completed.emit(comp_event)
-
-                self.event_bus.publish(EventTopics.FILE_COMPLETED, comp_event)
-
-        except Exception as e:
-            # 예외 발생 시 전역 에러 핸들러에 보고 (선택 사항)
+        except Exception as exc:
             try:
                 from core.error_handler import get_error_handler
+
                 handler = get_error_handler()
                 if handler:
-                    handler.report_error(type(e), e, e.__traceback__)
+                    handler.report_error(type(exc), exc, exc.__traceback__)
             except Exception:
                 pass
 
-            error_msg = str(e)
-
-            # 에러 이벤트 발행 (DTO)
-            error_event = FileErrorEvent(message=error_msg, file_path=self.file_path)
-            self.signals.error_occurred.emit(error_event)
-
-            # 완료 이벤트 발행 (실패)
-            comp_event = FileCompletionEvent(success=False, message=error_msg, file_path=self.file_path)
-            self.signals.transfer_completed.emit(comp_event)
-
-            self.event_bus.publish(EventTopics.FILE_ERROR, error_event)
-            self.event_bus.publish(EventTopics.FILE_COMPLETED, comp_event)
-
+            self._emit_failure(str(exc))
         finally:
-            # 전송 종료 등록 해제
             self.connection_controller.unregister_file_transfer(self.port_name)
+
+    def _emit_failure(self, message: str) -> None:
+        error_event = FileErrorEvent(message=message, file_path=self.file_path)
+        self.signals.error_occurred.emit(error_event)
+        self.signals.transfer_completed.emit(
+            FileCompletionEvent(
+                success=False,
+                message=message,
+                file_path=self.file_path,
+            )
+        )
