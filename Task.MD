@@ -137,7 +137,6 @@ PR #1 / GitHub Actions / Python 3.11
   - [-] `PluginLoader` dynamic import
   - [-] Example plugin
 - [-] SPI/I2C Transport
-- [-] TCP/UDP session
 - [-] 구조화 packet filter
 - [-] trigger-based transmission
 - [-] packet annotation / selected-range export
