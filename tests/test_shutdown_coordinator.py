@@ -9,6 +9,7 @@ def _make_coordinator():
     settings = MagicMock()
     controller = MagicMock()
     macro = MagicMock()
+    macro_script = MagicMock()
     port_scan = MagicMock()
     manual = MagicMock()
     packet = MagicMock()
@@ -21,6 +22,7 @@ def _make_coordinator():
         settings_manager=settings,
         connection_controller=controller,
         macro_runner=macro,
+        macro_script_manager=macro_script,
         port_scan_manager=port_scan,
         manual_control_presenter=manual,
         packet_presenter=packet,
@@ -34,6 +36,7 @@ def _make_coordinator():
         settings,
         controller,
         macro,
+        macro_script,
         port_scan,
         manual,
         packet,
@@ -50,6 +53,7 @@ def test_shutdown_stops_runtime_services_and_saves_state():
         settings,
         controller,
         macro,
+        macro_script,
         port_scan,
         manual,
         packet,
@@ -73,6 +77,7 @@ def test_shutdown_stops_runtime_services_and_saves_state():
 
     macro.stop.assert_called_once()
     macro.wait.assert_called_once_with(1000)
+    macro_script.stop.assert_called_once()
     port_scan.stop.assert_called_once()
     data.stop.assert_called_once()
     packet.stop.assert_called_once()
