@@ -3,6 +3,7 @@
 > 우선순위: P2
 > 대상: RxLogView rendering, Serial non-blocking I/O
 > 원칙: **측정 전 최적화 금지**
+> Runtime baseline spec: [`../runtime_benchmark_baseline_spec_20260830.md`](../runtime_benchmark_baseline_spec_20260830.md)
 
 ---
 
@@ -17,11 +18,35 @@
 - memory growth bounded
 - shutdown/data-preservation invariant 유지
 
+현재 benchmark는 역할을 분리한다.
+
+```text
+Core micro benchmark
+  -> tools/benchmark.py
+  -> RingBuffer / Queue / Parser / DataLogger
+
+Runtime-path benchmark
+  -> tools/runtime_benchmark.py
+  -> DataTrafficHandler RX aggregation/flush
+  -> ConnectionWorker mixed RX/TX loop + stop latency
+
+실제 hardware validation
+  -> 실제 USB Serial smoke
+  -> driver / reconnect / disconnect 특성
+```
+
+GitHub-hosted runner의 성능 수치를 제품 threshold로 사용하지 않는다. CI는 benchmark
+scenario 실행 가능 여부, byte-preservation, result schema만 고정한다.
+
 ---
 
 # 2. RxLogView `BatchRenderer` 재평가
 
 현재 RX path는 `DataTrafficHandler`가 UI 업데이트를 batching한다. `BatchRenderer` 도입은 추가 abstraction이므로 실제 병목이 View rendering인지 먼저 증명해야 한다.
+
+P2-B #3에서 `DataTrafficHandler`의 aggregation/flush 비용은 runtime benchmark 기준선을 만들었다.
+P2-B #4에서는 그 위의 실제 `QSmartListView` rendering/model path를 별도 측정해
+DataTrafficHandler 비용과 QWidget rendering 비용을 섞지 않는다.
 
 검증 질문:
 
@@ -97,7 +122,18 @@ SerialTransport
 - stale worker identity guard
 - final RX batch preservation
 
-측정 포인트:
+P2-B #3의 runtime benchmark는 실제 `ConnectionWorker(QThread)`와 synthetic
+`BaseTransport`를 사용해 mixed RX/TX workload를 동일 조건에서 반복 비교한다.
+
+현재 고정 metric:
+
+- `rx_mb_s`
+- `tx_mb_s`
+- `elapsed_ms`
+- `rx_batches`
+- `stop_ms`
+
+추가 실기기/후보 비교에서 볼 항목:
 
 - loop iterations/s
 - idle CPU
@@ -148,6 +184,7 @@ WHY:
 
 기능 회귀:
 
+- `tests/test_runtime_benchmark_smoke.py`
 - `tests/test_tx_flush.py`
 - connection lifecycle tests
 - file transfer tests
@@ -176,4 +213,6 @@ actual USB Serial smoke result (Serial I/O 변경 시)
 결론: 적용 / 보류 / 폐기
 ```
 
-결과 문서는 `doc/benchmarks/` 아래에 날짜별로 보존한다.
+- benchmark 정의/비교 규칙: `doc/runtime_benchmark_baseline_spec_20260830.md`
+- 과거 Core micro 결과: `doc/benchmark_20260822.md`
+- 새 실제 측정 결과: `doc/benchmarks/` 아래 날짜별 보존

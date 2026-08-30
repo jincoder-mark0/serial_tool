@@ -55,7 +55,15 @@ WHY:
 
 상세: [`performance_optimization_plan.md`](doc/plans/performance_optimization_plan.md)
 
-3. [-] benchmark scenario/baseline 재고정
+3. [x] benchmark scenario/baseline 재고정
+   - 기존 `tools/benchmark.py` Core micro benchmark는 유지
+   - `tools/runtime_benchmark.py` 신규: DataTrafficHandler RX pipeline + 실제 ConnectionWorker QThread mixed RX/TX scenario
+   - metric: RX/TX throughput, elapsed, RX batch count, stop latency
+   - synthetic transport는 benchmark fixture 자체가 병목이 되지 않도록 immutable bytes + offset 소비
+   - CI는 성능 threshold가 아니라 scenario 실행/byte-preservation/result schema만 검증
+   - 기준 문서: [`doc/runtime_benchmark_baseline_spec_20260830.md`](doc/runtime_benchmark_baseline_spec_20260830.md)
+   - PR #4 최신 검증: Python 3.11 `643 passed, 2 warnings`, GitHub Actions 4/4 Green
+   - 실제 개발 머신 runtime baseline 숫자는 후보 비교 착수 시 동일 환경에서 별도 기록
 4. [-] RxLogView `BatchRenderer` 후보안 비교
    - 측정 이득이 명확할 때만 도입
 5. [-] Serial non-blocking I/O loop 후보안 비교/최적화
