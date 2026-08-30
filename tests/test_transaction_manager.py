@@ -170,6 +170,20 @@ def app():
     return instance or QCoreApplication([])
 
 
+def test_async_discovery_emits_vendor_neutral_descriptors(app):
+    descriptor = _descriptor()
+    manager = TransactionManager(
+        AdapterBackendRegistry([_FakeProvider(descriptor, _FakeSpiController())])
+    )
+    found = []
+    manager.adapters_found.connect(lambda descriptors: found.extend(descriptors))
+
+    assert manager.request_discovery() is True
+    assert _wait_until(lambda: found == [descriptor])
+    assert _wait_until(lambda: not manager.is_discovering)
+    assert manager.shutdown() is True
+
+
 def test_manager_executes_spi_transaction_and_emits_result(app):
     spi = _FakeSpiController()
     manager = TransactionManager(
