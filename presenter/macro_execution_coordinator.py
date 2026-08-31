@@ -41,9 +41,6 @@ class MacroExecutionCoordinator(QObject):
         self._port_view = port_view
         self._settings = settings_manager
 
-        # WHY: MacroRunner worker thread에서는 QWidget을 읽으면 안 됩니다.
-        # UI thread에서 시작 시점의 endpoint를 문자열로 snapshot하고, 새 protocol-aware
-        # target과 legacy Serial target_port를 함께 유지합니다.
         self._target_port: Optional[str] = None
         self._target: Optional[ProtocolCommandTarget] = None
         self._broadcast_transaction_targets: tuple[ProtocolCommandTarget, ...] = ()
@@ -58,6 +55,9 @@ class MacroExecutionCoordinator(QObject):
     def target_port(self) -> Optional[str]:
         """진단/legacy facade: 현재 snapshot endpoint 이름."""
         return self._target_port
+
+    def _uses_protocol_router(self) -> bool:
+        return isinstance(self._command_router, ProtocolCommandRouter)
 
     @staticmethod
     def _normalize_protocol(value) -> str:
@@ -97,14 +97,11 @@ class MacroExecutionCoordinator(QObject):
 
     def _on_macro_started(self) -> None:
         """UI thread에서 현재 endpoint/protocol을 한 번만 snapshot합니다."""
-        # Legacy/architecture contract: 현재 port 이름은 UI thread에서 직접 snapshot.
         self._target_port = self._port_view.get_current_port_name() or None
 
         panel_getter = getattr(self._port_view, "get_current_port_panel", None)
         current_panel = panel_getter() if callable(panel_getter) else None
         target = self._target_from_panel(current_panel)
-
-        # 새 protocol facade가 없는 legacy View에서는 기존 Serial snapshot을 사용합니다.
         if target is None and self._target_port:
             target = ProtocolCommandTarget(
                 name=self._target_port,
@@ -124,7 +121,7 @@ class MacroExecutionCoordinator(QObject):
     def deliver_repeated_command(self, command: ManualCommand) -> MacroSendResult:
         """Worker thread에서 snapshot target만 사용하여 command를 전달합니다."""
         if command.broadcast_enabled:
-            if hasattr(self._command_router, "broadcast"):
+            if self._uses_protocol_router():
                 result = self._command_router.broadcast(
                     command,
                     self._broadcast_transaction_targets,
@@ -133,7 +130,6 @@ class MacroExecutionCoordinator(QObject):
                 result = self._command_router.send(command, active_port=None)
         else:
             target = self._target
-            # Legacy tests/callers may set _target_port directly.
             if target is None and self._target_port:
                 target = ProtocolCommandTarget(
                     name=self._target_port,
@@ -142,7 +138,7 @@ class MacroExecutionCoordinator(QObject):
             if target is None:
                 return MacroSendResult(False, "No connected target is selected.")
 
-            if hasattr(self._command_router, "broadcast"):
+            if self._uses_protocol_router():
                 result = self._command_router.send(command, target)
             else:
                 result = self._command_router.send(command, active_port=self._target_port)
@@ -157,12 +153,11 @@ class MacroExecutionCoordinator(QObject):
         """UI thread의 개별 Row Send도 현재 Serial/SPI/I2C target으로 전달합니다."""
         if command.broadcast_enabled:
             targets = self._snapshot_broadcast_transaction_targets()
-            if hasattr(self._command_router, "broadcast"):
+            if self._uses_protocol_router():
                 result = self._command_router.broadcast(command, targets)
             else:
                 result = self._command_router.send(command, active_port=None)
         else:
-            # Established facade를 먼저 읽어 legacy Serial contract를 보존합니다.
             current_port = self._port_view.get_current_port_name() or None
             panel_getter = getattr(self._port_view, "get_current_port_panel", None)
             current_panel = panel_getter() if callable(panel_getter) else None
@@ -176,7 +171,7 @@ class MacroExecutionCoordinator(QObject):
                 self._interrupt("No connected target is selected.")
                 return
 
-            if hasattr(self._command_router, "broadcast"):
+            if self._uses_protocol_router():
                 result = self._command_router.send(command, target)
             else:
                 result = self._command_router.send(command, active_port=current_port)
