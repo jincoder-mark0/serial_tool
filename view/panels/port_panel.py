@@ -1,7 +1,8 @@
-"""개별 연결 탭의 UI facade.
+"""Unified connection-tab View facade.
 
-Port라는 기존 UX/탭 구조는 유지하되 설정 위젯은 Serial/SPI/I2C를 통합 지원합니다.
-Presenter는 내부 selector/widget 구조를 알지 않고 facade와 signal만 사용합니다.
+The Port tab remains one UI surface for Serial/SPI/I2C. Protocol-specific
+configuration is encapsulated by ConnectionSettingsWidget and runtime routing
+stays outside the View.
 """
 from typing import List, Optional
 
@@ -25,6 +26,7 @@ class PortPanel(QWidget):
     disconnect_requested = pyqtSignal()
     port_scan_requested = pyqtSignal()
     endpoint_refresh_requested = pyqtSignal(str)
+    protocol_changed = pyqtSignal(str)
     connection_changed = pyqtSignal(bool)
 
     tx_broadcast_allowed_changed = pyqtSignal(bool)
@@ -55,18 +57,33 @@ class PortPanel(QWidget):
         self._data_log_widget = DataLogWidget()
 
         self._port_settings_widget.connect_requested.connect(self.connect_requested.emit)
-        self._port_settings_widget.disconnect_requested.connect(self.disconnect_requested.emit)
-        self._port_settings_widget.port_scan_requested.connect(self.port_scan_requested.emit)
+        self._port_settings_widget.disconnect_requested.connect(
+            self.disconnect_requested.emit
+        )
+        self._port_settings_widget.port_scan_requested.connect(
+            self.port_scan_requested.emit
+        )
         self._port_settings_widget.endpoint_refresh_requested.connect(
             self.endpoint_refresh_requested.emit
         )
-        self._port_settings_widget.port_connection_changed.connect(self.connection_changed.emit)
+        # endpoint refresh carries the selected protocol. Relaying it as a
+        # protocol hint keeps Presenter/View coupling at the facade boundary.
+        self._port_settings_widget.endpoint_refresh_requested.connect(
+            self.protocol_changed.emit
+        )
+        self._port_settings_widget.port_connection_changed.connect(
+            self.connection_changed.emit
+        )
 
         self._data_log_widget.tx_broadcast_allowed_changed.connect(
             self.tx_broadcast_allowed_changed.emit
         )
-        self._data_log_widget.logging_start_requested.connect(self.logging_start_requested.emit)
-        self._data_log_widget.logging_stop_requested.connect(self.logging_stop_requested.emit)
+        self._data_log_widget.logging_start_requested.connect(
+            self.logging_start_requested.emit
+        )
+        self._data_log_widget.logging_stop_requested.connect(
+            self.logging_stop_requested.emit
+        )
 
         layout.addWidget(self._port_settings_widget)
         layout.addWidget(self._port_stats_widget)
@@ -77,7 +94,7 @@ class PortPanel(QWidget):
     # Connection facade
     # ------------------------------------------------------------------
     def get_port_config(self):
-        """Legacy method name. Serial은 PortConfig, SPI/I2C는 TransactionConnectionConfig 반환."""
+        """Legacy name: returns Serial or transaction connection config."""
         return self._port_settings_widget.get_current_config()
 
     def get_connection_config(self):
@@ -102,7 +119,6 @@ class PortPanel(QWidget):
         return self._port_settings_widget.is_connected()
 
     def get_port_name(self) -> str:
-        """기존 호출부 호환용. transaction에서는 stable identity 기반 display name 반환."""
         return self._port_settings_widget.get_connection_display_name()
 
     def get_connection_display_name(self) -> str:
@@ -168,8 +184,11 @@ class PortPanel(QWidget):
         if not state:
             return
         self.custom_name = state.get(
-            "custom_name", language_manager.get_text("port_tab_default_name")
+            "custom_name",
+            language_manager.get_text("port_tab_default_name"),
         )
-        self._port_settings_widget.apply_state(state.get("port_settings_widget", {}))
+        self._port_settings_widget.apply_state(
+            state.get("port_settings_widget", {})
+        )
         self._data_log_widget.apply_state(state.get("data_log_widget", {}))
         self.update_tab_title()
