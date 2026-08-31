@@ -6,7 +6,6 @@ current PortPanel selection.
 """
 from dataclasses import replace
 from typing import Optional
-from weakref import WeakSet
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
@@ -52,7 +51,7 @@ class ManualControlPresenter(QObject):
         self.transmission_service = transmission_service
         self.transaction_manager = transaction_manager
         self.local_echo_enabled = self.panel.is_local_echo_enabled()
-        self._protocol_connected_panels: WeakSet = WeakSet()
+        self._protocol_connected_panel_ids: set[int] = set()
 
         self.auto_tx_scheduler = AutoTxScheduler()
         self.auto_tx_scheduler.send_requested.connect(self._on_auto_tx_send_requested)
@@ -67,11 +66,18 @@ class ManualControlPresenter(QObject):
         self.panel.broadcast_changed.connect(self.broadcast_changed.emit)
         self.panel.auto_tx_toggled.connect(self.on_auto_tx_toggled)
         self.connection_controller.connection_closed.connect(self._on_connection_closed)
-        self.port_view.current_tab_changed.connect(self.sync_protocol_from_current_tab)
-        self.port_view.port_tab_added.connect(self._on_port_tab_added)
 
-        for port_panel in self.port_view.get_port_panels():
-            self._connect_port_panel_protocol(port_panel)
+        tab_changed = getattr(self.port_view, "current_tab_changed", None)
+        if tab_changed is not None:
+            tab_changed.connect(self.sync_protocol_from_current_tab)
+        tab_added = getattr(self.port_view, "port_tab_added", None)
+        if tab_added is not None:
+            tab_added.connect(self._on_port_tab_added)
+
+        get_panels = getattr(self.port_view, "get_port_panels", None)
+        if get_panels is not None:
+            for port_panel in get_panels():
+                self._connect_port_panel_protocol(port_panel)
 
         if self.transaction_manager is not None:
             self.transaction_manager.transaction_completed.connect(
@@ -87,8 +93,10 @@ class ManualControlPresenter(QObject):
     # Current protocol / enable facade
     # ------------------------------------------------------------------
     def _connect_port_panel_protocol(self, port_panel) -> None:
-        if port_panel in self._protocol_connected_panels:
+        panel_id = id(port_panel)
+        if panel_id in self._protocol_connected_panel_ids:
             return
+
         signal = getattr(port_panel, "protocol_changed", None)
         if signal is not None:
             signal.connect(
@@ -96,19 +104,23 @@ class ManualControlPresenter(QObject):
                     panel
                 )
             )
-        self._protocol_connected_panels.add(port_panel)
+        self._protocol_connected_panel_ids.add(panel_id)
 
     def _on_port_tab_added(self, port_panel) -> None:
         self._connect_port_panel_protocol(port_panel)
-        if self.port_view.get_current_port_panel() is port_panel:
+        if self._get_current_port_panel() is port_panel:
             self.sync_protocol_from_current_tab()
 
     def _on_panel_protocol_changed(self, port_panel) -> None:
-        if self.port_view.get_current_port_panel() is port_panel:
+        if self._get_current_port_panel() is port_panel:
             self.sync_protocol_from_current_tab()
 
+    def _get_current_port_panel(self):
+        getter = getattr(self.port_view, "get_current_port_panel", None)
+        return getter() if getter is not None else None
+
     def current_protocol(self) -> str:
-        current_panel = self.port_view.get_current_port_panel()
+        current_panel = self._get_current_port_panel()
         if current_panel is None:
             return ConnectionProtocol.SERIAL
         getter = getattr(current_panel, "current_protocol", None)
@@ -162,7 +174,8 @@ class ManualControlPresenter(QObject):
     ) -> bool:
         active_port = None
         if not command.broadcast_enabled:
-            active_port = self.port_view.get_current_port_name() or None
+            getter = getattr(self.port_view, "get_current_port_name", None)
+            active_port = (getter() if getter is not None else "") or None
 
         result = self.transmission_service.send(command, active_port=active_port)
         if not result.success:
@@ -210,7 +223,7 @@ class ManualControlPresenter(QObject):
             self._report_transaction_error("Transaction runtime is unavailable")
             return
 
-        current_panel = self.port_view.get_current_port_panel()
+        current_panel = self._get_current_port_panel()
         if current_panel is None or not current_panel.is_connected():
             self._report_transaction_error("Transaction adapter is not connected")
             return
@@ -282,15 +295,23 @@ class ManualControlPresenter(QObject):
         self._report_transaction_error(str(error))
 
     def _append_data_to_endpoint(self, session_name: str, data: bytes) -> None:
-        for port_panel in self.port_view.get_port_panels():
+        get_panels = getattr(self.port_view, "get_port_panels", None)
+        if get_panels is None:
+            return
+        for port_panel in get_panels():
             if self._panel_endpoint_name(port_panel) == session_name:
-                port_panel.append_log_data(data)
+                append = getattr(port_panel, "append_log_data", None)
+                if append is not None:
+                    append(data)
                 return
 
     @staticmethod
     def _panel_endpoint_name(port_panel) -> str:
         getter = getattr(port_panel, "get_connection_display_name", None)
-        return getter() if getter is not None else port_panel.get_port_name()
+        if getter is not None:
+            return getter()
+        fallback = getattr(port_panel, "get_port_name", None)
+        return fallback() if fallback is not None else ""
 
     def _report_transaction_error(self, message: str) -> None:
         logger.warning(f"Manual transaction rejected: {message}")
