@@ -11,6 +11,7 @@ from PyQt5.QtWidgets import QCheckBox, QHBoxLayout, QLabel, QVBoxLayout, QWidget
 from common.constants import LAYOUT_MARGIN_NONE, LAYOUT_SPACING_DEFAULT
 from common.dtos import ManualControlState
 from common.enums import ConnectionProtocol
+from core.transport.transaction.dto import TransactionProtocol
 from view.managers.language_manager import language_manager
 from view.widgets.manual_control import ManualControlWidget
 
@@ -87,8 +88,8 @@ class ManualControlPanel(QWidget):
         """Protocol별 bus-control option만 전환하고 payload UI는 그대로 유지합니다."""
         self._protocol = protocol
         is_serial = protocol == ConnectionProtocol.SERIAL
-        is_spi = protocol == ConnectionProtocol.SPI
-        is_i2c = protocol == ConnectionProtocol.I2C
+        is_spi = protocol == TransactionProtocol.SPI.value
+        is_i2c = protocol == TransactionProtocol.I2C.value
 
         # ManualControlWidget이 기존 Serial contract의 RTS/DTR을 소유하므로,
         # Panel은 child ownership 경계 안에서 표시 여부만 전환합니다.
