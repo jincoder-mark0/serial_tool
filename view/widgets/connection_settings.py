@@ -122,17 +122,25 @@ class ConnectionSettingsWidget(QGroupBox):
         main_layout.setSpacing(LAYOUT_SPACING_DEFAULT)
 
         self.protocol_combo.addItems(
-            [ConnectionProtocol.SERIAL, TransactionProtocol.SPI.value, TransactionProtocol.I2C.value]
+            [
+                ConnectionProtocol.SERIAL,
+                TransactionProtocol.SPI.value,
+                TransactionProtocol.I2C.value,
+            ]
         )
         self.protocol_combo.setCurrentText(DEFAULT_PORT_PROTOCOL)
         self.protocol_combo.currentTextChanged.connect(self._on_protocol_changed)
 
         self.port_combo.setMinimumWidth(180)
-        self.port_combo.popup_show_requested.connect(self._request_current_endpoint_refresh)
+        self.port_combo.popup_show_requested.connect(
+            self._request_current_endpoint_refresh
+        )
         self.port_combo.currentTextChanged.connect(self.endpoint_changed.emit)
 
         self.adapter_combo.setMinimumWidth(220)
-        self.adapter_combo.popup_show_requested.connect(self._request_current_endpoint_refresh)
+        self.adapter_combo.popup_show_requested.connect(
+            self._request_current_endpoint_refresh
+        )
         self.adapter_combo.currentIndexChanged.connect(self._on_adapter_changed)
         self.channel_combo.currentIndexChanged.connect(self.endpoint_changed.emit)
 
@@ -179,24 +187,48 @@ class ConnectionSettingsWidget(QGroupBox):
         layout = QHBoxLayout(widget)
         layout.setContentsMargins(0, 0, 0, 0)
         layout.setSpacing(LAYOUT_SPACING_DEFAULT)
+
         self.serial_controls_ui["baud_combo"] = QComboBox()
         baud = self.serial_controls_ui["baud_combo"]
         baud.setEditable(True)
         baud.addItems([str(v) for v in VALID_BAUDRATES])
         baud.setCurrentText(str(DEFAULT_BAUDRATE))
-        baud.setValidator(QIntValidator(min(VALID_BAUDRATES), max(VALID_BAUDRATES)))
+        baud.setValidator(
+            QIntValidator(min(VALID_BAUDRATES), max(VALID_BAUDRATES))
+        )
+
         self.serial_controls_ui["data_combo"] = QComboBox()
-        self.serial_controls_ui["data_combo"].addItems([str(v) for v in _SERIAL_BYTESIZES])
-        self.serial_controls_ui["data_combo"].setCurrentText(str(DEFAULT_PORT_BYTESIZE))
-        self.serial_controls_ui["data_combo"].setFixedWidth(CONTROL_WIDTH_PORT_DATA_COMBO)
+        self.serial_controls_ui["data_combo"].addItems(
+            [str(v) for v in _SERIAL_BYTESIZES]
+        )
+        self.serial_controls_ui["data_combo"].setCurrentText(
+            str(DEFAULT_PORT_BYTESIZE)
+        )
+        self.serial_controls_ui["data_combo"].setFixedWidth(
+            CONTROL_WIDTH_PORT_DATA_COMBO
+        )
+
         self.serial_controls_ui["parity_combo"] = QComboBox()
-        self.serial_controls_ui["parity_combo"].addItems([item.value for item in SerialParity])
-        self.serial_controls_ui["parity_combo"].setFixedWidth(CONTROL_WIDTH_PORT_PARITY_COMBO)
+        self.serial_controls_ui["parity_combo"].addItems(
+            [item.value for item in SerialParity]
+        )
+        self.serial_controls_ui["parity_combo"].setFixedWidth(
+            CONTROL_WIDTH_PORT_PARITY_COMBO
+        )
+
         self.serial_controls_ui["stop_combo"] = QComboBox()
-        self.serial_controls_ui["stop_combo"].addItems([str(item.value) for item in SerialStopBits])
-        self.serial_controls_ui["stop_combo"].setFixedWidth(CONTROL_WIDTH_PORT_STOP_COMBO)
+        self.serial_controls_ui["stop_combo"].addItems(
+            [str(item.value) for item in SerialStopBits]
+        )
+        self.serial_controls_ui["stop_combo"].setFixedWidth(
+            CONTROL_WIDTH_PORT_STOP_COMBO
+        )
+
         self.serial_controls_ui["flow_combo"] = QComboBox()
-        self.serial_controls_ui["flow_combo"].addItems([item.value for item in SerialFlowControl])
+        self.serial_controls_ui["flow_combo"].addItems(
+            [item.value for item in SerialFlowControl]
+        )
+
         for label, key in (
             (language_manager.get_text("port_lbl_baudrate"), "baud_combo"),
             (language_manager.get_text("port_lbl_bytesize"), "data_combo"),
@@ -212,26 +244,37 @@ class ConnectionSettingsWidget(QGroupBox):
     def _create_spi_settings_widget(self) -> QWidget:
         widget = QWidget()
         layout = QHBoxLayout(widget)
-        layout.setContentsMargins(LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE, LAYOUT_MARGIN_NONE)
+        layout.setContentsMargins(
+            LAYOUT_MARGIN_NONE,
+            LAYOUT_MARGIN_NONE,
+            LAYOUT_MARGIN_NONE,
+            LAYOUT_MARGIN_NONE,
+        )
+
         speed = QComboBox()
         speed.setEditable(True)
         speed.addItems([str(v) for v in _SPI_SPEED_OPTIONS])
         speed.setCurrentText(str(DEFAULT_SPI_SPEED))
         speed.setValidator(QIntValidator(1_000, 60_000_000))
         self.spi_controls_ui["speed_combo"] = speed
+
         mode = QComboBox()
         mode.addItems(["0", "1", "2", "3"])
         mode.setCurrentText(str(DEFAULT_SPI_MODE))
         self.spi_controls_ui["mode_combo"] = mode
+
         chip_select = QComboBox()
         chip_select.addItem("0")
         self.spi_controls_ui["cs_combo"] = chip_select
+
         bit_order = QComboBox()
         bit_order.addItems(["MSB", "LSB"])
         self.spi_controls_ui["bit_order_combo"] = bit_order
+
         duplex = QComboBox()
         duplex.addItems(["Full", "Half"])
         self.spi_controls_ui["duplex_combo"] = duplex
+
         for label, control in (
             (language_manager.get_text("port_lbl_speed"), speed),
             (language_manager.get_text("port_lbl_mode"), mode),
@@ -248,20 +291,25 @@ class ConnectionSettingsWidget(QGroupBox):
         widget = QWidget()
         layout = QHBoxLayout(widget)
         layout.setContentsMargins(0, 0, 0, 0)
+
         speed = QComboBox()
         speed.setEditable(True)
         speed.addItems([str(v) for v in _I2C_SPEED_OPTIONS])
         speed.setCurrentText("100000")
         speed.setValidator(QIntValidator(1_000, 5_000_000))
         self.i2c_controls_ui["speed_combo"] = speed
+
         address = QLineEdit("0x50")
         address.setMaximumWidth(80)
         self.i2c_controls_ui["address_edit"] = address
+
         width = QComboBox()
         width.addItems(["7", "10"])
         self.i2c_controls_ui["address_bits_combo"] = width
+
         stretching = QCheckBox("Clock Stretch")
         self.i2c_controls_ui["stretch_chk"] = stretching
+
         layout.addWidget(QLabel("Speed (Hz)"))
         layout.addWidget(speed)
         layout.addWidget(QLabel("Address"))
@@ -303,7 +351,11 @@ class ConnectionSettingsWidget(QGroupBox):
         self.port_combo.blockSignals(True)
         self.port_combo.clear()
         for info in ports:
-            text = f"{info.device} ({info.description})" if info.description else info.device
+            text = (
+                f"{info.device} ({info.description})"
+                if info.description
+                else info.device
+            )
             self.port_combo.addItem(text, info.device)
         index = self.port_combo.findData(current)
         if index >= 0:
@@ -325,10 +377,15 @@ class ConnectionSettingsWidget(QGroupBox):
             if descriptor.capabilities.supports(protocol):
                 identity = descriptor.identity
                 grouped[(identity.backend_id, identity.stable_id)].append(descriptor)
+
         pending_key = None
         if self._pending_identity is not None:
-            pending_key = (self._pending_identity.backend_id, self._pending_identity.stable_id)
+            pending_key = (
+                self._pending_identity.backend_id,
+                self._pending_identity.stable_id,
+            )
         previous = pending_key or self.adapter_combo.currentData()
+
         self.adapter_combo.blockSignals(True)
         self.adapter_combo.clear()
         for key, items in grouped.items():
@@ -357,7 +414,10 @@ class ConnectionSettingsWidget(QGroupBox):
                 protocol = TransactionProtocol(self.current_protocol())
                 if not descriptor.capabilities.supports(protocol):
                     continue
-                self.channel_combo.addItem(identity.channel_id or "Default", identity)
+                self.channel_combo.addItem(
+                    identity.channel_id or "Default",
+                    identity,
+                )
         self.channel_combo.blockSignals(False)
         self._restore_pending_channel()
         self._apply_selected_capabilities()
@@ -383,18 +443,33 @@ class ConnectionSettingsWidget(QGroupBox):
         protocol = TransactionProtocol(self.current_protocol())
         if protocol is TransactionProtocol.SPI and descriptor.capabilities.spi is not None:
             caps = descriptor.capabilities.spi
-            self._replace_combo_values(self.spi_controls_ui["mode_combo"], sorted(caps.modes))
-            self._replace_combo_values(self.spi_controls_ui["cs_combo"], range(caps.chip_select_count))
-            self._replace_combo_values(self.spi_controls_ui["bit_order_combo"], [v.upper() for v in sorted(caps.bit_orders)])
+            self._replace_combo_values(
+                self.spi_controls_ui["mode_combo"],
+                sorted(caps.modes),
+            )
+            self._replace_combo_values(
+                self.spi_controls_ui["cs_combo"],
+                range(caps.chip_select_count),
+            )
+            self._replace_combo_values(
+                self.spi_controls_ui["bit_order_combo"],
+                [value.upper() for value in sorted(caps.bit_orders)],
+            )
             self.spi_controls_ui["duplex_combo"].setEnabled(caps.full_duplex)
-        elif protocol is TransactionProtocol.I2C and descriptor.capabilities.i2c is not None:
+        elif (
+            protocol is TransactionProtocol.I2C
+            and descriptor.capabilities.i2c is not None
+        ):
             caps = descriptor.capabilities.i2c
             widths = []
             if caps.seven_bit_address:
                 widths.append(7)
             if caps.ten_bit_address:
                 widths.append(10)
-            self._replace_combo_values(self.i2c_controls_ui["address_bits_combo"], widths)
+            self._replace_combo_values(
+                self.i2c_controls_ui["address_bits_combo"],
+                widths,
+            )
             self.i2c_controls_ui["stretch_chk"].setEnabled(caps.clock_stretching)
             if not caps.clock_stretching:
                 self.i2c_controls_ui["stretch_chk"].setChecked(False)
@@ -414,12 +489,17 @@ class ConnectionSettingsWidget(QGroupBox):
         if self.current_protocol() == ConnectionProtocol.SERIAL:
             data = self.port_combo.currentData()
             return str(data) if data else self.port_combo.currentText()
+
         identity = self.channel_combo.currentData()
         if isinstance(identity, AdapterIdentity):
             suffix = f"[{identity.channel_id}]" if identity.channel_id else ""
             return f"{identity.stable_id}{suffix}"
         if self._pending_identity is not None:
-            suffix = f"[{self._pending_identity.channel_id}]" if self._pending_identity.channel_id else ""
+            suffix = (
+                f"[{self._pending_identity.channel_id}]"
+                if self._pending_identity.channel_id
+                else ""
+            )
             return f"{self._pending_identity.stable_id}{suffix}"
         return ""
 
@@ -429,39 +509,64 @@ class ConnectionSettingsWidget(QGroupBox):
     def get_current_config(self) -> PortConfig | TransactionConnectionConfig:
         protocol = self.current_protocol()
         if protocol == ConnectionProtocol.SERIAL:
-            config = PortConfig(port=self.get_port_name(), protocol=ConnectionProtocol.SERIAL)
-            config.baudrate = int(self.serial_controls_ui["baud_combo"].currentText())
-            config.bytesize = int(self.serial_controls_ui["data_combo"].currentText())
+            config = PortConfig(
+                port=self.get_port_name(),
+                protocol=ConnectionProtocol.SERIAL,
+            )
+            config.baudrate = int(
+                self.serial_controls_ui["baud_combo"].currentText()
+            )
+            config.bytesize = int(
+                self.serial_controls_ui["data_combo"].currentText()
+            )
             config.parity = self.serial_controls_ui["parity_combo"].currentText()
-            config.stopbits = float(self.serial_controls_ui["stop_combo"].currentText())
+            config.stopbits = float(
+                self.serial_controls_ui["stop_combo"].currentText()
+            )
             config.flowctrl = self.serial_controls_ui["flow_combo"].currentText()
             return config
+
         identity = self.channel_combo.currentData()
         if not isinstance(identity, AdapterIdentity):
             raise ValueError("No available transaction adapter/channel selected")
         session_name = self.get_connection_display_name()
+
         if protocol == TransactionProtocol.SPI.value:
             return TransactionConnectionConfig(
                 name=session_name,
                 protocol=TransactionProtocol.SPI,
                 adapter=identity,
                 spi=SpiConfig(
-                    frequency_hz=int(self.spi_controls_ui["speed_combo"].currentText()),
+                    frequency_hz=int(
+                        self.spi_controls_ui["speed_combo"].currentText()
+                    ),
                     mode=int(self.spi_controls_ui["mode_combo"].currentText()),
-                    chip_select=int(self.spi_controls_ui["cs_combo"].currentText()),
-                    bit_order=self.spi_controls_ui["bit_order_combo"].currentText().lower(),
-                    full_duplex=self.spi_controls_ui["duplex_combo"].currentText() == "Full",
+                    chip_select=int(
+                        self.spi_controls_ui["cs_combo"].currentText()
+                    ),
+                    bit_order=self.spi_controls_ui[
+                        "bit_order_combo"
+                    ].currentText().lower(),
+                    full_duplex=(
+                        self.spi_controls_ui["duplex_combo"].currentText()
+                        == "Full"
+                    ),
                 ),
             )
+
         address = int(self.i2c_controls_ui["address_edit"].text().strip(), 0)
         return TransactionConnectionConfig(
             name=session_name,
             protocol=TransactionProtocol.I2C,
             adapter=identity,
             i2c=I2cConfig(
-                frequency_hz=int(self.i2c_controls_ui["speed_combo"].currentText()),
+                frequency_hz=int(
+                    self.i2c_controls_ui["speed_combo"].currentText()
+                ),
                 address=address,
-                address_bits=int(self.i2c_controls_ui["address_bits_combo"].currentText()),
+                address_bits=int(
+                    self.i2c_controls_ui["address_bits_combo"].currentText()
+                ),
                 clock_stretching=self.i2c_controls_ui["stretch_chk"].isChecked(),
             ),
         )
@@ -498,7 +603,8 @@ class ConnectionSettingsWidget(QGroupBox):
         self.port_connection_changed.emit(is_connected)
 
     def set_connected(self, connected: bool) -> None:
-        self.set_connection_state(PortState.CONNECTED if connected else PortState.DISCONNECTED)
+        state = PortState.CONNECTED if connected else PortState.DISCONNECTED
+        self.set_connection_state(state)
 
     def is_connected(self) -> bool:
         return self.connect_btn.property("state") == PortState.CONNECTED.value
@@ -510,12 +616,22 @@ class ConnectionSettingsWidget(QGroupBox):
         identity = self.channel_combo.currentData()
         if not isinstance(identity, AdapterIdentity):
             identity = self._pending_identity
+
         transaction_identity = None
         if isinstance(identity, AdapterIdentity):
-            transaction_identity = {"backend_id": identity.backend_id, "stable_id": identity.stable_id, "channel_id": identity.channel_id}
+            transaction_identity = {
+                "backend_id": identity.backend_id,
+                "stable_id": identity.stable_id,
+                "channel_id": identity.channel_id,
+            }
+
         return {
             "protocol": self.current_protocol(),
-            "port": self.get_port_name() if self.current_protocol() == ConnectionProtocol.SERIAL else "",
+            "port": (
+                self.get_port_name()
+                if self.current_protocol() == ConnectionProtocol.SERIAL
+                else ""
+            ),
             "serial": {
                 "baudrate": self.serial_controls_ui["baud_combo"].currentText(),
                 "bytesize": self.serial_controls_ui["data_combo"].currentText(),
@@ -527,14 +643,22 @@ class ConnectionSettingsWidget(QGroupBox):
                 "speed": self.spi_controls_ui["speed_combo"].currentText(),
                 "mode": self.spi_controls_ui["mode_combo"].currentText(),
                 "chip_select": self.spi_controls_ui["cs_combo"].currentText(),
-                "bit_order": self.spi_controls_ui["bit_order_combo"].currentText().lower(),
-                "full_duplex": self.spi_controls_ui["duplex_combo"].currentText() == "Full",
+                "bit_order": self.spi_controls_ui[
+                    "bit_order_combo"
+                ].currentText().lower(),
+                "full_duplex": (
+                    self.spi_controls_ui["duplex_combo"].currentText() == "Full"
+                ),
             },
             "i2c": {
                 "speed": self.i2c_controls_ui["speed_combo"].currentText(),
                 "address": self.i2c_controls_ui["address_edit"].text(),
-                "address_bits": self.i2c_controls_ui["address_bits_combo"].currentText(),
-                "clock_stretching": self.i2c_controls_ui["stretch_chk"].isChecked(),
+                "address_bits": self.i2c_controls_ui[
+                    "address_bits_combo"
+                ].currentText(),
+                "clock_stretching": self.i2c_controls_ui[
+                    "stretch_chk"
+                ].isChecked(),
             },
             "transaction_identity": transaction_identity,
         }
@@ -542,11 +666,17 @@ class ConnectionSettingsWidget(QGroupBox):
     def apply_state(self, state: dict) -> None:
         if not state:
             return
+
         protocol = state.get("protocol", DEFAULT_PORT_PROTOCOL)
-        valid_protocols = {ConnectionProtocol.SERIAL, TransactionProtocol.SPI.value, TransactionProtocol.I2C.value}
+        valid_protocols = {
+            ConnectionProtocol.SERIAL,
+            TransactionProtocol.SPI.value,
+            TransactionProtocol.I2C.value,
+        }
         if protocol not in valid_protocols:
             protocol = DEFAULT_PORT_PROTOCOL
         self.protocol_combo.setCurrentText(protocol)
+
         port = state.get("port", "")
         if port:
             index = self.port_combo.findData(port)
@@ -554,23 +684,55 @@ class ConnectionSettingsWidget(QGroupBox):
                 self.port_combo.addItem(port, port)
                 index = self.port_combo.count() - 1
             self.port_combo.setCurrentIndex(index)
+
         serial = state.get("serial", {})
-        self.serial_controls_ui["baud_combo"].setCurrentText(str(serial.get("baudrate", DEFAULT_BAUDRATE)))
-        self.serial_controls_ui["data_combo"].setCurrentText(str(serial.get("bytesize", DEFAULT_PORT_BYTESIZE)))
-        self.serial_controls_ui["parity_combo"].setCurrentText(serial.get("parity", SerialParity.NONE.value))
-        self.serial_controls_ui["stop_combo"].setCurrentText(str(serial.get("stopbits", SerialStopBits.ONE.value)))
-        self.serial_controls_ui["flow_combo"].setCurrentText(serial.get("flowctrl", SerialFlowControl.NONE.value))
+        self.serial_controls_ui["baud_combo"].setCurrentText(
+            str(serial.get("baudrate", DEFAULT_BAUDRATE))
+        )
+        self.serial_controls_ui["data_combo"].setCurrentText(
+            str(serial.get("bytesize", DEFAULT_PORT_BYTESIZE))
+        )
+        self.serial_controls_ui["parity_combo"].setCurrentText(
+            serial.get("parity", SerialParity.NONE.value)
+        )
+        self.serial_controls_ui["stop_combo"].setCurrentText(
+            str(serial.get("stopbits", SerialStopBits.ONE.value))
+        )
+        self.serial_controls_ui["flow_combo"].setCurrentText(
+            serial.get("flowctrl", SerialFlowControl.NONE.value)
+        )
+
         spi = state.get("spi", {})
-        self.spi_controls_ui["speed_combo"].setCurrentText(str(spi.get("speed", DEFAULT_SPI_SPEED)))
-        self.spi_controls_ui["mode_combo"].setCurrentText(str(spi.get("mode", DEFAULT_SPI_MODE)))
-        self.spi_controls_ui["cs_combo"].setCurrentText(str(spi.get("chip_select", 0)))
-        self.spi_controls_ui["bit_order_combo"].setCurrentText(str(spi.get("bit_order", "msb")).upper())
-        self.spi_controls_ui["duplex_combo"].setCurrentText("Full" if spi.get("full_duplex", True) else "Half")
+        self.spi_controls_ui["speed_combo"].setCurrentText(
+            str(spi.get("speed", DEFAULT_SPI_SPEED))
+        )
+        self.spi_controls_ui["mode_combo"].setCurrentText(
+            str(spi.get("mode", DEFAULT_SPI_MODE))
+        )
+        self.spi_controls_ui["cs_combo"].setCurrentText(
+            str(spi.get("chip_select", 0))
+        )
+        self.spi_controls_ui["bit_order_combo"].setCurrentText(
+            str(spi.get("bit_order", "msb")).upper()
+        )
+        self.spi_controls_ui["duplex_combo"].setCurrentText(
+            "Full" if spi.get("full_duplex", True) else "Half"
+        )
+
         i2c = state.get("i2c", {})
-        self.i2c_controls_ui["speed_combo"].setCurrentText(str(i2c.get("speed", 100_000)))
-        self.i2c_controls_ui["address_edit"].setText(str(i2c.get("address", "0x50")))
-        self.i2c_controls_ui["address_bits_combo"].setCurrentText(str(i2c.get("address_bits", 7)))
-        self.i2c_controls_ui["stretch_chk"].setChecked(bool(i2c.get("clock_stretching", False)))
+        self.i2c_controls_ui["speed_combo"].setCurrentText(
+            str(i2c.get("speed", 100_000))
+        )
+        self.i2c_controls_ui["address_edit"].setText(
+            str(i2c.get("address", "0x50"))
+        )
+        self.i2c_controls_ui["address_bits_combo"].setCurrentText(
+            str(i2c.get("address_bits", 7))
+        )
+        self.i2c_controls_ui["stretch_chk"].setChecked(
+            bool(i2c.get("clock_stretching", False))
+        )
+
         identity_state = state.get("transaction_identity") or {}
         backend_id = str(identity_state.get("backend_id", "")).strip()
         stable_id = str(identity_state.get("stable_id", "")).strip()
@@ -579,10 +741,14 @@ class ConnectionSettingsWidget(QGroupBox):
             self._pending_identity = AdapterIdentity(
                 backend_id=backend_id,
                 stable_id=stable_id,
-                channel_id=str(channel_id) if channel_id is not None else None,
+                channel_id=(
+                    str(channel_id) if channel_id is not None else None
+                ),
             )
             self._refresh_transaction_choices()
 
     def retranslate_ui(self) -> None:
         self.setTitle(language_manager.get_text("port_grp_settings"))
-        self.connect_btn.setToolTip(language_manager.get_text("port_btn_connect_tooltip"))
+        self.connect_btn.setToolTip(
+            language_manager.get_text("port_btn_connect_tooltip")
+        )
