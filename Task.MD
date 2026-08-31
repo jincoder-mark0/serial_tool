@@ -238,6 +238,19 @@ Tier-1:
   - **유일하게 남은 실질 gate.** 현재 개발 환경에는 PyFtdi가 설치조차 되어 있지 않다
     (그 상태로 전체 테스트가 통과하는 것이 optional backend 격리의 증거이기도 하다)
 
+런타임 점검(2026-09-01, 실패·경합 경로를 실제로 돌림):
+
+- 고침 — 세션 종료 시 **큐에 남은 transaction이 결과 신호 없이 사라졌다**.
+  request ID 4건 발급 후 close/shutdown하면 실행 중 1건만 `transaction_failed`를
+  받고 나머지는 2초를 기다려도 무응답이었다. 결과를 기다리는 호출자는 영원히
+  기다리고 사용자에게 오류 표시도 없다 — S-080이 매크로에서 없앤 것과 같은 침묵.
+  `run()` finally에서 큐를 비우며 통지하도록 고쳤다.
+  회귀: `test_queued_transactions_are_answered_when_session_closes`,
+  `test_pending_failures_are_reported_before_session_closed`
+- 확인했고 정상이던 것 — 열지 않은/닫힌 세션 `execute()`는 None 반환,
+  진행 중 shutdown/close는 협조적 취소로 즉시 정리, `controller.close()` 예외는
+  격리되어 같은 이름 재오픈 가능, discovery+session 동시 종료 후 스레드 누수 없음
+
 Architecture requirements:
 
 - PyFtdi import는 backend implementation 내부에만 존재
@@ -314,6 +327,11 @@ P4는 개별 feature hardware acceptance를 대체하지 않는다.
 - FT2232H I2C clock stretching hardware wiring 검증 필요
 - PyFtdi I2C medium/high-speed write는 초기 성능 목표에서 제외
 - CH347/MCP2210 production backend는 아직 구현 전
+- **보드가 인용한 PR 번호(#2·#3·#4·#7·#8·#10·#11·#15·#16·#17)가 현재 origin
+  (`jincoder-mark0/serial_tool`)의 PR과 대응하지 않는다.** 그 저장소의 merged PR은
+  2025-12자 #1~#17이고 head branch 이름도 전혀 다르다. 근거 추적 시 PR 번호 대신
+  커밋 해시를 쓸 것. 원격 브랜치 23개의 병합 여부도 이 때문에 확인이 안 되어
+  정리를 보류했다
 
 ---
 
