@@ -79,7 +79,6 @@ class ApplicationBootstrapper:
         self._settings_manager = settings_manager
 
     def build(self) -> ApplicationComponents:
-        """View restore → Model/Service → Presenter state → Coordinator → MainPresenter 순으로 조립합니다."""
         lifecycle_manager = AppLifecycleManager(self._view, self._settings_manager)
         lifecycle_manager.initialize_view()
 
@@ -96,9 +95,6 @@ class ApplicationBootstrapper:
             self._settings_manager,
         )
 
-        # SPI/I2C는 Serial stream worker와 분리된 transaction runtime을 사용합니다.
-        # PyFtdi package/libusb가 없어도 provider.is_available()만 False가 되며
-        # application startup과 Serial 기능은 계속 동작합니다.
         transaction_registry = AdapterBackendRegistry([PyFtdiAdapterProvider()])
         transaction_manager = TransactionManager(transaction_registry)
 
@@ -123,6 +119,7 @@ class ApplicationBootstrapper:
             connection_controller,
             self._settings_manager,
             port_scan_manager,
+            transaction_manager,
         )
         macro_presenter = MacroPresenter(
             self._view.macro_view,
@@ -144,7 +141,6 @@ class ApplicationBootstrapper:
             command_transmission_service,
         )
 
-        # 저장된 ManualControl 상태를 먼저 적용한 뒤 enable policy를 계산합니다.
         manual_control_presenter.apply_state(
             lifecycle_manager.create_manual_control_state()
         )
@@ -163,7 +159,6 @@ class ApplicationBootstrapper:
             macro_presenter,
         )
 
-        # 실행 중 변하지 않는 signal topology는 composition root에서 한 번만 배선합니다.
         connection_controller.data_received.connect(data_handler.on_fast_data_received)
         connection_controller.data_sent.connect(data_handler.on_data_sent)
         connection_controller.data_received.connect(macro_runner.on_data_received)
@@ -224,7 +219,6 @@ class ApplicationBootstrapper:
             ),
         )
 
-        # 초기 scan은 오류 subscriber까지 완전히 연결된 뒤 시작합니다.
         port_presenter.scan_ports()
         status_coordinator.start()
         lifecycle_manager.log_initialized()
