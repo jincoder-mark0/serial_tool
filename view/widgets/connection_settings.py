@@ -81,9 +81,6 @@ class ConnectionSettingsWidget(QGroupBox):
     endpoint_refresh_requested = pyqtSignal(str)
     port_connection_changed = pyqtSignal(bool)
     endpoint_changed = pyqtSignal()
-
-    # Compatibility surface for older PortPanel tests/callers. The new widget
-    # uses endpoint_refresh_requested as the canonical refresh signal.
     port_scan_requested = pyqtSignal()
 
     def __init__(self, parent: Optional[QWidget] = None) -> None:
@@ -109,9 +106,6 @@ class ConnectionSettingsWidget(QGroupBox):
         self.set_connection_state(PortState.DISCONNECTED)
         language_manager.language_changed.connect(self.retranslate_ui)
 
-    # ------------------------------------------------------------------
-    # UI construction
-    # ------------------------------------------------------------------
     def _init_ui(self) -> None:
         layout = QVBoxLayout(self)
         layout.setContentsMargins(
@@ -305,9 +299,6 @@ class ConnectionSettingsWidget(QGroupBox):
         row.addStretch()
         return widget
 
-    # ------------------------------------------------------------------
-    # Endpoint discovery / selection
-    # ------------------------------------------------------------------
     def current_protocol(self) -> str:
         return self.protocol_combo.currentText()
 
@@ -392,7 +383,6 @@ class ConnectionSettingsWidget(QGroupBox):
         if adapter_index >= 0:
             self.adapter_combo.setCurrentIndex(adapter_index)
         self.adapter_combo.blockSignals(False)
-
         self._on_adapter_changed()
 
     def _on_adapter_changed(self) -> None:
@@ -420,7 +410,6 @@ class ConnectionSettingsWidget(QGroupBox):
 
     @staticmethod
     def _combo_index_for_data(combo: QComboBox, expected) -> int:
-        """Find Python object data with Python equality, not QVariant matching."""
         if expected is None:
             return -1
         for index in range(combo.count()):
@@ -432,11 +421,9 @@ class ConnectionSettingsWidget(QGroupBox):
         identity = self._pending_identity
         if identity is None:
             return
-
         index = self._combo_index_for_data(self.channel_combo, identity)
         if index < 0:
             return
-
         self.channel_combo.setCurrentIndex(index)
         self._pending_identity = None
 
@@ -493,9 +480,6 @@ class ConnectionSettingsWidget(QGroupBox):
             combo.setCurrentIndex(index)
         combo.blockSignals(False)
 
-    # ------------------------------------------------------------------
-    # DTO facade
-    # ------------------------------------------------------------------
     def get_port_name(self) -> str:
         if self.current_protocol() == ConnectionProtocol.SERIAL:
             data = self.port_combo.currentData()
@@ -547,12 +531,8 @@ class ConnectionSettingsWidget(QGroupBox):
                 frequency_hz=int(self.spi_controls_ui["speed_combo"].currentText()),
                 mode=int(self.spi_controls_ui["mode_combo"].currentText()),
                 chip_select=int(self.spi_controls_ui["cs_combo"].currentText()),
-                bit_order=(
-                    self.spi_controls_ui["bit_order_combo"].currentText().lower()
-                ),
-                full_duplex=(
-                    self.spi_controls_ui["duplex_combo"].currentText() == "Full"
-                ),
+                bit_order=self.spi_controls_ui["bit_order_combo"].currentText().lower(),
+                full_duplex=self.spi_controls_ui["duplex_combo"].currentText() == "Full",
             ),
         )
 
@@ -565,21 +545,15 @@ class ConnectionSettingsWidget(QGroupBox):
             i2c=I2cConfig(
                 frequency_hz=int(self.i2c_controls_ui["speed_combo"].currentText()),
                 address=address,
-                address_bits=int(
-                    self.i2c_controls_ui["address_bits_combo"].currentText()
-                ),
+                address_bits=int(self.i2c_controls_ui["address_bits_combo"].currentText()),
                 clock_stretching=self.i2c_controls_ui["stretch_chk"].isChecked(),
             ),
         )
 
-    # ------------------------------------------------------------------
-    # Connection state
-    # ------------------------------------------------------------------
     def _on_connect_clicked(self) -> None:
         if not self.connect_btn.isChecked():
             self.disconnect_requested.emit()
             return
-
         try:
             config = self.get_current_config()
         except Exception as exc:
@@ -587,7 +561,6 @@ class ConnectionSettingsWidget(QGroupBox):
             self.connect_btn.setChecked(False)
             self.set_connection_state(PortState.ERROR)
             return
-
         self.connect_requested.emit(config)
         self.connect_btn.setText(language_manager.get_text("port_btn_disconnect"))
 
@@ -620,9 +593,6 @@ class ConnectionSettingsWidget(QGroupBox):
     def toggle_connection(self) -> None:
         self.connect_btn.click()
 
-    # ------------------------------------------------------------------
-    # Persistence
-    # ------------------------------------------------------------------
     def get_state(self) -> dict:
         identity = self.channel_combo.currentData()
         if not isinstance(identity, AdapterIdentity):
@@ -638,11 +608,7 @@ class ConnectionSettingsWidget(QGroupBox):
 
         return {
             "protocol": self.current_protocol(),
-            "port": (
-                self.get_port_name()
-                if self.current_protocol() == ConnectionProtocol.SERIAL
-                else ""
-            ),
+            "port": self.get_port_name() if self.current_protocol() == ConnectionProtocol.SERIAL else "",
             "serial": self._serial_state(),
             "spi": self._spi_state(),
             "i2c": self._i2c_state(),
@@ -663,21 +629,15 @@ class ConnectionSettingsWidget(QGroupBox):
             "speed": self.spi_controls_ui["speed_combo"].currentText(),
             "mode": self.spi_controls_ui["mode_combo"].currentText(),
             "chip_select": self.spi_controls_ui["cs_combo"].currentText(),
-            "bit_order": (
-                self.spi_controls_ui["bit_order_combo"].currentText().lower()
-            ),
-            "full_duplex": (
-                self.spi_controls_ui["duplex_combo"].currentText() == "Full"
-            ),
+            "bit_order": self.spi_controls_ui["bit_order_combo"].currentText().lower(),
+            "full_duplex": self.spi_controls_ui["duplex_combo"].currentText() == "Full",
         }
 
     def _i2c_state(self) -> dict:
         return {
             "speed": self.i2c_controls_ui["speed_combo"].currentText(),
             "address": self.i2c_controls_ui["address_edit"].text(),
-            "address_bits": (
-                self.i2c_controls_ui["address_bits_combo"].currentText()
-            ),
+            "address_bits": self.i2c_controls_ui["address_bits_combo"].currentText(),
             "clock_stretching": self.i2c_controls_ui["stretch_chk"].isChecked(),
         }
 
@@ -734,9 +694,16 @@ class ConnectionSettingsWidget(QGroupBox):
         self.spi_controls_ui["mode_combo"].setCurrentText(
             str(spi.get("mode", DEFAULT_SPI_MODE))
         )
-        self.spi_controls_ui["cs_combo"].setCurrentText(
-            str(spi.get("chip_select", 0))
-        )
+
+        # Discovery 전에 CS capability가 아직 없더라도 persisted selection을 잃지 않는다.
+        # 이후 _apply_selected_capabilities()가 실제 지원 CS 목록으로 교체할 때 현재 text가
+        # 유효하면 그대로 재선택되고, 지원하지 않는 값이면 capability 기본값으로 정규화된다.
+        saved_cs = str(spi.get("chip_select", 0))
+        cs_combo = self.spi_controls_ui["cs_combo"]
+        if cs_combo.findText(saved_cs) < 0:
+            cs_combo.addItem(saved_cs)
+        cs_combo.setCurrentText(saved_cs)
+
         self.spi_controls_ui["bit_order_combo"].setCurrentText(
             str(spi.get("bit_order", "msb")).upper()
         )
