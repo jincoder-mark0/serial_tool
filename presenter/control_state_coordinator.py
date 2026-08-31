@@ -1,7 +1,8 @@
 """Manual/Macro control enable policy coordinator.
 
-Manual Control follows the current unified Port tab, including SPI/I2C sessions.
-Macro and Serial broadcast keep their established stream-oriented policy.
+Manual Control과 Macro/명령 리스트는 현재 unified Port tab의 Serial/SPI/I2C 연결을 모두
+사용할 수 있습니다. Broadcast도 Serial connection 또는 transaction session이 하나라도
+활성화되어 있으면 protocol-aware router를 통해 실행할 수 있습니다.
 """
 from PyQt5.QtCore import QObject
 
@@ -75,40 +76,35 @@ class ControlStateCoordinator(QObject):
         }
 
     def _legacy_current_connected(self) -> bool:
-        """Older PortView/test doubles use only the established Serial facade."""
         try:
             return bool(self._port_view.is_current_port_connected())
         except AttributeError:
             return False
 
     def refresh(self) -> None:
-        """Recompute Manual/Macro enable state from the current tab and runtimes."""
+        """현재 target 또는 broadcast target 존재 여부로 Manual/Macro 상태를 계산합니다."""
         current_panel = self._current_panel()
-        current_protocol = ConnectionProtocol.SERIAL
-
         if current_panel is not None:
             protocol_getter = getattr(current_panel, "current_protocol", None)
             raw_protocol = protocol_getter() if protocol_getter is not None else None
             if self._is_known_protocol(raw_protocol):
-                current_protocol = raw_protocol
                 current_connected = bool(current_panel.is_connected())
             else:
-                # MagicMock/legacy facade처럼 새 protocol contract가 없는 객체는
-                # 기존 Serial 연결 판정 API를 사용해 이전 동작을 보존합니다.
                 current_connected = self._legacy_current_connected()
         else:
             current_connected = self._legacy_current_connected()
 
         has_serial_connection = self._connection_controller.has_active_connection
-        manual_enabled = current_connected or (
-            self._manual_presenter.is_broadcast_enabled() and has_serial_connection
+        has_transaction_session = bool(
+            self._transaction_manager and self._transaction_manager.has_active_session
         )
+        has_any_target = has_serial_connection or has_transaction_session
 
-        current_serial_connected = (
-            current_connected and current_protocol == ConnectionProtocol.SERIAL
+        manual_enabled = current_connected or (
+            self._manual_presenter.is_broadcast_enabled() and has_any_target
         )
-        macro_enabled = current_serial_connected or (
-            self._macro_presenter.is_broadcast_enabled() and has_serial_connection
+        macro_enabled = current_connected or (
+            self._macro_presenter.is_broadcast_enabled() and has_any_target
         )
 
         self._manual_presenter.set_enabled(manual_enabled)
