@@ -1,20 +1,21 @@
-"""
-Manual/Macro 제어 활성화 정책 조정자.
+"""Manual/Macro control enable policy coordinator.
 
-현재 탭 연결 상태, 전체 연결 존재 여부, Manual/Macro broadcast 모드를 조합해
-두 제어 영역의 enabled 상태를 계산합니다. View는 정책을 소유하지 않고 facade만
-제공하며 MainPresenter도 이 상태 계산을 알지 않습니다.
+Manual Control follows the current unified Port tab, including SPI/I2C sessions.
+Macro and broadcast remain Serial-only because their execution semantics are
+stream-oriented and are not part of the transaction runtime contract.
 """
 from PyQt5.QtCore import QObject
 
+from common.enums import ConnectionProtocol
 from model.connection_controller import ConnectionController
+from model.transaction_manager import TransactionManager
 from presenter.macro_presenter import MacroPresenter
 from presenter.manual_control_presenter import ManualControlPresenter
 from view.sections.main_left_section import MainLeftSection
 
 
 class ControlStateCoordinator(QObject):
-    """연결/탭/broadcast 변화에 따라 Manual/Macro control 상태를 동기화합니다."""
+    """Synchronize control availability across Serial and transaction runtimes."""
 
     def __init__(
         self,
@@ -22,37 +23,84 @@ class ControlStateCoordinator(QObject):
         connection_controller: ConnectionController,
         manual_presenter: ManualControlPresenter,
         macro_presenter: MacroPresenter,
+        transaction_manager: TransactionManager | None = None,
     ) -> None:
         super().__init__()
         self._port_view = port_view
         self._connection_controller = connection_controller
         self._manual_presenter = manual_presenter
         self._macro_presenter = macro_presenter
+        self._transaction_manager = transaction_manager
 
-        self._port_view.current_tab_changed.connect(self.refresh)
+        tab_changed = getattr(self._port_view, "current_tab_changed", None)
+        if tab_changed is not None:
+            tab_changed.connect(self.refresh)
         self._connection_controller.connection_opened.connect(self._on_connection_changed)
         self._connection_controller.connection_closed.connect(self._on_connection_changed)
         self._manual_presenter.broadcast_changed.connect(self._on_broadcast_changed)
+        protocol_changed = getattr(self._manual_presenter, "protocol_changed", None)
+        if protocol_changed is not None:
+            protocol_changed.connect(self._on_protocol_changed)
         self._macro_presenter.broadcast_changed.connect(self._on_broadcast_changed)
+
+        if self._transaction_manager is not None:
+            self._transaction_manager.session_opened.connect(self._on_transaction_changed)
+            self._transaction_manager.session_closed.connect(self._on_transaction_changed)
+            self._transaction_manager.session_failed.connect(self._on_transaction_changed)
 
         self.refresh()
 
     def _on_connection_changed(self, _event) -> None:
         self.refresh()
 
+    def _on_transaction_changed(self, *_args) -> None:
+        self.refresh()
+
     def _on_broadcast_changed(self, _enabled: bool) -> None:
         self.refresh()
 
-    def refresh(self) -> None:
-        """현재 연결/broadcast 상태에서 각 control의 enabled 값을 다시 계산합니다."""
-        current_connected = self._port_view.is_current_port_connected()
-        has_any_connection = self._connection_controller.has_active_connection
+    def _on_protocol_changed(self, _protocol: str) -> None:
+        self.refresh()
 
+    def _current_panel(self):
+        getter = getattr(self._port_view, "get_current_port_panel", None)
+        return getter() if getter is not None else None
+
+    def refresh(self) -> None:
+        """Recompute Manual/Macro enable state from the current tab and runtimes."""
+        current_panel = self._current_panel()
+
+        if current_panel is not None:
+            current_connected = bool(current_panel.is_connected())
+            protocol_getter = getattr(current_panel, "current_protocol", None)
+            current_protocol = (
+                protocol_getter()
+                if protocol_getter is not None
+                else ConnectionProtocol.SERIAL
+            )
+        else:
+            # Preserve the legacy policy for older PortView test doubles that only
+            # expose is_current_port_connected().
+            connected_getter = getattr(
+                self._port_view,
+                "is_current_port_connected",
+                None,
+            )
+            current_connected = bool(
+                connected_getter() if connected_getter is not None else False
+            )
+            current_protocol = ConnectionProtocol.SERIAL
+
+        has_serial_connection = self._connection_controller.has_active_connection
         manual_enabled = current_connected or (
-            self._manual_presenter.is_broadcast_enabled() and has_any_connection
+            self._manual_presenter.is_broadcast_enabled() and has_serial_connection
         )
-        macro_enabled = current_connected or (
-            self._macro_presenter.is_broadcast_enabled() and has_any_connection
+
+        current_serial_connected = (
+            current_connected and current_protocol == ConnectionProtocol.SERIAL
+        )
+        macro_enabled = current_serial_connected or (
+            self._macro_presenter.is_broadcast_enabled() and has_serial_connection
         )
 
         self._manual_presenter.set_enabled(manual_enabled)

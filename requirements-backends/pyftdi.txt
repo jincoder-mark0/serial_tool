@@ -1,0 +1,3 @@
+# Optional FT232H / FT2232H SPI/I2C backend
+# Install only on hosts that use the PyFtdi backend.
+pyftdi>=0.57,<0.58

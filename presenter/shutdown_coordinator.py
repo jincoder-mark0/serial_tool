@@ -5,7 +5,7 @@
 순서를 관리합니다. S-059의 데이터 보존 순서(connection close -> processEvents -> logger stop)를
 보존합니다.
 """
-from typing import Callable
+from typing import Callable, Optional
 
 from PyQt5.QtCore import QCoreApplication
 
@@ -17,6 +17,7 @@ from model.file_transfer_manager import FileTransferManager
 from model.macro_runner import MacroRunner
 from model.macro_script_manager import MacroScriptManager
 from model.port_scan_manager import PortScanManager
+from model.transaction_manager import TransactionManager
 from presenter.data_handler import DataTrafficHandler
 from presenter.manual_control_presenter import ManualControlPresenter
 from presenter.packet_presenter import PacketPresenter
@@ -42,6 +43,7 @@ class ShutdownCoordinator:
         data_handler: DataTrafficHandler,
         close_system_log: Callable[[], None],
         status_coordinator: StatusCoordinator,
+        transaction_manager: Optional[TransactionManager] = None,
     ) -> None:
         self._view = view
         self._settings_manager = settings_manager
@@ -55,6 +57,7 @@ class ShutdownCoordinator:
         self._data_handler = data_handler
         self._close_system_log = close_system_log
         self._status_coordinator = status_coordinator
+        self._transaction_manager = transaction_manager
 
     def shutdown(self) -> None:
         """백그라운드 작업, 상태 저장, 연결 및 logger를 안전한 순서로 종료합니다."""
@@ -65,8 +68,12 @@ class ShutdownCoordinator:
             self._macro_runner.stop()
             self._macro_runner.wait(1000)
 
-        # ConnectionController를 닫기 전에 producer 성격의 background 작업부터 정리합니다.
+        # ConnectionController 및 USB adapter resource를 닫기 전에 producer 성격의
+        # background 작업부터 정리합니다. SPI/I2C session도 별도 lifecycle owner가
+        # 있으므로 Serial worker와 독립적으로 여기서 명시적으로 종료합니다.
         self._file_transfer_manager.shutdown()
+        if self._transaction_manager is not None:
+            self._transaction_manager.shutdown()
         self._macro_script_manager.stop()
         self._port_scan_manager.stop()
         self._data_handler.stop()

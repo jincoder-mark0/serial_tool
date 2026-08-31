@@ -8,6 +8,8 @@ View 상태 복원부터 MainPresenter 생성까지 전체 runtime object graph�
 from dataclasses import dataclass
 
 from core.settings_manager import SettingsManager
+from core.transport.transaction.backends.pyftdi_backend import PyFtdiAdapterProvider
+from core.transport.transaction.registry import AdapterBackendRegistry
 from model.command_transmission_service import CommandTransmissionService
 from model.connection_controller import ConnectionController
 from model.connection_session_factory import ConnectionSessionFactory
@@ -19,6 +21,7 @@ from model.packet_export_manager import PacketExportManager
 from model.packet_parser_manager import PacketParserManager
 from model.port_scan_manager import PortScanManager
 from model.traffic_monitor import TrafficMonitor
+from model.transaction_manager import TransactionManager
 from presenter.control_state_coordinator import ControlStateCoordinator
 from presenter.data_handler import DataTrafficHandler
 from presenter.file_presenter import FilePresenter
@@ -48,6 +51,7 @@ class ApplicationComponents:
     connection_session_factory: ConnectionSessionFactory
     connection_controller: ConnectionController
     command_transmission_service: CommandTransmissionService
+    transaction_manager: TransactionManager
     macro_runner: MacroRunner
     traffic_monitor: TrafficMonitor
     data_handler: DataTrafficHandler
@@ -75,7 +79,6 @@ class ApplicationBootstrapper:
         self._settings_manager = settings_manager
 
     def build(self) -> ApplicationComponents:
-        """View restore → Model/Service → Presenter state → Coordinator → MainPresenter 순으로 조립합니다."""
         lifecycle_manager = AppLifecycleManager(self._view, self._settings_manager)
         lifecycle_manager.initialize_view()
 
@@ -91,6 +94,10 @@ class ApplicationBootstrapper:
             connection_controller,
             self._settings_manager,
         )
+
+        transaction_registry = AdapterBackendRegistry([PyFtdiAdapterProvider()])
+        transaction_manager = TransactionManager(transaction_registry)
+
         file_transfer_manager = FileTransferManager(connection_controller)
         port_scan_manager = PortScanManager()
         macro_runner = MacroRunner()
@@ -112,6 +119,7 @@ class ApplicationBootstrapper:
             connection_controller,
             self._settings_manager,
             port_scan_manager,
+            transaction_manager,
         )
         macro_presenter = MacroPresenter(
             self._view.macro_view,
@@ -131,9 +139,9 @@ class ApplicationBootstrapper:
             self._view.port_view,
             connection_controller,
             command_transmission_service,
+            transaction_manager,
         )
 
-        # 저장된 ManualControl 상태를 먼저 적용한 뒤 enable policy를 계산합니다.
         manual_control_presenter.apply_state(
             lifecycle_manager.create_manual_control_state()
         )
@@ -150,9 +158,9 @@ class ApplicationBootstrapper:
             connection_controller,
             manual_control_presenter,
             macro_presenter,
+            transaction_manager,
         )
 
-        # 실행 중 변하지 않는 signal topology는 composition root에서 한 번만 배선합니다.
         connection_controller.data_received.connect(data_handler.on_fast_data_received)
         connection_controller.data_sent.connect(data_handler.on_data_sent)
         connection_controller.data_received.connect(macro_runner.on_data_received)
@@ -197,6 +205,7 @@ class ApplicationBootstrapper:
             data_handler=data_handler,
             close_system_log=logging_coordinator.close_system_log,
             status_coordinator=status_coordinator,
+            transaction_manager=transaction_manager,
         )
 
         main_presenter = MainPresenter(
@@ -212,7 +221,6 @@ class ApplicationBootstrapper:
             ),
         )
 
-        # 초기 scan은 오류 subscriber까지 완전히 연결된 뒤 시작합니다.
         port_presenter.scan_ports()
         status_coordinator.start()
         lifecycle_manager.log_initialized()
@@ -226,6 +234,7 @@ class ApplicationBootstrapper:
             connection_session_factory=connection_session_factory,
             connection_controller=connection_controller,
             command_transmission_service=command_transmission_service,
+            transaction_manager=transaction_manager,
             macro_runner=macro_runner,
             traffic_monitor=traffic_monitor,
             data_handler=data_handler,

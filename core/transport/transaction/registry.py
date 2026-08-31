@@ -65,7 +65,6 @@ class AdapterBackendRegistry:
         )
 
     def open(self, identity: AdapterIdentity) -> AdapterHandle:
-        # Resolve first so malformed/stale identity fails deterministically before vendor open.
         self.resolve(identity)
         return self.provider_for(identity.backend_id).open(identity)
 
@@ -80,6 +79,11 @@ class AdapterBackendRegistry:
         if config.mode not in spi.modes:
             raise UnsupportedCapabilityError(
                 f"SPI mode {config.mode} is not supported by {descriptor.display_name}"
+            )
+        if config.bit_order not in spi.bit_orders:
+            raise UnsupportedCapabilityError(
+                f"SPI bit order {config.bit_order} is not supported by "
+                f"{descriptor.display_name}"
             )
         if not spi.min_frequency_hz <= config.frequency_hz <= spi.max_frequency_hz:
             raise ProtocolConfigurationError(
