@@ -25,23 +25,26 @@ def test_tx_rx_fairness_smoke():
     assert result.metrics["stop_ms"] >= 0
 
 
-def test_tx_budget_returns_to_rx_after_each_write(monkeypatch):
-    """0초 budget에서는 한 번의 outer-loop에 TX chunk를 1개만 처리해야 합니다.
+def test_tx_budget_processes_only_one_chunk_when_budget_is_zero(monkeypatch):
+    """0초 budget에서는 한 outer-loop의 TX 처리가 정확히 1 chunk여야 합니다.
 
-    실제 기본값(1 ms)의 wall-clock timing을 assertion으로 고정하지 않고, budget 정책 자체를
-    deterministic하게 검증합니다. RX/TX byte preservation은 benchmark가 함께 확인합니다.
+    benchmark 전체의 마지막 RX 이후 남은 TX drain까지 write streak로 세면 fairness와 무관한
+    구간이 섞입니다. 여기서는 worker의 bounded-TX primitive 자체를 직접 검증합니다.
     """
     monkeypatch.setattr(ConnectionWorker, "_TX_FAIRNESS_BUDGET_S", 0.0)
+    transport = serial_loop_benchmark._TimedDuplexTransport(b"")
+    assert transport.open() is True
+    worker = ConnectionWorker(transport, "TEST_BOUNDED_TX")
 
-    result = serial_loop_benchmark.bench_tx_rx_fairness(
-        rx_bytes=16 * 1024,
-        tx_chunks=8,
-        chunk_size=1024,
-        write_delay_s=0.0001,
-        timeout_s=2.0,
-    )
+    chunk = bytes(1024)
+    for _ in range(8):
+        assert worker.send_data(chunk) is True
 
-    assert result.metrics["max_write_streak"] == 1
+    assert worker.get_write_queue_size() == 8
+    assert worker._process_tx_budget() is True
+    assert worker.get_write_queue_size() == 7
+    assert transport.written_bytes == len(chunk)
+    transport.close()
 
 
 def test_idle_polling_smoke():
