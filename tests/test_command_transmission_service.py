@@ -78,7 +78,7 @@ def test_broadcast_without_target_returns_classified_failure():
     assert controller.broadcast_calls == []
 
 
-def test_presenters_do_not_own_command_processing_or_send_branching():
+def test_presenters_do_not_own_command_processing_or_low_level_send_branching():
     manual_source = inspect.getsource(ManualControlPresenter)
     main_source = inspect.getsource(MainPresenter)
 
@@ -98,7 +98,7 @@ def test_macro_worker_send_handler_does_not_read_view_state():
     assert "port_view" not in source
     assert "get_current_port_name" not in source
     assert "_target_port" in source
-    assert "_transmission_service.send" in source
+    assert "_command_router" in source
 
 
 def test_macro_coordinator_snapshots_target_on_ui_thread_callback():
@@ -106,9 +106,12 @@ def test_macro_coordinator_snapshots_target_on_ui_thread_callback():
 
     assert "_port_view.get_current_port_name()" in source
     assert "_target_port" in source
+    assert "_target" in source
 
 
-def test_manual_presenter_uses_shared_transmission_service():
-    source = inspect.getsource(ManualControlPresenter._process_and_send)
+def test_manual_presenter_uses_protocol_router_and_shared_payload_service():
+    source = inspect.getsource(ManualControlPresenter._send_manual_command)
+    legacy_source = inspect.getsource(ManualControlPresenter._legacy_serial_send)
 
-    assert "transmission_service.send" in source
+    assert "command_router" in source
+    assert "transmission_service.send" in legacy_source
