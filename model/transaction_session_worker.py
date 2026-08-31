@@ -36,7 +36,10 @@ from core.transport.transaction.dto import (
     SpiTransactionRequest,
     TransactionProtocol,
 )
-from core.transport.transaction.errors import TransactionAdapterError
+from core.transport.transaction.errors import (
+    TransactionAdapterError,
+    TransactionCancelledError,
+)
 from core.transport.transaction.registry import AdapterBackendRegistry
 
 
@@ -171,9 +174,48 @@ class TransactionSessionWorker(QThread):
         except Exception as exc:
             self.session_failed.emit(self.session_name, exc)
         finally:
+            # 큐에 남은 request에도 결과를 돌려준 뒤에 세션을 닫는다 (S-084).
+            # 순서가 중요하다 — session_closed보다 먼저 보내야 소비자가
+            # "이 요청은 실패"와 "세션이 끝남"을 구분해 처리할 수 있다.
+            self._fail_pending_transactions()
             self._close_runtime(controller, handle)
             self.session_closed.emit(self.session_name)
             self.worker_terminated.emit(self.session_name)
+
+    def _fail_pending_transactions(self) -> None:
+        """큐에 남은 transaction에 실패를 통지하고 큐를 비웁니다 (S-084).
+
+        Why:
+            `execute()`는 호출자에게 request ID를 돌려준다 — 결과를 신호로 받겠다는
+            약속이다. 그런데 세션이 닫히면 실행 중이던 1건만 `transaction_failed`를
+            받고, **큐에 남아 있던 나머지는 완료도 실패도 없이 사라졌다.**
+            실측: request ID 4건을 발급하고 세션을 닫으면 1번만 응답하고 2·3·4번은
+            2초를 기다려도 아무 신호가 없었다. 그 뒤에 오는 것은 request ID가 없는
+            `session_closed`/`worker_terminated`뿐이라 어느 요청이 버려졌는지 알 수 없다.
+
+            결과를 기다리는 호출자는 영원히 기다리게 되고, 사용자에게는 오류 표시조차
+            뜨지 않는다 — 보내지 못한 명령이 조용히 사라지는 것이다.
+
+        Note:
+            비우는 동안 큐가 다시 늘지 않도록 먼저 신규 request를 차단한다.
+            `stop()`을 거치지 않고 interruption만 걸린 경로에서도 안전해야 한다.
+        """
+        with self._state_lock:
+            self._stop_requested = True
+
+        while True:
+            try:
+                command = self._commands.get_nowait()
+            except Empty:
+                break
+
+            self.transaction_failed.emit(
+                self.session_name,
+                command.request_id,
+                TransactionCancelledError(
+                    "Session closed before the transaction started."
+                ),
+            )
 
     def _open_controller(
         self,

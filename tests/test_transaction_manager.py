@@ -271,3 +271,80 @@ def test_duplicate_session_name_is_rejected_until_close(app):
 
     assert manager.close_session("fixture-spi") is True
     assert _wait_until(lambda: not manager.is_session_active("fixture-spi"))
+
+
+def test_queued_transactions_are_answered_when_session_closes(app):
+    """
+    큐에 남은 transaction도 결과를 받아야 한다 (S-084).
+
+    ## WHY
+    `execute()`는 호출자에게 request ID를 돌려준다 — 결과를 신호로 받겠다는 약속이다.
+    그런데 세션이 닫히면 **실행 중이던 1건만** `transaction_failed`를 받고, 큐에
+    남아 있던 나머지는 완료도 실패도 없이 사라졌다.
+
+    실측: request ID 4건을 발급하고 세션을 닫으면 1번만 응답하고 2·3·4번은 2초를
+    기다려도 아무 신호가 없었다. 그 뒤 오는 것은 request ID가 없는
+    `session_closed`/`worker_terminated`뿐이라 어느 요청이 버려졌는지 알 수 없다.
+
+    결과를 기다리는 호출자는 영원히 기다리고, 사용자에게는 오류 표시조차 뜨지 않는다 —
+    보내지 못한 명령이 조용히 사라진다. `MacroSendResult`(S-080)가 매크로에서 없앤 것과
+    같은 종류의 침묵이다.
+    """
+    spi = _FakeSpiController(block=True)
+    manager = TransactionManager(
+        registry=AdapterBackendRegistry([_FakeProvider(_descriptor(), spi)]),
+    )
+    assert manager.open_session(_spi_config()) is True
+    assert _wait_until(lambda: manager.is_session_active("fixture-spi"))
+
+    answered: list[int] = []
+    manager.transaction_completed.connect(lambda _n, rid, _r: answered.append(rid))
+    manager.transaction_failed.connect(lambda _n, rid, _e: answered.append(rid))
+
+    issued = [
+        manager.execute("fixture-spi", SpiTransactionRequest(tx_data=b"\x01", rx_length=1))
+        for _ in range(4)
+    ]
+    assert all(rid is not None for rid in issued)
+    assert spi.started.wait(1.0)
+
+    manager.close_session("fixture-spi", timeout_ms=1000)
+    _wait_until(lambda: set(issued) <= set(answered), timeout=2.0)
+
+    assert set(issued) <= set(answered), (
+        f"응답 없이 사라진 request ID: {sorted(set(issued) - set(answered))}"
+    )
+    manager.shutdown()
+
+
+def test_pending_failures_are_reported_before_session_closed(app):
+    """
+    개별 실패 통지가 `session_closed`보다 먼저 와야 한다.
+
+    순서가 뒤집히면 소비자는 세션이 끝난 줄 알고 정리를 마친 뒤에 결과를 받는다 —
+    "이 요청은 실패"와 "세션이 끝남"을 구분해 처리할 수 없다.
+    """
+    spi = _FakeSpiController(block=True)
+    manager = TransactionManager(
+        registry=AdapterBackendRegistry([_FakeProvider(_descriptor(), spi)]),
+    )
+    assert manager.open_session(_spi_config()) is True
+    assert _wait_until(lambda: manager.is_session_active("fixture-spi"))
+
+    order: list[str] = []
+    worker = manager._workers["fixture-spi"]
+    worker.transaction_failed.connect(lambda *_: order.append("failed"))
+    worker.session_closed.connect(lambda *_: order.append("closed"))
+
+    for _ in range(3):
+        manager.execute("fixture-spi", SpiTransactionRequest(tx_data=b"\x01", rx_length=1))
+    assert spi.started.wait(1.0)
+
+    manager.close_session("fixture-spi", timeout_ms=1000)
+    _wait_until(lambda: "closed" in order, timeout=2.0)
+
+    assert "closed" in order, f"세션 종료 신호가 오지 않았다: {order}"
+    assert order.index("closed") == len(order) - 1, (
+        f"session_closed 뒤에 개별 실패가 왔다: {order}"
+    )
+    manager.shutdown()
