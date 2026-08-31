@@ -72,6 +72,24 @@ class PortPresenter(QObject):
         self.connection_controller.connection_closed.connect(self.on_connection_closed)
         self.connection_controller.error_occurred.connect(self.on_error)
 
+    @staticmethod
+    def _panel_config(panel):
+        getter = getattr(panel, "get_connection_config", None)
+        return getter() if getter is not None else panel.get_port_config()
+
+    @staticmethod
+    def _panel_protocol(panel) -> str:
+        getter = getattr(panel, "current_protocol", None)
+        if getter is not None:
+            return getter()
+        config = PortPresenter._panel_config(panel)
+        return getattr(config, "protocol", ConnectionProtocol.SERIAL)
+
+    @staticmethod
+    def _panel_endpoint_name(panel) -> str:
+        getter = getattr(panel, "get_connection_display_name", None)
+        return getter() if getter is not None else panel.get_port_name()
+
     def apply_max_log_lines(self, max_lines: int) -> None:
         for panel in self.left_section.get_port_panels():
             panel.set_max_log_lines(max_lines)
@@ -80,10 +98,12 @@ class PortPresenter(QObject):
         if panel in self._connected_panels:
             return
         panel.port_scan_requested.connect(self.scan_ports)
-        panel.endpoint_refresh_requested.connect(self.refresh_endpoints)
+        endpoint_refresh = getattr(panel, "endpoint_refresh_requested", None)
+        if endpoint_refresh is not None:
+            endpoint_refresh.connect(self.refresh_endpoints)
         panel.connect_requested.connect(self.handle_open_request)
         panel.disconnect_requested.connect(
-            lambda p=panel: self.handle_close_request(p.get_connection_config())
+            lambda p=panel: self.handle_close_request(self._panel_config(p))
         )
         panel.tx_broadcast_allowed_changed.connect(
             lambda state, p=panel: self.on_tx_broadcast_allowed_changed(p, state)
@@ -95,7 +115,7 @@ class PortPresenter(QObject):
         panel.set_max_log_lines(
             self.settings_manager.get(ConfigKeys.RX_MAX_LINES, DEFAULT_LOG_MAX_LINES)
         )
-        self.refresh_endpoints(panel.current_protocol())
+        self.refresh_endpoints(self._panel_protocol(panel))
 
     # ------------------------------------------------------------------
     # Discovery routing
@@ -117,7 +137,9 @@ class PortPresenter(QObject):
     def _on_adapters_found(self, descriptors: List[AdapterDescriptor]) -> None:
         logger.debug(f"Transaction discovery finished: {len(descriptors)} endpoint(s)")
         for panel in self.left_section.get_port_panels():
-            panel.set_adapter_descriptors(descriptors)
+            setter = getattr(panel, "set_adapter_descriptors", None)
+            if setter is not None:
+                setter(descriptors)
 
     def _on_discovery_failed(self, error: Exception) -> None:
         logger.warning(f"Transaction adapter discovery failed: {error}")
@@ -153,7 +175,9 @@ class PortPresenter(QObject):
             return
         if isinstance(config, TransactionConnectionConfig):
             if self.transaction_manager is None:
-                self._on_transaction_failed(config.name, RuntimeError("Transaction runtime unavailable"))
+                self._on_transaction_failed(
+                    config.name, RuntimeError("Transaction runtime unavailable")
+                )
                 return
             self.transaction_manager.open_session(config)
             return
@@ -179,7 +203,7 @@ class PortPresenter(QObject):
     # ------------------------------------------------------------------
     def _set_panel_connected(self, endpoint_name: str, connected: bool) -> None:
         for panel in self.left_section.get_port_panels():
-            if panel.get_connection_display_name() == endpoint_name:
+            if self._panel_endpoint_name(panel) == endpoint_name:
                 panel.set_connected(connected)
                 return
 
@@ -195,7 +219,9 @@ class PortPresenter(QObject):
         logger.error(f"Port Error ({event.port}): {event.message}")
         self._set_panel_connected(event.port, False)
         title = language_manager.get_text("port_title_error")
-        detail = language_manager.get_text("port_msg_error_detail").format(event.port, event.message)
+        detail = language_manager.get_text("port_msg_error_detail").format(
+            event.port, event.message
+        )
         self.left_section.show_error_message(title, detail)
         self._log_event(f"[{event.port}] Error: {event.message}", LogLevel.ERROR)
 
@@ -213,13 +239,16 @@ class PortPresenter(QObject):
         self._log_event(f"[{session_name}] Transaction error: {error}", LogLevel.ERROR)
 
     def _log_event(self, message: str, level: LogLevel) -> None:
-        self.left_section.log_system_message(SystemLogEvent(message=message, level=level.value))
+        if hasattr(self.left_section, "log_system_message"):
+            self.left_section.log_system_message(
+                SystemLogEvent(message=message, level=level.value)
+            )
 
     # ------------------------------------------------------------------
     # Existing Serial-only controls
     # ------------------------------------------------------------------
     def on_tx_broadcast_allowed_changed(self, panel: PortPanel, state: bool) -> None:
-        if panel.current_protocol() != ConnectionProtocol.SERIAL:
+        if self._panel_protocol(panel) != ConnectionProtocol.SERIAL:
             return
         port_name = panel.get_port_name()
         if port_name:
@@ -229,7 +258,7 @@ class PortPresenter(QObject):
         panel = self.left_section.get_current_port_panel()
         if panel and not panel.is_connected():
             try:
-                self.handle_open_request(panel.get_connection_config())
+                self.handle_open_request(self._panel_config(panel))
             except Exception as exc:
                 logger.warning(f"Connection request rejected: {exc}")
 
@@ -237,7 +266,7 @@ class PortPresenter(QObject):
         panel = self.left_section.get_current_port_panel()
         if panel and panel.is_connected():
             try:
-                self.handle_close_request(panel.get_connection_config())
+                self.handle_close_request(self._panel_config(panel))
             except Exception as exc:
                 logger.warning(f"Disconnect request rejected: {exc}")
 
