@@ -1,8 +1,9 @@
 """Serial worker fairness benchmark smoke/contract tests.
 
-성능 threshold는 고정하지 않고 deterministic workload에서 byte preservation, metric/schema,
-worker 종료만 확인합니다.
+절대 성능 threshold는 고정하지 않습니다. deterministic workload에서 byte preservation,
+metric/schema, worker 종료와 bounded TX fairness contract를 검증합니다.
 """
+from model.connection_worker import ConnectionWorker
 from tools import serial_loop_benchmark
 
 
@@ -24,6 +25,25 @@ def test_tx_rx_fairness_smoke():
     assert result.metrics["stop_ms"] >= 0
 
 
+def test_tx_budget_returns_to_rx_after_each_write(monkeypatch):
+    """0초 budget에서는 한 번의 outer-loop에 TX chunk를 1개만 처리해야 합니다.
+
+    실제 기본값(1 ms)의 wall-clock timing을 assertion으로 고정하지 않고, budget 정책 자체를
+    deterministic하게 검증합니다. RX/TX byte preservation은 benchmark가 함께 확인합니다.
+    """
+    monkeypatch.setattr(ConnectionWorker, "_TX_FAIRNESS_BUDGET_S", 0.0)
+
+    result = serial_loop_benchmark.bench_tx_rx_fairness(
+        rx_bytes=16 * 1024,
+        tx_chunks=8,
+        chunk_size=1024,
+        write_delay_s=0.0001,
+        timeout_s=2.0,
+    )
+
+    assert result.metrics["max_write_streak"] == 1
+
+
 def test_idle_polling_smoke():
     result = serial_loop_benchmark.bench_idle_polling(window_s=0.03)
 
@@ -37,8 +57,6 @@ def test_serial_loop_run_all_schema(monkeypatch):
     monkeypatch.setattr(serial_loop_benchmark, "DEFAULT_REPEAT", 1)
     monkeypatch.setattr(serial_loop_benchmark, "DEFAULT_TX_CHUNKS", 8)
 
-    # run_all 내부 default runner의 workload는 별도 관찰 benchmark용이므로
-    # schema test에서는 직접 작은 결과를 구성해 public result contract만 확인한다.
     fairness = serial_loop_benchmark.bench_tx_rx_fairness(
         rx_bytes=16 * 1024,
         tx_chunks=8,
