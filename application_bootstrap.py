@@ -139,6 +139,7 @@ class ApplicationBootstrapper:
             self._view.port_view,
             connection_controller,
             command_transmission_service,
+            transaction_manager,
         )
 
         manual_control_presenter.apply_state(
@@ -157,6 +158,7 @@ class ApplicationBootstrapper:
             connection_controller,
             manual_control_presenter,
             macro_presenter,
+            transaction_manager,
         )
 
         connection_controller.data_received.connect(data_handler.on_fast_data_received)
