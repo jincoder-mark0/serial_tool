@@ -1,12 +1,13 @@
 """Manual/Macro control enable policy coordinator.
 
-Manual Control follows the current unified Port tab, including SPI/I2C sessions.
-Macro and broadcast remain Serial-only because their execution semantics are
-stream-oriented and are not part of the transaction runtime contract.
+Manual Control과 Macro/명령 리스트는 현재 unified Port tab의 Serial/SPI/I2C 연결을 모두
+사용할 수 있습니다. Broadcast도 Serial connection 또는 transaction session이 하나라도
+활성화되어 있으면 protocol-aware router를 통해 실행할 수 있습니다.
 """
 from PyQt5.QtCore import QObject
 
 from common.enums import ConnectionProtocol
+from core.transport.transaction.dto import TransactionProtocol
 from model.connection_controller import ConnectionController
 from model.transaction_manager import TransactionManager
 from presenter.macro_presenter import MacroPresenter
@@ -66,41 +67,44 @@ class ControlStateCoordinator(QObject):
         getter = getattr(self._port_view, "get_current_port_panel", None)
         return getter() if getter is not None else None
 
-    def refresh(self) -> None:
-        """Recompute Manual/Macro enable state from the current tab and runtimes."""
-        current_panel = self._current_panel()
+    @staticmethod
+    def _is_known_protocol(value) -> bool:
+        return isinstance(value, str) and value in {
+            ConnectionProtocol.SERIAL,
+            TransactionProtocol.SPI.value,
+            TransactionProtocol.I2C.value,
+        }
 
+    def _legacy_current_connected(self) -> bool:
+        try:
+            return bool(self._port_view.is_current_port_connected())
+        except AttributeError:
+            return False
+
+    def refresh(self) -> None:
+        """현재 target 또는 broadcast target 존재 여부로 Manual/Macro 상태를 계산합니다."""
+        current_panel = self._current_panel()
         if current_panel is not None:
-            current_connected = bool(current_panel.is_connected())
             protocol_getter = getattr(current_panel, "current_protocol", None)
-            current_protocol = (
-                protocol_getter()
-                if protocol_getter is not None
-                else ConnectionProtocol.SERIAL
-            )
+            raw_protocol = protocol_getter() if protocol_getter is not None else None
+            if self._is_known_protocol(raw_protocol):
+                current_connected = bool(current_panel.is_connected())
+            else:
+                current_connected = self._legacy_current_connected()
         else:
-            # Preserve the legacy policy for older PortView test doubles that only
-            # expose is_current_port_connected().
-            connected_getter = getattr(
-                self._port_view,
-                "is_current_port_connected",
-                None,
-            )
-            current_connected = bool(
-                connected_getter() if connected_getter is not None else False
-            )
-            current_protocol = ConnectionProtocol.SERIAL
+            current_connected = self._legacy_current_connected()
 
         has_serial_connection = self._connection_controller.has_active_connection
-        manual_enabled = current_connected or (
-            self._manual_presenter.is_broadcast_enabled() and has_serial_connection
+        has_transaction_session = bool(
+            self._transaction_manager and self._transaction_manager.has_active_session
         )
+        has_any_target = has_serial_connection or has_transaction_session
 
-        current_serial_connected = (
-            current_connected and current_protocol == ConnectionProtocol.SERIAL
+        manual_enabled = current_connected or (
+            self._manual_presenter.is_broadcast_enabled() and has_any_target
         )
-        macro_enabled = current_serial_connected or (
-            self._macro_presenter.is_broadcast_enabled() and has_serial_connection
+        macro_enabled = current_connected or (
+            self._macro_presenter.is_broadcast_enabled() and has_any_target
         )
 
         self._manual_presenter.set_enabled(manual_enabled)

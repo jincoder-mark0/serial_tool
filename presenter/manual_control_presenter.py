@@ -1,8 +1,7 @@
-"""Unified manual-control Presenter.
+"""Unified Manual Control Presenter.
 
-Serial commands keep the established CommandTransmissionService path. SPI/I2C
-requests use TransactionManager while sharing the same Manual Control area and
-current PortPanel selection.
+Manual/Auto Tx/Broadcast는 동일한 Command 입력과 ProtocolCommandRouter를 공유합니다.
+Protocol별 UI 차이는 Serial RTS/DTR, SPI Keep CS, I2C Repeated Start뿐입니다.
 """
 from dataclasses import replace
 from typing import Optional
@@ -13,15 +12,18 @@ from common.dtos import ManualCommand, ManualControlState
 from common.enums import ConnectionProtocol, TransmissionErrorCode
 from core.logger import logger
 from core.transport.transaction.dto import (
-    I2cTransactionRequest,
     I2cTransactionResult,
-    SpiTransactionRequest,
     SpiTransactionResult,
     TransactionProtocol,
 )
 from model.auto_tx import AutoTxScheduler
 from model.command_transmission_service import CommandTransmissionService, TransmissionResult
 from model.connection_controller import ConnectionController
+from model.protocol_command_router import (
+    ProtocolCommandOptions,
+    ProtocolCommandRouter,
+    ProtocolCommandTarget,
+)
 from model.transaction_manager import TransactionManager
 from view.managers.language_manager import language_manager
 from view.panels.manual_control_panel import ManualControlPanel
@@ -29,7 +31,7 @@ from view.sections.main_left_section import MainLeftSection
 
 
 class ManualControlPresenter(QObject):
-    """Serial manual TX and SPI/I2C transaction execution orchestration."""
+    """공통 payload 입력과 protocol-aware delivery를 연결합니다."""
 
     broadcast_changed = pyqtSignal(bool)
     protocol_changed = pyqtSignal(str)
@@ -43,6 +45,7 @@ class ManualControlPresenter(QObject):
         connection_controller: ConnectionController,
         transmission_service: CommandTransmissionService,
         transaction_manager: TransactionManager | None = None,
+        command_router: ProtocolCommandRouter | None = None,
     ) -> None:
         super().__init__()
         self.panel = panel
@@ -50,6 +53,7 @@ class ManualControlPresenter(QObject):
         self.connection_controller = connection_controller
         self.transmission_service = transmission_service
         self.transaction_manager = transaction_manager
+        self.command_router = command_router
         self.local_echo_enabled = self.panel.is_local_echo_enabled()
         self._protocol_connected_panel_ids: set[int] = set()
 
@@ -58,9 +62,6 @@ class ManualControlPresenter(QObject):
         self._auto_tx_failing = False
 
         self.panel.send_requested.connect(self.on_send_requested)
-        transaction_signal = getattr(self.panel, "transaction_execute_requested", None)
-        if transaction_signal is not None:
-            transaction_signal.connect(self.on_transaction_execute_requested)
         self.panel.dtr_changed.connect(self.on_dtr_changed)
         self.panel.rts_changed.connect(self.on_rts_changed)
         self.panel.broadcast_changed.connect(self.broadcast_changed.emit)
@@ -89,20 +90,14 @@ class ManualControlPresenter(QObject):
 
         self.sync_protocol_from_current_tab()
 
-    # ------------------------------------------------------------------
-    # Current protocol / enable facade
-    # ------------------------------------------------------------------
     def _connect_port_panel_protocol(self, port_panel) -> None:
         panel_id = id(port_panel)
         if panel_id in self._protocol_connected_panel_ids:
             return
-
         signal = getattr(port_panel, "protocol_changed", None)
         if signal is not None:
             signal.connect(
-                lambda _protocol, panel=port_panel: self._on_panel_protocol_changed(
-                    panel
-                )
+                lambda _protocol, panel=port_panel: self._on_panel_protocol_changed(panel)
             )
         self._protocol_connected_panel_ids.add(panel_id)
 
@@ -119,39 +114,70 @@ class ManualControlPresenter(QObject):
         getter = getattr(self.port_view, "get_current_port_panel", None)
         return getter() if getter is not None else None
 
+    @staticmethod
+    def _normalize_protocol(protocol) -> str:
+        supported = {
+            ConnectionProtocol.SERIAL,
+            TransactionProtocol.SPI.value,
+            TransactionProtocol.I2C.value,
+        }
+        return protocol if isinstance(protocol, str) and protocol in supported else ConnectionProtocol.SERIAL
+
+    @classmethod
+    def _target_from_panel(cls, panel) -> Optional[ProtocolCommandTarget]:
+        if panel is None or not panel.is_connected():
+            return None
+        protocol = cls._normalize_protocol(panel.current_protocol())
+        name = panel.get_connection_display_name()
+        if not name:
+            return None
+        return ProtocolCommandTarget(name=name, protocol=protocol)
+
+    def _transaction_broadcast_targets(self) -> tuple[ProtocolCommandTarget, ...]:
+        getter = getattr(self.port_view, "get_port_panels", None)
+        if getter is None:
+            return ()
+        targets: list[ProtocolCommandTarget] = []
+        for panel in getter():
+            target = self._target_from_panel(panel)
+            if target is not None and target.protocol != ConnectionProtocol.SERIAL:
+                targets.append(target)
+        return tuple(targets)
+
+    def _protocol_options(self) -> ProtocolCommandOptions:
+        return ProtocolCommandOptions(
+            keep_cs=self.panel.is_keep_cs_enabled(),
+            repeated_start=self.panel.is_repeated_start_enabled(),
+        )
+
     def current_protocol(self) -> str:
         current_panel = self._get_current_port_panel()
         if current_panel is None:
             return ConnectionProtocol.SERIAL
         getter = getattr(current_panel, "current_protocol", None)
-        return getter() if getter is not None else ConnectionProtocol.SERIAL
+        if getter is None:
+            return ConnectionProtocol.SERIAL
+        return self._normalize_protocol(getter())
 
     def sync_protocol_from_current_tab(self, *_args) -> None:
         protocol = self.current_protocol()
         setter = getattr(self.panel, "set_protocol", None)
         if setter is not None:
             setter(protocol)
-        if protocol != ConnectionProtocol.SERIAL:
-            self.stop_auto_tx()
         self.protocol_changed.emit(protocol)
 
     def set_enabled(self, enabled: bool) -> None:
         self.panel.set_controls_enabled(enabled)
 
     def is_broadcast_enabled(self) -> bool:
-        if self.current_protocol() != ConnectionProtocol.SERIAL:
-            return False
         return self.panel.is_broadcast_enabled()
 
-    # ------------------------------------------------------------------
-    # Serial path
-    # ------------------------------------------------------------------
-    def on_send_requested(self, _=None) -> None:
-        if self.current_protocol() != ConnectionProtocol.SERIAL:
-            return
-        command = self._build_command_from_panel()
-        if command is not None:
-            self._process_and_send(command)
+    def on_send_requested(self, command=None) -> None:
+        manual_command = (
+            command if isinstance(command, ManualCommand) else self._build_command_from_panel()
+        )
+        if manual_command is not None:
+            self._send_manual_command(manual_command)
 
     def _build_command_from_panel(self) -> Optional[ManualCommand]:
         try:
@@ -167,19 +193,37 @@ class ManualControlPresenter(QObject):
             logger.error(f"Failed to gather state from ManualControlPanel: {exc}")
             return None
 
-    def _process_and_send(
+    def _send_manual_command(
         self,
         command: ManualCommand,
+        *,
         is_auto_tx: bool = False,
     ) -> bool:
-        active_port = None
-        if not command.broadcast_enabled:
-            getter = getattr(self.port_view, "get_current_port_name", None)
-            active_port = (getter() if getter is not None else "") or None
+        if self.command_router is None:
+            return self._legacy_serial_send(command, is_auto_tx=is_auto_tx)
 
-        result = self.transmission_service.send(command, active_port=active_port)
+        if command.broadcast_enabled:
+            result = self.command_router.broadcast(
+                command,
+                self._transaction_broadcast_targets(),
+                options=self._protocol_options(),
+            )
+        else:
+            target = self._target_from_panel(self._get_current_port_panel())
+            if target is None:
+                result = TransmissionResult(
+                    success=False,
+                    error_code=TransmissionErrorCode.NO_ACTIVE_PORT,
+                    message="No connected target is selected.",
+                )
+            else:
+                result = self.command_router.send(
+                    command,
+                    target,
+                    options=self._protocol_options(),
+                )
+
         if not result.success:
-            logger.warning(f"Command transmission failed: {result.message}")
             self._report_send_error(
                 is_auto_tx,
                 language_manager.get_text("manual_control_title_send_error"),
@@ -187,6 +231,29 @@ class ManualControlPresenter(QObject):
             )
             return False
 
+        if is_auto_tx:
+            self._auto_tx_failing = False
+        if self.local_echo_enabled and result.data:
+            self.local_echo_requested.emit(result.data)
+        return True
+
+    def _legacy_serial_send(
+        self,
+        command: ManualCommand,
+        *,
+        is_auto_tx: bool = False,
+    ) -> bool:
+        active_port = None
+        if not command.broadcast_enabled:
+            active_port = self.port_view.get_current_port_name() or None
+        result = self.transmission_service.send(command, active_port=active_port)
+        if not result.success:
+            self._report_send_error(
+                is_auto_tx,
+                language_manager.get_text("manual_control_title_send_error"),
+                self._resolve_error_message(result),
+            )
+            return False
         if is_auto_tx:
             self._auto_tx_failing = False
         if self.local_echo_enabled and result.data:
@@ -212,60 +279,7 @@ class ManualControlPresenter(QObject):
             return language_manager.get_text("manual_control_msg_port_not_connected")
         return result.message
 
-    # ------------------------------------------------------------------
-    # Transaction path
-    # ------------------------------------------------------------------
-    def on_transaction_execute_requested(self) -> None:
-        protocol = self.current_protocol()
-        if protocol == ConnectionProtocol.SERIAL:
-            return
-        if self.transaction_manager is None:
-            self._report_transaction_error("Transaction runtime is unavailable")
-            return
-
-        current_panel = self._get_current_port_panel()
-        if current_panel is None or not current_panel.is_connected():
-            self._report_transaction_error("Transaction adapter is not connected")
-            return
-
-        session_name = self._panel_endpoint_name(current_panel)
-        try:
-            if protocol == TransactionProtocol.SPI.value:
-                tx_data, rx_length, keep_cs = self.panel.get_spi_transaction_input()
-                request = SpiTransactionRequest(
-                    tx_data=tx_data,
-                    rx_length=rx_length,
-                    keep_cs_asserted=keep_cs,
-                )
-            else:
-                write_data, read_length, repeated_start = (
-                    self.panel.get_i2c_transaction_input()
-                )
-                request = I2cTransactionRequest(
-                    write_data=write_data,
-                    read_length=read_length,
-                    repeated_start=repeated_start,
-                )
-        except (ValueError, TypeError) as exc:
-            self._report_transaction_error(str(exc))
-            return
-
-        request_id = self.transaction_manager.execute(session_name, request)
-        if request_id is None:
-            self._report_transaction_error(
-                f"Transaction session is not ready: {session_name}"
-            )
-            return
-        logger.debug(
-            f"Transaction request queued: session={session_name}, id={request_id}"
-        )
-
-    def _on_transaction_completed(
-        self,
-        session_name: str,
-        request_id: int,
-        result,
-    ) -> None:
+    def _on_transaction_completed(self, session_name: str, request_id: int, result) -> None:
         data = b""
         actual_frequency = None
         if isinstance(result, SpiTransactionResult):
@@ -321,9 +335,6 @@ class ManualControlPresenter(QObject):
             True,
         )
 
-    # ------------------------------------------------------------------
-    # Serial automation / modem controls
-    # ------------------------------------------------------------------
     def _report_send_error(self, is_auto_tx: bool, title: str, message: str) -> None:
         if is_auto_tx:
             if self._auto_tx_failing:
@@ -334,14 +345,9 @@ class ManualControlPresenter(QObject):
         self.send_error.emit(title, message, True)
 
     def _on_auto_tx_send_requested(self, command: ManualCommand) -> None:
-        if self.current_protocol() == ConnectionProtocol.SERIAL:
-            self._process_and_send(command, is_auto_tx=True)
+        self._send_manual_command(command, is_auto_tx=True)
 
     def on_auto_tx_toggled(self, enabled: bool) -> None:
-        if self.current_protocol() != ConnectionProtocol.SERIAL:
-            self.stop_auto_tx()
-            return
-
         if enabled:
             command = self._build_command_from_panel()
             if command is None:
@@ -361,7 +367,9 @@ class ManualControlPresenter(QObject):
         self.panel.set_auto_tx_checked(False)
 
     def _on_connection_closed(self, _event=None) -> None:
-        if not self.connection_controller.has_active_connection:
+        if not self.connection_controller.has_active_connection and not (
+            self.transaction_manager and self.transaction_manager.has_active_session
+        ):
             self.stop_auto_tx()
 
     def on_dtr_changed(self, state: bool) -> None:
@@ -376,9 +384,6 @@ class ManualControlPresenter(QObject):
         self.connection_controller.set_rts(state)
         logger.info(f"RTS set to {state}")
 
-    # ------------------------------------------------------------------
-    # Persistent Serial manual-control preferences
-    # ------------------------------------------------------------------
     def update_local_echo_setting(self, enabled: bool) -> None:
         self.local_echo_enabled = enabled
         self.panel.set_local_echo_checked(enabled)

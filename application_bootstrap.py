@@ -1,5 +1,4 @@
-"""
-SerialTool application composition root.
+"""SerialTool application composition root.
 
 View 상태 복원부터 MainPresenter 생성까지 전체 runtime object graph를 한 곳에서 조립합니다.
 `main.py`는 리소스/Qt 애플리케이션을 준비한 뒤 이 bootstrapper를 호출하는 진입점 역할만
@@ -20,6 +19,7 @@ from model.packet_annotation_store import PacketAnnotationStore
 from model.packet_export_manager import PacketExportManager
 from model.packet_parser_manager import PacketParserManager
 from model.port_scan_manager import PortScanManager
+from model.protocol_command_router import ProtocolCommandRouter
 from model.traffic_monitor import TrafficMonitor
 from model.transaction_manager import TransactionManager
 from presenter.control_state_coordinator import ControlStateCoordinator
@@ -51,6 +51,7 @@ class ApplicationComponents:
     connection_session_factory: ConnectionSessionFactory
     connection_controller: ConnectionController
     command_transmission_service: CommandTransmissionService
+    protocol_command_router: ProtocolCommandRouter
     transaction_manager: TransactionManager
     macro_runner: MacroRunner
     traffic_monitor: TrafficMonitor
@@ -97,6 +98,11 @@ class ApplicationBootstrapper:
 
         transaction_registry = AdapterBackendRegistry([PyFtdiAdapterProvider()])
         transaction_manager = TransactionManager(transaction_registry)
+        protocol_command_router = ProtocolCommandRouter(
+            connection_controller,
+            transaction_manager,
+            command_transmission_service,
+        )
 
         file_transfer_manager = FileTransferManager(connection_controller)
         port_scan_manager = PortScanManager()
@@ -105,7 +111,7 @@ class ApplicationBootstrapper:
         macro_execution_coordinator = MacroExecutionCoordinator(
             macro_runner,
             connection_controller,
-            command_transmission_service,
+            protocol_command_router,
             self._view.port_view,
             self._settings_manager,
         )
@@ -140,6 +146,7 @@ class ApplicationBootstrapper:
             connection_controller,
             command_transmission_service,
             transaction_manager,
+            protocol_command_router,
         )
 
         manual_control_presenter.apply_state(
@@ -234,6 +241,7 @@ class ApplicationBootstrapper:
             connection_session_factory=connection_session_factory,
             connection_controller=connection_controller,
             command_transmission_service=command_transmission_service,
+            protocol_command_router=protocol_command_router,
             transaction_manager=transaction_manager,
             macro_runner=macro_runner,
             traffic_monitor=traffic_monitor,

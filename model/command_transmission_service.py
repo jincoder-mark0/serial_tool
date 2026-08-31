@@ -8,10 +8,12 @@ Manual/Macro Presenter가 중복으로 수행하던 명령 가공, Prefix/Suffix
 * Presenter마다 같은 전송 규칙을 복제하면 한 경로만 수정되어 동작이 달라질 수 있습니다.
 * Presenter는 사용자 의도와 표시 정책을 담당하고, 전송 유스케이스는 UI와 분리되어야 합니다.
 * 매크로 스레드에서도 호출되므로 QWidget/Qt UI 객체에 의존하지 않습니다.
+* Serial/SPI/I2C Manual Control이 같은 입력 규칙을 사용해야 Protocol별 payload 해석 차이를 방지할 수 있습니다.
 
 ## HOW
 * SettingsManager와 ConnectionController를 생성자 주입받습니다.
-* send()는 ManualCommand와 선택된 active_port만 입력받습니다.
+* prepare()는 ManualCommand를 실제 bytes로만 변환하며 transport에는 쓰지 않습니다.
+* send()는 prepare() 결과를 단일 Serial 포트 또는 브로드캐스트로 전송합니다.
 * 실패는 TransmissionErrorCode와 기술 메시지로 반환하고 UI 문구는 Presenter가 결정합니다.
 """
 from dataclasses import dataclass
@@ -36,7 +38,7 @@ class TransmissionResult:
 
 
 class CommandTransmissionService:
-    """Manual/Macro 공용 명령 가공 및 전송 서비스."""
+    """Manual/Macro 공용 명령 가공 및 Serial 전송 서비스."""
 
     def __init__(
         self,
@@ -46,22 +48,21 @@ class CommandTransmissionService:
         self._connection_controller = connection_controller
         self._settings_manager = settings_manager
 
+    def prepare(self, command: ManualCommand) -> TransmissionResult:
+        """ManualCommand를 transport-independent payload bytes로 변환합니다.
+
+        Serial/SPI/I2C가 ASCII/HEX, Prefix/Suffix 규칙을 공유하기 위한 공통 경계입니다.
+        이 메서드는 실제 I/O를 수행하지 않습니다.
+        """
+        return self._process_command(command)
+
     def send(
         self,
         command: ManualCommand,
         active_port: Optional[str] = None,
     ) -> TransmissionResult:
-        """
-        명령을 가공한 뒤 단일 포트 또는 브로드캐스트로 전송합니다.
-
-        Args:
-            command: 전송할 사용자 명령 DTO.
-            active_port: 단일 전송 시 대상 포트. 브로드캐스트에서는 사용하지 않습니다.
-
-        Returns:
-            TransmissionResult: 성공 여부, 실제 전송 바이트, 실패 분류와 기술 메시지.
-        """
-        processed = self._process_command(command)
+        """명령을 가공한 뒤 단일 Serial 포트 또는 브로드캐스트로 전송합니다."""
+        processed = self.prepare(command)
         if not processed.success:
             return processed
 
