@@ -6,6 +6,7 @@ current PortPanel selection.
 """
 from dataclasses import replace
 from typing import Optional
+from weakref import WeakSet
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
@@ -32,6 +33,7 @@ class ManualControlPresenter(QObject):
     """Serial manual TX and SPI/I2C transaction execution orchestration."""
 
     broadcast_changed = pyqtSignal(bool)
+    protocol_changed = pyqtSignal(str)
     send_error = pyqtSignal(str, str, bool)
     local_echo_requested = pyqtSignal(bytes)
 
@@ -50,6 +52,7 @@ class ManualControlPresenter(QObject):
         self.transmission_service = transmission_service
         self.transaction_manager = transaction_manager
         self.local_echo_enabled = self.panel.is_local_echo_enabled()
+        self._protocol_connected_panels: WeakSet = WeakSet()
 
         self.auto_tx_scheduler = AutoTxScheduler()
         self.auto_tx_scheduler.send_requested.connect(self._on_auto_tx_send_requested)
@@ -65,6 +68,10 @@ class ManualControlPresenter(QObject):
         self.panel.auto_tx_toggled.connect(self.on_auto_tx_toggled)
         self.connection_controller.connection_closed.connect(self._on_connection_closed)
         self.port_view.current_tab_changed.connect(self.sync_protocol_from_current_tab)
+        self.port_view.port_tab_added.connect(self._on_port_tab_added)
+
+        for port_panel in self.port_view.get_port_panels():
+            self._connect_port_panel_protocol(port_panel)
 
         if self.transaction_manager is not None:
             self.transaction_manager.transaction_completed.connect(
@@ -79,6 +86,27 @@ class ManualControlPresenter(QObject):
     # ------------------------------------------------------------------
     # Current protocol / enable facade
     # ------------------------------------------------------------------
+    def _connect_port_panel_protocol(self, port_panel) -> None:
+        if port_panel in self._protocol_connected_panels:
+            return
+        signal = getattr(port_panel, "protocol_changed", None)
+        if signal is not None:
+            signal.connect(
+                lambda _protocol, panel=port_panel: self._on_panel_protocol_changed(
+                    panel
+                )
+            )
+        self._protocol_connected_panels.add(port_panel)
+
+    def _on_port_tab_added(self, port_panel) -> None:
+        self._connect_port_panel_protocol(port_panel)
+        if self.port_view.get_current_port_panel() is port_panel:
+            self.sync_protocol_from_current_tab()
+
+    def _on_panel_protocol_changed(self, port_panel) -> None:
+        if self.port_view.get_current_port_panel() is port_panel:
+            self.sync_protocol_from_current_tab()
+
     def current_protocol(self) -> str:
         current_panel = self.port_view.get_current_port_panel()
         if current_panel is None:
@@ -93,6 +121,7 @@ class ManualControlPresenter(QObject):
             setter(protocol)
         if protocol != ConnectionProtocol.SERIAL:
             self.stop_auto_tx()
+        self.protocol_changed.emit(protocol)
 
     def set_enabled(self, enabled: bool) -> None:
         self.panel.set_controls_enabled(enabled)
