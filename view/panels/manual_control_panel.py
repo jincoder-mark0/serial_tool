@@ -40,6 +40,11 @@ class ManualControlPanel(QWidget):
         self.init_ui()
         language_manager.language_changed.connect(self.retranslate_ui)
 
+    @property
+    def manual_control_widget(self) -> ManualControlWidget:
+        """Legacy public facade kept for existing tests/callers."""
+        return self._manual_control_widget
+
     def init_ui(self) -> None:
         layout = QVBoxLayout()
         layout.setContentsMargins(
