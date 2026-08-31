@@ -36,6 +36,7 @@ class ControlStateCoordinator(QObject):
         self._connection_controller.connection_opened.connect(self._on_connection_changed)
         self._connection_controller.connection_closed.connect(self._on_connection_changed)
         self._manual_presenter.broadcast_changed.connect(self._on_broadcast_changed)
+        self._manual_presenter.protocol_changed.connect(self._on_protocol_changed)
         self._macro_presenter.broadcast_changed.connect(self._on_broadcast_changed)
 
         if self._transaction_manager is not None:
@@ -52,6 +53,9 @@ class ControlStateCoordinator(QObject):
         self.refresh()
 
     def _on_broadcast_changed(self, _enabled: bool) -> None:
+        self.refresh()
+
+    def _on_protocol_changed(self, _protocol: str) -> None:
         self.refresh()
 
     def refresh(self) -> None:
