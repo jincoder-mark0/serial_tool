@@ -1,12 +1,12 @@
 """Manual/Macro control enable policy coordinator.
 
 Manual Control follows the current unified Port tab, including SPI/I2C sessions.
-Macro and broadcast remain Serial-only because their execution semantics are
-stream-oriented and are not part of the transaction runtime contract.
+Macro and Serial broadcast keep their established stream-oriented policy.
 """
 from PyQt5.QtCore import QObject
 
 from common.enums import ConnectionProtocol
+from core.transport.transaction.dto import TransactionProtocol
 from model.connection_controller import ConnectionController
 from model.transaction_manager import TransactionManager
 from presenter.macro_presenter import MacroPresenter
@@ -66,30 +66,38 @@ class ControlStateCoordinator(QObject):
         getter = getattr(self._port_view, "get_current_port_panel", None)
         return getter() if getter is not None else None
 
+    @staticmethod
+    def _is_known_protocol(value) -> bool:
+        return isinstance(value, str) and value in {
+            ConnectionProtocol.SERIAL,
+            TransactionProtocol.SPI.value,
+            TransactionProtocol.I2C.value,
+        }
+
+    def _legacy_current_connected(self) -> bool:
+        """Older PortView/test doubles use only the established Serial facade."""
+        try:
+            return bool(self._port_view.is_current_port_connected())
+        except AttributeError:
+            return False
+
     def refresh(self) -> None:
         """Recompute Manual/Macro enable state from the current tab and runtimes."""
         current_panel = self._current_panel()
+        current_protocol = ConnectionProtocol.SERIAL
 
         if current_panel is not None:
-            current_connected = bool(current_panel.is_connected())
             protocol_getter = getattr(current_panel, "current_protocol", None)
-            current_protocol = (
-                protocol_getter()
-                if protocol_getter is not None
-                else ConnectionProtocol.SERIAL
-            )
+            raw_protocol = protocol_getter() if protocol_getter is not None else None
+            if self._is_known_protocol(raw_protocol):
+                current_protocol = raw_protocol
+                current_connected = bool(current_panel.is_connected())
+            else:
+                # MagicMock/legacy facade처럼 새 protocol contract가 없는 객체는
+                # 기존 Serial 연결 판정 API를 사용해 이전 동작을 보존합니다.
+                current_connected = self._legacy_current_connected()
         else:
-            # Preserve the legacy policy for older PortView test doubles that only
-            # expose is_current_port_connected().
-            connected_getter = getattr(
-                self._port_view,
-                "is_current_port_connected",
-                None,
-            )
-            current_connected = bool(
-                connected_getter() if connected_getter is not None else False
-            )
-            current_protocol = ConnectionProtocol.SERIAL
+            current_connected = self._legacy_current_connected()
 
         has_serial_connection = self._connection_controller.has_active_connection
         manual_enabled = current_connected or (
