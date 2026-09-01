@@ -6,6 +6,7 @@ View 상태 복원부터 MainPresenter 생성까지 전체 runtime object graph�
 """
 from dataclasses import dataclass
 
+from core.data_logger import DataLoggerManager
 from core.settings_manager import SettingsManager
 from core.transport.transaction.backends.pyftdi_backend import PyFtdiAdapterProvider
 from core.transport.transaction.registry import AdapterBackendRegistry
@@ -54,6 +55,7 @@ class ApplicationComponents:
     protocol_command_router: ProtocolCommandRouter
     transaction_manager: TransactionManager
     macro_runner: MacroRunner
+    data_logger_manager: DataLoggerManager
     traffic_monitor: TrafficMonitor
     data_handler: DataTrafficHandler
     file_transfer_manager: FileTransferManager
@@ -115,9 +117,13 @@ class ApplicationBootstrapper:
             self._view.port_view,
             self._settings_manager,
         )
-        traffic_monitor = TrafficMonitor()
+        data_logger_manager = DataLoggerManager()
+        traffic_monitor = TrafficMonitor(data_logger_manager)
         data_handler = DataTrafficHandler(self._view, traffic_monitor)
-        logging_coordinator = LoggingCoordinator(self._view.port_view)
+        logging_coordinator = LoggingCoordinator(
+            self._view.port_view,
+            data_logger_manager,
+        )
         status_coordinator = StatusCoordinator(self._view, traffic_monitor)
 
         port_presenter = PortPresenter(
@@ -212,6 +218,7 @@ class ApplicationBootstrapper:
             data_handler=data_handler,
             close_system_log=logging_coordinator.close_system_log,
             status_coordinator=status_coordinator,
+            data_logger_manager=data_logger_manager,
             transaction_manager=transaction_manager,
         )
 
@@ -244,6 +251,7 @@ class ApplicationBootstrapper:
             protocol_command_router=protocol_command_router,
             transaction_manager=transaction_manager,
             macro_runner=macro_runner,
+            data_logger_manager=data_logger_manager,
             traffic_monitor=traffic_monitor,
             data_handler=data_handler,
             file_transfer_manager=file_transfer_manager,

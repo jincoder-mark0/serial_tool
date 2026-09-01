@@ -4,6 +4,33 @@
 
 ---
 
+### DataLoggerManager 전역 싱글턴 제거 (2026-09-02)
+
+P2-C #6이 `SettingsManager`에서 없앤 것과 **정확히 같은 종류**의 hidden global이
+`core/data_logger.py`에 하나 남아 있었습니다. module-level `data_logger_manager`를
+Model(`TrafficMonitor`)과 Presenter(`LoggingCoordinator`, `ShutdownCoordinator`)가
+각자 import했습니다. import하는 위치가 곧 숨은 의존이 되고, 소유자가 없어 교체할 수
+없으며, 같은 프로세스의 테스트가 상태를 공유해 실행 순서에 의존합니다.
+
+- 전역 인스턴스를 삭제하고 composition root(`ApplicationBootstrapper.build()`)가
+  하나 생성해 주입합니다. `ApplicationComponents`가 수명을 소유합니다.
+- `TrafficMonitor` / `LoggingCoordinator` / `ShutdownCoordinator`가 생성자로
+  받습니다. 기본값 없는 필수 인자라 "안 넘기면 스스로 만드는" 경로가 없습니다.
+- `DataTrafficHandler`의 `traffic_monitor or TrafficMonitor()` fallback도 없앴습니다.
+  같은 종류의 숨은 의존이고, production·테스트 모두 이미 인스턴스를 넘기고 있어
+  실제로는 죽은 경로였습니다.
+- 전역을 patch하던 테스트들이 주입된 인스턴스를 직접 검증하도록 바뀌어, 더 이상
+  프로세스 전역 상태를 공유하지 않습니다. S-059 종료 테스트는 composition root가
+  조립한 runtime graph에서 manager를 꺼내 씁니다.
+- 재도입 방지 계약 3건을 `tests/test_data_logger_manager_instance_contract.py`에
+  추가했습니다 — module-level 인스턴스 금지, composition root 밖 생성 금지,
+  전역 이름 import 금지. 전역을 되살리면 실패하는 것을 확인했습니다.
+
+동작 변경은 없습니다. 검증 결과는 `751 passed`(3회 반복 동일), Ruff 0건,
+language/task-board gate Green입니다.
+
+---
+
 ### 코드 점검 후속 수정 — 침묵 실패·기본값 오염·우측 패널 토글 (2026-09-02)
 
 전체 게이트가 Green인 상태에서 코드를 점검해 **통과하는 검증이 놓치던** 결함 4건을

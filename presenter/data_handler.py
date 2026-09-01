@@ -5,7 +5,6 @@ RX UI throttling handler.
 버퍼링해 주기적으로 View에 반영하는 presentation 책임만 담당합니다.
 """
 from collections import defaultdict
-from typing import Optional
 
 from PyQt5.QtCore import QObject, QTimer
 
@@ -18,14 +17,10 @@ from view.main_window import MainWindow
 class DataTrafficHandler(QObject):
     """RX 데이터를 UI refresh 주기에 맞춰 배치하는 Presenter helper."""
 
-    def __init__(
-        self,
-        view: MainWindow,
-        traffic_monitor: Optional[TrafficMonitor] = None,
-    ) -> None:
+    def __init__(self, view: MainWindow, traffic_monitor: TrafficMonitor) -> None:
         super().__init__()
         self.view = view
-        self.traffic_monitor = traffic_monitor or TrafficMonitor()
+        self.traffic_monitor = traffic_monitor
         self._rx_buffer = defaultdict(bytearray)
 
         self._ui_refresh_timer = QTimer()

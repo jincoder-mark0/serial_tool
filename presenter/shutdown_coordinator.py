@@ -10,7 +10,7 @@ from typing import Callable, Optional
 from PyQt5.QtCore import QCoreApplication
 
 from common.constants import BACKGROUND_WORKER_STOP_TIMEOUT_MS
-from core.data_logger import data_logger_manager
+from core.data_logger import DataLoggerManager
 from core.logger import logger
 from core.settings_manager import SettingsManager
 from model.connection_controller import ConnectionController
@@ -44,6 +44,7 @@ class ShutdownCoordinator:
         data_handler: DataTrafficHandler,
         close_system_log: Callable[[], None],
         status_coordinator: StatusCoordinator,
+        data_logger_manager: DataLoggerManager,
         transaction_manager: Optional[TransactionManager] = None,
     ) -> None:
         self._view = view
@@ -58,6 +59,7 @@ class ShutdownCoordinator:
         self._data_handler = data_handler
         self._close_system_log = close_system_log
         self._status_coordinator = status_coordinator
+        self._data_logger_manager = data_logger_manager
         self._transaction_manager = transaction_manager
 
     def shutdown(self) -> None:
@@ -100,7 +102,7 @@ class ShutdownCoordinator:
 
         # S-059: Worker가 종료 직전 emit한 queued RX를 main thread에서 먼저 전달합니다.
         QCoreApplication.processEvents()
-        data_logger_manager.stop_all()
+        self._data_logger_manager.stop_all()
         logger.info("Shutdown completed.")
 
     def _save_ui_state(self) -> None:

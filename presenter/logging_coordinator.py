@@ -10,7 +10,7 @@ from weakref import WeakSet
 
 from PyQt5.QtCore import QObject, pyqtSignal
 
-from core.data_logger import data_logger_manager
+from core.data_logger import DataLoggerManager
 from core.text_log_writer import TextLogWriter
 from presenter.logging_format_resolver import LoggingFormatResolver
 from view.panels.port_panel import PortPanel
@@ -23,9 +23,14 @@ class LoggingCoordinator(QObject):
     info_requested = pyqtSignal(str)
     error_requested = pyqtSignal(str)
 
-    def __init__(self, port_view: MainLeftSection) -> None:
+    def __init__(
+        self,
+        port_view: MainLeftSection,
+        data_logger_manager: DataLoggerManager,
+    ) -> None:
         super().__init__()
         self._port_view = port_view
+        self._data_logger_manager = data_logger_manager
         self._system_log_writer: Optional[TextLogWriter] = None
         self._connected_panels: WeakSet[PortPanel] = WeakSet()
         self._system_signals_connected = False
@@ -95,7 +100,7 @@ class LoggingCoordinator(QObject):
             return
 
         log_format = LoggingFormatResolver.resolve(file_path)
-        if data_logger_manager.start_logging(port, file_path, log_format):
+        if self._data_logger_manager.start_logging(port, file_path, log_format):
             panel.set_logging_active(True)
             self.info_requested.emit(
                 f"[{port}] Logging started ({log_format.value}): {file_path}"
@@ -109,7 +114,7 @@ class LoggingCoordinator(QObject):
         """포트 데이터 로그 기록을 중지합니다."""
         port = panel.get_port_name()
         if port:
-            data_logger_manager.stop_logging(port)
+            self._data_logger_manager.stop_logging(port)
         panel.set_logging_active(False)
         self.info_requested.emit(f"[{port}] Logging stopped")
 
