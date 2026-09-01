@@ -251,6 +251,17 @@ Tier-1:
   진행 중 shutdown/close는 협조적 취소로 즉시 정리, `controller.close()` 예외는
   격리되어 같은 이름 재오픈 가능, discovery+session 동시 종료 후 스레드 누수 없음
 
+추가 점검(2026-09-02) — **위 S-084 수정만으로는 침묵이 다 없어지지 않았다**:
+
+- 고침 — 큐에서 **꺼낸 뒤** stop()이 도착하면 그 1건이 여전히 사라졌다 (S-085).
+  worker는 `get()`으로 command를 꺼낸 다음 lock을 잡고 `_stop_requested`를 확인해
+  `break` 하는데, 그 command는 이미 큐 밖이라 `_fail_pending_transactions()`의
+  큐 드레인도 잡지 못한다. 인터리빙을 고정해 재현하면 발급 3건 중 1번이 완료도
+  실패도 없이 사라졌다. break 전에 통지하도록 고쳤다.
+  회귀: `test_dequeued_transaction_is_answered_when_stop_arrives_mid_loop`
+- 교훈 — "큐를 비우며 통지"는 큐에 **남아 있는** 것만 덮는다. 큐에서 꺼낸 뒤
+  실행 전까지의 구간도 소유자가 있어야 한다
+
 Architecture requirements:
 
 - PyFtdi import는 backend implementation 내부에만 존재
