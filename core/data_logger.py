@@ -236,8 +236,15 @@ class DataLogger:
         self._file.write(line.encode('utf-8'))
 
 class DataLoggerManager:
-    """
-    여러 포트의 DataLogger를 관리하는 매니저 클래스 (Singleton)
+    """여러 포트의 DataLogger를 관리하는 매니저 클래스.
+
+    WHY instance:
+        과거에는 module-level 전역 인스턴스를 두고 Model/Presenter가 각자 import했다.
+        그러면 import하는 위치가 곧 hidden global dependency가 되고, 테스트는 같은
+        프로세스에서 상태를 공유해 실행 순서에 의존하게 된다 — SettingsManager에서
+        같은 이유로 singleton을 걷어냈다(P2-C #6).
+
+        현재는 composition root가 한 번 생성해 필요한 곳에 주입한다.
     """
 
     def __init__(self):
@@ -326,6 +333,3 @@ class DataLoggerManager:
         if port_name in self._loggers:
             return self._loggers[port_name].file_path
         return ""
-
-# 전역 인스턴스 (Singleton)
-data_logger_manager = DataLoggerManager()

@@ -57,6 +57,12 @@
    - production 생성은 `main.py` composition root 1곳
    - hidden constructor / stale test reset 제거
    - PR #8: Python 3.11 `655 passed, 2 warnings`, CI 4/4 Green
+   - 후속(2026-09-02): 같은 종류로 남아 있던 마지막 전역
+     `core/data_logger.py`의 `data_logger_manager`도 제거하고 composition root
+     주입으로 바꿨다. `TrafficMonitor` / `LoggingCoordinator` /
+     `ShutdownCoordinator`가 생성자로 받고, `DataTrafficHandler`의
+     `traffic_monitor or TrafficMonitor()` hidden fallback도 함께 없앴다.
+     재도입 방지: `tests/test_data_logger_manager_instance_contract.py`
 
 7. [x] Coordinator package 이동 판단
    - 결론: **현재 이동하지 않음**

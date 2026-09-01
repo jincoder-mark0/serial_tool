@@ -2,6 +2,7 @@
 from unittest.mock import MagicMock, patch
 
 from common.constants import BACKGROUND_WORKER_STOP_TIMEOUT_MS
+from core.data_logger import DataLoggerManager
 from presenter.shutdown_coordinator import ShutdownCoordinator
 
 
@@ -18,6 +19,7 @@ def _make_coordinator():
     data = MagicMock()
     close_system_log = MagicMock()
     status = MagicMock()
+    data_logger_manager = MagicMock(spec=DataLoggerManager)
 
     coordinator = ShutdownCoordinator(
         view=view,
@@ -32,6 +34,7 @@ def _make_coordinator():
         data_handler=data,
         close_system_log=close_system_log,
         status_coordinator=status,
+        data_logger_manager=data_logger_manager,
     )
     return (
         coordinator,
@@ -47,6 +50,7 @@ def _make_coordinator():
         data,
         close_system_log,
         status,
+        data_logger_manager,
     )
 
 
@@ -65,6 +69,7 @@ def test_shutdown_stops_runtime_services_and_saves_state():
         data,
         close_system_log,
         status,
+        data_logger_manager,
     ) = _make_coordinator()
     macro.isRunning.return_value = True
     controller.has_active_connection = True
@@ -75,11 +80,10 @@ def test_shutdown_stops_runtime_services_and_saves_state():
         "presenter.shutdown_coordinator.ShutdownStateCollector.collect_and_apply"
     ) as collect, patch(
         "presenter.shutdown_coordinator.QCoreApplication.processEvents"
-    ), patch(
-        "presenter.shutdown_coordinator.data_logger_manager.stop_all"
     ):
         coordinator.shutdown()
 
+    data_logger_manager.stop_all.assert_called_once()
     macro.stop.assert_called_once()
     # 상한은 stop()에 전달돼야 한다. 과거처럼 stop() 뒤에 wait(1000)을 두면
     # stop() 내부의 무한 대기가 먼저 끝나 상한이 아무 역할도 못 한다.
@@ -98,7 +102,7 @@ def test_shutdown_stops_runtime_services_and_saves_state():
 
 
 def test_auto_tx_is_stopped_before_manual_state_is_collected():
-    coordinator, _, _, controller, _, macro, _, _, manual, *_ = _make_coordinator()
+    coordinator, _, _, controller, _, macro, _, _, manual, *_rest = _make_coordinator()
     macro.isRunning.return_value = False
     controller.has_active_connection = False
     order = []
@@ -109,8 +113,6 @@ def test_auto_tx_is_stopped_before_manual_state_is_collected():
         "presenter.shutdown_coordinator.ShutdownStateCollector.collect_and_apply"
     ), patch(
         "presenter.shutdown_coordinator.QCoreApplication.processEvents"
-    ), patch(
-        "presenter.shutdown_coordinator.data_logger_manager.stop_all"
     ):
         coordinator.shutdown()
 
@@ -118,18 +120,19 @@ def test_auto_tx_is_stopped_before_manual_state_is_collected():
 
 
 def test_connection_closes_before_queued_events_and_data_logger_stop():
-    coordinator, _, _, controller, _, macro, *_ = _make_coordinator()
+    (
+        coordinator, _view, _settings, controller, _ft, macro, *_rest
+    ) = _make_coordinator()
+    data_logger_manager = _rest[-1]
     macro.isRunning.return_value = False
     controller.has_active_connection = True
     order = []
     controller.close_connection.side_effect = lambda: order.append("close_connection")
+    data_logger_manager.stop_all.side_effect = lambda: order.append("logger_stop")
 
     with patch(
         "presenter.shutdown_coordinator.QCoreApplication.processEvents",
         side_effect=lambda: order.append("process_events"),
-    ), patch(
-        "presenter.shutdown_coordinator.data_logger_manager.stop_all",
-        side_effect=lambda: order.append("logger_stop"),
     ):
         coordinator.shutdown()
 

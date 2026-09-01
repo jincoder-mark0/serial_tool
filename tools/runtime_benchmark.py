@@ -34,6 +34,7 @@ if str(PROJECT_ROOT) not in sys.path:
 
 from common.constants import DEFAULT_READ_CHUNK_SIZE  # noqa: E402
 from common.dtos import LogDataBatch, PortDataEvent  # noqa: E402
+from core.data_logger import DataLoggerManager  # noqa: E402
 from core.transport.base_transport import BaseTransport  # noqa: E402
 from model.connection_worker import ConnectionWorker  # noqa: E402
 from model.traffic_monitor import TrafficMonitor  # noqa: E402
@@ -147,7 +148,7 @@ def bench_rx_pipeline(
     """
     _ensure_qt_app()
     view = _BenchmarkView()
-    monitor = TrafficMonitor()
+    monitor = TrafficMonitor(DataLoggerManager())
     handler = DataTrafficHandler(view, monitor)
     handler._ui_refresh_timer.stop()
 

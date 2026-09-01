@@ -22,7 +22,6 @@ from application_bootstrap import ApplicationBootstrapper
 from common.constants import LOOPBACK_PORT_NAME
 from common.dtos import MainWindowState, PortConfig
 from common.enums import SerialFlowControl, SerialParity, SerialStopBits
-from core.data_logger import data_logger_manager
 
 
 @pytest.fixture
@@ -79,18 +78,30 @@ def mock_main_window():
 
 
 @pytest.fixture
-def presenter(mock_main_window, mock_settings_manager):
-    runtime = ApplicationBootstrapper(
+def runtime(mock_main_window, mock_settings_manager):
+    """Production과 동일한 composition root가 조립한 runtime graph."""
+    components = ApplicationBootstrapper(
         mock_main_window,
         mock_settings_manager,
     ).build()
-    yield runtime.main_presenter
-    data_logger_manager.stop_all()
-    runtime.status_coordinator.stop()
-    runtime.file_transfer_manager.shutdown()
-    runtime.macro_script_manager.stop()
-    runtime.port_scan_manager.stop()
-    runtime.connection_controller.close_connection()
+    yield components
+    components.data_logger_manager.stop_all()
+    components.status_coordinator.stop()
+    components.file_transfer_manager.shutdown()
+    components.macro_script_manager.stop()
+    components.port_scan_manager.stop()
+    components.connection_controller.close_connection()
+
+
+@pytest.fixture
+def presenter(runtime):
+    return runtime.main_presenter
+
+
+@pytest.fixture
+def data_logger_manager(runtime):
+    """전역이 아니라 이 runtime graph가 소유하는 DataLoggerManager."""
+    return runtime.data_logger_manager
 
 
 def _make_logging_panel(port_name: str, file_path: str) -> MagicMock:
@@ -102,7 +113,7 @@ def _make_logging_panel(port_name: str, file_path: str) -> MagicMock:
 
 class TestShutdownStopsDataLogger:
     def test_shutdown_stops_data_logger_and_preserves_written_bytes(
-        self, presenter, loopback_config, tmp_path, qapp, qtbot
+        self, presenter, data_logger_manager, loopback_config, tmp_path, qapp, qtbot
     ):
         assert presenter.connection_controller.open_connection(loopback_config) is True
 
@@ -135,7 +146,7 @@ class TestShutdownStopsDataLogger:
         assert file_path.read_bytes() == payload
 
     def test_shutdown_closes_pcap_with_valid_header_and_packet_structure(
-        self, presenter, loopback_config, tmp_path, qapp, qtbot
+        self, presenter, data_logger_manager, loopback_config, tmp_path, qapp, qtbot
     ):
         import struct
 
@@ -190,7 +201,9 @@ class TestShutdownStopsDataLogger:
         assert 0 <= ts_usec < 1_000_000
         assert payload_bytes == payload
 
-    def test_shutdown_without_any_active_logging_does_not_raise(self, presenter):
+    def test_shutdown_without_any_active_logging_does_not_raise(
+        self, presenter, data_logger_manager
+    ):
         assert data_logger_manager.is_logging(LOOPBACK_PORT_NAME) is False
         presenter.on_close_requested()
         assert data_logger_manager.is_logging(LOOPBACK_PORT_NAME) is False
@@ -198,7 +211,7 @@ class TestShutdownStopsDataLogger:
 
 class TestShutdownOrderingClosesConnectionBeforeLogger:
     def test_shutdown_flushes_pending_leftover_batch_before_closing_logger(
-        self, presenter, loopback_config, tmp_path, qapp, qtbot, monkeypatch
+        self, presenter, data_logger_manager, loopback_config, tmp_path, qapp, qtbot, monkeypatch
     ):
         monkeypatch.setattr("model.connection_worker.BATCH_SIZE_THRESHOLD", 10_000_000)
         monkeypatch.setattr("model.connection_worker.BATCH_TIMEOUT_MS", 10_000_000)
