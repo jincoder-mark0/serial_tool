@@ -15,6 +15,8 @@ SettingsManager의 하드코딩을 방지하고 설정값 관리를 중앙화합
 * fallback 딕셔너리는 scalar 기본값을 조립해서 만듭니다.
 * 런타임에서 설정값을 읽을 때도 가능한 한 이 scalar 기본값을 참조합니다.
 """
+from copy import deepcopy
+
 from common.constants import (
     DEFAULT_BAUDRATE,
     DEFAULT_LOG_MAX_LINES,
@@ -190,15 +192,26 @@ DEFAULT_MACRO_LIST_STATE = {
 # Full Fallback Configuration
 # ==========================================
 def create_fallback_settings() -> dict:
-    """전체 기본 설정 딕셔너리를 생성하여 반환합니다."""
-    return {
+    """전체 기본 설정 딕셔너리를 생성하여 반환합니다.
+
+    WHY deepcopy:
+        블록 중 일부(`manual_control`, `macro_list`, `packet`, `ports`)는 중첩
+        dict/list를 담고 있다. 얕은 `.copy()`로 반환하면 그 중첩 객체가 모듈 전역
+        DEFAULT_* 와 **같은 객체**여서, `SettingsManager._merge_settings`가 사용자
+        값을 재귀 병합할 때 기본값 자체를 덮어썼다.
+
+        결과는 두 가지였다. 설정 파일이 손상돼 fallback으로 복구할 때 진짜 기본값이
+        아니라 직전 사용자 값이 되살아났고, 테스트에서는 한 케이스가 만든 값이
+        모듈 전역에 남아 이후 케이스로 새어나갔다.
+    """
+    return deepcopy({
         "version": SETTINGS_VERSION,
-        "settings": DEFAULT_SETTINGS_BLOCK.copy(),
-        "ui": DEFAULT_UI_SETTINGS.copy(),
-        "command": DEFAULT_COMMAND_SETTINGS.copy(),
-        "logging": DEFAULT_LOGGING_SETTINGS.copy(),
-        "packet": DEFAULT_PACKET_SETTINGS.copy(),
-        "ports": DEFAULT_PORTS_STATE.copy(),
-        "manual_control": DEFAULT_MANUAL_CONTROL_STATE.copy(),
-        "macro_list": DEFAULT_MACRO_LIST_STATE.copy(),
-    }
+        "settings": DEFAULT_SETTINGS_BLOCK,
+        "ui": DEFAULT_UI_SETTINGS,
+        "command": DEFAULT_COMMAND_SETTINGS,
+        "logging": DEFAULT_LOGGING_SETTINGS,
+        "packet": DEFAULT_PACKET_SETTINGS,
+        "ports": DEFAULT_PORTS_STATE,
+        "manual_control": DEFAULT_MANUAL_CONTROL_STATE,
+        "macro_list": DEFAULT_MACRO_LIST_STATE,
+    })

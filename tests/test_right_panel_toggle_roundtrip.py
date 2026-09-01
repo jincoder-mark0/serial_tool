@@ -113,3 +113,41 @@ def test_maximized_toggle_only_changes_visibility(window):
 
     assert window.right_section.isVisible() is False
     assert window.width() == width_before, "최대화 상태에서 창 폭이 바뀌었다"
+
+
+def test_hiding_shrinks_the_window_instead_of_stretching_the_left_section(window):
+    """
+    패널을 숨기면 **창이 줄어야** 한다 — 좌측 섹션이 빈자리를 먹어서는 안 된다.
+
+    ## WHY
+    사용자 보고(2026-09-02): "창 크기가 변해야 하는데 창 크기가 유지되어 컴포넌트
+    크기가 변한다."
+
+    원인은 Qt의 지연된 레이아웃 무효화다. `right_section.setVisible(False)` 직후에는
+    splitter와 상위 레이아웃이 아직 우측 섹션의 최소 폭을 품고 있어 창의 최소 폭이
+    줄지 않은 상태이고, 그 시점의 `resize()`는 **옛 최소 폭에 클램프되어 무시**된다.
+    그래서 창은 그대로인 채 좌측 섹션만 넓어졌다.
+
+        숨김 전   창 3838  좌측 3244  우측 580
+        숨김 후   창 3838  좌측 3828  우측 0     <- 창은 그대로, 좌측이 584px 확장
+
+    ## WHAT
+    기존 왕복 항등 테스트(`test_hide_then_show_restores_original_geometry`)는 이걸
+    잡지 못했다. 숨길 때의 창 폭을 저장해 켤 때 되돌리므로, 숨김 단계에서 창이
+    전혀 줄지 않아도 왕복은 항등이기 때문이다. 그래서 **숨김 단계 자체**를 본다.
+    """
+    before_window, before_left, before_right = _snapshot(window)
+    assert before_right > 0, "우측 패널이 보이는 상태에서 시작해야 한다"
+
+    window.toggle_right_section(False)
+    hidden_window, hidden_left, _ = _snapshot(window)
+
+    assert hidden_window < before_window, (
+        f"패널을 숨겼는데 창 폭이 줄지 않았다 ({before_window} -> {hidden_window}). "
+        f"setVisible(False) 직후에는 창의 최소 폭이 아직 우측 패널을 포함하므로 "
+        f"resize()가 클램프된다 — 레이아웃 제약을 먼저 재계산해야 한다."
+    )
+    assert hidden_left == before_left, (
+        f"창 대신 좌측 섹션이 늘어났다 ({before_left} -> {hidden_left}). "
+        f"컴포넌트 크기는 그대로 두고 창이 줄어야 한다."
+    )

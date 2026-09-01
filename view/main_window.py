@@ -300,6 +300,30 @@ class MainWindow(QMainWindow):
         if hasattr(self, 'menu_bar'):
             self.menu_bar.retranslate_ui()
 
+    def _refresh_layout_constraints(self) -> None:
+        """숨김/표시 직후 창의 레이아웃 최소 크기를 즉시 재계산합니다.
+
+        WHY:
+            Qt의 레이아웃 무효화는 지연된다. `right_section.setVisible(False)` 직후에는
+            splitter와 상위 레이아웃이 아직 우측 섹션의 최소 폭
+            (`CONTROL_MIN_WIDTH_RIGHT_SECTION`)을 품고 있어, 창의 최소 폭이 줄어들지
+            않은 상태다. 그 시점의 `resize()`는 **옛 최소 폭에 클램프되어 무시**된다.
+
+            결과가 사용자가 본 증상이다 — 패널을 숨겨도 창 크기는 그대로고, 대신
+            좌측 섹션이 빈자리를 차지하며 넓어져 내부 컴포넌트 크기가 바뀐다.
+            실측(offscreen): 창 3838 유지, 좌측 3244 -> 3828.
+
+        HOW:
+            바뀐 위젯에서 창까지 레이아웃 사슬을 아래에서 위로 무효화하고 즉시
+            activate한다. 사슬 중 하나라도 빠지면 캐시된 최소 크기가 남아 클램프가
+            그대로 일어난다 — splitter만, 또는 최상위 레이아웃만 갱신해서는 듣지 않는다.
+        """
+        self.splitter.updateGeometry()
+        for layout in (self.centralWidget().layout(), self.layout()):
+            if layout is not None:
+                layout.invalidate()
+                layout.activate()
+
     def toggle_right_section(self, visible: bool) -> None:
         if self.isMaximized():
             self.right_section.setVisible(visible)
@@ -339,6 +363,7 @@ class MainWindow(QMainWindow):
                 total_margin = margins.left() + margins.right()
                 new_window_width = self.left_section.width() + total_margin
                 self.right_section.setVisible(False)
+                self._refresh_layout_constraints()
                 self.resize(new_window_width, self.height())
             self.menu_bar.set_right_section_checked(visible)
         finally:

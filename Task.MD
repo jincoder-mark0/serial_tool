@@ -1,6 +1,6 @@
 # Task.MD — SerialTool 현재 작업 보드
 
-> 최종 갱신: 2026-08-31
+> 최종 갱신: 2026-09-01 (코드 대조 기준 커밋 `9de58c3`)
 > 기준 브랜치: `main`
 > 현재 실행 순서: **P2 잔여 hardware gate → P3 확장 → P4 최종 환경/배포 검증**
 > Post-merge 로드맵: [`doc/plans/roadmap_post_merge.md`](doc/plans/roadmap_post_merge.md)
@@ -8,6 +8,12 @@
 > SPI/I2C wrapper: [`doc/plans/spi_i2c_adapter_architecture.md`](doc/plans/spi_i2c_adapter_architecture.md)
 
 상태: `[x]` 완료 / `[ ]` 해야 함 / `[-]` 일부 완료·외부 gate 대기
+
+> 이 보드는 **코드와 대조한 시점**을 위에 적는다. 2026-09-01 대조에서 12번 하위 14개가
+> 전부 `[ ]`였으나 실제로는 13개가 병합·테스트되어 있었다(PR #15·#16·#17, 67커밋 격차).
+> 병합 후 보드를 갱신하지 않으면 다음 세션이 완료된 작업을 다시 만든다 —
+> `doc/mistakes.md` #6·#8과 같은 양상이며, `tools/check_task_boards.py`는
+> 인덱스 정합성만 보므로 이 종류의 어긋남은 잡지 못한다.
 
 ---
 
@@ -186,24 +192,75 @@ Windows / Python 3.11
   task-boards: success
 ```
 
-## 12. [ ] SPI/I2C backend / runtime / UI 구현
+## 12. [-] SPI/I2C backend / runtime / UI 구현
+
+소프트웨어는 PR #15·#16·#17로 병합됐고, 남은 gate는 **실제 하드웨어 acceptance** 하나다.
+
+`[x]` = 하드웨어 없이 완결되는 항목 / `[-]` = 소프트웨어 완료·실기기 gate 대기
 
 Tier-1:
 
-- [ ] PyFtdi optional backend loader/provider
-- [ ] FT232H enumerate/open
-- [ ] FT232H SPI transaction
-- [ ] FT232H I2C transaction
-- [ ] FT2232H stable device + channel A/B enumeration
-- [ ] FT2232H SPI transaction
-- [ ] FT2232H I2C transaction
-- [ ] FT2232H dual-channel lifecycle
-- [ ] transaction worker/service + timeout/cancellation 실제 적용
-- [ ] adapter discovery / protocol settings UI
-- [ ] Settings persistence migration
-- [ ] disconnect/reopen/shutdown
-- [ ] actual accepted bus frequency 표시/보고
+- [x] PyFtdi optional backend loader/provider
+  - `test_provider_is_unavailable_when_optional_backend_prerequisite_is_missing`
+  - `test_provider_is_unavailable_when_optional_package_import_fails`
+  - `test_pyftdi_backend_is_lazy_imported`
+- [-] FT232H enumerate/open
+  - `test_enumerates_ft232h_and_ft2232h_channels_with_stable_identity`
+  - `test_missing_serial_uses_explicit_non_persistent_usb_locator`
+- [-] FT232H SPI transaction — `test_manager_executes_spi_transaction_and_emits_result`
+- [-] FT232H I2C transaction — `test_i2c_repeated_start_and_split_transactions_map_to_pyftdi_port`
+- [-] FT2232H stable device + channel A/B enumeration
+  - `test_registry_supports_ft2232h_channel_identity_without_vendor_special_case`
+- [-] FT2232H SPI transaction
+  - `test_ft2232h_channel_b_spi_transaction_is_wrapped_without_vendor_leakage`
+- [-] FT2232H I2C transaction — I2C wrapper는 채널 공통 경로. FT2232H 전용 I2C 테스트는 없음
+- [-] FT2232H dual-channel lifecycle
+  - `test_handle_prevents_two_protocol_owners_on_same_ftdi_interface`
+  - `test_duplicate_session_name_is_rejected_until_close`
+- [x] transaction worker/service + timeout/cancellation 실제 적용
+  - `test_transaction_options_rejects_non_positive_timeout`
+  - `test_cancellation_token_is_thread_safe_cooperative_state`
+  - `test_cancel_active_transaction_is_thread_safe`
+  - `test_cancellation_is_checked_before_vendor_io`
+- [x] adapter discovery / protocol settings UI
+  - `test_async_discovery_emits_vendor_neutral_descriptors`
+  - `tests/test_transaction_manual_control.py` (Serial/SPI/I2C 옵션 노출)
+- [x] Settings persistence migration
+  - `test_legacy_spi_migration_requires_explicit_adapter_identity`
+  - `test_legacy_serial_config_is_not_silently_converted_to_spi`
+- [-] disconnect/reopen/shutdown
+  - `test_usb_disconnect_error_is_translated_to_common_error`
+  - `TransactionManager.close_session/stop_discovery/shutdown` + manager 테스트
+- [-] actual accepted bus frequency 표시/보고
+  - 백엔드가 `actual_frequency_hz`로 보고, `ManualControlPresenter`가 표시
+  - `test_pyftdi_backend.py` 실측 assert (`4_000_000`)
 - [ ] 실제 FT232H + FT2232H hardware smoke
+  - **유일하게 남은 실질 gate.** 현재 개발 환경에는 PyFtdi가 설치조차 되어 있지 않다
+    (그 상태로 전체 테스트가 통과하는 것이 optional backend 격리의 증거이기도 하다)
+
+런타임 점검(2026-09-01, 실패·경합 경로를 실제로 돌림):
+
+- 고침 — 세션 종료 시 **큐에 남은 transaction이 결과 신호 없이 사라졌다**.
+  request ID 4건 발급 후 close/shutdown하면 실행 중 1건만 `transaction_failed`를
+  받고 나머지는 2초를 기다려도 무응답이었다. 결과를 기다리는 호출자는 영원히
+  기다리고 사용자에게 오류 표시도 없다 — S-080이 매크로에서 없앤 것과 같은 침묵.
+  `run()` finally에서 큐를 비우며 통지하도록 고쳤다.
+  회귀: `test_queued_transactions_are_answered_when_session_closes`,
+  `test_pending_failures_are_reported_before_session_closed`
+- 확인했고 정상이던 것 — 열지 않은/닫힌 세션 `execute()`는 None 반환,
+  진행 중 shutdown/close는 협조적 취소로 즉시 정리, `controller.close()` 예외는
+  격리되어 같은 이름 재오픈 가능, discovery+session 동시 종료 후 스레드 누수 없음
+
+추가 점검(2026-09-02) — **위 S-084 수정만으로는 침묵이 다 없어지지 않았다**:
+
+- 고침 — 큐에서 **꺼낸 뒤** stop()이 도착하면 그 1건이 여전히 사라졌다 (S-085).
+  worker는 `get()`으로 command를 꺼낸 다음 lock을 잡고 `_stop_requested`를 확인해
+  `break` 하는데, 그 command는 이미 큐 밖이라 `_fail_pending_transactions()`의
+  큐 드레인도 잡지 못한다. 인터리빙을 고정해 재현하면 발급 3건 중 1번이 완료도
+  실패도 없이 사라졌다. break 전에 통지하도록 고쳤다.
+  회귀: `test_dequeued_transaction_is_answered_when_stop_arrives_mid_loop`
+- 교훈 — "큐를 비우며 통지"는 큐에 **남아 있는** 것만 덮는다. 큐에서 꺼낸 뒤
+  실행 전까지의 구간도 소유자가 있어야 한다
 
 Architecture requirements:
 
@@ -281,6 +338,11 @@ P4는 개별 feature hardware acceptance를 대체하지 않는다.
 - FT2232H I2C clock stretching hardware wiring 검증 필요
 - PyFtdi I2C medium/high-speed write는 초기 성능 목표에서 제외
 - CH347/MCP2210 production backend는 아직 구현 전
+- **보드가 인용한 PR 번호(#2·#3·#4·#7·#8·#10·#11·#15·#16·#17)가 현재 origin
+  (`jincoder-mark0/serial_tool`)의 PR과 대응하지 않는다.** 그 저장소의 merged PR은
+  2025-12자 #1~#17이고 head branch 이름도 전혀 다르다. 근거 추적 시 PR 번호 대신
+  커밋 해시를 쓸 것. 원격 브랜치 23개의 병합 여부도 이 때문에 확인이 안 되어
+  정리를 보류했다
 
 ---
 

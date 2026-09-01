@@ -193,3 +193,71 @@ def test_common_event_state_values_are_stable():
     assert LogLevel.ERROR.value == "ERROR"
     assert LogLevel.SUCCESS.value == "SUCCESS"
     assert LogLevel.CRITICAL.value == "CRITICAL"
+
+
+def test_fallback_blocks_are_independent_across_calls():
+    """
+    호출마다 독립된 중첩 객체를 돌려줘야 한다.
+
+    얕은 복사로 돌려주면 중첩 dict/list가 모듈 전역 DEFAULT_* 와 같은 객체가 되어,
+    한 쪽을 고치면 "기본값"이 통째로 바뀐다.
+    """
+    first = create_fallback_settings()
+    second = create_fallback_settings()
+
+    nested_paths = [
+        ("manual_control", "manual_control_widget"),
+        ("macro_list", "control_state"),
+    ]
+    for block, key in nested_paths:
+        assert first[block][key] is not second[block][key], (
+            f"{block}.{key}가 호출 간에 같은 객체다 — 한 곳의 수정이 기본값 전체에 번진다"
+        )
+
+    for block, key in [("macro_list", "commands"), ("ports", "tabs"), ("packet", "delimiters")]:
+        assert first[block][key] is not second[block][key], (
+            f"{block}.{key} 리스트가 호출 간에 공유된다"
+        )
+
+
+def test_loading_user_settings_does_not_mutate_canonical_defaults(tmp_path):
+    """
+    사용자 설정을 로드해도 모듈 전역 기본값은 그대로여야 한다.
+
+    ## WHY
+    `create_fallback_settings()`가 얕은 복사를 돌려주던 때는
+    `SettingsManager._merge_settings`의 재귀 병합이 사용자 값을 모듈 전역
+    DEFAULT_* 에 그대로 써 넣었다. 실측: 전체 테스트 스위트를 한 번 돌리는 것만으로
+    `DEFAULT_MANUAL_CONTROL_STATE`의 prefix/suffix/broadcast가 False -> True로 바뀌었다.
+
+    피해가 두 갈래다. 런타임에서는 설정 파일이 손상돼 fallback으로 복구할 때 진짜
+    기본값이 아니라 **직전 사용자 값**이 되살아난다 — "기본값으로 복구했다"는
+    로그를 남기면서. 테스트에서는 한 케이스가 만든 값이 전역에 남아 이후 케이스로
+    새어나가 결과가 실행 순서에 의존하게 된다.
+    """
+    import copy
+    import json
+
+    from common import defaults as defaults_module
+    from core.resource_path import ResourcePath
+    from core.settings_manager import SettingsManager
+
+    pristine = copy.deepcopy(defaults_module.DEFAULT_MANUAL_CONTROL_STATE)
+
+    resource_path = ResourcePath(tmp_path)
+    resource_path.config_dir.mkdir(parents=True, exist_ok=True)
+
+    user_settings = create_fallback_settings()
+    user_settings["manual_control"]["manual_control_widget"].update(
+        {"input_text": "AT+USER", "hex_mode": True, "broadcast_enabled": True}
+    )
+    resource_path.user_settings_file.write_text(
+        json.dumps(user_settings), encoding="utf-8"
+    )
+
+    SettingsManager(resource_path)
+
+    assert defaults_module.DEFAULT_MANUAL_CONTROL_STATE == pristine, (
+        "사용자 설정 로드가 모듈 전역 기본값을 덮어썼다 — 손상 복구 시 진짜 기본값 대신 "
+        "직전 사용자 값이 되살아나고, 테스트 격리도 깨진다"
+    )

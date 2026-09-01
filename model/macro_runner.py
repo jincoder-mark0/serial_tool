@@ -93,10 +93,21 @@ class MacroRunner(QThread):
         self.macro_started.emit()
         super().start()
 
-    def stop(self) -> None:
+    def stop(self, timeout_ms: Optional[int] = None) -> bool:
+        """실행 중지를 요청하고 thread 종료를 기다립니다.
+
+        Args:
+            timeout_ms: 대기 상한(ms). None이면 종료까지 무한 대기한다.
+
+        Returns:
+            bool: thread가 실제로 종료됐으면 True.
+        """
         self._last_run_succeeded = False
         self._stop_internal(reason="User stopped macro")
-        self.wait()
+        if timeout_ms is None:
+            self.wait()
+            return True
+        return self.wait(timeout_ms)
 
     def _stop_internal(self, reason: str = "") -> None:
         self._mutex.lock()

@@ -1,6 +1,7 @@
 """ShutdownCoordinator의 책임과 S-059 종료 순서를 검증합니다."""
 from unittest.mock import MagicMock, patch
 
+from common.constants import BACKGROUND_WORKER_STOP_TIMEOUT_MS
 from presenter.shutdown_coordinator import ShutdownCoordinator
 
 
@@ -80,7 +81,9 @@ def test_shutdown_stops_runtime_services_and_saves_state():
         coordinator.shutdown()
 
     macro.stop.assert_called_once()
-    macro.wait.assert_called_once_with(1000)
+    # 상한은 stop()에 전달돼야 한다. 과거처럼 stop() 뒤에 wait(1000)을 두면
+    # stop() 내부의 무한 대기가 먼저 끝나 상한이 아무 역할도 못 한다.
+    assert macro.stop.call_args.kwargs.get("timeout_ms") == BACKGROUND_WORKER_STOP_TIMEOUT_MS
     file_transfer.shutdown.assert_called_once()
     macro_script.stop.assert_called_once()
     port_scan.stop.assert_called_once()
@@ -131,3 +134,41 @@ def test_connection_closes_before_queued_events_and_data_logger_stop():
         coordinator.shutdown()
 
     assert order == ["close_connection", "process_events", "logger_stop"]
+
+
+def test_macro_runner_stop_receives_the_shutdown_timeout():
+    """
+    종료 시 매크로 정지는 상한을 **stop()에 넘겨야** 실제로 적용된다.
+
+    ## WHY
+    과거 코드는 `stop()` 다음 줄에서 `wait(1000)`을 불렀다. 그런데 `stop()`은 내부에서
+    이미 상한 없는 `wait()`을 하므로, 그 다음 `wait(1000)`은 항상 **이미 끝난 스레드**를
+    기다렸다. 1초 상한이라는 의도가 코드에 적혀만 있고 아무 역할도 하지 못했다 —
+    매크로 스레드가 늦게 끝나면 종료가 그만큼 무한정 늘어졌다.
+    """
+    coordinator, _view, _settings, _controller, _ft, macro, *_rest = _make_coordinator()
+    macro.isRunning.return_value = True
+
+    with patch("presenter.shutdown_coordinator.QCoreApplication"):
+        coordinator.shutdown()
+
+    macro.stop.assert_called_once()
+    assert macro.stop.call_args.kwargs.get("timeout_ms") == BACKGROUND_WORKER_STOP_TIMEOUT_MS, (
+        "상한이 stop()에 전달되지 않았다 — stop() 뒤에 wait(timeout)을 두면 "
+        "stop() 내부의 무한 대기가 먼저 끝나 상한이 무의미해진다"
+    )
+
+
+def test_shutdown_continues_when_macro_runner_does_not_stop_in_time():
+    """상한을 넘겨도 종료 시퀀스의 나머지는 계속 진행돼야 한다."""
+    (
+        coordinator, _view, settings, controller, _ft, macro, *_rest
+    ) = _make_coordinator()
+    macro.isRunning.return_value = True
+    macro.stop.return_value = False
+
+    with patch("presenter.shutdown_coordinator.QCoreApplication"):
+        coordinator.shutdown()
+
+    controller.close_connection.assert_called_once()
+    settings.save_settings.assert_called_once()

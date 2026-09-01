@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from queue import Queue
 from threading import Event
 
 import pytest
@@ -33,6 +34,7 @@ from core.transport.transaction.dto import (
 from core.transport.transaction.errors import TransactionCancelledError
 from core.transport.transaction.registry import AdapterBackendRegistry
 from model.transaction_manager import TransactionManager
+from model.transaction_session_worker import TransactionSessionWorker
 
 
 def _wait_until(predicate, timeout: float = 1.0) -> bool:
@@ -271,3 +273,148 @@ def test_duplicate_session_name_is_rejected_until_close(app):
 
     assert manager.close_session("fixture-spi") is True
     assert _wait_until(lambda: not manager.is_session_active("fixture-spi"))
+
+
+def test_queued_transactions_are_answered_when_session_closes(app):
+    """
+    큐에 남은 transaction도 결과를 받아야 한다 (S-084).
+
+    ## WHY
+    `execute()`는 호출자에게 request ID를 돌려준다 — 결과를 신호로 받겠다는 약속이다.
+    그런데 세션이 닫히면 **실행 중이던 1건만** `transaction_failed`를 받고, 큐에
+    남아 있던 나머지는 완료도 실패도 없이 사라졌다.
+
+    실측: request ID 4건을 발급하고 세션을 닫으면 1번만 응답하고 2·3·4번은 2초를
+    기다려도 아무 신호가 없었다. 그 뒤 오는 것은 request ID가 없는
+    `session_closed`/`worker_terminated`뿐이라 어느 요청이 버려졌는지 알 수 없다.
+
+    결과를 기다리는 호출자는 영원히 기다리고, 사용자에게는 오류 표시조차 뜨지 않는다 —
+    보내지 못한 명령이 조용히 사라진다. `MacroSendResult`(S-080)가 매크로에서 없앤 것과
+    같은 종류의 침묵이다.
+    """
+    spi = _FakeSpiController(block=True)
+    manager = TransactionManager(
+        registry=AdapterBackendRegistry([_FakeProvider(_descriptor(), spi)]),
+    )
+    assert manager.open_session(_spi_config()) is True
+    assert _wait_until(lambda: manager.is_session_active("fixture-spi"))
+
+    answered: list[int] = []
+    manager.transaction_completed.connect(lambda _n, rid, _r: answered.append(rid))
+    manager.transaction_failed.connect(lambda _n, rid, _e: answered.append(rid))
+
+    issued = [
+        manager.execute("fixture-spi", SpiTransactionRequest(tx_data=b"\x01", rx_length=1))
+        for _ in range(4)
+    ]
+    assert all(rid is not None for rid in issued)
+    assert spi.started.wait(1.0)
+
+    manager.close_session("fixture-spi", timeout_ms=1000)
+    _wait_until(lambda: set(issued) <= set(answered), timeout=2.0)
+
+    assert set(issued) <= set(answered), (
+        f"응답 없이 사라진 request ID: {sorted(set(issued) - set(answered))}"
+    )
+    manager.shutdown()
+
+
+def test_pending_failures_are_reported_before_session_closed(app):
+    """
+    개별 실패 통지가 `session_closed`보다 먼저 와야 한다.
+
+    순서가 뒤집히면 소비자는 세션이 끝난 줄 알고 정리를 마친 뒤에 결과를 받는다 —
+    "이 요청은 실패"와 "세션이 끝남"을 구분해 처리할 수 없다.
+    """
+    spi = _FakeSpiController(block=True)
+    manager = TransactionManager(
+        registry=AdapterBackendRegistry([_FakeProvider(_descriptor(), spi)]),
+    )
+    assert manager.open_session(_spi_config()) is True
+    assert _wait_until(lambda: manager.is_session_active("fixture-spi"))
+
+    order: list[str] = []
+    worker = manager._workers["fixture-spi"]
+    worker.transaction_failed.connect(lambda *_: order.append("failed"))
+    worker.session_closed.connect(lambda *_: order.append("closed"))
+
+    for _ in range(3):
+        manager.execute("fixture-spi", SpiTransactionRequest(tx_data=b"\x01", rx_length=1))
+    assert spi.started.wait(1.0)
+
+    manager.close_session("fixture-spi", timeout_ms=1000)
+    _wait_until(lambda: "closed" in order, timeout=2.0)
+
+    assert "closed" in order, f"세션 종료 신호가 오지 않았다: {order}"
+    assert order.index("closed") == len(order) - 1, (
+        f"session_closed 뒤에 개별 실패가 왔다: {order}"
+    )
+    manager.shutdown()
+
+
+class _StopOnFirstGetQueue(Queue):
+    """첫 `get()`이 command를 돌려준 **직후**에 stop()이 도착하는 큐.
+
+    Worker는 `_commands.get()`으로 command를 꺼낸 뒤에야 state lock을 잡고
+    `_stop_requested`를 확인한다. 그 사이는 실제로 열려 있는 창이고, 여기서
+    stop()이 들어오면 이미 꺼내진 command가 어디에도 속하지 않게 된다.
+    운에 맡기면 재현이 들쭉날쭉하므로 그 인터리빙을 고정한다.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.worker: TransactionSessionWorker | None = None
+        self.armed = False
+
+    def get(self, *args, **kwargs):
+        item = super().get(*args, **kwargs)
+        if self.armed and self.worker is not None:
+            self.armed = False
+            self.worker.stop()
+        return item
+
+
+def test_dequeued_transaction_is_answered_when_stop_arrives_mid_loop(app):
+    """
+    큐에서 꺼낸 직후 stop()이 와도 그 transaction은 통지를 받아야 한다 (S-085).
+
+    ## WHY
+    S-084는 **큐에 남은** request를 통지하도록 고쳤지만, 창이 하나 더 있었다.
+    worker는 `get()`으로 command를 꺼낸 다음 lock을 잡고 `_stop_requested`를
+    확인해 `break` 한다. 그 command는 이미 큐 밖이라 종료 시 큐를 비우는
+    `_fail_pending_transactions()`도 잡지 못한다.
+
+    실측: 이 인터리빙을 고정하면 발급한 ID 3건 중 1번이 완료도 실패도 없이
+    사라졌다(`answered: [2, 3]`). S-084가 없앤 것과 같은 침묵이 경로 하나에
+    남아 있던 것이다.
+    """
+    spi = _FakeSpiController()
+    registry = AdapterBackendRegistry([_FakeProvider(_descriptor(), spi)])
+    worker = TransactionSessionWorker(registry, _spi_config())
+
+    # start() 전에 갈아끼워야 worker thread가 옛 큐에서 대기하는 일이 없다.
+    hooked = _StopOnFirstGetQueue()
+    hooked.worker = worker
+    worker._commands = hooked
+
+    answered: list[int] = []
+    worker.transaction_completed.connect(lambda _n, rid, _r: answered.append(rid))
+    worker.transaction_failed.connect(lambda _n, rid, _e: answered.append(rid))
+
+    opened: list[str] = []
+    worker.session_opened.connect(lambda name, _d: opened.append(name))
+    worker.start()
+    assert _wait_until(lambda: bool(opened)), "세션이 열리지 않았다"
+
+    hooked.armed = True
+    issued = [rid for rid in (1, 2, 3)
+              if worker.enqueue_transaction(rid, SpiTransactionRequest(tx_data=b"", rx_length=1))]
+    assert issued == [1, 2, 3]
+
+    assert worker.wait(2000), "worker가 종료되지 않았다"
+    _wait_until(lambda: set(issued) <= set(answered), timeout=2.0)
+
+    assert set(issued) <= set(answered), (
+        f"응답 없이 사라진 request ID: {sorted(set(issued) - set(answered))} "
+        f"(큐에서 꺼낸 뒤 stop()이 오면 그 건은 큐 드레인도 놓친다)"
+    )
