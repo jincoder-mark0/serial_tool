@@ -9,6 +9,7 @@ from typing import Callable, Optional
 
 from PyQt5.QtCore import QCoreApplication
 
+from common.constants import BACKGROUND_WORKER_STOP_TIMEOUT_MS
 from core.data_logger import data_logger_manager
 from core.logger import logger
 from core.settings_manager import SettingsManager
@@ -65,8 +66,15 @@ class ShutdownCoordinator:
 
         if self._macro_runner.isRunning():
             logger.info("Stopping active macro runner...")
-            self._macro_runner.stop()
-            self._macro_runner.wait(1000)
+            # 상한은 stop()에 넘겨야 실제로 적용된다. 과거에는 stop() 안에서 이미
+            # 무한 wait()을 한 뒤에 wait(1000)을 불러 상한이 아무 역할도 못 했다.
+            if not self._macro_runner.stop(
+                timeout_ms=BACKGROUND_WORKER_STOP_TIMEOUT_MS
+            ):
+                logger.warning(
+                    "Macro runner did not stop within "
+                    f"{BACKGROUND_WORKER_STOP_TIMEOUT_MS} ms; continuing shutdown."
+                )
 
         # ConnectionController 및 USB adapter resource를 닫기 전에 producer 성격의
         # background 작업부터 정리합니다. SPI/I2C session도 별도 lifecycle owner가

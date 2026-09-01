@@ -36,10 +36,7 @@ from core.transport.transaction.dto import (
     SpiTransactionRequest,
     TransactionProtocol,
 )
-from core.transport.transaction.errors import (
-    TransactionAdapterError,
-    TransactionCancelledError,
-)
+from core.transport.transaction.errors import TransactionCancelledError
 from core.transport.transaction.registry import AdapterBackendRegistry
 
 
@@ -145,9 +142,18 @@ class TransactionSessionWorker(QThread):
 
                 token = CancellationToken()
                 with self._state_lock:
-                    if self._stop_requested:
-                        break
-                    self._active_token = token
+                    stopping = self._stop_requested
+                    if not stopping:
+                        self._active_token = token
+
+                if stopping:
+                    # 이 command는 이미 큐에서 꺼낸 뒤다 — 여기서 통지하지 않으면
+                    # `_fail_pending_transactions()`의 큐 드레인도 놓친다 (S-085).
+                    self._fail_transaction(
+                        command.request_id,
+                        "Session closed before the transaction started.",
+                    )
+                    break
 
                 try:
                     result = controller.transact(
@@ -209,13 +215,18 @@ class TransactionSessionWorker(QThread):
             except Empty:
                 break
 
-            self.transaction_failed.emit(
-                self.session_name,
+            self._fail_transaction(
                 command.request_id,
-                TransactionCancelledError(
-                    "Session closed before the transaction started."
-                ),
+                "Session closed before the transaction started.",
             )
+
+    def _fail_transaction(self, request_id: int, message: str) -> None:
+        """실행되지 못한 transaction에 취소 실패를 통지합니다."""
+        self.transaction_failed.emit(
+            self.session_name,
+            request_id,
+            TransactionCancelledError(message),
+        )
 
     def _open_controller(
         self,
@@ -252,15 +263,11 @@ class TransactionSessionWorker(QThread):
         if controller is not None:
             try:
                 controller.close()
-            except TransactionAdapterError:
-                pass
             except Exception:
                 pass
 
         if handle is not None:
             try:
                 handle.close()
-            except TransactionAdapterError:
-                pass
             except Exception:
                 pass

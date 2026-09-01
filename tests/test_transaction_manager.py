@@ -3,6 +3,7 @@ from __future__ import annotations
 
 import time
 from dataclasses import dataclass
+from queue import Queue
 from threading import Event
 
 import pytest
@@ -33,6 +34,7 @@ from core.transport.transaction.dto import (
 from core.transport.transaction.errors import TransactionCancelledError
 from core.transport.transaction.registry import AdapterBackendRegistry
 from model.transaction_manager import TransactionManager
+from model.transaction_session_worker import TransactionSessionWorker
 
 
 def _wait_until(predicate, timeout: float = 1.0) -> bool:
@@ -348,3 +350,71 @@ def test_pending_failures_are_reported_before_session_closed(app):
         f"session_closed 뒤에 개별 실패가 왔다: {order}"
     )
     manager.shutdown()
+
+
+class _StopOnFirstGetQueue(Queue):
+    """첫 `get()`이 command를 돌려준 **직후**에 stop()이 도착하는 큐.
+
+    Worker는 `_commands.get()`으로 command를 꺼낸 뒤에야 state lock을 잡고
+    `_stop_requested`를 확인한다. 그 사이는 실제로 열려 있는 창이고, 여기서
+    stop()이 들어오면 이미 꺼내진 command가 어디에도 속하지 않게 된다.
+    운에 맡기면 재현이 들쭉날쭉하므로 그 인터리빙을 고정한다.
+    """
+
+    def __init__(self) -> None:
+        super().__init__()
+        self.worker: TransactionSessionWorker | None = None
+        self.armed = False
+
+    def get(self, *args, **kwargs):
+        item = super().get(*args, **kwargs)
+        if self.armed and self.worker is not None:
+            self.armed = False
+            self.worker.stop()
+        return item
+
+
+def test_dequeued_transaction_is_answered_when_stop_arrives_mid_loop(app):
+    """
+    큐에서 꺼낸 직후 stop()이 와도 그 transaction은 통지를 받아야 한다 (S-085).
+
+    ## WHY
+    S-084는 **큐에 남은** request를 통지하도록 고쳤지만, 창이 하나 더 있었다.
+    worker는 `get()`으로 command를 꺼낸 다음 lock을 잡고 `_stop_requested`를
+    확인해 `break` 한다. 그 command는 이미 큐 밖이라 종료 시 큐를 비우는
+    `_fail_pending_transactions()`도 잡지 못한다.
+
+    실측: 이 인터리빙을 고정하면 발급한 ID 3건 중 1번이 완료도 실패도 없이
+    사라졌다(`answered: [2, 3]`). S-084가 없앤 것과 같은 침묵이 경로 하나에
+    남아 있던 것이다.
+    """
+    spi = _FakeSpiController()
+    registry = AdapterBackendRegistry([_FakeProvider(_descriptor(), spi)])
+    worker = TransactionSessionWorker(registry, _spi_config())
+
+    # start() 전에 갈아끼워야 worker thread가 옛 큐에서 대기하는 일이 없다.
+    hooked = _StopOnFirstGetQueue()
+    hooked.worker = worker
+    worker._commands = hooked
+
+    answered: list[int] = []
+    worker.transaction_completed.connect(lambda _n, rid, _r: answered.append(rid))
+    worker.transaction_failed.connect(lambda _n, rid, _e: answered.append(rid))
+
+    opened: list[str] = []
+    worker.session_opened.connect(lambda name, _d: opened.append(name))
+    worker.start()
+    assert _wait_until(lambda: bool(opened)), "세션이 열리지 않았다"
+
+    hooked.armed = True
+    issued = [rid for rid in (1, 2, 3)
+              if worker.enqueue_transaction(rid, SpiTransactionRequest(tx_data=b"", rx_length=1))]
+    assert issued == [1, 2, 3]
+
+    assert worker.wait(2000), "worker가 종료되지 않았다"
+    _wait_until(lambda: set(issued) <= set(answered), timeout=2.0)
+
+    assert set(issued) <= set(answered), (
+        f"응답 없이 사라진 request ID: {sorted(set(issued) - set(answered))} "
+        f"(큐에서 꺼낸 뒤 stop()이 오면 그 건은 큐 드레인도 놓친다)"
+    )
