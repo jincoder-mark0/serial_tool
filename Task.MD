@@ -317,7 +317,15 @@ Macro / AutoTx / Broadcast / Local Echo / Packet Parser와 교차하므로 side 
 
 상세: [`doc/plans/environment_validation_plan.md`](doc/plans/environment_validation_plan.md)
 
-18. [ ] 최신 `main` PyInstaller artifact build + smoke
+18. [-] 최신 `main` PyInstaller artifact build + smoke
+    - 기록: [`doc/artifact_smoke_20260902.md`](doc/artifact_smoke_20260902.md)
+    - 통과: 빌드, 리소스 번들 완전성, 기동, 번들 경로 resource/언어/테마 로드,
+      설정 읽기·쓰기 및 v1.2 -> v1.3 마이그레이션, APPDATA 로깅 경로, 포트 스캔,
+      정상 종료, 로그 내 WARNING/ERROR 0건, PyFtdi 미설치 격리
+    - 고침: spec이 gitignore된 `settings.local.json`을 배포본에 담고 있었다.
+      빌드 의존성(PyInstaller)도 어디에도 선언돼 있지 않아 `requirements-build.txt` 추가
+    - 남은 gate: LOOPBACK Manual TX/RX, Macro 실행, Packet Inspector, File Transfer,
+      로그 file dialog, 아이콘 — 모두 GUI 대화형이라 사람이 artifact에서 확인해야 한다
 19. [ ] Windows com0com Serial E2E
 20. [ ] 실제 USB Serial 종합 검증
 21. [ ] Linux socat 검증 — Linux가 실제 지원 대상일 때 필수
