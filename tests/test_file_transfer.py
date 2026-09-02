@@ -38,9 +38,15 @@ def _rts_cts_config(port: str, baudrate: int = 115200) -> PortConfig:
 class _FakeConnectionController:
     """FileTransferService가 실제로 사용하는 queue/send 계약만 구현합니다."""
 
-    def __init__(self, queue_size: int = 0, send_succeeds: bool = True):
+    def __init__(
+        self,
+        queue_size: int = 0,
+        send_succeeds: bool = True,
+        connection_open: bool = True,
+    ):
         self.queue_size = queue_size
         self.send_succeeds = send_succeeds
+        self.connection_open = connection_open
         self.sent_chunks = []
         self.queue_size_query_count = 0
         self.write_idle = True
@@ -54,7 +60,7 @@ class _FakeConnectionController:
         return self.write_idle and self.queue_size == 0
 
     def is_connection_open(self, port_name) -> bool:
-        return True
+        return self.connection_open
 
     def get_write_error(self, port_name):
         return self.write_error
@@ -296,7 +302,9 @@ def test_send_failure_emits_error_and_failed_completion(qapp, tmp_path):
     file_path.write_bytes(b"X" * 10)
 
     config = _rts_cts_config("DEAD_PORT")
-    controller = _FakeConnectionController(send_succeeds=False)
+    # 포트가 닫힌 상태다. TX 큐가 가득 찬 경우(포트는 열려 있음)와 구분되어야 한다 —
+    # 전자는 즉시 실패, 후자는 backpressure로 재시도하는 상황이다.
+    controller = _FakeConnectionController(send_succeeds=False, connection_open=False)
     service = FileTransferService(controller, str(file_path), config)
     completed = []
     errors = []
@@ -310,3 +318,72 @@ def test_send_failure_emits_error_and_failed_completion(qapp, tmp_path):
     assert "DEAD_PORT" in errors[0].message
     assert len(completed) == 1
     assert completed[0].success is False
+
+
+def test_backpressure_retries_the_same_chunk_instead_of_dropping_it(qapp, tmp_path):
+    """
+    큐가 가득 차 거절당한 청크는 **버리지 않고** 재시도해야 한다.
+
+    거절당했을 때 다음 청크를 새로 읽으면 그 청크가 조용히 사라진다 — 큐 상한을
+    도입한 목적(유실 방지)이 정반대로 뒤집힌다.
+    """
+    content = b"".join(bytes([i]) * 1024 for i in range(4))
+    file_path = tmp_path / "retry.bin"
+    file_path.write_bytes(content)
+
+    class _RejectsEveryOtherSend(_FakeConnectionController):
+        def __init__(self):
+            super().__init__()
+            self.attempts = 0
+
+        def send_data_to_connection(self, port_name, chunk) -> bool:
+            self.attempts += 1
+            if self.attempts % 2 == 1:      # 홀수 번째 시도는 큐가 가득 차 거절
+                return False
+            self.sent_chunks.append(chunk)
+            return True
+
+    controller = _RejectsEveryOtherSend()
+    config = _rts_cts_config("COM1")
+    service = FileTransferService(controller, str(file_path), config)
+    completed = []
+    service.signals.transfer_completed.connect(completed.append)
+
+    service.run()
+
+    assert completed[-1].success is True
+    assert b"".join(controller.sent_chunks) == content, (
+        "거절당한 청크가 유실됐다 — 재시도하지 않고 다음 청크를 읽었다"
+    )
+
+
+def test_transfer_fails_when_the_queue_stays_full(qapp, tmp_path, monkeypatch):
+    """
+    큐가 계속 가득 차 있으면 영원히 재시도하지 않고 알려야 한다.
+
+    포트가 실제로 멎으면(드라이버 정지, XON/XOFF hold 등) 재시도가 끝나지 않는다.
+    사용자에게는 전송이 특정 %에서 영원히 멈춘 것으로만 보인다 — 조용한 정체다.
+    큐잉되지 않은 데이터라 실패로 끝내도 유실이 아니다.
+    """
+    monkeypatch.setattr(
+        "model.file_transfer_service.FILE_TRANSFER_STALL_TIMEOUT_S", 0.05
+    )
+
+    file_path = tmp_path / "stall.bin"
+    file_path.write_bytes(b"X" * 4096)
+
+    # 포트는 열려 있는데 큐가 계속 가득 찬 상황.
+    controller = _FakeConnectionController(send_succeeds=False, connection_open=True)
+    config = _rts_cts_config("STALLED_PORT")
+    service = FileTransferService(controller, str(file_path), config)
+    completed = []
+    errors = []
+    service.signals.transfer_completed.connect(completed.append)
+    service.signals.error_occurred.connect(errors.append)
+
+    service.run()
+
+    assert errors, "정체를 알리지 않고 조용히 멈췄다"
+    assert "not draining" in errors[-1].message
+    assert "STALLED_PORT" in errors[-1].message
+    assert completed[-1].success is False

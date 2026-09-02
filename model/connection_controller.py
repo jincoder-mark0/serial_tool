@@ -65,6 +65,20 @@ class ConnectionController(QObject):
         worker = self.workers.get(name)
         return worker.get_write_queue_size() if worker else 0
 
+    def get_write_queue_bytes(self, name: str) -> int:
+        """대상 Worker의 전송 대기 TX 바이트 총량을 반환합니다."""
+        worker = self.workers.get(name)
+        return worker.get_write_queue_bytes() if worker else 0
+
+    def is_write_queue_full(self, name: str) -> bool:
+        """대상 Worker의 TX 큐가 상한에 닿아 신규 데이터를 못 받는지 반환합니다.
+
+        생산자가 "지금은 못 받는다(재시도)"와 "포트가 닫혔다(실패)"를 구분하는 데
+        쓴다. 둘을 구분하지 못하면 일시적인 backpressure에 전송을 중단하게 된다.
+        """
+        worker = self.workers.get(name)
+        return worker is not None and worker.is_write_queue_full()
+
     def is_write_idle(self, name: str) -> bool:
         """대상 Worker의 Queue와 in-flight transport write가 모두 끝났는지 확인합니다."""
         worker = self.workers.get(name)
@@ -326,7 +340,20 @@ class ConnectionController(QObject):
         if not self.is_connection_open(port_name):
             self._emit_error(port_name, "Cannot send data: Port is not open.")
             return False
-        return self.send_data_to_connection(port_name, data)
+
+        if self.send_data_to_connection(port_name, data):
+            return True
+
+        # 포트는 열려 있는데 큐잉이 실패했다 = TX 큐가 상한에 닿았다.
+        # 여기서 조용히 False만 돌려주면 사용자는 명령이 사라진 이유를 알 수 없다.
+        if self.is_write_queue_full(port_name):
+            self._emit_error(
+                port_name,
+                "Cannot send data: TX queue is full "
+                f"({self.get_write_queue_bytes(port_name)} bytes pending). "
+                "The port is not draining fast enough.",
+            )
+        return False
 
     def send_broadcast_data(self, data: bytes) -> bool:
         if not self.workers:
