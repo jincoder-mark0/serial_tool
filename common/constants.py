@@ -148,6 +148,22 @@ BACKGROUND_WORKER_STOP_TIMEOUT_MS: int = 1000
 #      pyserial write_timeout이 청크당 1초이므로 두 청크 분량을 상한으로 둔다.
 REOPEN_FLUSH_WAIT_MS: int = 2000
 
+# ConnectionWorker TX 큐의 누적 바이트 상한.
+#
+# WHY: 상한이 없으면 `send_data()`가 항상 성공을 돌려주므로 **큐잉 성공이 전송 성공을
+#      뜻하지 않는다.** 생산자는 포트가 감당하지 못하는 속도로 계속 쌓을 수 있고,
+#      실제로 못 보냈다는 사실은 한참 뒤에야 드러난다. 상한이 있으면 `enqueue()`가
+#      즉시 False를 돌려주어 생산자가 그 자리에서 backpressure를 받는다.
+#
+# 값의 근거: 정상 사용을 막지 않는 안전망 수준으로 잡는다. 가장 큰 생산자인
+#      FileTransferService는 이미 큐 깊이 50청크(청크당 최대 4 KB ≈ 200 KB)로
+#      자체 제한하므로 1 MB는 그보다 5배 여유가 있다. 여기에 닿는다는 것은 생산자가
+#      backpressure를 무시하고 있다는 신호다.
+#
+# 이것이 보장하지 않는 것: 드레인 **시간**의 상한. 1 MB는 115200 bps에서 약 87초,
+#      9600 bps에서는 훨씬 길다. 종료 시 대기 시간 문제는 별도 과제다.
+TX_QUEUE_MAX_BYTES: int = 1024 * 1024
+
 # 더미 포트 예약명 (S-033) — 실기기 없이 송수신 경로를 디버깅하기 위한 루프백 에코 포트.
 # 실제 장치명(COMx 등)과 충돌하지 않는 이름으로 고정.
 LOOPBACK_PORT_NAME: str = "LOOPBACK"
@@ -244,6 +260,18 @@ STATUS_BAR_UPDATE_INTERVAL_MS: int = 1000
 # 파일 전송 backpressure 대기 (model/file_transfer_service.py)
 # TX 큐가 임계값을 넘거나(전송 중) 완료 후 큐가 비워지길 기다릴 때 사용하는 폴링 간격.
 FILE_TRANSFER_BACKPRESSURE_WAIT_S: float = 0.01
+
+# TX 큐가 가득 찬 상태로 이만큼 지나면 전송을 실패시킨다.
+#
+# WHY: 큐가 가득 차면 같은 청크를 들고 재시도하는데, 포트가 실제로 멎으면
+#      (드라이버 정지, XON/XOFF hold 등) 그 재시도가 끝나지 않는다. 사용자에게는
+#      전송이 특정 %에서 영원히 멈춘 것으로만 보인다 — 조용한 정체다.
+#      상한을 두면 "왜 멈췄는지"를 알릴 수 있고, 큐잉되지 않은 데이터라 유실도 아니다.
+#
+# 값의 근거: FileTransferService는 큐 깊이 50청크로 자체 제한하므로 정상적으로는
+#      하드 상한(TX_QUEUE_MAX_BYTES)에 닿지 않는다. 여기에 30초를 머문다는 것은
+#      드레인이 진행되지 않는다는 뜻이다.
+FILE_TRANSFER_STALL_TIMEOUT_S: float = 30.0
 
 # ==========================================
 # Dialog & Widget Fixed Sizes (S-047: 매직 넘버 상수화)

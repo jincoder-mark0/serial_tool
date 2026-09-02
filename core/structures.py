@@ -28,15 +28,29 @@ class ThreadSafeQueue:
     내부적으로 deque와 Lock을 사용하여 구현되었습니다.
     """
 
-    def __init__(self, maxlen: Optional[int] = None):
+    def __init__(
+        self,
+        maxlen: Optional[int] = None,
+        max_bytes: Optional[int] = None,
+    ):
         """
         ThreadSafeQueue를 초기화합니다.
 
         Args:
-            maxlen (Optional[int]): 큐의 최대 크기. None이면 무제한.
+            maxlen (Optional[int]): 큐의 최대 아이템 개수. None이면 무제한.
+            max_bytes (Optional[int]): 큐에 담긴 아이템의 최대 누적 바이트.
+                None이면 무제한. 지정하면 아이템이 ``len()``을 지원해야 한다
+                (bytes/bytearray 등).
+
+        Note:
+            상한에 닿으면 ``enqueue()``가 **가장 오래된 아이템을 버리지 않고**
+            False를 돌려준다. 생산자가 "지금은 더 못 받는다"를 즉시 알게 되는 것이
+            핵심이다 — 조용히 버리면 그 순간 유실이 된다.
         """
         self._queue = deque(maxlen=maxlen)
         self._lock = threading.Lock()
+        self._max_bytes = max_bytes
+        self._total_bytes = 0
 
     def enqueue(self, item: Any) -> bool:
         """
@@ -51,7 +65,16 @@ class ThreadSafeQueue:
         with self._lock:
             if self._queue.maxlen is not None and len(self._queue) >= self._queue.maxlen:
                 return False
+
+            item_bytes = len(item) if self._max_bytes is not None else 0
+            if (
+                self._max_bytes is not None
+                and self._total_bytes + item_bytes > self._max_bytes
+            ):
+                return False
+
             self._queue.append(item)
+            self._total_bytes += item_bytes
             return True
 
     def dequeue(self) -> Optional[Any]:
@@ -62,9 +85,13 @@ class ThreadSafeQueue:
             Optional[Any]: 큐가 비어있지 않으면 아이템, 비어있으면 None.
         """
         with self._lock:
-            if self._queue:
-                return self._queue.popleft()
-            return None
+            if not self._queue:
+                return None
+
+            item = self._queue.popleft()
+            if self._max_bytes is not None:
+                self._total_bytes -= len(item)
+            return item
 
     def is_empty(self) -> bool:
         """
@@ -80,6 +107,7 @@ class ThreadSafeQueue:
         """큐의 모든 아이템을 제거합니다."""
         with self._lock:
             self._queue.clear()
+            self._total_bytes = 0
 
     def qsize(self) -> int:
         """
@@ -90,6 +118,21 @@ class ThreadSafeQueue:
         """
         with self._lock:
             return len(self._queue)
+
+    def total_bytes(self) -> int:
+        """큐에 담긴 아이템의 누적 바이트를 반환합니다 (max_bytes 미지정 시 항상 0)."""
+        with self._lock:
+            return self._total_bytes
+
+    def is_full(self) -> bool:
+        """다음 enqueue가 상한에 막힐 상태인지 반환합니다."""
+        with self._lock:
+            if self._queue.maxlen is not None and len(self._queue) >= self._queue.maxlen:
+                return True
+            return (
+                self._max_bytes is not None
+                and self._total_bytes >= self._max_bytes
+            )
 
 
 class RingBuffer:

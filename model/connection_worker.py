@@ -31,6 +31,7 @@ from common.constants import (
     BATCH_SIZE_THRESHOLD,
     BATCH_TIMEOUT_MS,
     DEFAULT_READ_CHUNK_SIZE,
+    TX_QUEUE_MAX_BYTES,
     WORKER_BUSY_WAIT_US,
     WORKER_IDLE_WAIT_MS,
 )
@@ -69,7 +70,7 @@ class ConnectionWorker(QThread):
         self._write_error: Optional[str] = None
 
         self._mutex = QMutex()
-        self._write_queue = ThreadSafeQueue()
+        self._write_queue = ThreadSafeQueue(max_bytes=TX_QUEUE_MAX_BYTES)
 
     def run(self) -> None:
         """RX 우선 + bounded TX budget으로 non-blocking I/O loop를 실행합니다."""
@@ -271,12 +272,29 @@ class ConnectionWorker(QThread):
         self.worker_terminated.emit(self.connection_name)
 
     def send_data(self, data: bytes) -> bool:
-        """데이터를 non-blocking TX queue에 추가합니다."""
+        """데이터를 non-blocking TX queue에 추가합니다.
+
+        Returns:
+            bool: 큐에 들어갔으면 True. 종료 요청 이후이거나 큐가 상한
+                (`TX_QUEUE_MAX_BYTES`)에 닿았으면 False.
+
+        Note:
+            상한에 닿았을 때 오래된 데이터를 버리지 않고 **거절**한다. 조용히 버리면
+            그 순간 유실이지만, 거절하면 생산자가 즉시 알고 늦출 수 있다.
+        """
         with QMutexLocker(self._mutex):
             stop_requested = self._stop_requested
         if stop_requested:
             return False
         return self._write_queue.enqueue(data)
+
+    def get_write_queue_bytes(self) -> int:
+        """현재 전송 대기 중인 TX 바이트 총량을 반환합니다."""
+        return self._write_queue.total_bytes()
+
+    def is_write_queue_full(self) -> bool:
+        """TX 큐가 상한에 닿아 신규 데이터를 받을 수 없는 상태인지 반환합니다."""
+        return self._write_queue.is_full()
 
     def get_write_queue_size(self) -> int:
         """현재 전송 대기 중인 TX chunk 개수를 반환합니다."""

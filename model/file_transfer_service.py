@@ -6,11 +6,16 @@ QRunnable 기반 파일 전송 엔진입니다. 진행/완료/에러는 FileTran
 세션 생명주기와 connection-close 대응은 FileTransferManager가 소유합니다.
 """
 import os
+import time
+from typing import Optional
 from threading import Event
 
 from PyQt5.QtCore import QObject, QRunnable, pyqtSignal
 
-from common.constants import FILE_TRANSFER_BACKPRESSURE_WAIT_S
+from common.constants import (
+    FILE_TRANSFER_BACKPRESSURE_WAIT_S,
+    FILE_TRANSFER_STALL_TIMEOUT_S,
+)
 from common.dtos import FileCompletionEvent, FileErrorEvent, FileProgressState, PortConfig
 from common.enums import FileStatus, SerialFlowControl
 from model.connection_controller import ConnectionController
@@ -62,6 +67,8 @@ class FileTransferService(QRunnable):
 
             total_size = os.path.getsize(self.file_path)
             sent_bytes = 0
+            pending_chunk: Optional[bytes] = None
+            stalled_since: Optional[float] = None
 
             with open(self.file_path, "rb") as file_obj:
                 while not self.is_cancelled:
@@ -75,18 +82,46 @@ class FileTransferService(QRunnable):
                     if self.is_cancelled:
                         break
 
-                    chunk = file_obj.read(self.chunk_size)
-                    if not chunk:
-                        break
+                    # 큐잉에 실패한 청크는 버리지 않고 들고 있다가 재시도한다.
+                    # 새로 읽어버리면 그 청크가 조용히 사라진다.
+                    if pending_chunk is None:
+                        pending_chunk = file_obj.read(self.chunk_size)
+                        if not pending_chunk:
+                            break
 
                     if not self.connection_controller.send_data_to_connection(
                         self.port_name,
-                        chunk,
+                        pending_chunk,
                     ):
-                        raise RuntimeError(
-                            f"Port {self.port_name} is not open or unavailable."
-                        )
+                        # 실패 이유를 구분해야 한다. 포트가 닫힌 것은 전송 실패지만,
+                        # TX 큐가 가득 찬 것은 "지금은 못 받는다"일 뿐이다.
+                        # 구분하지 않으면 일시적인 backpressure에 전송을 중단하게 된다.
+                        if not self.connection_controller.is_connection_open(
+                            self.port_name
+                        ):
+                            raise RuntimeError(
+                                f"Port {self.port_name} is not open or unavailable."
+                            )
 
+                        if stalled_since is None:
+                            stalled_since = time.monotonic()
+                        elif (
+                            time.monotonic() - stalled_since
+                            > FILE_TRANSFER_STALL_TIMEOUT_S
+                        ):
+                            raise RuntimeError(
+                                f"Port {self.port_name} TX queue stayed full for "
+                                f"{FILE_TRANSFER_STALL_TIMEOUT_S:.0f}s; "
+                                f"the port is not draining."
+                            )
+
+                        if self._wait_or_cancel(FILE_TRANSFER_BACKPRESSURE_WAIT_S):
+                            break
+                        continue
+
+                    stalled_since = None
+                    chunk = pending_chunk
+                    pending_chunk = None
                     sent_bytes += len(chunk)
                     self.signals.progress_updated.emit(
                         FileProgressState(
