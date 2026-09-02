@@ -98,7 +98,7 @@ def test_failed_send_is_reported_as_a_failed_step(runner):
     counts = _instrument(runner)
     runner.set_send_handler(lambda command: MacroSendResult(False, "Port is not open."))
 
-    runner.start(loop_count=1, interval_ms=0, stop_on_error=False)
+    runner.start_macro(loop_count=1, interval_ms=0, stop_on_error=False)
     _run(runner)
 
     assert counts["ok"] == 0, f"보내지 못했는데 성공으로 보고됐다 (성공 {counts['ok']}건)"
@@ -114,7 +114,7 @@ def test_failed_send_raises_a_macro_error_event(runner):
     counts = _instrument(runner)
     runner.set_send_handler(lambda command: MacroSendResult(False, "Port is not open."))
 
-    runner.start(loop_count=1, interval_ms=0, stop_on_error=False)
+    runner.start_macro(loop_count=1, interval_ms=0, stop_on_error=False)
     _run(runner)
 
     assert counts["errors"], "전송 실패인데 에러 이벤트가 없다"
@@ -133,7 +133,7 @@ def test_stop_on_error_actually_stops_on_a_send_failure(runner):
     counts = _instrument(runner)
     runner.set_send_handler(lambda command: MacroSendResult(False, "Send failed."))
 
-    runner.start(loop_count=3, interval_ms=0, stop_on_error=True)   # 2행 x 3회 = 6스텝이 예정돼 있다
+    runner.start_macro(loop_count=3, interval_ms=0, stop_on_error=True)   # 2행 x 3회 = 6스텝이 예정돼 있다
     _run(runner)
 
     attempted = counts["ok"] + counts["fail"]
@@ -152,7 +152,7 @@ def test_missing_send_handler_is_not_treated_as_success(runner):
     """
     counts = _instrument(runner)
     # 핸들러를 일부러 등록하지 않는다
-    runner.start(loop_count=1, interval_ms=0, stop_on_error=False)
+    runner.start_macro(loop_count=1, interval_ms=0, stop_on_error=False)
     _run(runner)
 
     assert counts["ok"] == 0, "전송 핸들러가 없는데 성공으로 보고됐다"
@@ -174,7 +174,7 @@ def test_expect_is_not_awaited_when_the_send_failed(qapp):
     macro.set_send_handler(lambda command: MacroSendResult(False, "Send failed."))
 
     started = time.time()
-    macro.start(loop_count=1, interval_ms=0, stop_on_error=True)
+    macro.start_macro(loop_count=1, interval_ms=0, stop_on_error=True)
     _run(macro, timeout_s=5.0)
     elapsed = time.time() - started
 

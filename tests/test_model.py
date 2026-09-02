@@ -278,7 +278,7 @@ class TestMacroRunner:
         runner.step_started.connect(step_spy)
 
         # WHEN: 매크로 시작
-        runner.start(loop_count=1, interval_ms=0)
+        runner.start_macro(loop_count=1, interval_ms=0)
 
         # 스레드 동작 대기 (테스트 환경에서는 sleep 필요)
         # 실제로는 qtbot.waitSignal 등을 쓰지만 여기선 simple sleep
@@ -318,7 +318,7 @@ class TestMacroRunner:
         # 긴 딜레이를 주어 바로 끝나지 않게 설정
         entry = MacroEntry(enabled=True, command="CMD", delay_ms=1000)
         runner.load_macro([entry])
-        runner.start()
+        runner.start_macro()
 
         # Ensure running
         time.sleep(0.05)

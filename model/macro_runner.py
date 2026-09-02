@@ -49,6 +49,7 @@ class MacroRunner(QThread):
         self._expect_found = False
         self._send_handler: Optional[Callable[[ManualCommand], MacroSendResult]] = None
         self._last_run_succeeded = False
+        self._start_requested = False
 
     def set_send_handler(
         self, handler: Optional[Callable[[ManualCommand], MacroSendResult]]
@@ -66,13 +67,21 @@ class MacroRunner(QThread):
             for index, item in enumerate(entries)
         ]
 
-    def start(
+    def start_macro(
         self,
         loop_count: int = 1,
         interval_ms: int = 0,
         broadcast_enabled: bool = False,
         stop_on_error: bool = True,
     ) -> None:
+        """실행 조건을 설정하고 매크로 thread를 시작합니다.
+
+        WHY 이름이 `start`가 아닌가:
+            과거에는 `QThread.start(priority)`를 완전히 다른 시그니처로 override했다.
+            QThread로 취급하는 호출자가 `runner.start(QThread.HighPriority)`를 쓰면
+            priority enum이 `loop_count`로 조용히 들어가 엉뚱한 반복 횟수가 된다.
+            base class와 다른 계약이면 이름도 달라야 한다.
+        """
         if self.isRunning():
             self.error_occurred.emit(MacroErrorEvent(message="Macro is already running."))
             return
@@ -84,6 +93,7 @@ class MacroRunner(QThread):
         self._last_run_succeeded = True
         self._is_running = True
         self._is_paused = False
+        self._start_requested = True
         self._loop_count = loop_count
         self._loop_interval_ms = interval_ms
         self.broadcast_enabled = broadcast_enabled
@@ -91,7 +101,7 @@ class MacroRunner(QThread):
         self._mutex.unlock()
 
         self.macro_started.emit()
-        super().start()
+        self.start()
 
     def stop(self, timeout_ms: Optional[int] = None) -> bool:
         """실행 중지를 요청하고 thread 종료를 기다립니다.
@@ -166,6 +176,16 @@ class MacroRunner(QThread):
             self._mutex.unlock()
 
     def run(self) -> None:
+        if not self._consume_start_request():
+            # 상속된 `QThread.start()`로 직접 시작된 경우다. 실행할 조건이 설정되지
+            # 않았으므로 아무 일도 하지 않는다 — 여기서 macro_finished를 내보내면
+            # macro_started 없이 완료 신호만 오는 유령 이벤트가 된다.
+            logger.warning(
+                "MacroRunner.run() reached without start_macro(); "
+                "use start_macro() to run a macro."
+            )
+            return
+
         current_loop = 0
 
         while self._check_running():
@@ -260,6 +280,14 @@ class MacroRunner(QThread):
     def last_run_succeeded(self) -> bool:
         """직전 실행이 오류나 외부 중단 없이 끝났는지 반환합니다."""
         return self._last_run_succeeded
+
+    def _consume_start_request(self) -> bool:
+        """`start_macro()`를 거쳐 시작됐는지 확인하고 요청 플래그를 소비합니다."""
+        self._mutex.lock()
+        requested = self._start_requested
+        self._start_requested = False
+        self._mutex.unlock()
+        return requested
 
     def _check_running(self) -> bool:
         self._mutex.lock()

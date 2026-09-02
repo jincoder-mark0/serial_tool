@@ -155,7 +155,7 @@ class TestMacroFinishedNotificationConsistency:
         runner.macro_finished.connect(finished_spy)
 
         with qtbot.waitSignal(runner.macro_finished, timeout=3000):
-            runner.start(loop_count=1, interval_ms=0)
+            runner.start_macro(loop_count=1, interval_ms=0)
 
         qapp.processEvents()
         assert finished_spy.call_count == 1
@@ -169,7 +169,7 @@ class TestMacroFinishedNotificationConsistency:
         finished_spy = MagicMock()
         runner.macro_finished.connect(finished_spy)
 
-        runner.start(loop_count=0, interval_ms=0)
+        runner.start_macro(loop_count=0, interval_ms=0)
         qtbot.wait(100)
         runner.stop()
 
@@ -187,7 +187,7 @@ class TestMacroFinishedNotificationConsistency:
         finished_spy = MagicMock()
         runner.macro_finished.connect(finished_spy)
 
-        runner.start(loop_count=0, interval_ms=0)
+        runner.start_macro(loop_count=0, interval_ms=0)
         runner.stop()
 
         qtbot.waitUntil(lambda: finished_spy.call_count >= 1, timeout=1000)
@@ -203,9 +203,9 @@ class TestMacroFinishedNotificationConsistency:
         errors = []
         runner.error_occurred.connect(errors.append)
 
-        runner.start(loop_count=0)
+        runner.start_macro(loop_count=0)
         qtbot.waitUntil(runner.isRunning, timeout=1000)
-        runner.start(loop_count=2)
+        runner.start_macro(loop_count=2)
 
         assert errors
         assert "already running" in errors[-1].message

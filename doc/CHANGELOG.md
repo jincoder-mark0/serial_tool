@@ -4,6 +4,34 @@
 
 ---
 
+### MacroRunner 시작 API를 QThread 계약과 분리 (2026-09-02)
+
+`MacroRunner`가 `QThread`를 상속하면서 `start()`를 **완전히 다른 시그니처**로
+override하고 있었습니다.
+
+```text
+QThread.start(priority=InheritPriority)
+MacroRunner.start(loop_count=1, interval_ms=0, broadcast_enabled=False, stop_on_error=True)
+```
+
+이 객체를 QThread로 취급하는 호출자가 `runner.start(QThread.HighPriority)`를 쓰면
+priority enum이 `loop_count`로 조용히 들어가 매크로가 엉뚱한 횟수로 돕니다. 예외도
+경고도 없습니다.
+
+- 매크로 실행 진입점을 `start_macro()`로 분리하고 `start()`는 QThread의 것을 그대로
+  상속합니다. 호출부는 production 1곳(`MacroPresenter`)과 테스트 11곳입니다.
+- 이름만 바꾸면 위험이 사라지는 게 아니라 옮겨갑니다. 상속된 `start()`로 직접
+  시작한 경우 `run()`이 실행 조건 없이 진행하다 `macro_finished`를 내보내면
+  **macro_started 없이 완료 신호만 오는 유령 이벤트**가 됩니다. 시작 요청 플래그를
+  두어 그 경로를 안전한 no-op으로 만들고 경고를 남깁니다.
+- 회귀 방지 계약 4건을 `tests/test_macro_runner_start_contract.py`에 추가했습니다.
+  과거 형태로 되돌리면 4건 모두 실패하는 것을 확인했습니다.
+
+동작 변경은 없습니다. 검증 결과는 `760 passed`, Ruff 0건,
+language/task-board gate Green입니다.
+
+---
+
 ### 배포 artifact에서 개발자 로컬 설정 유출 차단 (2026-09-02)
 
 P4 #18 artifact smoke를 수행하다 발견했습니다.
