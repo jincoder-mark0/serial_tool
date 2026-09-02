@@ -41,7 +41,7 @@ def wired_presenter(qapp, mock_settings_manager):
         yield left_section, presenter, controller
     finally:
         port_scan_manager.stop()
-        controller.close_connection()
+        controller.close_all_and_wait()
 
 
 class TestTabCloseReleasesConnection:

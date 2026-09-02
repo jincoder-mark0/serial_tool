@@ -4,6 +4,47 @@
 
 ---
 
+### 포트 종료를 비동기로 — UI 멈춤 제거, TX 유실 없음 (2026-09-02)
+
+사용자 요구: "데이터 무손실이 중요하다. 다만 UI가 멈추면 안 된다."
+
+두 요구는 상충하지 않았습니다. 남은 TX 큐를 비우는 것은 **worker thread**가 하는
+일이고 호출자의 thread는 필요하지 않습니다. 그런데 `ConnectionWorker.stop()`이
+무조건 `wait()`를 걸었고 `close_connection()`이 그것을 그대로 호출해서, 포트를 닫는
+UI thread가 드레인이 끝날 때까지 멈췄습니다. TX 큐는 상한이 없고 청크당 write는
+최대 1초(`WRITE_TIMEOUT_S`)이므로 멈추는 시간에 상한이 없었습니다. 회귀 테스트로
+재현한 시나리오에서 `close_connection()`이 **15.02초** 블록됐습니다.
+
+- `ConnectionWorker`에 `request_stop()`(대기 없음)을 두어 요청과 대기를 분리했습니다.
+  `stop(timeout_ms=None)`은 대기가 필요한 호출자를 위해 남겨 뒀습니다.
+- `ConnectionController.close_connection()`은 이제 기다리지 않고 반환합니다.
+  **드레인 범위는 그대로라 유실은 없습니다** — 대기를 없앤 것이지 드레인을 줄인 게
+  아닙니다. registry 정리와 `connection_closed` 발행은 지금처럼 동기적으로 하므로
+  호출 직후 `is_connection_open()`은 False이고 신규 송신은 거부됩니다.
+- **앱 종료 경로는 반대로 반드시 기다립니다.** 프로세스가 사라지면 아직 내보내지
+  못한 큐가 함께 사라지므로, 기다리지 않는 것이 곧 유실입니다. `close_all_and_wait()`를
+  추가하고 `ShutdownCoordinator`가 이것을 쓰도록 했습니다(상한 없음 — 기존과 동일).
+- 진행 상태 조회용으로 `has_pending_flush()` / `wait_for_pending_flush()`를 추가했습니다.
+- 드레인 중인 포트를 다시 여는 경우, transport가 아직 열려 있으므로 그대로 열면
+  같은 물리 포트를 두 번 여는 시도가 됩니다. `REOPEN_FLUSH_WAIT_MS`(2초)만큼
+  기다린 뒤 그래도 안 끝나면 알립니다. 처음에는 곧바로 거부했는데, 그러면
+  "탭 닫고 다시 열기"라는 정당한 조작이 깨졌습니다
+  (`test_closing_tab_closes_loopback_connection_and_allows_reopen`이 잡아냈습니다).
+
+계약이 하나 바뀌었습니다 — **"close가 반환했다"가 더 이상 "드레인이 끝났다"를
+뜻하지 않습니다.** 데이터가 실제로 나갔는지 확인해야 하는 호출자는
+`wait_for_pending_flush()`를 써야 합니다. 이 가정에 기대던 테스트들을 새 계약에
+맞게 갱신했고, worker thread를 남기지 않도록 종료 대기를 명시했습니다.
+
+회귀 테스트 5건을 `tests/test_async_close_lossless.py`에 추가했습니다. 동기 close로
+되돌리면 "close가 15.02초 블록됐다"로 실패합니다.
+
+검증 결과는 `765 passed`(순차 8회 반복 동일), Ruff 0건, language/task-board gate
+Green입니다. 후속으로 TX 큐 상한 + backpressure가 남아 있습니다 — 지금은 큐잉
+성공이 전송 성공을 뜻하지 않고, 큐가 무한정 쌓일 수 있습니다.
+
+---
+
 ### MacroRunner 시작 API를 QThread 계약과 분리 (2026-09-02)
 
 `MacroRunner`가 `QThread`를 상속하면서 `start()`를 **완전히 다른 시그니처**로

@@ -90,7 +90,7 @@ def runtime(mock_main_window, mock_settings_manager):
     components.file_transfer_manager.shutdown()
     components.macro_script_manager.stop()
     components.port_scan_manager.stop()
-    components.connection_controller.close_connection()
+    components.connection_controller.close_all_and_wait()
 
 
 @pytest.fixture

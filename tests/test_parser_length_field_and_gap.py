@@ -317,7 +317,7 @@ class TestGapFlushOnConnectionClose:
             controller.packet_parser_manager.feed(LOOPBACK_PORT_NAME, b"TAIL")
             assert received.call_count == 0, "유휴 전에는 프레임이 확정되면 안 된다"
         finally:
-            controller.close_connection()
+            controller.close_all_and_wait()
 
         assert received.call_count == 1, (
             "포트를 닫을 때 마지막 프레임이 나오지 않았다 — "

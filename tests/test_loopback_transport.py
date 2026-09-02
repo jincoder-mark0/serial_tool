@@ -147,7 +147,7 @@ def test_connection_controller_uses_loopback_transport_for_reserved_name(loopbac
         worker = controller.workers[LOOPBACK_PORT_NAME]
         assert isinstance(worker.transport, LoopbackTransport)
     finally:
-        controller.close_connection()
+        controller.close_all_and_wait()
 
 
 def test_send_data_echoes_back_through_data_received_signal(qapp, qtbot, loopback_config):
@@ -178,4 +178,4 @@ def test_send_data_echoes_back_through_data_received_signal(qapp, qtbot, loopbac
         assert event.port == LOOPBACK_PORT_NAME
         assert event.data == b"PING"
     finally:
-        controller.close_connection()
+        controller.close_all_and_wait()

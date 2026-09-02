@@ -254,7 +254,9 @@ def test_send_then_immediate_close_never_loses_data_silently(qapp, qtbot, loopba
         # 대기 없이 곧바로 종료 요청 (재현하려는 레이스: msleep(1) 도중 stop())
         controller.close_connection(LOOPBACK_PORT_NAME)
 
-        qtbot.waitUntil(lambda: not controller.has_active_connection, timeout=2000)
+        # close는 이제 비동기다 — registry에서 사라지는 것과 TX 드레인이 끝나는 것은
+        # 다른 시점이다. 유실 여부를 보려면 **드레인 완료**를 기다려야 한다.
+        qtbot.waitUntil(lambda: not controller.has_pending_flush(), timeout=2000)
 
         delivered = b"".join(written) == b"IMMEDIATE_CLOSE"
         surfaced = len(errors) > 0
@@ -264,7 +266,7 @@ def test_send_then_immediate_close_never_loses_data_silently(qapp, qtbot, loopba
             "(침묵 유실 발생)"
         )
     finally:
-        controller.close_connection()
+        controller.close_all_and_wait()
 
 
 def test_multiple_sends_then_immediate_close_preserve_order_or_surface(qapp, qtbot, loopback_config):
@@ -296,7 +298,9 @@ def test_multiple_sends_then_immediate_close_preserve_order_or_surface(qapp, qtb
 
         controller.close_connection(LOOPBACK_PORT_NAME)
 
-        qtbot.waitUntil(lambda: not controller.has_active_connection, timeout=2000)
+        # close는 이제 비동기다 — registry에서 사라지는 것과 TX 드레인이 끝나는 것은
+        # 다른 시점이다. 유실 여부를 보려면 **드레인 완료**를 기다려야 한다.
+        qtbot.waitUntil(lambda: not controller.has_pending_flush(), timeout=2000)
 
         joined = b"".join(written)
         # 도달한 것은 항상 접두어 형태로 순서가 보존되어야 한다 (뒤섞임 금지)
@@ -305,7 +309,7 @@ def test_multiple_sends_then_immediate_close_preserve_order_or_surface(qapp, qtb
             # 일부만 도달했다면(레이스로 조기 종료) 반드시 표면화되어 있어야 함
             assert len(errors) > 0
     finally:
-        controller.close_connection()
+        controller.close_all_and_wait()
 
 
 # -----------------------------------------------------------------------------

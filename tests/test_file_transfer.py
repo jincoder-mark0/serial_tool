@@ -140,7 +140,7 @@ def test_successful_transfer_over_loopback_delivers_bytes_in_order(qapp, tmp_pat
         assert progresses[-1].sent_bytes == len(content)
         assert progresses[-1].total_bytes == len(content)
     finally:
-        controller.close_connection()
+        controller.close_all_and_wait()
 
 
 def test_missing_file_emits_error_and_failed_completion(qapp, tmp_path):
@@ -217,7 +217,7 @@ def test_real_worker_write_failure_reaches_file_transfer_completion(qapp, tmp_pa
         assert "simulated device write failure" in errors[-1].message
         assert completed[-1].success is False
     finally:
-        controller.close_connection()
+        controller.close_all_and_wait()
 
 
 def test_cancel_stops_before_remaining_chunks_and_emits_failed_completion(qapp, tmp_path):
