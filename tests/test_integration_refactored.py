@@ -42,7 +42,7 @@ def integration_system(mock_main_window, mock_serial_port, mock_settings_manager
     runtime.file_transfer_manager.shutdown()
     runtime.macro_script_manager.stop()
     runtime.port_scan_manager.stop()
-    runtime.connection_controller.close_connection()
+    runtime.connection_controller.close_all_and_wait()
 
 
 def test_system_initialization_wires_facade_views(integration_system):
@@ -103,6 +103,8 @@ def test_connection_send_and_close_flow(integration_system, sample_port_config):
     assert wait_until(lambda: mock_serial.write.called)
     mock_serial.write.assert_called_with(b"TEST_MSG")
     controller.close_connection(sample_port_config.port)
+    # close는 비동기다 — 테스트가 worker thread를 남기지 않도록 드레인을 기다린다.
+    controller.wait_for_pending_flush()
     assert sample_port_config.port not in controller.workers
 
 

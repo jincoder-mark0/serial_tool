@@ -9,6 +9,7 @@ from typing import Dict, List, Optional
 from PyQt5.QtCore import QObject, pyqtSignal
 
 from common.dtos import PacketEvent, PortConfig, PortConnectionEvent, PortDataEvent, PortErrorEvent
+from common.constants import REOPEN_FLUSH_WAIT_MS
 from common.enums import ConnectionEventState, ConnectionProtocol
 from core.logger import logger
 from model.connection_session_factory import ConnectionSessionFactory
@@ -82,6 +83,25 @@ class ConnectionController(QObject):
         if self.is_connection_open(name):
             self._emit_error(name, "Connection is already open.")
             return False
+
+        # 직전 세션이 아직 TX 큐를 비우는 중이면 끝날 때까지 잠깐 기다린다.
+        # WHY: close는 비동기라 registry에서는 이미 사라졌지만 transport는 드레인이
+        #      끝날 때까지 열려 있다. 그대로 열면 같은 물리 포트를 두 번 여는 시도가
+        #      되거나 이전 세션의 남은 TX가 새 세션과 섞인다.
+        #
+        #      곧바로 거부하지 않는 이유는 "탭을 닫고 다시 열기"가 정당한 조작이기
+        #      때문이다. 보통은 큐가 비어 있어 이 대기가 사실상 0이고, 실제 backlog가
+        #      있을 때만 잠깐 기다린다. 상한을 넘기면 그때 알린다 — 여기서 무한정
+        #      기다리면 close에서 없앤 멈춤이 open으로 옮겨갈 뿐이다.
+        flushing = self._retired_workers.get(name)
+        if flushing is not None and flushing.isRunning():
+            if not flushing.wait(REOPEN_FLUSH_WAIT_MS):
+                self._emit_error(
+                    name,
+                    "Previous session is still flushing queued data. "
+                    "Please retry shortly.",
+                )
+                return False
         if config.protocol not in ConnectionProtocol.SUPPORTED:
             self._emit_error(
                 name,
@@ -124,18 +144,80 @@ class ConnectionController(QObject):
         return True
 
     def close_connection(self, name: Optional[str] = None) -> None:
+        """세션 종료를 요청하고 **기다리지 않고** 반환합니다.
+
+        WHY:
+            큐에 남은 TX는 worker thread가 종료 직전에 끝까지 내보낸다 — 드레인에
+            호출자의 thread는 필요하지 않다. 과거에는 `worker.stop()`이 무조건
+            대기했기 때문에, 포트를 닫는 UI thread가 드레인이 끝날 때까지 멈췄다.
+            저속 포트에 backlog가 쌓여 있으면 그만큼 창이 얼어붙는다.
+
+            요청과 대기를 분리하면 **데이터는 그대로 다 내보내면서** UI는 기다리지
+            않는다. 유실 없이 멈춤만 없앤 것이다.
+
+        Note:
+            registry 정리와 `connection_closed` 발행은 지금처럼 동기적으로 한다.
+            그래야 호출 직후 `is_connection_open()`이 False가 되고 신규 송신이
+            거부된다 — 드레인이 끝나기를 기다릴 필요가 없는 부분이다.
+
+            프로세스가 곧 죽는 경로(앱 종료)에서는 이 메서드를 쓰면 안 된다.
+            반드시 `close_all_and_wait()`로 드레인 완료를 기다려야 한다.
+        """
         if name:
             worker = self.workers.get(name)
             if worker:
                 self.connection_closing.emit(name)
-                worker.stop()
+                worker.request_stop()
                 # worker의 cross-thread connection_closed는 main event loop에 queued될 수
-                # 있으므로 registry는 stop() 반환 직후 동기적으로도 정리합니다.
+                # 있으므로 registry는 요청 직후 동기적으로도 정리합니다.
                 self.on_worker_closed(name, worker)
             return
 
         for port_name in list(self.workers.keys()):
             self.close_connection(port_name)
+
+    def close_all_and_wait(self, timeout_ms: Optional[int] = None) -> bool:
+        """모든 세션 종료를 요청하고 TX 드레인이 실제로 끝날 때까지 기다립니다.
+
+        WHY:
+            앱 종료처럼 프로세스가 곧 사라지는 경로에서는 비동기 close를 쓸 수 없다.
+            기다리지 않으면 아직 내보내지 못한 TX 큐가 프로세스와 함께 사라진다 —
+            기다리지 않는 것이 곧 유실이다.
+
+        Args:
+            timeout_ms: 세션당 대기 상한(ms). None이면 완료까지 무한 대기해
+                유실을 만들지 않는다.
+
+        Returns:
+            bool: 모든 worker가 상한 안에 종료됐으면 True.
+        """
+        self.close_connection()
+        return self.wait_for_pending_flush(timeout_ms=timeout_ms)
+
+    def wait_for_pending_flush(self, timeout_ms: Optional[int] = None) -> bool:
+        """이미 종료 요청된 worker들의 TX 드레인 완료를 기다립니다."""
+        all_finished = True
+
+        for name, worker in list(self._retired_workers.items()):
+            if not worker.isRunning():
+                continue
+
+            if timeout_ms is None:
+                worker.wait()
+                continue
+
+            if not worker.wait(timeout_ms):
+                logger.warning(
+                    f"Connection worker did not finish flushing within "
+                    f"{timeout_ms} ms: {name}"
+                )
+                all_finished = False
+
+        return all_finished
+
+    def has_pending_flush(self) -> bool:
+        """TX 드레인이 아직 끝나지 않은 세션이 있는지 반환합니다."""
+        return any(worker.isRunning() for worker in self._retired_workers.values())
 
     def _cleanup_worker_registry(
         self,

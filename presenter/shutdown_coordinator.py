@@ -97,8 +97,14 @@ class ShutdownCoordinator:
         self._close_system_log()
         self._save_ui_state()
 
-        if self._connection_controller.has_active_connection:
-            self._connection_controller.close_connection()
+        # 앱 종료에서는 비동기 close를 쓰면 안 된다. 프로세스가 사라지면 아직
+        # 내보내지 못한 TX 큐가 함께 사라진다 — 기다리지 않는 것이 곧 유실이다.
+        # 상한을 두지 않는 것도 같은 이유다(기존 동작과 동일).
+        if (
+            self._connection_controller.has_active_connection
+            or self._connection_controller.has_pending_flush()
+        ):
+            self._connection_controller.close_all_and_wait()
 
         # S-059: Worker가 종료 직전 emit한 queued RX를 main thread에서 먼저 전달합니다.
         QCoreApplication.processEvents()

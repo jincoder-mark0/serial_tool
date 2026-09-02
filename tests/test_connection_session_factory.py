@@ -60,15 +60,20 @@ def test_controller_removes_parser_session_if_worker_factory_fails():
 
 
 def test_connection_closing_is_emitted_before_worker_stop():
+    """`connection_closing`은 worker에 종료를 요청하기 **전에** 나가야 한다.
+
+    FileTransferManager 등 소비자가 이 신호를 받아 자기 세션을 먼저 취소한다 —
+    순서가 뒤집히면 취소하기도 전에 드레인이 시작된다.
+    """
     controller = ConnectionController()
     worker = MagicMock()
     order = []
     controller.workers["COM1"] = worker
     controller.connection_configs["COM1"] = PortConfig(port="COM1")
     controller.connection_closing.connect(lambda port: order.append(f"closing:{port}"))
-    worker.stop.side_effect = lambda: order.append("worker.stop")
+    worker.request_stop.side_effect = lambda: order.append("worker.request_stop")
 
     controller.close_connection("COM1")
 
-    assert order[:2] == ["closing:COM1", "worker.stop"]
+    assert order[:2] == ["closing:COM1", "worker.request_stop"]
     assert "COM1" not in controller.workers

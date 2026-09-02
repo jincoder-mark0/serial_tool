@@ -56,7 +56,7 @@ class TestParserSettingsWiring:
                 expected_cls,
             )
         finally:
-            controller.close_connection()
+            controller.close_all_and_wait()
 
     def test_invalid_delimiter_is_not_silently_swallowed(self):
         parser_manager = PacketParserManager()
@@ -122,4 +122,4 @@ class TestDefaultSerialRegression:
                 RawParser,
             )
         finally:
-            controller.close_connection()
+            controller.close_all_and_wait()

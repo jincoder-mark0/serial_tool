@@ -121,7 +121,8 @@ class TestConnectionController:
         # 시그널 발생 확인 (정확한 타이밍 이슈로 인해 worker 내부 동작에 따라 다를 수 있음)
         # 여기서는 Controller 로직상 Worker 생성 성공 여부를 주로 봅니다.
         controller.close_connection(sample_port_config.port)
-
+        # close는 비동기다 — 테스트가 worker thread를 남기지 않도록 드레인을 기다린다.
+        controller.wait_for_pending_flush()
     def test_open_connection_duplicate_fail(self, mock_serial_port, sample_port_config):
         """
         이미 열린 포트에 대한 중복 연결 시도 실패 테스트
@@ -151,7 +152,8 @@ class TestConnectionController:
         args, _ = error_spy.call_args
         assert args[0].port == sample_port_config.port  # PortErrorEvent 검증
         controller.close_connection(sample_port_config.port)
-
+        # close는 비동기다 — 테스트가 worker thread를 남기지 않도록 드레인을 기다린다.
+        controller.wait_for_pending_flush()
     def test_send_data(self, mock_serial_port, sample_port_config):
         """
         데이터 전송 요청 테스트
@@ -187,7 +189,8 @@ class TestConnectionController:
         assert event.port == sample_port_config.port
         assert event.data == test_data
         controller.close_connection(sample_port_config.port)
-
+        # close는 비동기다 — 테스트가 worker thread를 남기지 않도록 드레인을 기다린다.
+        controller.wait_for_pending_flush()
     def test_close_connection(self, mock_serial_port, sample_port_config, qapp):
         """
         포트 연결 종료 테스트
@@ -207,7 +210,8 @@ class TestConnectionController:
 
         # WHEN: 연결 종료
         controller.close_connection(sample_port_config.port)
-
+        # close는 비동기다 — 테스트가 worker thread를 남기지 않도록 드레인을 기다린다.
+        controller.wait_for_pending_flush()
         # THEN: 리소스 정리 확인
         assert controller.is_connection_open(sample_port_config.port) is False
         assert sample_port_config.port not in controller.workers

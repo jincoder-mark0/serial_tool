@@ -228,12 +228,36 @@ class ConnectionWorker(QThread):
         with QMutexLocker(self._mutex):
             return self._is_running
 
-    def stop(self) -> None:
-        """Thread 중지를 요청하고 종료까지 기다립니다."""
+    def request_stop(self) -> None:
+        """종료를 요청하고 **즉시 반환**합니다 (대기 없음).
+
+        WHY:
+            큐에 남은 TX는 worker thread가 `run()`의 finally에서 끝까지 내보낸다.
+            즉 드레인에 호출자의 thread는 필요하지 않다. 그런데 과거 `stop()`은
+            무조건 `wait()`를 걸어, 포트를 닫는 UI thread가 드레인이 끝날 때까지
+            멈췄다 — 저속 포트에 backlog가 쌓여 있으면 그만큼 창이 얼어붙는다.
+
+            요청과 대기를 분리하면 **데이터는 그대로 다 내보내면서** UI는 기다리지
+            않는다. 실제 종료는 `worker_terminated` signal로 알린다.
+        """
         with QMutexLocker(self._mutex):
             self._stop_requested = True
             self._is_running = False
-        self.wait()
+
+    def stop(self, timeout_ms: Optional[int] = None) -> bool:
+        """종료를 요청하고 thread가 실제로 끝날 때까지 기다립니다.
+
+        Args:
+            timeout_ms: 대기 상한(ms). None이면 종료까지 무한 대기한다.
+
+        Returns:
+            bool: thread가 실제로 종료됐으면 True.
+        """
+        self.request_stop()
+        if timeout_ms is None:
+            self.wait()
+            return True
+        return self.wait(timeout_ms)
 
     def close_connection(self) -> None:
         """Transport를 닫고 lifecycle signal을 정리합니다."""

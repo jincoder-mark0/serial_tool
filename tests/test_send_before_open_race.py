@@ -116,7 +116,7 @@ def test_send_immediately_after_open_is_not_lost(qapp, qtbot, loopback_config):
         assert event.port == LOOPBACK_PORT_NAME
         assert event.data == b"RACE_PING"
     finally:
-        controller.close_connection()
+        controller.close_all_and_wait()
 
 
 def test_multiple_sends_immediately_after_open_preserve_order(qapp, qtbot, loopback_config):
@@ -141,4 +141,4 @@ def test_multiple_sends_immediately_after_open_preserve_order(qapp, qtbot, loopb
 
         qtbot.waitUntil(lambda: b"".join(received) == b"ABC", timeout=2000)
     finally:
-        controller.close_connection()
+        controller.close_all_and_wait()

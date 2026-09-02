@@ -140,6 +140,14 @@ DATA_LOGGER_STOP_FORCE_TIMEOUT_S: float = 0.5
 BACKGROUND_IO_POLL_S: float = 0.05
 BACKGROUND_WORKER_STOP_TIMEOUT_MS: int = 1000
 
+# 같은 포트를 다시 열 때, 직전 세션의 TX 드레인을 기다려 주는 상한.
+#
+# WHY: close는 비동기라 사용자가 곧바로 다시 연결할 수 있다(탭 닫고 다시 열기 포함).
+#      보통은 TX 큐가 비어 있어 이 대기는 사실상 0이다. 실제 backlog가 있을 때만
+#      잠깐 기다렸다가, 그래도 안 끝나면 재시도하라고 알린다 — 무한정 붙잡지 않는다.
+#      pyserial write_timeout이 청크당 1초이므로 두 청크 분량을 상한으로 둔다.
+REOPEN_FLUSH_WAIT_MS: int = 2000
+
 # 더미 포트 예약명 (S-033) — 실기기 없이 송수신 경로를 디버깅하기 위한 루프백 에코 포트.
 # 실제 장치명(COMx 등)과 충돌하지 않는 이름으로 고정.
 LOOPBACK_PORT_NAME: str = "LOOPBACK"

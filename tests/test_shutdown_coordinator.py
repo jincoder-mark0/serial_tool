@@ -98,7 +98,7 @@ def test_shutdown_stops_runtime_services_and_saves_state():
     close_system_log.assert_called_once()
     collect.assert_called_once_with(settings, window_state, manual_state)
     settings.save_settings.assert_called_once()
-    controller.close_connection.assert_called_once_with()
+    controller.close_all_and_wait.assert_called_once_with()
 
 
 def test_auto_tx_is_stopped_before_manual_state_is_collected():
@@ -127,7 +127,7 @@ def test_connection_closes_before_queued_events_and_data_logger_stop():
     macro.isRunning.return_value = False
     controller.has_active_connection = True
     order = []
-    controller.close_connection.side_effect = lambda: order.append("close_connection")
+    controller.close_all_and_wait.side_effect = lambda: order.append("close_connection")
     data_logger_manager.stop_all.side_effect = lambda: order.append("logger_stop")
 
     with patch(
@@ -173,5 +173,5 @@ def test_shutdown_continues_when_macro_runner_does_not_stop_in_time():
     with patch("presenter.shutdown_coordinator.QCoreApplication"):
         coordinator.shutdown()
 
-    controller.close_connection.assert_called_once()
+    controller.close_all_and_wait.assert_called_once()
     settings.save_settings.assert_called_once()
