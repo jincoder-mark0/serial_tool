@@ -113,7 +113,7 @@ class MacroPresenter(QObject):
 
         option = request.option
         self.runner.load_macro(execution_plan)
-        self.runner.start(
+        self.runner.start_macro(
             loop_count=option.max_runs,
             interval_ms=option.interval_ms,
             broadcast_enabled=option.broadcast_enabled,
