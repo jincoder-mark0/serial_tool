@@ -1,0 +1,9 @@
+# 배포 artifact 빌드 전용 의존성.
+#
+# WHY: PyInstaller가 requirements.txt에도, requirements-backends/에도 없어서
+#      깨끗한 체크아웃에서는 `pyinstaller serial_tool.spec`이 실행되지 않는다.
+#      런타임 의존성이 아니므로 requirements.txt와 분리해 둔다.
+#
+# 사용: pip install -r requirements.txt -r requirements-build.txt
+#      pyinstaller serial_tool.spec --noconfirm
+pyinstaller>=6.22,<7

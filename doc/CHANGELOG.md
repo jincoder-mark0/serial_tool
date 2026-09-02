@@ -4,6 +4,33 @@
 
 ---
 
+### 배포 artifact에서 개발자 로컬 설정 유출 차단 (2026-09-02)
+
+P4 #18 artifact smoke를 수행하다 발견했습니다.
+
+- `serial_tool.spec`의 `datas=[('resources', 'resources')]`가 디렉터리를 통째로
+  담아, git이 추적하지 않는 `resources/configs/settings.local.json`이 배포본에
+  포함됐습니다. 빌드한 개발자의 창 위치·포트 탭 상태·수동 입력값이 실립니다.
+  이 파일은 S-043이 "개발자 로컬 세션이 커밋에 섞이는 오염"을 막으려고 분리하고
+  `.gitignore`에 넣은 것인데, **그 보호가 git 단계에서만 작동해 빌드로는 그대로
+  샜습니다.** 번들 실행 시 사용자 설정은 APPDATA를 쓰므로 읽히지도 않는 순수
+  유출이고, 빌드하는 사람마다 artifact가 달라져 재현성도 깨집니다.
+  spec에 `EXCLUDED_DATA_BASENAMES`를 두어 제외했습니다.
+- PyInstaller가 `requirements.txt`에도 `requirements-backends/`에도 없어 깨끗한
+  체크아웃에서는 빌드가 불가능했습니다. `requirements-build.txt`로 선언했습니다.
+- 회귀 방지 계약 5건을 `tests/test_packaging_spec_contract.py`에 추가했습니다.
+  제외 목록의 파일명이 `ResourcePath`가 실제로 쓰는 dev-mode 파일명과 일치하는지도
+  검사합니다 — 한쪽만 이름이 바뀌면 spec은 없는 이름을 거르고 유출은 되살아납니다.
+
+artifact smoke 결과는 [`doc/artifact_smoke_20260902.md`](artifact_smoke_20260902.md)에
+기록했습니다. 빌드·기동·번들 경로 리소스 로드·설정 마이그레이션(v1.2 -> v1.3)·
+정상 종료가 모두 통과했고 로그 내 WARNING/ERROR는 0건입니다. GUI 대화형 항목은
+미검증으로 남겼습니다.
+
+검증 결과는 `756 passed`, Ruff 0건, language/task-board gate Green입니다.
+
+---
+
 ### DataLoggerManager 전역 싱글턴 제거 (2026-09-02)
 
 P2-C #6이 `SettingsManager`에서 없앤 것과 **정확히 같은 종류**의 hidden global이
