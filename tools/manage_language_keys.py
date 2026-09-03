@@ -133,7 +133,16 @@ class LanguageKeyManager:
         Logic:
             - UTF-8 인코딩 사용
             - ensure_ascii=False (한글 깨짐 방지)
-            - indent=4 (가독성 확보)
+            - indent=2 + 끝 개행 1개
+
+        WHY indent=2:
+            저장된 `resources/languages/*.json`이 2칸 들여쓰기다. 과거 이 도구는
+            indent=4로 써서, 키를 하나만 추가해도 **파일 전체(607줄)가 재포맷**됐다.
+            문서화된 절차(`.claude/skills/lang-keys`)를 따를 때마다 diff가 노이즈로
+            뒤덮여 실제 변경이 묻히고, blame도 끊긴다.
+
+            형식은 도구가 아니라 저장된 파일이 정본이다 — 파일을 도구에 맞추면
+            한 번의 대량 재포맷이 남지만, 도구를 파일에 맞추면 그 뒤로 조용하다.
 
         Args:
             path (str): 저장할 경로.
@@ -141,7 +150,8 @@ class LanguageKeyManager:
         """
         try:
             with open(path, 'w', encoding='utf-8') as f:
-                json.dump(data, f, indent=4, ensure_ascii=False)
+                json.dump(data, f, indent=2, ensure_ascii=False)
+                f.write("\n")
         except Exception as e:
             print(f"[ERROR] Failed to save {path}: {e}")
 
@@ -204,9 +214,9 @@ def main():
         dummy_ko = {"hello": "안녕하세요", "world": "세상", "only_ko": "한국어에만 있음"}
 
         with open(os.path.join(LANG_DIR, FILE_EN), 'w', encoding='utf-8') as f:
-            json.dump(dummy_en, f, indent=4)
+            json.dump(dummy_en, f, indent=2)
         with open(os.path.join(LANG_DIR, FILE_KO), 'w', encoding='utf-8') as f:
-            json.dump(dummy_ko, f, indent=4, ensure_ascii=False)
+            json.dump(dummy_ko, f, indent=2, ensure_ascii=False)
 
     # 매니저 실행
     manager = LanguageKeyManager(LANG_DIR)

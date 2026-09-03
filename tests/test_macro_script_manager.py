@@ -4,6 +4,8 @@ import time
 from threading import Event
 from unittest.mock import patch
 
+import pytest
+
 from common.dtos import MacroScriptData
 from model.macro_script_manager import MacroScriptManager
 from presenter.macro_presenter import MacroPresenter
@@ -58,7 +60,27 @@ def test_async_load_emits_macro_script_data(qapp, tmp_path, qtbot):
     manager.script_loaded.connect(loaded.append)
 
     assert manager.request_load(str(file_path)) is True
-    qtbot.waitUntil(lambda: bool(loaded), timeout=2000)
+
+    # 여기서 재는 것은 "언젠가 도착하는가"이지 지연 시간이 아니다. 2초는 부하가
+    # 걸린 머신에서 빠듯해 실제로 간헐적으로 터졌다(전체 스위트 실행 시간이
+    # 8초~19초로 흔들린다). 여유를 주되, 터졌을 때 어디서 막혔는지 알 수 있게
+    # worker 상태를 함께 남긴다 — "waitUntil timed out"만으로는 다음에도 못 고친다.
+    try:
+        qtbot.waitUntil(lambda: bool(loaded), timeout=5000)
+    except Exception as exc:
+        worker = manager._load_worker
+        if worker is None:
+            detail = "worker=이미 정리됨 (신호만 도달하지 않음)"
+        else:
+            detail = (
+                f"worker_running={worker.isRunning()}, "
+                f"pending_io={worker.has_pending_io}"
+            )
+        pytest.fail(
+            f"script_loaded가 오지 않았다 ({type(exc).__name__}). "
+            f"is_loading={manager.is_loading}, {detail}"
+        )
+
     manager.stop()
 
     assert loaded[0].file_path == str(file_path)
