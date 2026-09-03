@@ -11,6 +11,8 @@ from model.connection_controller import ConnectionController
 from model.port_scan_manager import PortScanManager
 from presenter.port_presenter import PortPresenter
 from view.sections.main_left_section import MainLeftSection
+from view.managers.color_manager import ColorManager
+from view.managers.theme_manager import ThemeManager
 
 
 @pytest.fixture
@@ -28,7 +30,7 @@ def loopback_config() -> PortConfig:
 @pytest.fixture
 def wired_presenter(qapp, mock_settings_manager):
     """실제 View + Presenter + Controller를 명시적 dependency graph로 조립합니다."""
-    left_section = MainLeftSection()
+    left_section = MainLeftSection(ThemeManager(), ColorManager())
     controller = ConnectionController()
     port_scan_manager = PortScanManager()
     presenter = PortPresenter(

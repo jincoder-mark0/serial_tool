@@ -15,10 +15,12 @@ from PyQt5.QtWidgets import QApplication  # noqa: E402
 
 app = QApplication(sys.argv)
 from view.main_window import MainWindow  # noqa: E402
+from view.managers.color_manager import ColorManager  # noqa: E402
+from view.managers.theme_manager import ThemeManager  # noqa: E402
 
 
 def fresh():
-    w = MainWindow()
+    w = MainWindow(ThemeManager(), ColorManager())
     w.show()
     w.resize(1500, 800)
     w.right_section.setVisible(True)

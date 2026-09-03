@@ -24,6 +24,8 @@
 """
 import pytest
 from PyQt5.QtWidgets import QApplication
+from view.managers.color_manager import ColorManager
+from view.managers.theme_manager import ThemeManager
 
 
 @pytest.fixture
@@ -31,7 +33,7 @@ def window(qapp):
     """실제 MainWindow (토글은 창 지오메트리를 다루므로 Mock으로 대신할 수 없다)."""
     from view.main_window import MainWindow
 
-    win = MainWindow()
+    win = MainWindow(ThemeManager(), ColorManager())
     win.show()
     win.resize(1500, 800)
     win.right_section.setVisible(True)

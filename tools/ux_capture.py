@@ -60,7 +60,7 @@ def main() -> None:
     SettingsManager(resource_path)
     language_manager = LanguageManager(resource_path)
     theme_manager = ThemeManager(resource_path)
-    ColorManager(resource_path)
+    color_manager = ColorManager(resource_path)
 
     language_manager.set_language(args.lang)
 
@@ -68,11 +68,13 @@ def main() -> None:
     app = QApplication(sys.argv)
 
     theme_manager.apply_theme(args.theme)
+    # 팔레트 전파는 두 매니저를 아는 쪽이 한다 (main.py와 동일).
+    color_manager.apply_theme(args.theme)
 
     from view.main_window import MainWindow
     from presenter.main_presenter import MainPresenter
 
-    window = MainWindow()
+    window = MainWindow(theme_manager, color_manager)
     presenter = MainPresenter(window)  # noqa: F841 - 상태바 등 실제 배선 포함 렌더
     window.show()
 

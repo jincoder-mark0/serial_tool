@@ -11,10 +11,11 @@ from PyQt5.QtWidgets import QMessageBox, QVBoxLayout, QWidget
 
 from common.constants import LAYOUT_MARGIN_NONE
 from common.dtos import ColorRule, LogDataBatch, PortInfo, SystemLogEvent
-from view.managers.color_manager import color_manager
+from view.managers.color_manager import ColorManager
 from view.managers.language_manager import language_manager
 from view.panels.manual_control_panel import ManualControlPanel
 from view.panels.port_panel import PortPanel
+from view.managers.theme_manager import ThemeManager
 from view.panels.port_tab_panel import PortTabPanel
 from view.widgets.system_log import SystemLogWidget
 
@@ -31,8 +32,15 @@ class MainLeftSection(QWidget):
     sys_logging_stop_requested = pyqtSignal()
     system_log_line_appended = pyqtSignal(str)
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(
+        self,
+        theme_manager: ThemeManager,
+        color_manager: ColorManager,
+        parent: Optional[QWidget] = None,
+    ) -> None:
         super().__init__(parent)
+        self._theme_manager = theme_manager
+        self._color_manager = color_manager
         self._port_tab_panel: Optional[PortTabPanel] = None
         self._manual_control_panel: Optional[ManualControlPanel] = None
         self._system_log_widget: Optional[SystemLogWidget] = None
@@ -51,7 +59,7 @@ class MainLeftSection(QWidget):
         )
         layout.setSpacing(10)
 
-        self._port_tab_panel = PortTabPanel()
+        self._port_tab_panel = PortTabPanel(self._theme_manager)
         self._port_tab_panel.port_tab_added.connect(self._on_port_tab_added)
         self._port_tab_panel.port_tab_added.connect(self.port_tab_added.emit)
         self._port_tab_panel.port_tab_closed.connect(self.port_tab_closed.emit)
@@ -85,9 +93,8 @@ class MainLeftSection(QWidget):
         """새 PortPanel에 View-only presentation 정책을 적용합니다."""
         self._apply_port_panel_presentation(panel)
 
-    @staticmethod
-    def _apply_port_panel_presentation(panel: PortPanel) -> None:
-        panel.set_data_log_color_rules(color_manager.rules)
+    def _apply_port_panel_presentation(self, panel: PortPanel) -> None:
+        panel.set_data_log_color_rules(self._color_manager.rules)
 
     def retranslate_ui(self) -> None:
         """섹션 자체에는 번역 대상 텍스트가 없고 하위 View가 각자 갱신합니다."""

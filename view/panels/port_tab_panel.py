@@ -27,7 +27,7 @@ from PyQt5.QtCore import pyqtSignal
 from PyQt5.QtGui import QIcon
 
 from view.managers.language_manager import language_manager
-from view.managers.theme_manager import theme_manager
+from view.managers.theme_manager import ThemeManager
 from view.panels.port_panel import PortPanel
 from common.dtos import LogDataBatch
 
@@ -42,14 +42,20 @@ class PortTabPanel(QTabWidget):
     port_tab_added = pyqtSignal(object)  # 새 탭이 추가되었을 때 (PortPanel 객체 전달)
     port_tab_closed = pyqtSignal(str)  # 탭이 닫혔을 때 (닫힌 탭의 포트 이름 전달, S-040)
 
-    def __init__(self, parent: Optional[QWidget] = None) -> None:
+    def __init__(
+        self,
+        theme_manager: ThemeManager,
+        parent: Optional[QWidget] = None,
+    ) -> None:
         """
         PortTabPanel을 초기화합니다.
 
         Args:
+            theme_manager (ThemeManager): '+' 탭 아이콘 조회에 사용.
             parent (Optional[QWidget]): 부모 위젯. 기본값은 None.
         """
         super().__init__(parent)
+        self._theme_manager = theme_manager
         self.setTabsClosable(True)
         self.tabCloseRequested.connect(self.close_port_tab)
         self.currentChanged.connect(self.on_tab_changed)
@@ -178,7 +184,7 @@ class PortTabPanel(QTabWidget):
             return
 
         index = count - 1
-        icon = theme_manager.get_icon("add")
+        icon = self._theme_manager.get_icon("add")
 
         if icon.isNull():
             self.setTabText(index, "+")

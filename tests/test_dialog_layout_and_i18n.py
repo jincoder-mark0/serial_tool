@@ -27,6 +27,7 @@ import pytest
 from PyQt5.QtWidgets import QApplication, QDialogButtonBox
 
 from common.dtos import PreferencesState
+from view.managers.theme_manager import ThemeManager
 
 
 def _dialogs(theme_manager):
@@ -37,18 +38,11 @@ def _dialogs(theme_manager):
     from view.dialogs.preferences_dialog import PreferencesDialog
 
     return [
-        ("preferences", lambda: PreferencesDialog(state=PreferencesState())),
+        ("preferences", lambda: PreferencesDialog(ThemeManager(), state=PreferencesState())),
         ("font_settings", lambda: FontSettingsDialog(theme_manager=theme_manager)),
         ("about", AboutDialog),
         ("file_transfer", FileTransferDialog),
     ]
-
-
-@pytest.fixture
-def theme_manager():
-    from view.managers.theme_manager import theme_manager as tm
-
-    return tm
 
 
 @pytest.mark.parametrize("lang", ["ko", "en"])

@@ -49,8 +49,6 @@ from PyQt5.QtGui import QTextCharFormat
 
 from core.resource_path import ResourcePath
 from common.constants import ConfigKeys
-from view.managers.theme_manager import theme_manager
-from view.managers.color_manager import color_manager
 from view.managers import theme_state
 from view.custom_qt.smart_list_view import QSmartListView
 
@@ -71,7 +69,7 @@ _THEME_BG_FINGERPRINT = {
 # -----------------------------------------------------------------------------
 
 @pytest.mark.parametrize("theme_name", ["dark", "light", "dracula", "classic"])
-def test_apply_theme_loads_correct_qss_file_and_updates_current_theme(qapp, theme_name):
+def test_apply_theme_loads_correct_qss_file_and_updates_current_theme(qapp, theme_name, theme_manager):
     """apply_theme() 후 QApplication 스타일시트에 해당 테마 파일 내용이 실제로 들어있어야 한다."""
     theme_manager.apply_theme(theme_name)
 
@@ -89,14 +87,14 @@ def test_apply_theme_loads_correct_qss_file_and_updates_current_theme(qapp, them
     "theme_name,expect_dark",
     [("dark", True), ("light", False), ("dracula", True), ("classic", False)],
 )
-def test_is_dark_theme_classification(qapp, theme_name, expect_dark):
+def test_is_dark_theme_classification(qapp, theme_name, expect_dark, theme_manager):
     """dark/dracula는 dark 계열, light/classic은 아니다 (is_dark_theme 팔레트 선택 계약,
     classic은 S-060에서 밝은 계열로 추가됨)."""
     theme_manager.apply_theme(theme_name)
     assert theme_manager.is_dark_theme() is expect_dark
 
 
-def test_current_theme_property_delegates_to_shared_theme_state(qapp):
+def test_current_theme_property_delegates_to_shared_theme_state(qapp, theme_manager):
     """
     S-050: `_current_theme`은 이제 `theme_state` 모듈에 위임하는 property다.
     직접 대입(`theme_manager._current_theme = ...`)과 theme_state 조회가
@@ -116,7 +114,7 @@ def test_current_theme_property_delegates_to_shared_theme_state(qapp):
 # -----------------------------------------------------------------------------
 
 @pytest.mark.parametrize("theme_name", ["dark", "light", "dracula"])
-def test_get_icon_routes_to_current_theme_directory(qapp, monkeypatch, theme_name):
+def test_get_icon_routes_to_current_theme_directory(qapp, monkeypatch, theme_name, theme_manager):
     """
     get_icon()이 현재 테마 접미사가 붙은 디렉터리(icons/{theme}/{name}_{theme}.svg)를
     첫 시도로 사용하고, 그 파일이 실제로 존재해 접미사 없는 폴백으로 빠지지 않는지 확인한다.
@@ -141,14 +139,14 @@ def test_get_icon_routes_to_current_theme_directory(qapp, monkeypatch, theme_nam
     )
 
 
-def test_get_icon_unknown_name_returns_null_icon(qapp):
+def test_get_icon_unknown_name_returns_null_icon(qapp, theme_manager):
     """존재하지 않는 아이콘 이름은 조용히 QIcon()(null)을 반환한다 (예외를 던지지 않음)."""
     theme_manager.apply_theme("dark")
     icon = theme_manager.get_icon("__definitely_not_a_real_icon__")
     assert icon.isNull()
 
 
-def test_get_icon_classic_theme_falls_back_to_light_icon_directory(qapp):
+def test_get_icon_classic_theme_falls_back_to_light_icon_directory(qapp, theme_manager):
     """
     S-060: classic 전용 아이콘 디렉터리(resources/icons/classic/)가 아직 없으므로,
     get_icon()은 classic 접미사 시도가 실패하면 light 아이콘으로 폴백해야 한다
@@ -170,7 +168,7 @@ def test_get_icon_classic_theme_falls_back_to_light_icon_directory(qapp):
 #    폰트가 다시 안 먹는다). autouse 픽스처가 폰트 상태를 다루지 않으므로 직접 복원한다.
 # -----------------------------------------------------------------------------
 
-def test_generate_font_stylesheet_separates_proportional_and_fixed_targets(qapp):
+def test_generate_font_stylesheet_separates_proportional_and_fixed_targets(qapp, theme_manager):
     """
     전역(*) 규칙은 가변폭 폰트를, `.fixed-font`/QTextEdit 등 로그·데이터 뷰 규칙은
     고정폭 폰트를 써야 한다 (섞이면 로그 뷰가 가변폭 폰트로 렌더링되는 회귀).
@@ -197,7 +195,7 @@ def test_generate_font_stylesheet_separates_proportional_and_fixed_targets(qapp)
         theme_manager.set_fixed_font(*orig_fixed, apply_now=False)
 
 
-def test_set_proportional_font_propagates_to_live_application_stylesheet(qapp):
+def test_set_proportional_font_propagates_to_live_application_stylesheet(qapp, theme_manager):
     """set_proportional_font(apply_now=True)가 실제 QApplication 스타일시트까지 갱신해야 한다."""
     theme_manager.apply_theme("dark")
     orig_prop = theme_manager.get_proportional_font_info()
@@ -210,7 +208,7 @@ def test_set_proportional_font_propagates_to_live_application_stylesheet(qapp):
         theme_manager.set_proportional_font(*orig_prop)
 
 
-def test_set_fixed_font_propagates_to_live_application_stylesheet(qapp):
+def test_set_fixed_font_propagates_to_live_application_stylesheet(qapp, theme_manager):
     """set_fixed_font(apply_now=True)가 실제 QApplication 스타일시트까지 갱신해야 한다."""
     theme_manager.apply_theme("dark")
     orig_fixed = theme_manager.get_fixed_font_info()
@@ -223,7 +221,7 @@ def test_set_fixed_font_propagates_to_live_application_stylesheet(qapp):
         theme_manager.set_fixed_font(*orig_fixed)
 
 
-def test_fixed_font_setting_is_actually_applied_to_real_widget(qapp):
+def test_fixed_font_setting_is_actually_applied_to_real_widget(qapp, theme_manager):
     """
     S-036 회귀 재현 테스트: 문자열(스타일시트 텍스트)이 아니라 **실제 위젯에 배정된
     QFont**로 검증한다. 이전 버전(`test_font_stylesheet_is_appended_after_theme_qss_
@@ -262,7 +260,7 @@ def test_fixed_font_setting_is_actually_applied_to_real_widget(qapp):
         theme_manager.set_fixed_font(*orig_fixed)
 
 
-def test_proportional_font_setting_is_appended_after_theme_qss_for_cascade_priority(qapp):
+def test_proportional_font_setting_is_appended_after_theme_qss_for_cascade_priority(qapp, theme_manager):
     """
     가변폭 폰트는 전역(`*`) 선택자만 쓰므로(경쟁하는 하드코딩이 없음) 문자열 순서
     검증으로도 충분하다 - 순서 자체가 카스케이드에 영향을 주는 유일한 경우(동일
@@ -281,7 +279,7 @@ def test_proportional_font_setting_is_appended_after_theme_qss_for_cascade_prior
         theme_manager.set_proportional_font(*orig_prop)
 
 
-def test_font_settings_dto_round_trip_and_restore_from_settings_dict(qapp):
+def test_font_settings_dto_round_trip_and_restore_from_settings_dict(qapp, theme_manager):
     """get_font_settings()/restore_fonts_from_settings() 왕복 계약 (앱 재시작 시나리오)."""
     orig_prop = theme_manager.get_proportional_font_info()
     orig_fixed = theme_manager.get_fixed_font_info()
@@ -319,7 +317,7 @@ def test_font_settings_dto_round_trip_and_restore_from_settings_dict(qapp):
 # 4. 폴백 스타일시트 경로 - 실제로 도달 가능한가? (감사는 "죽은 경로에 가깝다"고 의심)
 # -----------------------------------------------------------------------------
 
-def test_fallback_stylesheet_is_reachable_when_theme_directory_missing(qapp, tmp_path):
+def test_fallback_stylesheet_is_reachable_when_theme_directory_missing(qapp, tmp_path, theme_manager):
     """
     `doc/refactor_audit_20260822.md`는 `_get_fallback_stylesheet()`를 죽은 경로에
     가깝다고 판단했다. 실측 결과: **도달은 가능하지만, 트리거하려면 알려지지 않은
@@ -362,7 +360,7 @@ def test_fallback_stylesheet_is_reachable_when_theme_directory_missing(qapp, tmp
 # 5. ColorManager - 하이브리드 색상 매핑 계약
 # -----------------------------------------------------------------------------
 
-def test_apply_rules_color_follows_theme_state_directly(qapp):
+def test_apply_rules_color_follows_theme_state_directly(qapp, theme_manager, color_manager):
     """
     apply_rules()는 (color_manager.apply_theme()가 호출됐는지와 무관하게) 호출 시점의
     `theme_state.is_dark_theme()` 값만으로 dark_color/light_color 중 하나를 골라야 한다
@@ -383,7 +381,7 @@ def test_apply_rules_color_follows_theme_state_directly(qapp):
     assert dark_result != light_result
 
 
-def test_color_manager_apply_theme_syncs_palette_and_rule_colors():
+def test_color_manager_apply_theme_syncs_palette_and_rule_colors(color_manager):
     """ColorManager.apply_theme()이 COLOR_* 팔레트와 개별 규칙 .color 필드를 동기화한다."""
     color_manager.apply_theme("light")
     assert color_manager.COLOR_RX == "#0000FF"
@@ -395,7 +393,7 @@ def test_color_manager_apply_theme_syncs_palette_and_rule_colors():
     assert ok_rule.color == ok_rule.dark_color
 
 
-def test_rules_property_excludes_disabled_rules_and_yields_qt_format(qapp):
+def test_rules_property_excludes_disabled_rules_and_yields_qt_format(qapp, color_manager):
     """`rules` 프로퍼티는 비활성 규칙을 제외하고 (pattern, QTextCharFormat) 튜플만 반환한다."""
     all_names = [r.name for r in color_manager._rules]
     assert "AT_OK" in all_names
@@ -412,7 +410,7 @@ def test_rules_property_excludes_disabled_rules_and_yields_qt_format(qapp):
         color_manager.toggle_rule("AT_OK")
 
 
-def test_add_and_remove_custom_rule_round_trip():
+def test_add_and_remove_custom_rule_round_trip(color_manager):
     """add_custom_rule()/remove_rule() 왕복 계약 (사용자 정의 하이라이트 규칙)."""
     original_count = len(color_manager._rules)
     color_manager.add_custom_rule("CHAR_TEST_RULE", r"CHARTEST", "FF00FF")

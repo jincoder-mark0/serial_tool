@@ -1,7 +1,7 @@
 """
 테마 관리자 모듈
 
-애플리케이션의 전체적인 Look & Feel을 관리하는 Singleton 클래스입니다.
+애플리케이션의 전체적인 Look & Feel을 관리합니다.
 Dark/Light 모드 전환, 외부 QSS 파일 로드 및 경로 치환, 동적 색상/폰트 적용을 담당합니다.
 
 ## WHY
@@ -16,10 +16,11 @@ Dark/Light 모드 전환, 외부 QSS 파일 로드 및 경로 치환, 동적 색
 * 기존 공개 API 유지
 
 ## HOW
-* ThemeManager 자체 Singleton은 기존 호환성을 위해 유지
+* composition root가 한 번 생성해 주입한다 (class singleton / module 전역 없음)
 * 설정 복원은 `restore_fonts_from_settings()`로 전달받은 plain dict 사용
 * FontManager는 재적용 callback만 받아 ThemeManager 역참조를 피함
-* ColorManager는 shared `theme_state`를 통해 현재 테마와 동기화
+* ColorManager를 직접 호출하지 않는다 — 팔레트 전파는 두 매니저를 모두 아는 쪽이 한다.
+  현재 테마 조회는 shared `theme_state`(리프 모듈)를 통한다
 """
 
 from typing import Any, Dict, Optional, Tuple
@@ -33,38 +34,36 @@ from common.enums import ThemeType
 from core.logger import logger
 from core.resource_path import ResourcePath
 from view.managers import theme_state
-from view.managers.color_manager import color_manager
 from view.managers.font_manager import FontManager
 from view.managers.theme_resource_loader import ThemeResourceLoader
 
 
 class ThemeManager(QObject):
-    """애플리케이션 테마/폰트/resource orchestration을 담당하는 Singleton."""
+    """애플리케이션 테마/폰트/resource orchestration을 담당한다.
 
-    _instance = None
+    WHY instance:
+        과거에는 `__new__` 기반 class singleton + module-level 전역 인스턴스였다.
+        `main.py`가 ResourcePath를 넘겨도 `_initialized` 가드가 early-return해
+        `ThemeResourceLoader`는 import 시점의 기본 경로로 만들어진 것을 계속 썼다.
 
-    def __new__(cls, *args, **kwargs):
-        """기존 전역 ThemeManager 호환성을 위해 Singleton instance를 반환한다."""
-        if not cls._instance:
-            cls._instance = super(ThemeManager, cls).__new__(cls)
-            cls._instance._initialized = False
-        return cls._instance
+        지금은 composition root가 한 번 생성해 주입한다 (P2-C #6의 SettingsManager와
+        같은 결정).
+    """
 
     def __init__(self, resource_path: Optional[ResourcePath] = None) -> None:
         """ThemeManager를 초기화한다.
 
         Args:
-            resource_path: ResourcePath instance. None이면 기본 경로 생성.
+            resource_path: ResourcePath instance. None이면 기본 경로 생성
+                (SettingsManager와 동일한 관례).
         """
+        super().__init__()
+
         if resource_path is None:
             resource_path = ResourcePath()
 
-        if hasattr(self, "_initialized") and self._initialized:
-            if resource_path is not None:
-                self._resource_path = resource_path
-            return
-
-        super().__init__()
+        # `_resource_path`는 `_resource_loader`에 위임하는 property이므로 여기서
+        # 직접 대입하지 않는다 — loader가 먼저 있어야 한다.
 
         # SettingsManager를 내부에서 생성하지 않는다.
         # 저장된 폰트 설정은 lifecycle/bootstrap 경로가 plain dict로 전달한다.
@@ -73,8 +72,6 @@ class ThemeManager(QObject):
 
         self._resource_loader = ThemeResourceLoader(resource_path)
         self._font_manager = FontManager(on_font_applied=self._reapply_current_theme)
-
-        self._initialized = True
 
     def _reapply_current_theme(self) -> None:
         """FontManager 변경 후 현재 테마를 재적용한다."""
@@ -232,8 +229,11 @@ class ThemeManager(QObject):
         font_qss = self._font_manager._generate_font_stylesheet()
         app.setStyleSheet(stylesheet + "\n" + font_qss)
 
-        # ColorManager.apply_theme은 동일 theme에 대해 idempotent하다.
-        color_manager.apply_theme(theme_name)
+        # ColorManager는 여기서 부르지 않는다.
+        # WHY: 과거에는 전역 `color_manager`를 직접 호출했다 — 전역이 전역을 부르는
+        #      구조라 어느 쪽도 교체할 수 없었다. 팔레트 전파는 두 매니저를 모두
+        #      아는 쪽(composition root와 MainWindow.switch_theme)이 한다.
+        #      `MainWindow.switch_theme`은 이미 두 매니저에 각각 적용하고 있었다.
 
         if previous_theme != theme_name:
             logger.info(f"Theme changed to '{theme_name}'.")
@@ -243,7 +243,3 @@ class ThemeManager(QObject):
     def get_current_theme(self) -> str:
         """현재 적용된 theme 이름을 반환한다."""
         return self._current_theme
-
-
-# 기존 public global accessor 호환용 ThemeManager singleton.
-theme_manager = ThemeManager()
