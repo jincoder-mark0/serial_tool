@@ -135,6 +135,7 @@
   "main_status_lbl_rx": "RX: {0}",
   "main_status_lbl_tx": "TX: {0}",
   "main_status_msg_file_transfer_result": "파일 전송 {0}",
+  "main_status_msg_flushing": "종료 전 대기 중인 데이터를 전송하고 있습니다... ({0} bytes 남음)",
   "main_status_msg_macro_finished": "매크로 완료",
   "main_status_msg_macro_running": "매크로 실행 중...",
   "main_status_msg_macro_stopped": "매크로 중지됨: {0}",

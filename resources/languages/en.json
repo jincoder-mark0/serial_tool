@@ -135,6 +135,7 @@
   "main_status_lbl_rx": "RX: {0}",
   "main_status_lbl_tx": "TX: {0}",
   "main_status_msg_file_transfer_result": "File Transfer {0}",
+  "main_status_msg_flushing": "Flushing queued data before exit... ({0} bytes remaining)",
   "main_status_msg_macro_finished": "Macro Finished",
   "main_status_msg_macro_running": "Macro Running...",
   "main_status_msg_macro_stopped": "Macro Stopped: {0}",

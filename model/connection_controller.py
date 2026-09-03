@@ -233,6 +233,17 @@ class ConnectionController(QObject):
         """TX 드레인이 아직 끝나지 않은 세션이 있는지 반환합니다."""
         return any(worker.isRunning() for worker in self._retired_workers.values())
 
+    def pending_flush_bytes(self) -> int:
+        """드레인 중인 세션들에 남아 있는 TX 바이트 총량을 반환합니다.
+
+        종료 대기 중 "얼마나 남았는지"를 사용자에게 보여주기 위한 값이다.
+        """
+        return sum(
+            worker.get_write_queue_bytes()
+            for worker in self._retired_workers.values()
+            if worker.isRunning()
+        )
+
     def _cleanup_worker_registry(
         self,
         name: str,
