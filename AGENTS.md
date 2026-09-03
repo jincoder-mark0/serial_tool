@@ -22,9 +22,11 @@ Presenter/View Boundary 리팩토링은 PR #1에서 squash merge 완료됐다. �
 Source of truth:
 
 ```text
-현재 코드
+사용자의 최신 명시적 지시
+  > 현재 코드
   > AGENTS.md
   > architecture contract tests
+  > RULES.md
   > Task.MD
   > doc/00_overview.md
   > 리팩토링/역사 문서

@@ -13,10 +13,11 @@ Presenter/View Boundary 리팩토링은 PR #1에서 squash merge 완료됐다. �
 ## 1. 작업 시작
 
 1. `AGENTS.md`
-2. `Task.MD`
-3. 작업 대상 소스와 호출부
-4. 관련 tests
-5. 필요 시 `doc/00_overview.md`, `.agent/rules/`, 과거 리팩토링 기록
+2. `RULES.md` — 검증/커밋/브랜치/도구 운영 규율
+3. `Task.MD`
+4. 작업 대상 소스와 호출부
+5. 관련 tests
+6. 필요 시 `doc/00_overview.md`, `.agent/rules/`, 과거 리팩토링 기록
 
 과거 문서와 현재 코드가 다르면 현재 코드와 architecture contract를 우선한다.
 
