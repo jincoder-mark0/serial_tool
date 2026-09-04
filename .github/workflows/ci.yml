@@ -3,8 +3,19 @@ name: SerialTool CI
 on:
   push:
     branches: [main]
+  # base branch를 제한하지 않는다 — 모든 PR을 검증한다.
+  #
+  # WHY: 과거에는 `branches: [main]`이었다. 그래서 base가 main이 아닌 PR
+  #      (다른 PR 위에 쌓은 stacked PR)에는 CI가 **아예 돌지 않았다.**
+  #      실패가 아니라 실행 자체가 없어서, PR 화면에는 빨간 X가 아니라
+  #      "no checks reported"만 뜬다 — 검증되지 않았다는 사실이 눈에 띄지 않는다.
+  #
+  #      2026-09-04 PR #29에서 실제로 그 상태로 머지 직전까지 갔다.
+  #      검증이 없는 것과 검증이 실패한 것은 화면에서 구분되어야 한다.
+  #
+  # 비용: PR이 있을 때만 도는 것은 그대로다. base가 main인 기존 PR의 실행 횟수는
+  #      변하지 않고, stacked PR이 추가로 검증될 뿐이다.
   pull_request:
-    branches: [main]
   workflow_dispatch:
 
 jobs:
