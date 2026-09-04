@@ -115,49 +115,56 @@ def stub_serial_port_enumeration(monkeypatch):
 
 @pytest.fixture(autouse=True)
 def reset_ui_manager_state():
-    """공유 UI manager mutable state를 test 전후 snapshot/restore한다 (S-048).
+    """여전히 공유되는 UI 상태만 test 전후 snapshot/restore한다 (S-048 후속).
 
     ## WHY
-    ThemeManager/ColorManager/LanguageManager는 module-level shared instance를 여러 consumer가
-    직접 import한다. class singleton field를 지웠다가 재생성하는 방식은 이미 배포된
-    reference를 교체하지 못하므로 state isolation 방법으로 적합하지 않다.
+    ThemeManager/ColorManager는 더 이상 module-level 공유 인스턴스가 아니다 —
+    composition root가 생성해 주입하므로 테스트는 각자 인스턴스를 만들면 되고,
+    복원할 공유 상태가 없다.
 
-    SettingsManager는 현재 fixture/runtime에서 명시적으로 생성·주입하는 일반 instance라
-    이 global-state snapshot 대상에 포함되지 않는다.
+    남은 공유 상태는 둘뿐이다.
 
-    ## WHAT
-    - ThemeManager current theme
-    - ColorManager rules 및 COLOR_* palette
-    - LanguageManager current language/resources
+    - `view/managers/theme_state`: "현재 테마 이름"은 앱 전체에 하나뿐인 값이라
+      의도적으로 리프 모듈이 소유한다(S-050). 인스턴스를 나눠도 이 값은 공유된다.
+    - `language_manager`: 아직 module-level 전역이다(후속 작업 대상).
+
+    SettingsManager는 명시적으로 생성·주입하는 일반 instance라 대상이 아니다.
 
     nested mutable object가 있으므로 필요한 항목은 deepcopy한다.
     """
-    from view.managers.color_manager import color_manager
+    from view.managers import theme_state
     from view.managers.language_manager import language_manager
-    from view.managers.theme_manager import theme_manager
 
-    theme_snapshot = theme_manager._current_theme
-
-    color_rules_snapshot = copy.deepcopy(color_manager._rules)
-    color_palette_snapshot = {
-        key: value
-        for key, value in vars(color_manager).items()
-        if key.startswith("COLOR_")
-    }
+    theme_snapshot = theme_state.get_current_theme()
 
     lang_current_snapshot = language_manager._current_language
     lang_resources_snapshot = copy.deepcopy(language_manager.resources)
 
     yield
 
-    theme_manager._current_theme = theme_snapshot
-
-    color_manager._rules = color_rules_snapshot
-    for key, value in color_palette_snapshot.items():
-        setattr(color_manager, key, value)
+    theme_state.set_current_theme(theme_snapshot)
 
     language_manager._current_language = lang_current_snapshot
     language_manager.resources = lang_resources_snapshot
+
+
+@pytest.fixture
+def theme_manager():
+    """테스트 전용 ThemeManager 인스턴스.
+
+    전역이 없어졌으므로 필요한 테스트가 각자 만든다 — 상태가 새어 나갈 곳이 없다.
+    """
+    from view.managers.theme_manager import ThemeManager
+
+    return ThemeManager()
+
+
+@pytest.fixture
+def color_manager():
+    """테스트 전용 ColorManager 인스턴스."""
+    from view.managers.color_manager import ColorManager
+
+    return ColorManager()
 
 
 # -----------------------------------------------------------------------------

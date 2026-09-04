@@ -64,7 +64,7 @@ from common.enums import (
     ThemeType,
 )
 from view.managers.language_manager import language_manager
-from view.managers.theme_manager import theme_manager
+from view.managers.theme_manager import ThemeManager
 
 
 class PreferencesDialog(QDialog):
@@ -72,8 +72,14 @@ class PreferencesDialog(QDialog):
 
     settings_changed = pyqtSignal(object)  # PreferencesState
 
-    def __init__(self, parent: Optional[QWidget] = None, state: PreferencesState = None) -> None:
+    def __init__(
+        self,
+        theme_manager: ThemeManager,
+        parent: Optional[QWidget] = None,
+        state: PreferencesState = None,
+    ) -> None:
         super().__init__(parent)
+        self._theme_manager = theme_manager
         self.setWindowTitle(language_manager.get_text("pref_title"))
         self.resize(500, 400)
         self.state = state if state else PreferencesState()
@@ -113,7 +119,7 @@ class PreferencesDialog(QDialog):
         ui_layout = QFormLayout()
 
         self.theme_combo = QComboBox()
-        themes = theme_manager.get_available_themes()
+        themes = self._theme_manager.get_available_themes()
         if not themes:
             themes = [ThemeType.DARK.value, ThemeType.LIGHT.value]
         for theme_name in themes:

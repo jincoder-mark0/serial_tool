@@ -32,12 +32,14 @@ import pytest
 from PyQt5.QtWidgets import QApplication
 
 from view.main_window import MainWindow
+from view.managers.color_manager import ColorManager
+from view.managers.theme_manager import ThemeManager
 
 
 @pytest.fixture
 def window(qapp):
     """메인 윈도우 한 개 (표시하지 않는다)."""
-    view = MainWindow()
+    view = MainWindow(ThemeManager(), ColorManager())
     yield view
     view.close()
     view.deleteLater()

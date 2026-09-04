@@ -39,9 +39,9 @@ from view.dialogs.preferences_dialog import PreferencesDialog
 from view.dialogs.file_transfer_dialog import FileTransferDialog
 from common.constants import LAYOUT_MARGIN_DEFAULT, LAYOUT_SPACING_DEFAULT
 
-from view.managers.theme_manager import theme_manager
+from view.managers.theme_manager import ThemeManager
 from view.managers.language_manager import language_manager
-from view.managers.color_manager import color_manager
+from view.managers.color_manager import ColorManager
 
 from common.dtos import (
     FontConfig, MainWindowState, PreferencesState,
@@ -70,7 +70,11 @@ class MainWindow(QMainWindow):
     send_requested = pyqtSignal(object)
     port_tab_added = pyqtSignal(object)
 
-    def __init__(self) -> None:
+    def __init__(
+        self,
+        theme_manager: ThemeManager,
+        color_manager: ColorManager,
+    ) -> None:
         super().__init__()
         self.theme_manager = theme_manager
         self.language_manager = language_manager
@@ -81,7 +85,7 @@ class MainWindow(QMainWindow):
         self._saved_window_width: Optional[int] = None
         self._right_section_width: Optional[int] = None
         self.init_ui()
-        self.menu_bar = MainMenuBar(self)
+        self.menu_bar = MainMenuBar(self.theme_manager, self)
         self.setMenuBar(self.menu_bar)
         self._connect_menu_signals()
         self.init_shortcuts()
@@ -99,7 +103,7 @@ class MainWindow(QMainWindow):
         )
         main_layout.setSpacing(LAYOUT_SPACING_DEFAULT)
         self.splitter = QSplitter(Qt.Horizontal)
-        self.left_section = MainLeftSection()
+        self.left_section = MainLeftSection(self.theme_manager, self.color_manager)
         self.right_section = MainRightSection()
         self.splitter.addWidget(self.left_section)
         self.splitter.addWidget(self.right_section)
@@ -276,7 +280,7 @@ class MainWindow(QMainWindow):
             self.show_status_message("Font settings updated", 2000)
 
     def open_preferences_dialog(self, state: PreferencesState) -> None:
-        dialog = PreferencesDialog(self, state)
+        dialog = PreferencesDialog(self.theme_manager, self, state)
         dialog.settings_changed.connect(self.on_settings_change_requested)
         dialog.exec_()
 

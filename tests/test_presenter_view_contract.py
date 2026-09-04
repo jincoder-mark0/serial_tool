@@ -3,6 +3,8 @@ import ast
 import pathlib
 
 import pytest
+from view.managers.color_manager import ColorManager
+from view.managers.theme_manager import ThemeManager
 
 PROJECT_ROOT = pathlib.Path(__file__).resolve().parents[1]
 PRESENTER_DIR = PROJECT_ROOT / "presenter"
@@ -23,8 +25,8 @@ def _build_view_instances():
     from view.sections.main_left_section import MainLeftSection
 
     return {
-        "MainWindow": MainWindow(),
-        "MainLeftSection": MainLeftSection(),
+        "MainWindow": MainWindow(ThemeManager(), ColorManager()),
+        "MainLeftSection": MainLeftSection(ThemeManager(), ColorManager()),
         "ManualControlPanel": ManualControlPanel(),
         "PacketPanel": PacketPanel(),
         "MacroPanel": MacroPanel(),

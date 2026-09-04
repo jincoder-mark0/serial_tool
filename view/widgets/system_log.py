@@ -27,7 +27,7 @@ from PyQt5.QtWidgets import (
 from PyQt5.QtCore import pyqtSignal, pyqtSlot, Qt
 
 from view.managers.language_manager import language_manager
-from view.managers.theme_manager import theme_manager
+from view.managers import theme_state
 from view.custom_qt.smart_list_view import QSmartListView
 from view.widgets.log_toolbar import (
     create_search_bar, create_filter_checkbox, create_logging_toggle_button,
@@ -243,7 +243,7 @@ class SystemLogWidget(QWidget):
         # 3. 색상 규칙 적용
         if self._color_rules:
             # 현재 테마 상태 조회 및 전달
-            is_dark = theme_manager.is_dark_theme()
+            is_dark = theme_state.is_dark_theme()
             full_text = ColorService.apply_rules(full_text, self._color_rules, is_dark)
 
         # 4. 뷰에 추가

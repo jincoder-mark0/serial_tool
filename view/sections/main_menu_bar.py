@@ -27,7 +27,7 @@ from PyQt5.QtWidgets import QMenuBar, QAction, QActionGroup
 from PyQt5.QtCore import pyqtSignal
 
 from view.managers.language_manager import language_manager
-from view.managers.theme_manager import theme_manager
+from view.managers.theme_manager import ThemeManager
 
 
 class MainMenuBar(QMenuBar):
@@ -59,7 +59,7 @@ class MainMenuBar(QMenuBar):
     # Help Menu Signals
     about_requested = pyqtSignal()
 
-    def __init__(self, parent=None) -> None:
+    def __init__(self, theme_manager: ThemeManager, parent=None) -> None:
         """
         MainMenuBar 초기화
 
@@ -69,9 +69,11 @@ class MainMenuBar(QMenuBar):
             - 언어 변경 시그널 연결 (즉시 UI 갱신)
 
         Args:
+            theme_manager: 메뉴 아이콘/테마 목록 조회에 사용.
             parent: 부모 위젯.
         """
         super().__init__(parent)
+        self._theme_manager = theme_manager
 
         # 액션 그룹 참조 (상태 갱신용)
         self.theme_action_group: Optional[QActionGroup] = None
@@ -132,7 +134,7 @@ class MainMenuBar(QMenuBar):
         exit_action = QAction(language_manager.get_text("main_menu_exit"), self)
         exit_action.setShortcut("Ctrl+Q")
         exit_action.setToolTip(language_manager.get_text("main_menu_exit_tooltip"))
-        exit_action.setIcon(theme_manager.get_icon("exit")) # 아이콘 추가
+        exit_action.setIcon(self._theme_manager.get_icon("exit")) # 아이콘 추가
         exit_action.triggered.connect(self.exit_requested.emit)
         file_menu.addAction(exit_action)
 
@@ -152,14 +154,14 @@ class MainMenuBar(QMenuBar):
 
         # 테마 서브메뉴 (Theme Submenu)
         theme_menu = view_menu.addMenu(language_manager.get_text("main_menu_theme"))
-        theme_menu.setIcon(theme_manager.get_icon("theme"))
+        theme_menu.setIcon(self._theme_manager.get_icon("theme"))
 
         self.theme_action_group = QActionGroup(self)
         self.theme_action_group.setExclusive(True)
 
         # ThemeManager에서 사용 가능한 테마 목록 스캔
-        available_themes = theme_manager.get_available_themes()
-        current_theme = theme_manager.get_current_theme()
+        available_themes = self._theme_manager.get_available_themes()
+        current_theme = self._theme_manager.get_current_theme()
 
         for theme_name in available_themes:
             # 메뉴 표시 이름 번역 시도
@@ -186,13 +188,13 @@ class MainMenuBar(QMenuBar):
         font_action = QAction(language_manager.get_text("main_menu_font"), self)
         font_action.setShortcut("Ctrl+Shift+F")
         font_action.setToolTip(language_manager.get_text("main_menu_font_tooltip"))
-        font_action.setIcon(theme_manager.get_icon("font"))
+        font_action.setIcon(self._theme_manager.get_icon("font"))
         font_action.triggered.connect(self.font_settings_requested.emit)
         view_menu.addAction(font_action)
 
         # 언어 서브메뉴 (Language Submenu)
         language_menu = view_menu.addMenu(language_manager.get_text("main_menu_lang"))
-        language_menu.setIcon(theme_manager.get_icon("language"))
+        language_menu.setIcon(self._theme_manager.get_icon("language"))
 
         # LanguageManager에서 사용 가능한 언어 목록 스캔
         available_langs = language_manager.get_available_languages()
@@ -239,7 +241,7 @@ class MainMenuBar(QMenuBar):
 
         # 정보(About) 액션
         about_action = QAction(language_manager.get_text("main_menu_about"), self)
-        about_action.setIcon(theme_manager.get_icon("info"))
+        about_action.setIcon(self._theme_manager.get_icon("info"))
         about_action.setToolTip(language_manager.get_text("main_menu_about_tooltip"))
         about_action.triggered.connect(self.about_requested.emit)
         help_menu.addAction(about_action)

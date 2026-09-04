@@ -17,7 +17,7 @@
 * 테마(Dark/Light) 변경에 따른 내부 색상 팔레트 및 규칙 색상 동기화
 
 ## HOW
-* Singleton 패턴으로 전역 접근 보장
+* composition root가 한 번 생성해 주입한다 (class singleton / module 전역 없음)
 * 규칙 데이터(`_rules`)는 내부 `ColorRuleRepository` 인스턴스가 소유하며, 이 클래스는
   `_rules` 프로퍼티로 위임해 기존 공개 계약(속성 직접 접근·CRUD 메서드 시그니처)을
   그대로 유지한다(S-054, `tests/test_theme_color_managers.py` 무수정 통과가 계약).
@@ -40,42 +40,38 @@ from view.managers.theme_resource_loader import ThemeResourceLoader
 
 class ColorManager(QObject):
     """
-    색상 규칙 관리자 클래스 (Singleton).
+    색상 규칙 관리자 클래스.
     설정 파일 관리·규칙 CRUD는 `ColorRuleRepository`에 위임하고, Qt 서식 생성 및
     테마 팔레트 동기화를 담당합니다.
+
+    WHY instance:
+        과거에는 `__new__` 기반 class singleton + module-level 전역 인스턴스였다.
+        그 조합이 두 가지 결함을 만들었다.
+
+        1. `main.py`가 넘긴 ResourcePath가 **적용되지 않았다.** import 시점에 이미
+           초기화가 끝나 있어 `_initialized` 가드가 early-return했고, `_resource_path`만
+           갈아끼운 채 `config_path`는 재계산하지 않았다. 색 규칙은 언제나 import
+           시점의 기본 경로에서 로드됐다.
+        2. **import만으로 파일 I/O가 일어났다.** 모듈을 읽는 것만으로
+           `color_rules.json`을 읽었고, PyInstaller 분석 단계에서도 그 로그가 찍혔다.
+
+        지금은 composition root가 한 번 생성해 주입한다 (P2-C #6의 SettingsManager와
+        같은 결정).
     """
-
-    _instance = None
-    _initialized = False
-
-    def __new__(cls, *args, **kwargs):
-        """
-        Singleton 인스턴스 보장
-        """
-        if not cls._instance:
-            cls._instance = super(ColorManager, cls).__new__(cls)
-            cls._instance._initialized = False
-        return cls._instance
 
     def __init__(self, resource_path: Optional[ResourcePath] = None) -> None:
         """
         ColorManager 초기화
 
         Logic:
-            - 중복 초기화 방지
             - ResourcePath 설정 및 설정 파일 경로 계산
             - 기본 테마 색상 팔레트 초기화
             - 설정 파일 로드 (없으면 기본값 생성)
 
         Args:
             resource_path (Optional[ResourcePath]): 리소스 경로 관리 객체.
+                None이면 기본 ResourcePath를 만든다 (SettingsManager와 동일한 관례).
         """
-        if self._initialized:
-            # ResourcePath가 나중에 주입되는 경우를 대비해 업데이트
-            if resource_path:
-                self._resource_path = resource_path
-            return
-
         super().__init__()
 
         # ResourcePath 설정 (없으면 생성)
@@ -106,8 +102,6 @@ class ColorManager(QObject):
 
         # [중요] 규칙 로드 후 현재 테마에 맞춰 색상 동기화 실행
         self.apply_theme('dark')
-
-        self._initialized = True
 
     # -------------------------------------------------------------------------
     # Rule Data Access (ColorRuleRepository 위임)
@@ -357,17 +351,17 @@ class ColorManager(QObject):
         """
         self._repo.load_rules(file_path)
 
-    @staticmethod
-    def _get_config_path() -> Path:
+    def _get_config_path(self) -> Path:
         """
-        설정 파일의 기본 경로를 반환합니다. (인스턴스가 없거나 초기화 전일 때 사용)
+        이 인스턴스의 색 규칙 설정 파일 경로를 반환합니다.
+
+        과거에는 class singleton(`ColorManager._instance`)을 뒤져 경로를 찾는
+        staticmethod였다. 인스턴스가 주입되는 지금은 자기 상태만 보면 된다.
 
         Returns:
-            Path: 'resources/configs/color_rules.json' 경로 객체.
+            Path: 색 규칙 JSON 경로.
         """
-        if ColorManager._instance and hasattr(ColorManager._instance, 'config_path'):
-             return ColorManager._instance.config_path
-        return Path("resources/configs/color_rules.json")
+        return self.config_path
 
     @staticmethod
     def _apply_single_rule(text: str, rule: ColorRule) -> str:
@@ -382,7 +376,3 @@ class ColorManager(QObject):
             str: 변환된 텍스트.
         """
         return ColorService._apply_single_rule(text, rule.pattern, rule.color, rule.regex_enabled)
-
-
-# 전역 인스턴스 생성
-color_manager = ColorManager()

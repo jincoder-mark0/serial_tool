@@ -4,6 +4,49 @@
 
 ---
 
+### ThemeManager / ColorManager 싱글턴 해체 (2026-09-03)
+
+두 매니저는 `__new__` 기반 class singleton + module-level 전역 인스턴스였습니다.
+`SettingsManager`(P2-C #6)·`DataLoggerManager`와 같은 형태이고, 같은 문제를 만들었습니다.
+
+**조사 중 발견한 결함 2건이 이 리팩토링으로 사라집니다.**
+
+- **주입한 ResourcePath가 적용되지 않았습니다.** `main.py`의 `ColorManager(resource_path)`는
+  import 시점에 이미 초기화가 끝나 있어 `_initialized` 가드에 막혔고, `_resource_path`만
+  갈아끼운 채 `config_path`는 재계산하지 않았습니다. 색 규칙은 언제나 import 시점의 기본
+  경로에서 로드됐습니다. 지금 문제가 되지 않던 이유는 `ResourcePath()`가 번들을 스스로
+  감지하기 때문일 뿐이었습니다.
+- **import만으로 파일 I/O가 일어났습니다.** 모듈을 읽는 것만으로 `color_rules.json`을
+  읽었고, PyInstaller **빌드 분석 단계**에서도 그 로그가 찍혔습니다.
+
+주요 변경입니다.
+
+- 두 클래스에서 `__new__`/`_instance`/`_initialized`와 module-level 전역을 제거하고
+  composition root(`main.py`)가 생성해 주입합니다.
+- **`ThemeManager`가 전역 `color_manager`를 직접 부르던 호출을 제거했습니다.** 전역이
+  전역을 부르는 구조라 어느 쪽도 교체할 수 없었습니다. `MainWindow.switch_theme`은 이미
+  두 매니저에 각각 적용하고 있어 중복이기도 했고, 시작 경로의 전파는 `main.py`가 맡습니다.
+- `is_dark_theme()`만 필요한 위젯(`system_log`, `smart_list_view`)은 `theme_state`
+  리프 모듈을 직접 씁니다 — 깊은 위젯까지 주입을 번지게 할 이유가 없습니다.
+- 아이콘·테마 목록이 필요한 곳(`MainMenuBar`, `PortTabPanel`, `PreferencesDialog`)은
+  생성자 주입으로 전달합니다.
+
+**테스트 격리 방식이 바뀌었습니다.** `tests/test_singleton_isolation.py`(S-048)와
+`conftest.py`의 전역 snapshot/restore는 "공유 상태를 매번 되돌린다"는 전제 위에 있었는데,
+인스턴스를 나누면 되돌릴 것이 없습니다. 격리 테스트는 삭제하고
+`tests/test_view_manager_instance_contract.py`로 대체했습니다 — **복원이 아니라 애초에
+공유하지 않는 것**이 격리입니다. autouse fixture는 아직 공유되는 두 가지
+(`theme_state`, `language_manager`)만 복원합니다.
+
+`tests/test_theme_color_managers.py`는 S-054가 "무수정 통과가 계약"으로 선언한 파일입니다.
+공개 API는 그대로이고 **인스턴스 획득 방식만** 전역 import에서 fixture로 바뀌었습니다
+(26건 전부 통과).
+
+검증 결과는 `788 passed`(3회 반복 동일), Ruff 0건, language/task-board gate Green이며,
+실제 앱 기동까지 확인했습니다.
+
+---
+
 ### 언어 도구 형식 일치와 flaky 테스트 진단 (2026-09-03)
 
 **언어 키 도구가 절차를 따를 때마다 파일 전체를 재포맷했습니다.**

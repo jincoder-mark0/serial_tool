@@ -25,12 +25,13 @@ from PyQt5.QtWidgets import QApplication
 from view.managers.language_manager import language_manager
 from view.panels.port_panel import PortPanel
 from view.panels.port_tab_panel import PortTabPanel
+from view.managers.theme_manager import ThemeManager
 
 
 @pytest.fixture
 def tab_panel(qapp):
     """포트 탭 컨테이너 한 개 (테스트마다 새로 만든다)."""
-    panel = PortTabPanel()
+    panel = PortTabPanel(ThemeManager())
     yield panel
     panel.deleteLater()
     QApplication.processEvents()

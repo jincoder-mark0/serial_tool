@@ -47,7 +47,7 @@ def main() -> None:
     settings_mgr = SettingsManager(resource_path)
     language_manager = LanguageManager(resource_path)
     theme_manager = ThemeManager(resource_path)
-    ColorManager(resource_path)
+    color_manager = ColorManager(resource_path)
 
     def _get_crash_dialog_texts() -> tuple:
         return (
@@ -70,8 +70,11 @@ def main() -> None:
 
     saved_theme = settings_mgr.get(ConfigKeys.THEME, DEFAULT_THEME)
     theme_manager.apply_theme(saved_theme)
+    # 팔레트 전파는 두 매니저를 모두 아는 composition root가 한다.
+    # ThemeManager가 전역 ColorManager를 직접 부르던 구조를 대체한 것이다.
+    color_manager.apply_theme(saved_theme)
 
-    window = MainWindow()
+    window = MainWindow(theme_manager, color_manager)
     runtime = ApplicationBootstrapper(window, settings_mgr).build()  # noqa: F841
     window.show()
 
