@@ -1,7 +1,7 @@
 """
 언어 관리자 모듈
 
-애플리케이션의 다국어(I18N) 지원을 담당하는 싱글톤 클래스입니다.
+애플리케이션의 다국어(I18N) 지원을 담당합니다.
 JSON 기반의 언어 리소스를 로드하고, 런타임 언어 변경 및 텍스트 조회를 수행합니다.
 
 ## WHY
@@ -16,7 +16,8 @@ JSON 기반의 언어 리소스를 로드하고, 런타임 언어 변경 및 텍
 * 메타데이터(_meta_lang_name)를 이용한 동적 언어 목록 제공
 
 ## HOW
-* Singleton 패턴으로 전역에서 접근 가능한 인스턴스 제공
+* 모듈 하단의 전역 인스턴스를 composition root가 `configure()`로 설정한다.
+  class singleton(`__new__`)은 쓰지 않는다 — 생성처럼 보이는 설정은 읽는 사람을 속인다
 * ResourcePath를 사용하여 실행 환경(Dev/Prod)에 따른 정확한 경로 탐색
 * Lazy Initialization: 초기화 시 경로가 없으면 로드를 지연하여 시작 속도 최적화
 """
@@ -36,8 +37,28 @@ from core.resource_path import ResourcePath
 
 
 class LanguageManager(QObject):
-    """
-    다국어 리소스를 관리하고 텍스트 번역을 제공하는 관리자 클래스 (Singleton).
+    """다국어 리소스를 관리하고 텍스트 번역을 제공하는 관리자 클래스.
+
+    WHY 전역 인스턴스를 유지하는가:
+        "현재 언어"는 앱 전체에 하나뿐인 값이고, 텍스트 조회는 452곳의 위젯 내부
+        `retranslate_ui()`에서 일어난다. 이것을 생성자 주입으로 바꾸면 위젯 트리
+        전체(약 25개 클래스)에 인자를 관통시켜야 하는데, 그렇게 해서 고쳐지는
+        결함이 없다.
+
+        이 프로젝트는 같은 성격의 값을 이미 전역으로 인정했다 — S-050의
+        `view/managers/theme_state.py`가 "현재 테마"를 어느 매니저도 아닌 리프
+        모듈에 둔 것이 그 판단이다. 언어 카탈로그는 같은 종류이고 크기만 크다.
+
+        `ThemeManager`/`ColorManager`를 주입으로 바꾼 것과 다른 결론인 이유는,
+        그 둘에는 실제 결함이 있었기 때문이다(주입한 ResourcePath가 무시됨,
+        import만으로 파일 I/O). 여기에는 둘 다 없다 — 아래 `configure()`는 실제로
+        다시 로드하고, `resource_path` 없이 만들면 파일을 읽지 않는다.
+
+    WHY `__new__`를 없앴는가:
+        과거에는 `__new__` 기반 class singleton이라 `main.py`의
+        `LanguageManager(resource_path)`가 **새 객체를 만드는 것처럼 보이지만 실은
+        전역을 설정**했다. 읽는 사람이 속는다. 지금은 `configure()`로 하는 일이
+        그대로 보인다.
     """
 
     # -------------------------------------------------------------------------
@@ -46,58 +67,47 @@ class LanguageManager(QObject):
     # 언어가 변경되었을 때 UI 컴포넌트들에게 알리는 시그널 (변경된 언어 코드 전달)
     language_changed = pyqtSignal(str)
 
-    _instance = None
-    _resource_path: Optional[ResourcePath] = None
-
-    def __new__(cls, *args, **kwargs):
-        """
-        Singleton 인스턴스 보장 및 초기화 플래그 설정
-        """
-        if not cls._instance:
-            # QObject 상속 시 super().__new__에는 인자를 전달하지 않는 것이 안전함
-            cls._instance = super(LanguageManager, cls).__new__(cls)
-            # 인스턴스 생성 직후 플래그 초기화
-            cls._instance._initialized = False
-        return cls._instance
-
     def __init__(self, resource_path: Optional[ResourcePath] = None) -> None:
         """
         LanguageManager 초기화
 
         Logic:
-            - 중복 초기화 방지 (Singleton)
-            - ResourcePath 설정
-            - 리소스 경로가 주입된 경우에만 언어 파일 로드 수행 (Lazy Load)
-            - super().__init__() 호출 (QObject 초기화)
+            - ResourcePath 설정 (None이면 로드를 지연)
+            - 리소스 경로가 주어진 경우에만 언어 파일 로드 (Lazy Load)
 
         Args:
-            resource_path: ResourcePath 인스턴스. None이면 내부에서 생성하지 않고 대기.
-        """
-        # 1. 싱글톤 중복 초기화 방지 및 재설정 로직
-        if hasattr(self, '_initialized') and self._initialized:
-            # 이미 초기화되었더라도, 새로운 resource_path가 들어오면 업데이트 및 리로드
-            if resource_path is not None:
-                self._resource_path = resource_path
-                self.load_languages()
-            return
+            resource_path: ResourcePath 인스턴스. None이면 로드하지 않고 대기한다
+                — 이 지연 덕분에 import만으로는 파일을 읽지 않는다.
 
-        # 2. QObject 초기화 (가장 먼저 호출해야 함)
+        Note:
+            production에서 이 생성자를 직접 부르지 않는다. 모듈 하단의 전역
+            `language_manager`를 `configure()`로 설정한다 — 새 인스턴스를 만들면
+            위젯들이 구독한 전역과 다른 객체가 되어, 언어를 바꿔도 화면이 갱신되지
+            않는다 (`tests/test_language_manager_contract.py`가 막는다).
+        """
         super().__init__()
 
-        # 3. 리소스 경로 설정 (None일 수 있음)
         self._resource_path = resource_path
-
-        # 4. 멤버 변수 초기화
         self._current_language = "en"  # 기본 언어
         # 전체 언어 데이터를 메모리에 저장 { 'en': {...}, 'ko': {...} }
         self.resources: Dict[str, Dict[str, str]] = {}
 
-        # 5. 로직 실행 (경로가 있을 때만 로드하여 불필요한 스캔 방지)
+        # 경로가 있을 때만 로드하여 불필요한 스캔 방지
         if self._resource_path:
             self.load_languages()
 
-        # 6. 초기화 완료 플래그 설정
-        self._initialized = True
+    def configure(self, resource_path: ResourcePath) -> None:
+        """리소스 경로를 설정하고 언어 파일을 (다시) 로드한다.
+
+        composition root가 시작 시 한 번 호출한다. 과거에는 생성자를 다시 부르는
+        형태였는데, 그 호출은 새 객체를 만드는 것처럼 보이면서 실제로는 기존
+        전역을 설정하고 있었다.
+
+        Args:
+            resource_path: 언어 파일을 찾을 ResourcePath.
+        """
+        self._resource_path = resource_path
+        self.load_languages()
 
     def load_languages(self) -> None:
         """
@@ -255,6 +265,12 @@ class LanguageManager(QObject):
                 return True
         return False
 
-# 전역에서 접근 가능한 싱글톤 인스턴스 생성
-# 여기서는 ResourcePath가 없으므로 초기화만 되고 로드는 수행하지 않음 (Lazy Load)
+# 앱 전역 텍스트 카탈로그.
+#
+# 위젯 452곳이 자기 `retranslate_ui()`에서 이 인스턴스를 직접 조회하고, 17곳이
+# `language_changed`를 구독한다. "현재 언어"는 앱 전체에 하나뿐인 값이므로
+# `theme_state`(S-050)와 같은 성격으로 전역에 둔다 — 자세한 판단 근거는 클래스 docstring.
+#
+# ResourcePath 없이 만들므로 여기서는 파일을 읽지 않는다. 로드는 composition root가
+# `language_manager.configure(resource_path)`를 부를 때 일어난다.
 language_manager = LanguageManager()
