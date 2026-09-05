@@ -4,6 +4,39 @@
 
 ---
 
+### 패킷 export의 중단·실패를 표면화 (2026-09-05)
+
+코드 점검에서 나온 결함 2건입니다. 둘 다 `model/packet_export_manager.py`에 있습니다.
+
+**중단 요청이 아무 일도 하지 않았습니다.** `stop()`은 `requestInterruption()`을
+부르지만 worker의 `run()`은 그 요청을 **한 번도 확인하지 않았습니다** — 단일 blocking
+write였기 때문입니다. 그리고 `stop()`은 `None`을 돌려주며 상한을 넘겨도 아무것도
+알리지 않았습니다.
+
+종료 경로(`ShutdownCoordinator` → `PacketPresenter.stop()` → 여기)에서 export가
+1초 안에 끝나지 않으면 **조용히 종료되고 `.tmp` 파일만 남았습니다.** 사용자는
+export를 요청했는데 결과 파일이 없고 이유도 알 수 없었습니다.
+
+- 네 포맷(csv/json/hex/raw) 모두 record 단위로 중단을 확인합니다. 중단 시
+  `PacketExportAborted`를 올려 **대상 파일을 교체하지 않고** temporary file도
+  지웁니다 — 부분 결과가 완성본으로 남지 않습니다.
+- `stop()`이 `bool`을 돌려주고 상한 초과 시 경고를 남깁니다. 형제 매니저
+  (`PortScanManager`/`MacroScriptManager`)와 같은 계약입니다.
+- `write_records()`가 실제로 기록한 개수를 돌려줍니다.
+
+**빈 경로 가드가 죽어 있었습니다.** `if not str(Path(path))`는 `Path("")`가 `.`이
+되어 **한 번도 걸리지 않았습니다.** 빈 경로는 의도한 메시지 대신 worker 안에서
+`ValueError: WindowsPath('.') has an empty name`으로 터졌습니다. `Path`로 감싸기
+전에 원본 문자열을 검사하도록 고쳤습니다.
+
+회귀 테스트 10건을 `tests/test_packet_export_shutdown.py`에 추가했습니다. 네 포맷을
+모두 개별 검증합니다 — 한 포맷만 확인하고 나머지를 일반화하면 중단되지 않는 경로가
+남습니다(`doc/mistakes.md` #9). 두 결함을 되돌리면 7건이 실패하는 것을 확인했습니다.
+
+검증 결과는 `803 passed`(3회 반복 동일), Ruff 0건, language/task-board gate Green입니다.
+
+---
+
 ### LanguageManager: `__new__` 싱글턴 제거, `configure()` 도입 (2026-09-04)
 
 View 계층 전역 정리 2/2입니다. **앞의 둘과 다른 결론에 도달했습니다** —
