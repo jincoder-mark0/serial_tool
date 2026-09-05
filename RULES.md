@@ -177,6 +177,18 @@ git switch main; git pull --ff-only
 머지 실행 여부는 사용자가 정한다 — CI Green이어도 자동으로 머지하지 않는다.
 방식 자체는 위와 같이 고정이므로 매번 되묻지 않는다.
 
+**다른 PR 위에 쌓지 않는다.** base를 `main`이 아닌 브랜치로 두면 두 가지가 따라온다.
+
+1. 그 base를 `--delete-branch`로 머지하는 순간 **GitHub이 쌓인 PR을 닫는다.**
+   닫힌 PR은 base 변경도 재개도 불가하므로 rebase 후 새 PR을 만들어야 한다.
+2. CI 트리거가 base를 제한하고 있으면 검증이 아예 붙지 않는다 — 실패가 아니라
+   "no checks reported"라서 눈에 띄지 않는다.
+
+(2026-09-04 PR #29에서 둘 다 발생했다. 2번은 `.github/workflows/ci.yml`의
+`pull_request` base 제한을 없애 기계적으로 막았고, 1번은 이 규칙으로 남긴다.)
+
+파일이 겹쳐서 쌓아야 할 것 같으면, 앞 PR을 먼저 머지하고 갱신된 `main`에서 딴다.
+
 ### 8.2 브랜치를 딴 base를 확인한다
 
 PR을 만들기 전에 **base 대비 커밋 목록**을 확인한다. 로컬 `main`이 `origin/main`보다
