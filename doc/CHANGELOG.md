@@ -4,6 +4,42 @@
 
 ---
 
+### LanguageManager: `__new__` 싱글턴 제거, `configure()` 도입 (2026-09-04)
+
+View 계층 전역 정리 2/2입니다. **앞의 둘과 다른 결론에 도달했습니다** —
+`ThemeManager`/`ColorManager`는 생성자 주입으로 바꿨지만 이것은 전역을 유지합니다.
+
+조사 결과 **그 둘을 정당화한 결함이 여기엔 없었습니다.**
+
+| 결함 | Color/Theme | Language |
+|---|---|---|
+| 주입한 `ResourcePath`가 무시됨 | 있었음 | 없음 — 재설정이 실제로 다시 로드 |
+| import만으로 파일 I/O | 있었음 | 없음 — 경로 없으면 로드하지 않는 lazy 설계 |
+
+반면 주입 비용은 자릿수가 달랐습니다. `get_text()` 호출 **452곳**, `language_changed`
+구독 17곳, 영향 파일 34개, 생성자 배선이 필요한 위젯 클래스 약 25개입니다. "현재 언어"는
+앱 전체에 하나뿐인 값이고, 이 프로젝트는 같은 성격의 값을 이미 전역으로 인정했습니다
+(S-050 `theme_state`).
+
+실제 문제는 주입 여부가 아니라 **`__new__`가 만드는 거짓말**이었습니다.
+`main.py`의 `LanguageManager(resource_path)`는 새 객체를 만드는 것처럼 보이지만
+실제로는 전역을 설정했습니다.
+
+- `__new__`/`_instance` 제거, `configure(resource_path)` 공개 메서드 추가.
+  `main.py`·`tools/ux_capture.py`가 `language_manager.configure(...)`를 호출합니다.
+- 전역 인스턴스는 **앱 전역 텍스트 카탈로그**로 유지하고, 유지하는 이유와
+  `ThemeManager`/`ColorManager`와 결론이 다른 이유를 코드에 적었습니다.
+
+**`__new__`가 가려주던 실수가 이제는 진짜 버그가 됩니다.** 새 인스턴스를 만들어
+설정하면 위젯들이 구독한 전역과 다른 객체가 되어, 언어를 바꿔도 **예외도 로그도 없이
+화면만 갱신되지 않습니다.** `tests/test_language_manager_contract.py`(5건)가 이 경로와
+`configure()`의 재로드 동작을 고정합니다.
+
+검증 결과는 `793 passed`(3회 반복 동일), Ruff 0건, language/task-board gate Green이며,
+실제 앱에서 언어 로드(en/ko 303 keys)와 ko 전환까지 확인했습니다.
+
+---
+
 ### ThemeManager / ColorManager 싱글턴 해체 (2026-09-03)
 
 두 매니저는 `__new__` 기반 class singleton + module-level 전역 인스턴스였습니다.

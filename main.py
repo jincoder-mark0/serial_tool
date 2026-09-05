@@ -23,7 +23,7 @@ from core.resource_path import ResourcePath
 from core.settings_manager import SettingsManager
 from view.main_window import MainWindow
 from view.managers.color_manager import ColorManager
-from view.managers.language_manager import LanguageManager
+from view.managers.language_manager import language_manager
 from view.managers.theme_manager import ThemeManager
 
 
@@ -45,7 +45,9 @@ def main() -> None:
     logging.info(f"Base directory: {resource_path.base_dir}")
 
     settings_mgr = SettingsManager(resource_path)
-    language_manager = LanguageManager(resource_path)
+    # 전역 텍스트 카탈로그를 설정한다. 새 인스턴스를 만들면 위젯들이 구독한
+    # 전역과 다른 객체가 되어 언어를 바꿔도 화면이 갱신되지 않는다.
+    language_manager.configure(resource_path)
     theme_manager = ThemeManager(resource_path)
     color_manager = ColorManager(resource_path)
 

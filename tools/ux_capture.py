@@ -52,13 +52,13 @@ def main() -> None:
     from core.logger import logger
     from core.settings_manager import SettingsManager
     from view.managers.theme_manager import ThemeManager
-    from view.managers.language_manager import LanguageManager
+    from view.managers.language_manager import language_manager
     from view.managers.color_manager import ColorManager
 
     resource_path = ResourcePath()
     logger.configure(resource_path)
     SettingsManager(resource_path)
-    language_manager = LanguageManager(resource_path)
+    language_manager.configure(resource_path)
     theme_manager = ThemeManager(resource_path)
     color_manager = ColorManager(resource_path)
 
