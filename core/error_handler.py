@@ -59,6 +59,20 @@ class GlobalErrorHandler(QObject):
         """
         super().__init__()
         self._message_provider = message_provider
+
+        # 다이얼로그는 한 번에 하나만 연다.
+        #
+        # WHY: `_show_error_dialog`는 `show_error_signal` 슬롯이고 내부에서
+        #      `exec_()`로 중첩 이벤트 루프를 돈다. 그 루프가 큐에 밀려 있던
+        #      다음 오류를 처리하면 **첫 다이얼로그 안에서 두 번째가 열린다**
+        #      (실측 중첩 깊이 2). 타이머 슬롯처럼 반복 실행되는 곳에서 예외가
+        #      나면 무한정 쌓이고, 하나를 닫으면 다음이 나와 앱을 닫을 수 없다.
+        #
+        #      억눌린 오류가 유실되는 것은 아니다 — `_process_exception`이
+        #      이미 CRITICAL로 로깅한 뒤에 다이얼로그를 요청한다.
+        self._dialog_open = False
+        self._suppressed_dialogs = 0
+
         # 1. Main Thread 예외 훅
         self._old_excepthook = sys.excepthook
         sys.excepthook = self._handle_sys_exception
@@ -180,9 +194,39 @@ class GlobalErrorHandler(QObject):
         """
         에러 다이얼로그 표시 (메인 스레드에서 실행됨)
 
+        한 번에 하나만 연다. 이미 열려 있으면 세어만 두고 돌아간다 — 개별 오류는
+        `_process_exception`이 이미 CRITICAL로 로깅했으므로 유실이 아니다.
+
+        WHY 지연(`QTimer.singleShot`)하지 않는가:
+            `MainWindow.show_error_message`는 S-082에서 지연으로 재진입을 없앴다.
+            여기서 같은 방식을 쓰면 **이벤트 루프가 돌기 전에 난 오류는 아무것도
+            보이지 않는다.** `main.py`는 `app.exec_()` 이전에 설정·리소스·
+            부트스트랩을 모두 수행하므로, 거기서 죽으면 사용자가 가장 필요할 때
+            침묵하게 된다(실측 확인). 그래서 이 경로는 동기 표시를 유지하고
+            재진입만 막는다.
+
         Args:
             context (ErrorContext): 에러 정보 DTO
         """
+        if self._dialog_open:
+            self._suppressed_dialogs += 1
+            return
+
+        self._dialog_open = True
+        try:
+            self._render_error_dialog(context)
+        finally:
+            self._dialog_open = False
+            suppressed = self._suppressed_dialogs
+            self._suppressed_dialogs = 0
+            if suppressed:
+                logger.warning(
+                    f"{suppressed} further error dialog(s) suppressed while one was "
+                    f"open. Each of them is logged above with its own traceback."
+                )
+
+    def _render_error_dialog(self, context: ErrorContext) -> None:
+        """실제 QMessageBox를 구성해 표시한다 (재진입 가드 안에서만 호출)."""
         # 다이얼로그 문구는 조립 계층이 주입한 콜백(self._message_provider)으로 얻는다.
         # core는 view/language_manager를 모른다(S-056) - 콜백이 없거나(주입 전/테스트/
         # 라이브러리 사용) 콜백 호출 자체가 실패하면(손상된 상태, 깨진 언어 리소스 등)
